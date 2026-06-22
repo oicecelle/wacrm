@@ -13,6 +13,8 @@ import {
   ClockIcon,
   Loader2Icon,
   FilterXIcon,
+  CakeIcon,
+  ClipboardList,
 } from "lucide-react";
 
 interface Appointment {
@@ -172,13 +174,44 @@ export default function AgendaPage() {
     }
   }, [accountId, supabase, weekDates]);
 
+  const [birthdays, setBirthdays] = useState<Record<string, string[]>>({});
+
+  const fetchBirthdays = useCallback(async () => {
+    if (!accountId) return;
+    try {
+      const { data } = await supabase
+        .from("patients")
+        .select("name, birthday")
+        .eq("clinic_id", accountId)
+        .not("birthday", "is", null);
+
+      if (data) {
+        const bdays: Record<string, string[]> = {};
+        data.forEach((p) => {
+          if (p.birthday) {
+            const parts = p.birthday.split("-");
+            if (parts.length === 3) {
+              const key = `${parts[1]}-${parts[2]}`; // MM-DD
+              if (!bdays[key]) bdays[key] = [];
+              bdays[key].push(p.name);
+            }
+          }
+        });
+        setBirthdays(bdays);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [accountId, supabase]);
+
   useEffect(() => {
     fetchFilterOptions();
   }, [fetchFilterOptions]);
 
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+    fetchBirthdays();
+  }, [fetchAppointments, fetchBirthdays]);
 
   // Mini Month Picker Math
   const handlePickerPrevMonth = () => {
@@ -554,7 +587,7 @@ export default function AgendaPage() {
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-neutral-100 bg-[#fbfcfb]/50">
             {/* Week Nav controls */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -563,13 +596,16 @@ export default function AgendaPage() {
               >
                 Hoje
               </Button>
-              <div className="flex gap-0.5">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={handlePrevWeek}
                   className="h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 active:scale-95 transition-all text-neutral-600"
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
+                <span className="text-sm font-bold text-neutral-800">
+                  {formatWeekRange(weekDates)}
+                </span>
                 <button
                   onClick={handleNextWeek}
                   className="h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 active:scale-95 transition-all text-neutral-600"
@@ -577,9 +613,6 @@ export default function AgendaPage() {
                   <ChevronRightIcon className="h-4 w-4" />
                 </button>
               </div>
-              <span className="text-sm font-bold text-neutral-800 ml-2">
-                {formatWeekRange(weekDates)}
-              </span>
             </div>
 
             {/* Quick Copilot button & view selector */}
@@ -591,6 +624,16 @@ export default function AgendaPage() {
                 <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-blue-200" />
                 Pedir ao Copiloto
               </button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-neutral-700 font-semibold flex items-center gap-1.5 bg-white border-neutral-200"
+                onClick={() => alert("Lista de espera carregando...")}
+              >
+                <ClipboardList className="h-4 w-4 text-neutral-500" />
+                Lista de espera
+              </Button>
 
               <select
                 disabled
@@ -608,6 +651,10 @@ export default function AgendaPage() {
               const dayName = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][dayDate.getDay()];
               const dayNum = dayDate.getDate();
 
+              const monthDayKey = `${String(dayDate.getMonth() + 1).padStart(2, "0")}-${String(dayDate.getDate()).padStart(2, "0")}`;
+              const dayBirthdays = birthdays[monthDayKey] || [];
+              const hasBirthday = dayBirthdays.length > 0;
+
               return (
                 <div key={i} className="py-2.5 flex flex-col items-center justify-center gap-1 min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -621,6 +668,13 @@ export default function AgendaPage() {
                     <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-blue-600" : "text-neutral-400"}`}>
                       {dayName}
                     </span>
+                    {hasBirthday && (
+                      <span title={`Aniversariante(s) do dia:\n${dayBirthdays.join("\n")}`} className="shrink-0">
+                        <CakeIcon 
+                          className="h-3.5 w-3.5 text-pink-500 animate-bounce cursor-help" 
+                        />
+                      </span>
+                    )}
                   </div>
                 </div>
               );

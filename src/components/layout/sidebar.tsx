@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
@@ -27,8 +27,10 @@ import {
   FileText,
   Briefcase,
   TrendingUp,
+  ArrowLeftRight,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
+import { ClinicSwitcherModal } from "@/components/layout/clinic-switcher-modal";
 
 // Per-role chip metadata used in the sidebar's account strip + the
 // Members tab roster. Keeping this near both consumers in a single
@@ -40,7 +42,7 @@ const ROLE_CHIP: Record<
 > = {
   owner: {
     icon: Crown,
-    label: "Owner",
+    label: "Proprietário",
     // Amber: scarce, immutable, "the boss" — gets visual emphasis.
     className:
       "border-amber-500/40 bg-amber-500/10 text-amber-300",
@@ -54,14 +56,14 @@ const ROLE_CHIP: Record<
   },
   agent: {
     icon: UserCog,
-    label: "Agent",
+    label: "Profissional",
     // Neutral slate: the operational default.
     className:
       "border-border bg-muted text-foreground",
   },
   viewer: {
     icon: User,
-    label: "Viewer",
+    label: "Visualizador",
     // Muted slate: read-only role; visually quieter than agent.
     className:
       "border-border bg-card text-muted-foreground",
@@ -93,22 +95,22 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/agenda", label: "Agenda", icon: Calendar },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare },
-  { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/inbox", label: "Caixa de Entrada", icon: MessageSquare },
+  { href: "/contacts", label: "Contatos", icon: Users },
   { href: "/financeiro", label: "Financeiro", icon: DollarSign },
   { href: "/documentos", label: "Documentos", icon: FileText },
   { href: "/equipe", label: "Equipe", icon: UsersRound },
   { href: "/servicos", label: "Serviços", icon: Briefcase },
-  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
-  { href: "/broadcasts", label: "Broadcasts", icon: Radio },
-  { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/pipelines", label: "Funis de Vendas", icon: GitBranch },
+  { href: "/broadcasts", label: "Disparos", icon: Radio },
+  { href: "/automations", label: "Automações", icon: Zap },
   { href: "/relatorios", label: "Relatórios", icon: TrendingUp },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/flows", label: "Flows", icon: Workflow, beta: true },
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/flows", label: "Fluxos", icon: Workflow, beta: true },
 ];
 
 const bottomNavItems = [
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 interface SidebarProps {
@@ -121,6 +123,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
   const totalUnread = useTotalUnread();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   // Only surface the account-name strip when it actually carries
   // information. A solo user's personal account is named after them
   // (the 017 signup trigger seeds it from `full_name`), so showing it
@@ -357,7 +360,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 }
               >
                 <User className="size-4" />
-                Profile
+                Perfil
               </DropdownMenuItem>
               <DropdownMenuItem
                 render={
@@ -369,20 +372,35 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 }
               >
                 <Settings className="size-4" />
-                Settings
+                Preferências
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-border" />
+              {account?.name && (
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border bg-muted/20 flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400">Clínica Atual</span>
+                  <span className="truncate">{account.name}</span>
+                </div>
+              )}
+              <DropdownMenuItem
+                onClick={() => setSwitcherOpen(true)}
+                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
+              >
+                <ArrowLeftRight className="size-4" />
+                Trocar de clínica
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={signOut}
-                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
+                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground text-red-600 focus:text-red-700 cursor-pointer"
               >
                 <LogOut className="size-4" />
-                Sign out
+                Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </aside>
+      <ClinicSwitcherModal open={switcherOpen} onOpenChange={setSwitcherOpen} />
     </>
   );
 }
