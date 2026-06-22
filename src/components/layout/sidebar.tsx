@@ -22,6 +22,11 @@ import {
   Workflow,
   X,
   Zap,
+  Calendar,
+  DollarSign,
+  FileText,
+  Briefcase,
+  TrendingUp,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 
@@ -87,12 +92,18 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/inbox", label: "Inbox", icon: MessageSquare },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/financeiro", label: "Financeiro", icon: DollarSign },
+  { href: "/documentos", label: "Documentos", icon: FileText },
+  { href: "/equipe", label: "Equipe", icon: UsersRound },
+  { href: "/servicos", label: "Serviços", icon: Briefcase },
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/relatorios", label: "Relatórios", icon: TrendingUp },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/flows", label: "Flows", icon: Workflow, beta: true },
 ];
 

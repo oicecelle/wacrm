@@ -46,14 +46,14 @@ export async function middleware(request: NextRequest) {
       url.pathname = `/join/${encodeURIComponent(inviteToken)}`
       url.search = ''
     } else {
-      url.pathname = '/dashboard'
+      url.pathname = '/agenda'
       url.search = ''
     }
     return NextResponse.redirect(url)
   }
 
   // Protected pages - redirect to login if not authenticated
-  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings']
+  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/agenda', '/financeiro', '/documentos', '/equipe', '/servicos', '/relatorios']
   if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
