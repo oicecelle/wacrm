@@ -30,12 +30,20 @@ interface Appointment {
   end_time: string;
   patients: {
     name: string;
+    phone: string;
   } | null;
 }
+
+const WhatsAppIcon = () => (
+  <svg className="h-3.5 w-3.5 fill-emerald-600" viewBox="0 0 24 24">
+    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.062 5.248 5.308 0 11.773 0c3.133.001 6.078 1.22 8.29 3.433 2.213 2.212 3.431 5.158 3.43 8.29-.005 6.525-5.25 11.772-11.714 11.772-2.004-.001-3.973-.513-5.72-1.488L0 24zm6.49-14.73c-.22-.49-.452-.5-.66-.508-.17-.008-.364-.008-.558-.008-.194 0-.51.072-.777.362s-1.02 1.002-1.02 2.441c0 1.439 1.047 2.829 1.192 3.029.146.199 2.06 3.146 4.99 4.414.697.302 1.242.483 1.666.618.701.223 1.34.191 1.845.116.562-.084 1.727-.706 1.97-1.389.243-.682.243-1.266.17-1.389-.073-.123-.267-.199-.558-.344-.29-.145-1.727-.852-1.993-.949-.267-.097-.46-.145-.66.145-.199.29-.777.949-.95 1.149-.175.2-.35.223-.64.079-.29-.145-1.226-.453-2.336-1.442-.864-.77-1.447-1.72-1.617-2.01-.17-.29-.018-.448.127-.592.13-.13.29-.34.436-.509.145-.17.194-.29.29-.483.097-.19.048-.362-.024-.509-.073-.146-.66-1.593-.905-2.185z" />
+  </svg>
+);
 
 interface FilterOption {
   id: string;
   name: string;
+  valor?: number;
 }
 
 export default function AgendaPage() {
@@ -72,6 +80,10 @@ export default function AgendaPage() {
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
 
+  // Popover States
+  const [popoverAppt, setPopoverAppt] = useState<Appointment | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
+
   // Get week date list starting Sunday to Saturday
   const getWeekDates = (date: Date) => {
     const d = new Date(date);
@@ -89,6 +101,64 @@ export default function AgendaPage() {
   };
 
   const weekDates = getWeekDates(selectedDate);
+
+  // Helpers for Popover and formatting
+  const formatPopoverDate = (startStr: string, endStr: string) => {
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    };
+    const formattedDate = start.toLocaleDateString("pt-BR", options);
+    
+    const startHours = String(start.getHours()).padStart(2, "0");
+    const startMins = String(start.getMinutes()).padStart(2, "0");
+    const endHours = String(end.getHours()).padStart(2, "0");
+    const endMins = String(end.getMinutes()).padStart(2, "0");
+    
+    return `${formattedDate} • ${startHours}:${startMins} - ${endHours}:${endMins}`;
+  };
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const getWaLink = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, "");
+    const finalPhone = cleaned.length <= 11 ? `55${cleaned}` : cleaned;
+    return `https://wa.me/${finalPhone}`;
+  };
+
+  const handleApptClick = (appt: Appointment, e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    let left = rect.right + 8;
+    let top = rect.top;
+    
+    const popoverWidth = 320;
+    if (left + popoverWidth > window.innerWidth) {
+      left = rect.left - popoverWidth - 8;
+    }
+    if (left < 0) left = 16;
+    
+    const popoverHeight = 310;
+    if (top + popoverHeight > window.innerHeight) {
+      top = window.innerHeight - popoverHeight - 16;
+    }
+    if (top < 0) top = 16;
+    
+    setPopoverAppt(appt);
+    setPopoverPosition({ top, left });
+  };
 
   // Fetch data
   const fetchFilterOptions = useCallback(async () => {
@@ -113,14 +183,14 @@ export default function AgendaPage() {
         .order("name");
       setStaff((st || []).map((s) => ({ id: s.id, name: s.name })));
 
-      // 3. Fetch Procedures
+      // 3. Fetch Procedures (with valor)
       const { data: procs } = await supabase
         .from("procedures")
-        .select("id, name")
+        .select("id, name, valor")
         .eq("clinic_id", clinicId)
         .eq("ativo", true)
         .order("name");
-      setProcedures(procs || []);
+      setProcedures((procs || []).map(p => ({ id: p.id, name: p.name, valor: p.valor })));
 
       // 4. Fetch Rooms
       const { data: rms } = await supabase
@@ -157,7 +227,8 @@ export default function AgendaPage() {
           start_time,
           end_time,
           patients (
-            name
+            name,
+            phone
           )
         `)
         .eq("clinic_id", accountId)
@@ -788,8 +859,7 @@ export default function AgendaPage() {
                               height: `${heightPx}px`,
                             }}
                             onClick={(e) => {
-                              e.stopPropagation(); // Avoid triggering parent add appointment
-                              handleEditAppointment(appt.id);
+                              handleApptClick(appt, e);
                             }}
                             className={`absolute left-1 right-1 rounded-xl shadow-xs transition-all duration-200 text-left border p-2 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between ${styles.border} ${styles.bg}`}
                           >
@@ -855,6 +925,154 @@ export default function AgendaPage() {
         defaultDate={modalDefaultDate}
         onSave={fetchAppointments}
       />
+
+      {/* Appointment Details Popover overlay */}
+      {popoverAppt && popoverPosition && (
+        <>
+          <div 
+            className="fixed inset-0 z-40 bg-transparent"
+            onClick={() => {
+              setPopoverAppt(null);
+              setPopoverPosition(null);
+            }}
+          />
+          <div 
+            style={{ 
+              position: 'fixed', 
+              top: `${popoverPosition.top}px`, 
+              left: `${popoverPosition.left}px`,
+            }}
+            className="z-50 w-[310px] bg-white border border-neutral-200 shadow-2xl rounded-2xl p-4 text-left space-y-4 animate-in fade-in zoom-in-95 duration-100"
+          >
+            {/* Header: status and "Agendamento" */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${getCardStatusStyles(popoverAppt.status).dot}`} />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400">
+                  Agendamento • {(() => {
+                    switch (popoverAppt.status) {
+                      case "confirmed": return "Confirmado";
+                      case "attended": return "Realizado";
+                      case "cancelled": return "Cancelado";
+                      case "no_show": return "Não compareceu";
+                      default: return "Pendente";
+                    }
+                  })()}
+                </span>
+              </div>
+              <button 
+                onClick={() => {
+                  setPopoverAppt(null);
+                  setPopoverPosition(null);
+                }}
+                className="text-neutral-400 hover:text-neutral-600 text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Date & Time */}
+            <div className="text-xs font-bold text-neutral-800">
+              {formatPopoverDate(popoverAppt.start_time, popoverAppt.end_time)}
+            </div>
+
+            <div className="border-t border-neutral-100" />
+
+            {/* Professional & Patient Rows */}
+            <div className="space-y-3">
+              {/* Professional */}
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center text-[10px] font-bold">
+                  {getInitials(staff.find((s) => s.id === popoverAppt.professional_id)?.name || "NT")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Profissional</p>
+                  <p className="text-xs font-bold text-neutral-700 truncate">
+                    {staff.find((s) => s.id === popoverAppt.professional_id)?.name || "Não atribuído"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Patient */}
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">
+                  {getInitials(popoverAppt.patients?.name || "Sem Nome")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Paciente</p>
+                  <p className="text-xs font-bold text-neutral-700 truncate">
+                    {popoverAppt.patients?.name || "Sem Nome"}
+                  </p>
+                </div>
+                {popoverAppt.patients?.phone && (
+                  <a
+                    href={getWaLink(popoverAppt.patients.phone)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 rounded-lg text-emerald-600 transition-colors flex items-center justify-center"
+                    title="Conversar no WhatsApp"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <WhatsAppIcon />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-neutral-100" />
+
+            {/* Procedure name & Price */}
+            <div className="flex items-center justify-between text-xs">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Procedimento</p>
+                <p className="font-bold text-neutral-700 truncate">
+                  1x {popoverAppt.type || popoverAppt.title || "Consulta"}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Valor</p>
+                <p className="font-extrabold text-blue-700">
+                  {(() => {
+                    const proc = procedures.find(p => p.name === popoverAppt.type);
+                    return proc?.valor ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proc.valor) : "R$ 0,00";
+                  })()}
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-neutral-100" />
+
+            {/* Footers */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const id = popoverAppt.id;
+                  setPopoverAppt(null);
+                  setPopoverPosition(null);
+                  handleEditAppointment(id);
+                }}
+                className="flex-1 text-xs font-bold h-8 rounded-lg"
+              >
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const id = popoverAppt.id;
+                  setPopoverAppt(null);
+                  setPopoverPosition(null);
+                  handleEditAppointment(id);
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-8 rounded-lg"
+              >
+                Ver detalhes
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

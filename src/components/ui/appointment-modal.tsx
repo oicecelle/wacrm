@@ -1290,8 +1290,8 @@ export function AppointmentModal({
               onClick={() => setApptType(type)}
               className={`flex-1 py-1.5 rounded-lg text-center transition-all capitalize cursor-pointer ${
                 apptType === type
-                  ? "bg-white shadow-sm text-neutral-900"
-                  : "text-neutral-500 hover:text-neutral-900"
+                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md font-extrabold"
+                  : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/30"
               }`}
             >
               {type === "bloqueio" ? "Bloqueio de horário" : type}
@@ -1609,9 +1609,9 @@ export function AppointmentModal({
               <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3.5 flex items-start gap-2.5 text-left text-amber-800">
                 <BadgeAlertIcon className="h-4.5 w-4.5 shrink-0 mt-0.5 text-amber-600" />
                 <div className="space-y-0.5">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider block">Verificação de Conflitos</span>
-                  <span className="text-xs block font-semibold">
-                    Certifique-se de que a sala e o profissional estão disponíveis antes de confirmar.
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider block text-amber-700">Aviso de Notificação</span>
+                  <span className="text-xs block font-semibold text-amber-900 leading-normal">
+                    As notificações de Confirmação de agendamento (WhatsApp Business) e Lembrete de agendamento (WhatsApp Business) não serão enviadas pois o tempo de antecedência configurado é maior que o tempo disponível até o agendamento.
                   </span>
                 </div>
               </div>

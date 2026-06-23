@@ -28,6 +28,8 @@ import {
   Briefcase,
   TrendingUp,
   ArrowLeftRight,
+  Lock,
+  Award,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 import { ClinicSwitcherModal } from "@/components/layout/clinic-switcher-modal";
@@ -196,8 +198,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MessageSquare className="h-4 w-4" />
             </div>
-            <span className="text-sm font-semibold text-foreground">
-              CRM Template for WhatsApp
+            <span className="text-sm font-bold text-foreground tracking-tight">
+              LeadPluz
             </span>
           </Link>
           <button
@@ -374,11 +376,39 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <Settings className="size-4" />
                 Preferências
               </DropdownMenuItem>
+              <DropdownMenuItem
+                render={
+                  <Link
+                    href="/settings?tab=security"
+                    onClick={onClose}
+                    className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
+                  />
+                }
+              >
+                <Lock className="size-4" />
+                Segurança
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                render={
+                  <Link
+                    href="/settings?tab=referral"
+                    onClick={onClose}
+                    className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
+                  />
+                }
+              >
+                <Award className="size-4" />
+                Indique e ganhe
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               {account?.name && (
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border bg-muted/20 flex flex-col gap-0.5">
-                  <span className="text-[10px] uppercase font-bold text-neutral-400">Clínica Atual</span>
-                  <span className="truncate">{account.name}</span>
+                <div className="px-2 py-1.5 flex items-center gap-2 border-b border-border bg-muted/20">
+                  <Avatar className="size-6 shrink-0">
+                    <AvatarFallback className="bg-blue-600/10 text-[10px] font-bold text-blue-600 uppercase">
+                      {account.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate text-xs font-bold text-neutral-700">{account.name}</span>
                 </div>
               )}
               <DropdownMenuItem

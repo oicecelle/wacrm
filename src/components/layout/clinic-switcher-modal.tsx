@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2Icon, CheckIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ClinicOption {
   id: string;
@@ -32,6 +33,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
   const [selectedId, setSelectedId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [setAsDefault, setSetAsDefault] = useState(false);
 
   useEffect(() => {
     if (!open || !user || !profile) return;
@@ -55,7 +57,11 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
           .in("id", allIds);
 
         setClinics(accountsList || []);
-        setSelectedId(profile.account_id || "");
+        const currentAccountId = profile.account_id || "";
+        setSelectedId(currentAccountId);
+
+        const storedDefault = localStorage.getItem("default_clinic_id");
+        setSetAsDefault(storedDefault === currentAccountId);
       } catch (err) {
         console.error("Error loading user clinics:", err);
       } finally {
@@ -68,6 +74,16 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
 
   const handleSwitchClinic = async () => {
     if (!selectedId || !user || !profile) return;
+    
+    // Save or update default clinic preference in localStorage
+    if (setAsDefault) {
+      localStorage.setItem("default_clinic_id", selectedId);
+    } else {
+      if (localStorage.getItem("default_clinic_id") === selectedId) {
+        localStorage.removeItem("default_clinic_id");
+      }
+    }
+
     if (selectedId === profile.account_id) {
       onOpenChange(false);
       return;
@@ -156,7 +172,11 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
               return (
                 <div
                   key={clinic.id}
-                  onClick={() => setSelectedId(clinic.id)}
+                  onClick={() => {
+                    setSelectedId(clinic.id);
+                    const storedDefault = localStorage.getItem("default_clinic_id");
+                    setSetAsDefault(storedDefault === clinic.id);
+                  }}
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-blue-600 bg-blue-50/40 text-blue-900"
@@ -181,6 +201,22 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
               <p className="text-xs text-neutral-400 italic text-center py-4">
                 Nenhuma clínica vinculada a este usuário.
               </p>
+            )}
+
+            {clinics.length > 0 && (
+              <div className="flex items-center gap-2 mt-4 px-1 py-1">
+                <Checkbox
+                  id="default-clinic-checkbox"
+                  checked={setAsDefault}
+                  onCheckedChange={(checked) => setSetAsDefault(!!checked)}
+                />
+                <label
+                  htmlFor="default-clinic-checkbox"
+                  className="text-xs font-bold text-neutral-600 cursor-pointer select-none"
+                >
+                  Definir a clínica selecionada como padrão
+                </label>
+              </div>
             )}
           </div>
         )}
