@@ -1,7 +1,7 @@
-"use server";
+import { getEnvOptional } from "@/lib/env";
 
 export async function generateAISummary(messages: { sender: string; text: string }[]) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getEnvOptional("OPENAI_API_KEY");
   if (!apiKey) {
     throw new Error("Chave OpenAI não configurada no servidor.");
   }
@@ -54,7 +54,7 @@ Resumo Executivo:`;
 }
 
 export async function askCopilot(question: string, contextData: any) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getEnvOptional("OPENAI_API_KEY");
   if (!apiKey) {
     throw new Error("Chave OpenAI não configurada no servidor.");
   }
@@ -103,7 +103,7 @@ export async function generateAIDocument(
   observacoes: string,
   docType: string
 ) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getEnvOptional("OPENAI_API_KEY");
   if (!apiKey) {
     throw new Error("Chave OpenAI não configurada no servidor.");
   }
