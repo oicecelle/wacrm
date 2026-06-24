@@ -60,9 +60,9 @@ function LoginPageInner() {
     }
 
     if (inviteToken) {
-      router.push(`/join/${encodeURIComponent(inviteToken)}`);
+      window.location.href = `/join/${encodeURIComponent(inviteToken)}`;
     } else {
-      router.push("/dashboard");
+      window.location.href = "/agenda";
     }
   };
 
