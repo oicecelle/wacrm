@@ -16,7 +16,8 @@ export function getEnv(key: string, fallback: string): string {
     val === "''" ||
     val === 'undefined' ||
     val === 'null' ||
-    val.toLowerCase() === 'default'
+    val.toLowerCase() === 'default' ||
+    (key === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' && !val.startsWith('eyJ'))
   ) {
     return fallback;
   }
@@ -40,7 +41,8 @@ export function getEnvOptional(key: string): string | undefined {
     val === '""' ||
     val === "''" ||
     val === 'undefined' ||
-    val === 'null'
+    val === 'null' ||
+    (key === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' && !val.startsWith('eyJ'))
   ) {
     return undefined;
   }
