@@ -210,8 +210,17 @@ export default function AgendaPage() {
     setLoading(true);
 
     try {
-      const startOfWeekIso = new Date(new Date(weekDates[0]).setHours(0, 0, 0, 0)).toISOString();
-      const endOfWeekIso = new Date(new Date(weekDates[6]).setHours(23, 59, 59, 999)).toISOString();
+      // Derive week range from selectedDate inside the callback to avoid
+      // the infinite loop caused by weekDates being a new array reference on every render.
+      const d = new Date(selectedDate);
+      const dayOfWeek = d.getDay();
+      const sunday = new Date(d);
+      sunday.setDate(d.getDate() - dayOfWeek);
+      const saturday = new Date(sunday);
+      saturday.setDate(sunday.getDate() + 6);
+
+      const startOfWeekIso = new Date(sunday.setHours(0, 0, 0, 0)).toISOString();
+      const endOfWeekIso = new Date(saturday.setHours(23, 59, 59, 999)).toISOString();
 
       const { data, error } = await supabase
         .from("appointments")
@@ -243,7 +252,8 @@ export default function AgendaPage() {
     } finally {
       setLoading(false);
     }
-  }, [accountId, supabase, weekDates]);
+  // selectedDate (not weekDates) is the stable dependency — weekDates is derived from it
+  }, [accountId, supabase, selectedDate]);
 
   const [birthdays, setBirthdays] = useState<Record<string, string[]>>({});
 
