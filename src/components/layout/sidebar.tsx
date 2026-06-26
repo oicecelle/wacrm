@@ -30,6 +30,7 @@ import {
   ArrowLeftRight,
   Lock,
   Award,
+  Sparkles,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 import { ClinicSwitcherModal } from "@/components/layout/clinic-switcher-modal";
@@ -105,6 +106,7 @@ const navItems: NavItem[] = [
   { href: "/servicos", label: "Serviços", icon: Briefcase },
   { href: "/pipelines", label: "Funis de Vendas", icon: GitBranch },
   { href: "/broadcasts", label: "Disparos", icon: Radio },
+  { href: "/comunicacao/modelos", label: "Modelos de Mensagem", icon: Sparkles },
   { href: "/automations", label: "Automações", icon: Zap },
   { href: "/relatorios", label: "Relatórios", icon: TrendingUp },
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },

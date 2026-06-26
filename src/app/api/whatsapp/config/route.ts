@@ -6,6 +6,10 @@ import {
   subscribeWabaToApp,
   verifyPhoneNumber,
 } from '@/lib/whatsapp/meta-api'
+import {
+  getUazapiStatus,
+  setUazapiWebhook,
+} from '@/lib/whatsapp/uazapi-api'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 
 /**
@@ -49,18 +53,142 @@ function supabaseAdmin() {
   return _adminClient
 }
 
+function cleanString(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function findBestClinicMatch(accountName: string, userEmail: string | undefined, clinics: any[]) {
+  const emailToUse = accountName.includes('@') ? accountName : (userEmail || '');
+  if (emailToUse) {
+    const prefix = cleanString(emailToUse.split('@')[0]);
+    if (prefix) {
+      const match = clinics.find(c => {
+        const cleanName = cleanString(c.name);
+        return cleanName.includes(prefix) || prefix.includes(cleanName);
+      });
+      if (match) return match;
+    }
+  }
+
+  const cleanAccName = cleanString(accountName);
+  if (cleanAccName) {
+    const match = clinics.find(c => {
+      const cleanName = cleanString(c.name);
+      return cleanName.includes(cleanAccName) || cleanAccName.includes(cleanName);
+    });
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function findBestConfigMatch(clinicName: string, configs: any[]) {
+  const cleanClinicName = cleanString(clinicName);
+  if (!cleanClinicName) return null;
+
+  let match = configs.find(c => cleanString(c.nome) === cleanClinicName);
+  if (match) return match;
+
+  match = configs.find(c => {
+    const cleanNome = cleanString(c.nome);
+    return cleanNome.includes(cleanClinicName) || cleanClinicName.includes(cleanNome);
+  });
+  
+  return match || null;
+}
+
+async function autoResolveClinicDetails(
+  supabase: any,
+  user: any,
+  accountId: string
+): Promise<{ token: string | null; name: string | null; clinicId: string | null }> {
+  try {
+    const admin = supabaseAdmin()
+
+    // 1. Get clinic_id from clinic_users mapping
+    const { data: clinicUser } = await admin
+      .from('clinic_users')
+      .select('clinic_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    let clinicId = clinicUser?.clinic_id || null
+    let clinicName: string | null = null
+    let uazapiToken: string | null = null
+
+    // 2. Query clinics table
+    if (clinicId) {
+      const { data: clinic } = await admin
+        .from('clinics')
+        .select('name, uazapi_token')
+        .eq('id', clinicId)
+        .maybeSingle()
+      if (clinic) {
+        clinicName = clinic.name
+        uazapiToken = clinic.uazapi_token
+      }
+    }
+
+    // 3. Fallback: try account matching if clinicId is not resolved
+    if (!clinicName) {
+      const { data: accountRow } = await admin
+        .from('accounts')
+        .select('name')
+        .eq('id', accountId)
+        .maybeSingle()
+      
+      if (accountRow?.name) {
+        const { data: clinicsList } = await admin
+          .from('clinics')
+          .select('id, name, uazapi_token')
+        
+        if (clinicsList) {
+          const match = findBestClinicMatch(accountRow.name, user.email, clinicsList)
+          if (match) {
+            clinicId = match.id
+            clinicName = match.name
+            uazapiToken = match.uazapi_token
+          }
+        }
+      }
+    }
+
+    // 4. Resolve uazapi_token from clinicas_config if missing in clinics table
+    if (clinicName && !uazapiToken) {
+      const { data: configList } = await admin
+        .from('clinicas_config')
+        .select('nome, uazapi_token')
+      
+      if (configList) {
+        const configMatch = findBestConfigMatch(clinicName, configList)
+        if (configMatch) {
+          uazapiToken = configMatch.uazapi_token
+        }
+      }
+    }
+
+    return {
+      token: uazapiToken,
+      name: clinicName,
+      clinicId
+    }
+  } catch (err) {
+    console.error('[autoResolveClinicDetails] error:', err)
+    return { token: null, name: null, clinicId: null }
+  }
+}
+
 /**
  * GET /api/whatsapp/config
  *
  * Used by the "Test API Connection" button and by the page to check
  * whether the saved config is healthy. Returns 200 in all non-auth cases
  * so the UI can render an appropriate message rather than show a 500.
- *
- * Response shape:
- *   { connected: true,  phone_info: {...} }
- *   { connected: false, reason: 'no_config',        message: '...' }
- *   { connected: false, reason: 'token_corrupted',  message: '...', needs_reset: true }
- *   { connected: false, reason: 'meta_api_error',   message: '...' }
  */
 export async function GET() {
   try {
@@ -89,7 +217,7 @@ export async function GET() {
 
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
-      .select('phone_number_id, access_token, status')
+      .select('*')
       .eq('account_id', accountId)
       .maybeSingle()
 
@@ -102,20 +230,57 @@ export async function GET() {
     }
 
     if (!config) {
+      const resolved = await autoResolveClinicDetails(supabase, user, accountId);
       return NextResponse.json(
         {
           connected: false,
           reason: 'no_config',
           message: 'No WhatsApp configuration saved yet. Fill in the form and click Save Configuration.',
+          provider_type: 'uazapi',
+          uazapi_token: resolved.token,
+          uazapi_instance_name: resolved.name,
+          timezone: 'America/Sao_Paulo',
         },
         { status: 200 }
       )
     }
 
+    // Handle Uazapi connection check
+    if (config.provider_type === 'uazapi') {
+      const baseUrl = config.uazapi_base_url || 'https://customix.uazapi.com'
+      const token = config.uazapi_token
+      if (!token) {
+        return NextResponse.json({
+          connected: false,
+          reason: 'uazapi_not_configured',
+          message: 'Uazapi token is not configured.'
+        }, { status: 200 })
+      }
+
+      const status = await getUazapiStatus(baseUrl, token)
+      return NextResponse.json({
+        connected: status.connected,
+        provider_type: 'uazapi',
+        state: status.state,
+        raw: status.raw,
+        uazapi_token: token,
+        uazapi_instance_name: config.uazapi_instance_name,
+        uazapi_base_url: baseUrl,
+        timezone: config.timezone,
+        phone_number_id: config.phone_number_id
+      }, { status: 200 })
+    }
+
     // Try to decrypt the stored token with the current ENCRYPTION_KEY.
-    // If this fails, the key changed (or was never consistent across envs).
     let accessToken: string
     try {
+      if (!config.access_token) {
+        return NextResponse.json({
+          connected: false,
+          reason: 'meta_not_configured',
+          message: 'Meta access token is not configured.'
+        }, { status: 200 })
+      }
       accessToken = decrypt(config.access_token)
     } catch (err) {
       console.error('[whatsapp/config GET] Token decryption failed:', err)
@@ -125,7 +290,7 @@ export async function GET() {
           reason: 'token_corrupted',
           needs_reset: true,
           message:
-            'The stored access token cannot be decrypted with the current ENCRYPTION_KEY. This usually means the key changed, or it differs between environments (local vs Hostinger vs Vercel). Click "Reset Configuration" below, then re-save.',
+            'The stored access token cannot be decrypted with the current ENCRYPTION_KEY. Click "Reset Configuration" below, then re-save.',
         },
         { status: 200 }
       )
@@ -137,7 +302,7 @@ export async function GET() {
         phoneNumberId: config.phone_number_id,
         accessToken,
       })
-      return NextResponse.json({ connected: true, phone_info: phoneInfo })
+      return NextResponse.json({ connected: true, provider_type: 'meta', phone_info: phoneInfo })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown Meta API error'
       console.error('[whatsapp/config GET] Meta API verification failed:', message)
@@ -163,7 +328,6 @@ export async function GET() {
  * POST /api/whatsapp/config
  *
  * Saves or updates the WhatsApp config for the authenticated user.
- * Verifies credentials with Meta first, then encrypts and stores.
  */
 export async function POST(request: Request) {
   try {
@@ -187,8 +351,130 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { phone_number_id, waba_id, access_token, verify_token, pin } = body
+    const {
+      provider_type = 'meta',
+      phone_number_id,
+      waba_id,
+      access_token,
+      verify_token,
+      pin,
+      uazapi_token,
+      uazapi_instance_name,
+      uazapi_base_url = 'https://customix.uazapi.com',
+      timezone = 'America/Sao_Paulo',
+      phone_number
+    } = body
 
+    // 1. Uazapi configuration pathway
+    if (provider_type === 'uazapi') {
+      let resolvedToken = uazapi_token
+      let resolvedInstanceName = uazapi_instance_name
+      let clinicId = null
+
+      if (!resolvedToken) {
+        const resolved = await autoResolveClinicDetails(supabase, user, accountId)
+        resolvedToken = resolved.token
+        resolvedInstanceName = resolved.name
+        clinicId = resolved.clinicId
+      }
+
+      if (!resolvedToken) {
+        return NextResponse.json(
+          { error: 'Não foi possível encontrar um token Uazapi pré-alocado para a sua clínica. Por favor, entre em contato com o suporte.' },
+          { status: 400 }
+        )
+      }
+
+      // Check connection status
+      const status = await getUazapiStatus(uazapi_base_url, resolvedToken)
+
+      // Automatically configure the inbound webhook on the Uazapi server
+      const host = request.headers.get('host') || 'localhost:3000'
+      const proto = request.headers.get('x-forwarded-proto') || 'http'
+      const publicUrl = `${proto}://${host}`
+      const webhookUrl = `${publicUrl}/api/whatsapp/uazapi-webhook?account_id=${accountId}`
+
+      const webhookSuccess = await setUazapiWebhook(uazapi_base_url, resolvedToken, webhookUrl)
+      if (!webhookSuccess) {
+        console.warn('[whatsapp/config] Uazapi setWebhook failed or was skipped.')
+      }
+
+      const cleanPhone = phone_number ? phone_number.replace(/\D/g, '') : (phone_number_id ? phone_number_id.replace(/\D/g, '') : null)
+
+      const payload = {
+        account_id: accountId,
+        user_id: user.id,
+        provider_type: 'uazapi',
+        uazapi_token: resolvedToken,
+        uazapi_instance_name: resolvedInstanceName,
+        uazapi_base_url,
+        timezone,
+        status: status.connected ? 'connected' : 'disconnected',
+        connected_at: status.connected ? new Date().toISOString() : null,
+        phone_number_id: cleanPhone,
+        waba_id: null,
+        access_token: null,
+        verify_token: null,
+        registered_at: null,
+        subscribed_apps_at: null,
+        updated_at: new Date().toISOString()
+      }
+
+      // Check if config exists
+      const { data: existing } = await supabase
+        .from('whatsapp_config')
+        .select('id')
+        .eq('account_id', accountId)
+        .maybeSingle()
+
+      if (existing) {
+        const { error } = await supabase
+          .from('whatsapp_config')
+          .update(payload)
+          .eq('account_id', accountId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('whatsapp_config')
+          .insert(payload)
+        if (error) throw error
+      }
+
+      // Sync the phone number and status back to clinicas_config and clinics
+      if (cleanPhone && resolvedInstanceName) {
+        const admin = supabaseAdmin()
+        
+        // A. Update clinicas_config table
+        await admin
+          .from('clinicas_config')
+          .update({ numero_whatsapp: cleanPhone })
+          .ilike('nome', resolvedInstanceName)
+
+        // B. Update clinics table
+        if (clinicId) {
+          await admin
+            .from('clinics')
+            .update({ numero_whatsapp: cleanPhone, whatsapp_status: status.connected ? 'connected' : 'disconnected' })
+            .eq('id', clinicId)
+        } else {
+          await admin
+            .from('clinics')
+            .update({ numero_whatsapp: cleanPhone, whatsapp_status: status.connected ? 'connected' : 'disconnected' })
+            .ilike('name', resolvedInstanceName)
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        saved: true,
+        connected: status.connected,
+        state: status.state,
+        webhook_configured: webhookSuccess,
+        uazapi_token: resolvedToken
+      })
+    }
+
+    // 2. Meta configuration pathway
     if (!access_token || !phone_number_id) {
       return NextResponse.json(
         { error: 'access_token and phone_number_id are required' },
@@ -206,12 +492,6 @@ export async function POST(request: Request) {
     }
 
     // Reject if another account has already claimed this phone_number_id.
-    // wacrm is single-tenant-per-WhatsApp-number — letting two accounts
-    // bind the same number causes the webhook's `.single()` lookup to
-    // throw PGRST116 ("multiple rows"), silently dropping every
-    // inbound message. See issue #136. Post-multi-user we key on
-    // account_id (not user_id) since teammates inside the same account
-    // all share one config; the conflict is between accounts.
     const { data: claimed, error: claimedError } = await supabaseAdmin()
       .from('whatsapp_config')
       .select('account_id')
@@ -285,31 +565,13 @@ export async function POST(request: Request) {
       existing?.registered_at != null
 
     // Step 1: register the phone number for inbound webhooks.
-    //
-    // Attempted on first save AND whenever the user supplies a fresh
-    // PIN (e.g. they rotated the 2FA PIN in Meta Manager). Skipped
-    // when the same number is already registered and no PIN was
-    // supplied — re-registering an already-active number with a
-    // stale PIN would actually fail and undo the active subscription.
     let registeredAt: string | null = existing?.registered_at ?? null
     let registrationError: string | null = null
-    // True when registration was deliberately skipped because no PIN
-    // was supplied (see below). Distinct from registrationError — this
-    // is not a failure, just an incomplete-but-valid save.
     let registrationSkipped = false
 
     const needsRegistration = !sameNumber || (typeof pin === 'string' && pin.length > 0)
     if (needsRegistration) {
       if (!pin) {
-        // No PIN provided. Meta TEST numbers (Developer Console) are
-        // pre-registered by Meta and expose no two-step verification
-        // PIN to set, so requiring one made them impossible to connect
-        // (issue #242). The /register + PIN step only matters for
-        // production numbers under a shared WABA (issue #136), so treat
-        // it as best-effort: skip it, save the (already Meta-verified)
-        // credentials as connected, and leave registered_at null. The
-        // UI surfaces a separate "Not registered" banner with a path to
-        // add a PIN later for users who do need inbound webhook routing.
         registrationSkipped = true
       } else {
         try {
@@ -323,18 +585,11 @@ export async function POST(request: Request) {
           registrationError =
             err instanceof Error ? err.message : 'Unknown Meta API error'
           console.error('Phone number /register failed:', registrationError)
-          // We deliberately fall through and still save the row so the
-          // user can retry without re-entering everything. The UI
-          // surfaces `last_registration_error` so they see WHY it's
-          // not actually live yet.
         }
       }
     }
 
-    // Step 2: subscribe the WABA to this app. Idempotent on Meta's
-    // side, so we call on every save and persist the timestamp.
-    // Skipped only when there's no waba_id (legacy rows from before
-    // we required it).
+    // Step 2: subscribe the WABA to this app.
     let subscribedAppsAt: string | null = null
     if (waba_id) {
       try {
@@ -346,16 +601,12 @@ export async function POST(request: Request) {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.warn('WABA subscribed_apps failed (non-fatal):', message)
-        // Subscription failures are rare once the App has the right
-        // permissions; we don't block save on them — the diagnostic
-        // endpoint surfaces this state too.
       }
     }
 
-    // Persist everything in one shot. If /register failed we still
-    // store the credentials and the error so the UI can guide the
-    // user through a retry.
+    // Persist everything in one shot
     const baseRow = {
+      provider_type: 'meta',
       phone_number_id,
       waba_id: waba_id || null,
       access_token: encryptedAccessToken,
@@ -365,6 +616,10 @@ export async function POST(request: Request) {
       registered_at: registrationError ? null : registeredAt,
       subscribed_apps_at: subscribedAppsAt ?? null,
       last_registration_error: registrationError,
+      uazapi_token: null,
+      uazapi_instance_name: null,
+      uazapi_base_url: null,
+      timezone: timezone || 'America/Sao_Paulo',
       updated_at: new Date().toISOString(),
     }
 
@@ -382,10 +637,6 @@ export async function POST(request: Request) {
         )
       }
     } else {
-      // Insert with both columns: `account_id` is the tenancy key
-      // (NOT NULL post-017, UNIQUE so duplicates trip the constraint
-      // up-front), `user_id` is the audit column identifying which
-      // member of the account saved the config.
       const { error: insertError } = await supabase
         .from('whatsapp_config')
         .insert({
@@ -404,9 +655,6 @@ export async function POST(request: Request) {
     }
 
     if (registrationError) {
-      // Save succeeded but the number isn't actually live. Return
-      // 200 with a structured error so the UI can show the specific
-      // remediation step instead of a generic toast.
       return NextResponse.json({
         success: false,
         saved: true,
@@ -420,10 +668,6 @@ export async function POST(request: Request) {
       success: true,
       saved: true,
       registered: registeredAt != null,
-      // Credentials are valid and saved, but inbound webhook
-      // registration was skipped because no PIN was supplied (e.g. a
-      // Meta test number). The UI shows the "Not registered" banner
-      // rather than claiming the number is fully live.
       registration_skipped: registrationSkipped,
       phone_info: phoneInfo,
     })

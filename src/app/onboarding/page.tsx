@@ -53,7 +53,7 @@ interface TeamMember {
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
-  const { profile, accountId } = useAuth();
+  const { user, profile, accountId } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +62,12 @@ export default function OnboardingPage() {
   // Step 2: WhatsApp
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [uazapiToken, setUazapiToken] = useState("");
+  const [uazapiInstanceName, setUazapiInstanceName] = useState("");
+  const [uazapiBaseUrl, setUazapiBaseUrl] = useState("https://customix.uazapi.com");
+  const [uazapiPhone, setUazapiPhone] = useState("");
+  const [timezone, setTimezone] = useState("America/Sao_Paulo");
+  const [pollIntervalId, setPollIntervalId] = useState<NodeJS.Timeout | null>(null);
   
   // Step 3: Campaigns
   const [campaignInput, setCampaignInput] = useState("");
@@ -103,18 +109,81 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!accountId) return;
     const loadClinicStatus = async () => {
-      const { data: clinic } = await supabase
-        .from("clinics")
-        .select("whatsapp_status")
-        .eq("id", accountId)
+      // First, call GET route to check connection state live and resolve values
+      try {
+        const res = await fetch('/api/whatsapp/config');
+        if (res.ok) {
+          const statusData = await res.json();
+          if (statusData.uazapi_token) {
+            setUazapiToken(statusData.uazapi_token);
+          }
+          if (statusData.uazapi_instance_name) {
+            setUazapiInstanceName(statusData.uazapi_instance_name);
+          }
+          if (statusData.uazapi_base_url) {
+            setUazapiBaseUrl(statusData.uazapi_base_url);
+          }
+          if (statusData.timezone) {
+            setTimezone(statusData.timezone);
+          }
+          if (statusData.phone_number_id) {
+            setUazapiPhone(statusData.phone_number_id);
+          }
+          if (statusData.connected) {
+            setWaStatus("connected");
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Live connection check failed:", e);
+      }
+
+      // Fallback: get the configuration directly
+      const { data: config } = await supabase
+        .from("whatsapp_config")
+        .select("uazapi_token, uazapi_instance_name, uazapi_base_url, timezone, status, phone_number_id")
+        .eq("account_id", accountId)
         .maybeSingle();
 
-      if (clinic?.whatsapp_status === "connected") {
-        setWaStatus("connected");
+      if (config) {
+        setUazapiToken(config.uazapi_token || "");
+        setUazapiInstanceName(config.uazapi_instance_name || "");
+        setUazapiBaseUrl(config.uazapi_base_url || "https://customix.uazapi.com");
+        setTimezone(config.timezone || "America/Sao_Paulo");
+        setUazapiPhone(config.phone_number_id || "");
+        
+        if (config.status === "connected") {
+          setWaStatus("connected");
+        } else {
+          setWaStatus("disconnected");
+        }
+      } else {
+        // Fallback to checking clinics directly
+        const { data: clinic } = await supabase
+          .from("clinics")
+          .select("whatsapp_status, numero_whatsapp")
+          .eq("id", accountId)
+          .maybeSingle();
+
+        if (clinic?.whatsapp_status === "connected") {
+          setWaStatus("connected");
+        }
+        if (clinic?.numero_whatsapp) {
+          setUazapiPhone(clinic.numero_whatsapp);
+        }
       }
     };
     loadClinicStatus();
   }, [accountId, supabase]);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+      }
+    };
+  }, [pollIntervalId]);
 
   // Sync with Supabase Steps table
   const completeStepInDb = async (stepId: string) => {
@@ -191,32 +260,117 @@ export default function OnboardingPage() {
 
   // --- Step Handlers ---
 
-  // WhatsApp Connect (Simulation)
-  const handleConnectWhatsApp = () => {
+  // WhatsApp Connect (Uazapi Integration)
+  const handleConnectWhatsApp = async () => {
+    if (!uazapiPhone.trim()) {
+      setError("Por favor, preencha o número do WhatsApp.");
+      return;
+    }
+    setError(null);
     setWaStatus("connecting");
-    const fakeToken = "instance_" + Math.random().toString(36).substring(7);
-    setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=2563eb&data=https://uazapi.com/connect/${accountId || fakeToken}`);
 
-    // Simulate scanning and connecting in 3.5 seconds
-    setTimeout(async () => {
-      setWaStatus("connected");
-      if (accountId) {
-        await supabase
-          .from("clinics")
-          .update({ whatsapp_status: "connected" })
-          .eq("id", accountId);
+    try {
+      const response = await fetch('/api/whatsapp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider_type: 'uazapi',
+          phone_number: uazapiPhone.trim(),
+          timezone: timezone,
+          uazapi_token: uazapiToken.trim() || undefined,
+          uazapi_instance_name: uazapiInstanceName.trim() || undefined,
+          uazapi_base_url: uazapiBaseUrl.trim() || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Erro ao salvar as configurações");
       }
-    }, 3500);
+
+      const resData = await response.json();
+      const resolvedToken = resData.uazapi_token || uazapiToken;
+      if (resolvedToken) {
+        setUazapiToken(resolvedToken);
+        setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=2563eb&data=https://uazapi.com/connect/${encodeURIComponent(resolvedToken.trim())}`);
+      }
+
+      // Start polling
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch('/api/whatsapp/config');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.connected) {
+              clearInterval(interval);
+              setPollIntervalId(null);
+              setWaStatus("connected");
+              
+              const { data: clinicUser } = await supabase
+                .from("clinic_users")
+                .select("clinic_id")
+                .eq("user_id", user?.id)
+                .maybeSingle();
+
+              const resolvedClinicId = clinicUser?.clinic_id || accountId;
+              if (resolvedClinicId) {
+                await supabase
+                  .from("clinics")
+                  .update({ whatsapp_status: "connected" })
+                  .eq("id", resolvedClinicId);
+              }
+            }
+          }
+        } catch (pollErr) {
+          console.error("Erro no polling de status:", pollErr);
+        }
+      }, 3000);
+
+      setPollIntervalId(interval);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro ao conectar com o servidor Uazapi.");
+      setWaStatus("disconnected");
+      setQrCodeUrl(null);
+    }
+  };
+
+  const handleCancelConnection = () => {
+    if (pollIntervalId) {
+      clearInterval(pollIntervalId);
+      setPollIntervalId(null);
+    }
+    setWaStatus("disconnected");
+    setQrCodeUrl(null);
   };
 
   const handleDisconnectWhatsApp = async () => {
-    setWaStatus("disconnected");
-    setQrCodeUrl(null);
-    if (accountId) {
-      await supabase
-        .from("clinics")
-        .update({ whatsapp_status: "disconnected" })
-        .eq("id", accountId);
+    try {
+      setLoading(true);
+      setError(null);
+      await fetch('/api/whatsapp/config', { method: 'DELETE' });
+      setWaStatus("disconnected");
+      setQrCodeUrl(null);
+      
+      const { data: clinicUser } = await supabase
+        .from("clinic_users")
+        .select("clinic_id")
+        .eq("user_id", user?.id)
+        .maybeSingle();
+
+      const resolvedClinicId = clinicUser?.clinic_id || accountId;
+      if (resolvedClinicId) {
+        await supabase
+          .from("clinics")
+          .update({ whatsapp_status: "disconnected" })
+          .eq("id", resolvedClinicId);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao desconectar o WhatsApp.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -395,26 +549,62 @@ export default function OnboardingPage() {
           <div className="space-y-6 text-left">
             <div className="space-y-1.5">
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Conecte seu WhatsApp Business
+                Conecte seu WhatsApp Business (Uazapi)
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                A LeadPluz lê conversas autorizadas e envia lembretes automáticos para seus clientes diretamente do seu número.
+                Digite seu número do WhatsApp e selecione o fuso horário para iniciar a conexão.
               </p>
+            </div>
+
+            {/* Inputs Block */}
+            <div className="space-y-4 bg-slate-50/50 p-4 border border-slate-200/60 rounded-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="wa-phone" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Número de WhatsApp *</Label>
+                  <Input
+                    id="wa-phone"
+                    placeholder="Ex: 5511999999999"
+                    value={uazapiPhone}
+                    onChange={(e) => setUazapiPhone(e.target.value)}
+                    className="rounded-xl border-slate-200 text-xs h-10 bg-white"
+                    disabled={waStatus !== "disconnected"}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="wa-timezone" className="text-xs font-bold text-slate-500 uppercase tracking-wide">Fuso Horário</Label>
+                  <select
+                    id="wa-timezone"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    className="w-full text-xs h-10 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                    disabled={waStatus !== "disconnected"}
+                  >
+                    <option value="America/Sao_Paulo">Brasília (GMT-3) - America/Sao_Paulo</option>
+                    <option value="America/Manaus">Manaus (GMT-4) - America/Manaus</option>
+                    <option value="America/Fortaleza">Fortaleza (GMT-3) - America/Fortaleza</option>
+                    <option value="America/Bahia">Salvador (GMT-3) - America/Bahia</option>
+                    <option value="America/Rio_Branco">Acre (GMT-5) - America/Rio_Branco</option>
+                    <option value="America/Denver">Mountain Time - America/Denver</option>
+                    <option value="America/New_York">Eastern Time - America/New_York</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div className="py-2 flex justify-center">
               {waStatus === "disconnected" && (
-                <div className="w-full flex flex-col items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-4">
-                  <div className="h-12 w-12 flex items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                    <MessageSquareIcon className="h-6 w-6" />
+                <div className="w-full flex flex-col items-center justify-center p-6 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <MessageSquareIcon className="h-5 w-5" />
                   </div>
                   <div className="text-center space-y-1">
-                    <p className="text-xs font-bold text-slate-800">WhatsApp Desconectado</p>
-                    <p className="text-[10px] text-slate-400">Escaneie o QR Code para parear.</p>
+                    <p className="text-xs font-bold text-slate-800">Pronto para conectar</p>
+                    <p className="text-[10px] text-slate-400">Preencha seu WhatsApp acima para gerar o QR Code.</p>
                   </div>
                   <Button 
                     onClick={handleConnectWhatsApp}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 text-xs rounded-xl shadow-md"
+                    disabled={!uazapiPhone.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 text-xs rounded-xl shadow-md disabled:opacity-50"
                   >
                     Gerar QR Code de Conexão
                   </Button>
@@ -424,23 +614,42 @@ export default function OnboardingPage() {
               {waStatus === "connecting" && (
                 <div className="w-full flex flex-col items-center justify-center p-6 border border-slate-200 rounded-2xl bg-slate-50/30 space-y-4">
                   {qrCodeUrl ? (
-                    <div className="bg-white p-3 border border-slate-200 rounded-2xl shadow-sm">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={qrCodeUrl} alt="QR Code" className="h-40 w-40" />
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="bg-white p-3 border border-slate-200 rounded-2xl shadow-sm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={qrCodeUrl} alt="QR Code" className="h-40 w-40" />
+                      </div>
+                      <a 
+                        href={`https://uazapi.com/connect/${encodeURIComponent(uazapiToken.trim())}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs text-blue-600 hover:text-blue-700 underline font-bold mt-1"
+                      >
+                        Ou clique aqui para abrir em nova aba
+                      </a>
                     </div>
                   ) : (
                     <div className="h-40 w-40 flex items-center justify-center bg-white border border-slate-100 rounded-2xl">
                       <Loader2Icon className="h-6 w-6 animate-spin text-blue-600" />
                     </div>
                   )}
-                  <div className="text-center space-y-1">
+                  <div className="text-center space-y-2">
                     <div className="flex items-center justify-center gap-1.5 text-blue-600 font-bold text-xs">
                       <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
                       <span>Aguardando leitura do celular...</span>
                     </div>
                     <p className="text-[10px] text-slate-400 max-w-sm">
-                      Abra o WhatsApp, vá em Aparelhos Conectados e aponte para a tela.
+                      Abra o WhatsApp no celular, vá em Aparelhos Conectados e escaneie o código.
                     </p>
+                    <div className="pt-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCancelConnection}
+                        className="h-8 border-slate-200 text-slate-600 font-bold rounded-xl text-[10px]"
+                      >
+                        Alterar número / fuso
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import {
-  sendTextMessage,
-  sendTemplateMessage,
-  sendMediaMessage,
-  type MediaKind,
-} from '@/lib/whatsapp/meta-api'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
+import { dispatchSendMessage } from '@/lib/whatsapp/sender-dispatcher'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 import {
   sanitizePhoneForMeta,
@@ -179,26 +174,34 @@ export async function POST(request: Request) {
       )
     }
 
-    const accessToken = decrypt(config.access_token)
+    if (config.provider_type === 'meta') {
+      if (!config.access_token) {
+        return NextResponse.json(
+          { error: 'Meta configuration access token missing' },
+          { status: 400 }
+        )
+      }
+      const accessToken = decrypt(config.access_token)
 
-    // Self-heal legacy CBC-encrypted tokens. Fire-and-forget: we
-    // return from the send without waiting, so a failed upgrade just
-    // means the next send tries again. The upgrade is idempotent —
-    // concurrent sends both produce valid GCM ciphertexts of the same
-    // plaintext, last write wins.
-    if (isLegacyFormat(config.access_token)) {
-      void supabase
-        .from('whatsapp_config')
-        .update({ access_token: encrypt(accessToken) })
-        .eq('id', config.id)
-        .then(({ error }) => {
-          if (error) {
-            console.warn(
-              '[whatsapp/send] access_token GCM upgrade failed:',
-              error.message,
-            )
-          }
-        })
+      // Self-heal legacy CBC-encrypted tokens. Fire-and-forget: we
+      // return from the send without waiting, so a failed upgrade just
+      // means the next send tries again. The upgrade is idempotent —
+      // concurrent sends both produce valid GCM ciphertexts of the same
+      // plaintext, last write wins.
+      if (isLegacyFormat(config.access_token)) {
+        void supabase
+          .from('whatsapp_config')
+          .update({ access_token: encrypt(accessToken) })
+          .eq('id', config.id)
+          .then(({ error }) => {
+            if (error) {
+              console.warn(
+                '[whatsapp/send] access_token GCM upgrade failed:',
+                error.message,
+              )
+            }
+          })
+      }
     }
 
     // Resolve the reply target (if any) to its Meta message_id, which is
@@ -232,11 +235,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send via Meta API — retry with phone-number variants if Meta rejects
-    // with "recipient not in allowed list" (common in sandbox / when a
-    // number was registered with/without a trunk 0). If an alternate
-    // format succeeds, we persist it back to the contact row so the
-    // next send goes through on the first attempt.
+    // Send via dispatchSendMessage
     let waMessageId = ''
     let workingPhone = sanitizedPhone
 
@@ -272,46 +271,32 @@ export async function POST(request: Request) {
     }
 
     const attempt = async (phone: string): Promise<string> => {
-      if (message_type === 'template') {
-        const result = await sendTemplateMessage({
-          phoneNumberId: config.phone_number_id,
-          accessToken,
-          to: phone,
-          templateName: template_name,
-          language: template_language || 'en_US',
-          template: templateRow ?? undefined,
-          messageParams: template_message_params ?? undefined,
-          // Legacy body-only fallback — only consulted when
-          // messageParams.body isn't set.
-          params: template_params || [],
-          contextMessageId,
-        })
-        return result.messageId
-      }
-      if (isMediaKind) {
-        // content_text doubles as the caption (ignored for audio inside
-        // sendMediaMessage). filename surfaces in the recipient's chat
-        // for documents only.
-        const result = await sendMediaMessage({
-          phoneNumberId: config.phone_number_id,
-          accessToken,
-          to: phone,
-          kind: message_type as MediaKind,
-          link: media_url,
-          caption: content_text || undefined,
-          filename: filename || undefined,
-          contextMessageId,
-        })
-        return result.messageId
-      }
-      const result = await sendTextMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
+      const result = await dispatchSendMessage({
+        config: {
+          provider_type: config.provider_type,
+          phone_number_id: config.phone_number_id,
+          access_token: config.access_token,
+          uazapi_token: config.uazapi_token,
+          uazapi_base_url: config.uazapi_base_url,
+          uazapi_instance_name: config.uazapi_instance_name,
+        },
         to: phone,
-        text: content_text,
+        messageType: message_type as any,
+        content_text,
+        media_url,
+        filename,
+        template_name,
+        template_language,
+        template_params,
+        templateRow,
+        template_message_params,
         contextMessageId,
       })
-      return result.messageId
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send WhatsApp message')
+      }
+      return result.messageId || `msg-${Date.now()}`
     }
 
     try {
@@ -329,20 +314,20 @@ export async function POST(request: Request) {
           // Only retry when the failure is specifically that the
           // recipient isn't in Meta's allowed list. Any other error
           // (bad token, invalid template, etc.) bubbles up immediately.
-          if (!isRecipientNotAllowedError(message)) {
+          if (config.provider_type !== 'meta' || !isRecipientNotAllowedError(message)) {
             throw err
           }
           lastError = err
-          console.warn(`[whatsapp/send] variant "${variant}" rejected by Meta, trying next…`)
+          console.warn(`[whatsapp/send] variant "${variant}" rejected, trying next…`)
         }
       }
 
       if (lastError) throw lastError
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown Meta API error'
-      console.error('Meta API send failed for all variants:', message)
+      const message = err instanceof Error ? err.message : 'Unknown API error'
+      console.error('API send failed for all variants:', message)
       return NextResponse.json(
-        { error: `Meta API error: ${message}` },
+        { error: `WhatsApp API error: ${message}` },
         { status: 502 }
       )
     }

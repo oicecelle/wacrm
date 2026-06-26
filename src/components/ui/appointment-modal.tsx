@@ -110,6 +110,7 @@ export function AppointmentModal({
   const [color, setColor] = useState("purple");
   const [showNewPatientFormInline, setShowNewPatientFormInline] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [originalStatus, setOriginalStatus] = useState<string>("");
 
   // Separate date/time states matching form input structure
   const [dateVal, setDateVal] = useState("");
@@ -268,6 +269,7 @@ export function AppointmentModal({
       setProcedureName("");
       setRoomId("");
       setStatus("provisional");
+      setOriginalStatus("");
       setNotes("");
       setSendWa(true);
       setActiveTab("details");
@@ -322,6 +324,7 @@ export function AppointmentModal({
         setStartTime(startLocal);
         setEndTime(endLocal);
         setStatus(appt.status || "provisional");
+        setOriginalStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
         setSendWa(true);
       } catch (err) {
@@ -656,9 +659,41 @@ export function AppointmentModal({
           },
         });
 
+        // Trigger notifications via API
+        const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
+        const formattedDate = startObj.toLocaleDateString("pt-BR");
+        const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+        let eventType = "agendamento_alterado";
+        if (status !== originalStatus) {
+          if (status === "confirmed") {
+            eventType = "agendamento_confirmado";
+          } else if (status === "cancelled") {
+            eventType = "agendamento_cancelado";
+          }
+        }
+
+        fetch("/api/whatsapp/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_type: eventType,
+            appointment_id: appointmentId,
+            patient_id: patientId,
+            metadata: {
+              paciente: selectedPatientInfo?.name || "",
+              phone: selectedPatientInfo?.phone || "",
+              data: formattedDate,
+              hora: formattedTime,
+              profissional: professionalName,
+              procedimento: procedureName,
+            },
+          }),
+        }).catch((err) => console.error("Error triggering appointment update/status:", err));
+
       } else {
         // Create appointment
-        const { error: createErr } = await supabase
+        const { data: newAppt, error: createErr } = await supabase
           .from("appointments")
           .insert({
             clinic_id: clinicId,
@@ -670,7 +705,9 @@ export function AppointmentModal({
             notes,
             type: procedureName || null,
             room_id: roomId || null,
-          });
+          })
+          .select("id")
+          .single();
 
         if (createErr) throw createErr;
 
@@ -684,6 +721,31 @@ export function AppointmentModal({
             status,
           },
         });
+
+        // Trigger created notification via API
+        if (newAppt?.id) {
+          const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
+          const formattedDate = startObj.toLocaleDateString("pt-BR");
+          const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+          fetch("/api/whatsapp/trigger", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event_type: "agendamento_criado",
+              appointment_id: newAppt.id,
+              patient_id: patientId,
+              metadata: {
+                paciente: selectedPatientInfo?.name || "",
+                phone: selectedPatientInfo?.phone || "",
+                data: formattedDate,
+                hora: formattedTime,
+                profissional: professionalName,
+                procedimento: procedureName,
+              },
+            }),
+          }).catch((err) => console.error("Error triggering appointment_created:", err));
+        }
       }
 
       // Send WhatsApp message if checked
@@ -726,6 +788,30 @@ export function AppointmentModal({
         .eq("id", appointmentId)
         .single();
         
+      // Trigger cancel notification via API before deleting from DB
+      const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
+      const startObj = new Date(startTime);
+      const formattedDate = startObj.toLocaleDateString("pt-BR");
+      const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+      fetch("/api/whatsapp/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_type: "agendamento_cancelado",
+          appointment_id: appointmentId,
+          patient_id: patientId,
+          metadata: {
+            paciente: selectedPatientInfo?.name || "",
+            phone: selectedPatientInfo?.phone || "",
+            data: formattedDate,
+            hora: formattedTime,
+            profissional: professionalName,
+            procedimento: procedureName,
+          },
+        }),
+      }).catch((err) => console.error("Error triggering cancellation notification:", err));
+
       const { error: deleteErr } = await supabase
         .from("appointments")
         .delete()
