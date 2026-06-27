@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, Settings as SettingsIcon, User } from "lucide-react";
+import { LogOut, Menu, Settings as SettingsIcon, User, ArrowLeftRight } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "@/components/layout/mode-toggle";
+import { ClinicSwitcherModal } from "@/components/layout/clinic-switcher-modal";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Painel",
@@ -51,8 +53,9 @@ interface HeaderProps {
 
 export function Header({ onOpenSidebar }: HeaderProps) {
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, account } = useAuth();
   const title = getPageTitle(pathname);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   const initial =
     profile?.full_name?.charAt(0)?.toUpperCase() ??
@@ -77,6 +80,22 @@ export function Header({ onOpenSidebar }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
+        {/* Clinic switcher pill — shown when user has account name available */}
+        {account?.name && (
+          <>
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen(true)}
+              title="Trocar de clínica"
+              className="hidden sm:flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground max-w-[180px]"
+            >
+              <ArrowLeftRight className="size-3 shrink-0" />
+              <span className="truncate">{account.name}</span>
+            </button>
+            <ClinicSwitcherModal open={switcherOpen} onOpenChange={setSwitcherOpen} />
+          </>
+        )}
+
         <ModeToggle />
 
         <DropdownMenu>

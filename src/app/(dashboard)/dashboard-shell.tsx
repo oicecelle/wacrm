@@ -30,15 +30,36 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading || !user || !profile) return;
 
-    const defaultClinicId = localStorage.getItem("default_clinic_id");
-    const hasAutoSwitched = sessionStorage.getItem("clinic_auto_switched");
+    const hasHandledClinicSelection = sessionStorage.getItem("clinic_auto_switched");
+    if (hasHandledClinicSelection) return;
 
-    if (defaultClinicId && profile.account_id && profile.account_id !== defaultClinicId && !hasAutoSwitched) {
-      sessionStorage.setItem("clinic_auto_switched", "true");
+    // Mark this session so we don't re-run
+    sessionStorage.setItem("clinic_auto_switched", "true");
 
-      const autoSwitch = async () => {
-        const supabase = createClient();
-        try {
+    const handleClinicSetup = async () => {
+      const supabase = createClient();
+      try {
+        const defaultClinicId = localStorage.getItem("default_clinic_id");
+
+        // Check how many clinics this user belongs to
+        const { data: memberships } = await supabase
+          .from("clinic_users")
+          .select("clinic_id")
+          .eq("user_id", user.id);
+
+        const memberClinicIds = (memberships || []).map((m: { clinic_id: string }) => m.clinic_id);
+        const allIds = Array.from(
+          new Set([profile.account_id, ...memberClinicIds].filter(Boolean) as string[])
+        );
+
+        // If user belongs to multiple clinics and has no default set → show selector
+        if (allIds.length > 1 && !defaultClinicId) {
+          router.push("/selecionar-clinica");
+          return;
+        }
+
+        // If user has a stored default that differs from current account → auto-switch to it
+        if (defaultClinicId && profile.account_id && profile.account_id !== defaultClinicId) {
           let targetRole: "owner" | "admin" | "agent" | "viewer" = "agent";
 
           const { data: accData } = await supabase
@@ -79,13 +100,13 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           if (updateErr) throw updateErr;
 
           window.location.reload();
-        } catch (err) {
-          console.error("Error auto switching clinic:", err);
         }
-      };
+      } catch (err) {
+        console.error("Error in clinic setup:", err);
+      }
+    };
 
-      autoSwitch();
-    }
+    handleClinicSetup();
   }, [loading, user, profile]);
 
   if (loading) {
