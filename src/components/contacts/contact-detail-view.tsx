@@ -33,7 +33,13 @@ import {
   Save,
   X,
   DollarSign,
+  UserIcon,
+  CalendarIcon,
+  FileTextIcon,
+  TrendingUpIcon,
 } from 'lucide-react';
+import { ProntuarioTab } from '@/components/contacts/prontuario-tab';
+import { EvolucaoTab } from '@/components/contacts/evolucao-tab';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -386,36 +392,48 @@ export function ContactDetailView({
 
             {/* Tabs */}
             <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="bg-muted/50 border-b border-border mx-4 mt-3">
+              <TabsList className="bg-muted/50 border-b border-border mx-4 mt-3 flex-wrap h-auto gap-0.5">
                 <TabsTrigger
                   value="details"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
-                  Details
+                  Dados
                 </TabsTrigger>
                 <TabsTrigger
                   value="tags"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
                   Tags
                 </TabsTrigger>
                 <TabsTrigger
                   value="notes"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
-                  Notes
+                  Anotações
+                </TabsTrigger>
+                <TabsTrigger
+                  value="prontuario"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
+                >
+                  🩺 Prontuário
+                </TabsTrigger>
+                <TabsTrigger
+                  value="evolucao"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
+                >
+                  📈 Evolução
                 </TabsTrigger>
                 <TabsTrigger
                   value="custom"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
-                  Custom Fields
+                  Campos
                 </TabsTrigger>
                 <TabsTrigger
                   value="deals"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
-                  Deals
+                  CRM
                 </TabsTrigger>
               </TabsList>
 
@@ -678,6 +696,15 @@ export function ContactDetailView({
                     ))}
                   </div>
                 )}
+              </TabsContent>
+              {/* Prontuário Tab */}
+              <TabsContent value="prontuario" className="flex-1 overflow-y-auto px-4 py-4">
+                <ProntuarioTab patientId={contactId!} />
+              </TabsContent>
+
+              {/* Evolução Tab */}
+              <TabsContent value="evolucao" className="flex-1 overflow-y-auto px-4 py-4">
+                <EvolucaoTab patientId={contactId!} />
               </TabsContent>
             </Tabs>
           </div>
