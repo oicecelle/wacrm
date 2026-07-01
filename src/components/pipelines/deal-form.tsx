@@ -63,6 +63,13 @@ export function DealForm({
   const [assignedTo, setAssignedTo] = useState("");
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
   const [notes, setNotes] = useState("");
+  // AI/Copilot fields
+  const [interest, setInterest] = useState("");
+  const [temperature, setTemperature] = useState<"hot" | "warm" | "cold" | "">("");
+  const [mainObjection, setMainObjection] = useState("");
+  const [score, setScore] = useState("");
+  const [nextAction, setNextAction] = useState("");
+  const [source, setSource] = useState("");
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -92,6 +99,12 @@ export function DealForm({
       setAssignedTo(deal.assigned_to ?? "");
       setExpectedCloseDate(deal.expected_close_date ?? "");
       setNotes(deal.notes ?? "");
+      setInterest(deal.interest ?? "");
+      setTemperature(deal.temperature ?? "");
+      setMainObjection(deal.main_objection ?? "");
+      setScore(deal.score !== undefined && deal.score !== null ? String(deal.score) : "");
+      setNextAction(deal.next_action ?? "");
+      setSource(deal.source ?? "");
     } else {
       setTitle("");
       setValue("");
@@ -101,6 +114,12 @@ export function DealForm({
       setAssignedTo("");
       setExpectedCloseDate("");
       setNotes("");
+      setInterest("");
+      setTemperature("");
+      setMainObjection("");
+      setScore("");
+      setNextAction("");
+      setSource("");
     }
   }, [open, deal, defaultStageId, stages, defaultCurrency]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -166,6 +185,12 @@ export function DealForm({
       assigned_to: assignedTo || null,
       notes: notes.trim() || null,
       expected_close_date: expectedCloseDate || null,
+      interest: interest.trim() || null,
+      temperature: temperature || null,
+      main_objection: mainObjection.trim() || null,
+      score: score ? parseInt(score, 10) : null,
+      next_action: nextAction.trim() || null,
+      source: source.trim() || null,
     };
 
     if (deal) {
@@ -362,6 +387,84 @@ export function DealForm({
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* AI / Copilot Fields Group */}
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3.5">
+              <p className="text-xs font-black text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                🤖 Copiloto IA & CRM Inteligente
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Temperatura</Label>
+                  <select
+                    value={temperature}
+                    onChange={(e) => setTemperature(e.target.value as any)}
+                    className="h-9 w-full rounded-lg border border-border bg-white px-2.5 text-xs text-foreground outline-none"
+                  >
+                    <option value="">Nenhuma</option>
+                    <option value="hot">🔥 Hot (Quente)</option>
+                    <option value="warm">⚡ Warm (Morno)</option>
+                    <option value="cold">❄️ Cold (Frio)</option>
+                  </select>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Engajamento Score (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={score}
+                    onChange={(e) => setScore(e.target.value)}
+                    placeholder="0-100"
+                    className="border-border bg-white text-xs h-9 text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Interesse</Label>
+                  <Input
+                    value={interest}
+                    onChange={(e) => setInterest(e.target.value)}
+                    placeholder="Ex: Toxina Botulínica"
+                    className="border-border bg-white text-xs h-9 text-foreground"
+                  />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Origem (Source)</Label>
+                  <Input
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                    placeholder="Ex: Instagram, Google"
+                    className="border-border bg-white text-xs h-9 text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label className="text-xs font-bold text-neutral-600">Objeção Principal</Label>
+                <Input
+                  value={mainObjection}
+                  onChange={(e) => setMainObjection(e.target.value)}
+                  placeholder="Ex: Achou o preço alto"
+                  className="border-border bg-white text-xs h-9 text-foreground"
+                />
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label className="text-xs font-bold text-neutral-600">Próxima Ação</Label>
+                <Input
+                  value={nextAction}
+                  onChange={(e) => setNextAction(e.target.value)}
+                  placeholder="Ex: Enviar proposta de parcelamento na segunda"
+                  className="border-border bg-white text-xs h-9 text-foreground"
+                />
+              </div>
             </div>
 
             <div className="grid gap-2">

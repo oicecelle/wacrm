@@ -1,0 +1,541 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
+import {
+  XIcon,
+  PlusIcon,
+  Loader2Icon,
+  SendIcon,
+  DollarSignIcon,
+  TagIcon,
+  PackageIcon,
+  ClipboardListIcon,
+  MessageSquareIcon,
+  CheckCircle2Icon,
+  CopyIcon,
+  ChevronDownIcon,
+  FileTextIcon,
+  TrashIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+/* ─── Types ──────────────────────────────────────────────── */
+interface QuoteItem {
+  item_type: "procedure" | "package";
+  item_id: string | null;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  sessions?: number;
+}
+
+interface Procedure {
+  id: string;
+  name: string;
+  valor: number;
+  price: number;
+}
+
+interface Package {
+  id: string;
+  name: string;
+  price: number;
+  validity_days: number | null;
+}
+
+interface QuoteModalProps {
+  open: boolean;
+  onClose: () => void;
+  /** Pre-fill contact when opened from Contatos/Agenda */
+  contactId?: string;
+  contactName?: string;
+  contactPhone?: string;
+  onQuoteCreated?: (quoteId: string) => void;
+}
+
+/* ─── Helpers ────────────────────────────────────────────── */
+const fmt = (v: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+const DEFAULT_TEMPLATE = `Olá, {{nome}}! 👋
+
+Preparei um orçamento especial para você:
+
+{{itens}}
+
+💰 *Total: {{total}}*
+{{condicao}}
+
+Este orçamento é válido por 7 dias.
+Qualquer dúvida, estou à disposição! 😊`;
+
+/* ─── Component ──────────────────────────────────────────── */
+export function QuoteModal({
+  open,
+  onClose,
+  contactId,
+  contactName = "",
+  contactPhone = "",
+  onQuoteCreated,
+}: QuoteModalProps) {
+  const supabase = createClient();
+  const { accountId } = useAuth();
+
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [items, setItems] = useState<QuoteItem[]>([]);
+  const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
+  const [discountValue, setDiscountValue] = useState("0");
+  const [specialCondition, setSpecialCondition] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [step, setStep] = useState<"build" | "message">("build");
+  const [loading, setLoading] = useState(true);
+
+  /* ─── Load procedures & packages ─── */
+  const loadOptions = useCallback(async () => {
+    if (!accountId) return;
+    setLoading(true);
+    try {
+      const [procRes, pkgRes] = await Promise.all([
+        supabase.from("procedures").select("id, name, valor, price").eq("clinic_id", accountId).eq("ativo", true).order("name"),
+        supabase.from("packages").select("id, name, price, validity_days").eq("account_id", accountId).eq("is_active", true).order("name"),
+      ]);
+      setProcedures(procRes.data || []);
+      setPackages(pkgRes.data || []);
+    } finally {
+      setLoading(false);
+    }
+  }, [accountId, supabase]);
+
+  useEffect(() => {
+    if (open) {
+      loadOptions();
+      setItems([]);
+      setDiscountValue("0");
+      setSpecialCondition("");
+      setStep("build");
+    }
+  }, [open, loadOptions]);
+
+  /* ─── Calculations ───────────────────────────────────────── */
+  const subtotal = items.reduce((s, i) => s + i.total_price, 0);
+  const discountNum = parseFloat(discountValue.replace(",", ".")) || 0;
+  const discountAmount = discountType === "percent" ? (subtotal * discountNum) / 100 : discountNum;
+  const total = Math.max(0, subtotal - discountAmount);
+
+  /* ─── Item management ─────────────────────────────────────── */
+  const addProcedure = (proc: Procedure) => {
+    const existing = items.findIndex((i) => i.item_type === "procedure" && i.item_id === proc.id);
+    if (existing >= 0) {
+      const updated = [...items];
+      updated[existing].quantity += 1;
+      updated[existing].total_price = updated[existing].quantity * updated[existing].unit_price;
+      setItems(updated);
+    } else {
+      const price = proc.valor || proc.price || 0;
+      setItems((prev) => [...prev, {
+        item_type: "procedure", item_id: proc.id, name: proc.name,
+        quantity: 1, unit_price: price, total_price: price,
+      }]);
+    }
+  };
+
+  const addPackage = (pkg: Package) => {
+    const existing = items.findIndex((i) => i.item_type === "package" && i.item_id === pkg.id);
+    if (existing >= 0) return; // packages are unique
+    setItems((prev) => [...prev, {
+      item_type: "package", item_id: pkg.id, name: pkg.name,
+      quantity: 1, unit_price: pkg.price, total_price: pkg.price,
+    }]);
+  };
+
+  const updateItemQty = (idx: number, qty: number) => {
+    if (qty < 1) return;
+    const updated = [...items];
+    updated[idx].quantity = qty;
+    updated[idx].total_price = qty * updated[idx].unit_price;
+    setItems(updated);
+  };
+
+  const removeItem = (idx: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  /* ─── Generate WhatsApp message ───────────────────────────── */
+  const buildMessage = () => {
+    const itemsText = items.map((i) =>
+      `• ${i.name}${i.quantity > 1 ? ` (x${i.quantity})` : ""} — ${fmt(i.total_price)}`
+    ).join("\n");
+
+    const condText = specialCondition
+      ? `\n✅ *Condição especial:* ${specialCondition}`
+      : "";
+
+    let msg = DEFAULT_TEMPLATE
+      .replace("{{nome}}", contactName || "cliente")
+      .replace("{{itens}}", itemsText)
+      .replace("{{total}}", fmt(total))
+      .replace("{{condicao}}", condText);
+
+    if (discountAmount > 0) {
+      msg = msg.replace("💰", `🎁 *Desconto:* -${fmt(discountAmount)}\n💰`);
+    }
+
+    setMessageText(msg);
+    setStep("message");
+  };
+
+  /* ─── Save quote ──────────────────────────────────────────── */
+  const saveQuote = async (status: "draft" | "sent") => {
+    if (!accountId || !contactId) return null;
+    const { data, error } = await supabase.from("quotes").insert({
+      account_id: accountId,
+      contact_id: contactId,
+      status,
+      total_value: total,
+      discount_value: discountAmount,
+      discount_type: discountType,
+      special_condition: specialCondition || null,
+      message_text: messageText,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
+    }).select("id").single();
+
+    if (error) throw error;
+
+    // Insert items
+    if (items.length > 0) {
+      await supabase.from("quote_items").insert(
+        items.map((i) => ({
+          quote_id: data.id,
+          item_type: i.item_type,
+          item_id: i.item_id,
+          name: i.name,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          total_price: i.total_price,
+        }))
+      );
+    }
+
+    return data.id;
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!contactPhone) {
+      toast.error("Este contato não tem WhatsApp cadastrado.");
+      return;
+    }
+    setSending(true);
+    try {
+      const quoteId = await saveQuote("sent");
+      if (quoteId && onQuoteCreated) onQuoteCreated(quoteId);
+
+      // Open WhatsApp with the message
+      const phone = contactPhone.replace(/\D/g, "");
+      const waUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(messageText)}`;
+      window.open(waUrl, "_blank");
+
+      toast.success("Orçamento registrado e WhatsApp aberto!");
+      onClose();
+    } catch (err: unknown) {
+      toast.error("Erro: " + (err instanceof Error ? err.message : ""));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleCopyMessage = async () => {
+    await navigator.clipboard.writeText(messageText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Mensagem copiada!");
+  };
+
+  const handleSaveDraft = async () => {
+    if (!contactId) return;
+    setSaving(true);
+    try {
+      const quoteId = await saveQuote("draft");
+      if (quoteId && onQuoteCreated) onQuoteCreated(quoteId);
+      toast.success("Orçamento salvo como rascunho!");
+      onClose();
+    } catch (err: unknown) {
+      toast.error("Erro: " + (err instanceof Error ? err.message : ""));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white w-full max-w-2xl rounded-2xl border border-neutral-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
+          <div className="flex items-center gap-2">
+            {step === "build" ? (
+              <>
+                <FileTextIcon className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h2 className="text-sm font-black text-neutral-900">Novo Orçamento</h2>
+                  {contactName && <p className="text-xs text-neutral-500">para {contactName}</p>}
+                </div>
+              </>
+            ) : (
+              <>
+                <MessageSquareIcon className="h-5 w-5 text-emerald-600" />
+                <div>
+                  <h2 className="text-sm font-black text-neutral-900">Mensagem do Orçamento</h2>
+                  <p className="text-xs text-neutral-500">Revise antes de enviar</p>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Step indicator */}
+            <div className="flex items-center gap-1">
+              <span className={`h-2 w-6 rounded-full transition-colors ${step === "build" ? "bg-blue-600" : "bg-neutral-200"}`} />
+              <span className={`h-2 w-6 rounded-full transition-colors ${step === "message" ? "bg-emerald-600" : "bg-neutral-200"}`} />
+            </div>
+            <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700">
+              <XIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center py-12">
+            <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        ) : step === "build" ? (
+          <>
+            <div className="flex-1 overflow-y-auto">
+              <div className="grid grid-cols-2 divide-x divide-neutral-100">
+                {/* Left: Service selection */}
+                <div className="p-4 space-y-4">
+                  {/* Procedures */}
+                  <div>
+                    <p className="text-[10px] font-black text-neutral-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                      <TagIcon className="h-3 w-3" /> Procedimentos
+                    </p>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {procedures.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => addProcedure(p)}
+                          className="w-full flex items-center justify-between text-xs rounded-lg px-3 py-2 hover:bg-blue-50 hover:text-blue-700 border border-transparent hover:border-blue-200 transition-all text-left"
+                        >
+                          <span className="font-semibold truncate">{p.name}</span>
+                          <span className="text-neutral-400 font-mono ml-2 shrink-0">{fmt(p.valor || p.price || 0)}</span>
+                        </button>
+                      ))}
+                      {procedures.length === 0 && (
+                        <p className="text-xs text-neutral-400 italic text-center py-4">Nenhum procedimento cadastrado.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Packages */}
+                  <div>
+                    <p className="text-[10px] font-black text-neutral-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                      <PackageIcon className="h-3 w-3" /> Pacotes
+                    </p>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {packages.map((pkg) => (
+                        <button
+                          key={pkg.id}
+                          onClick={() => addPackage(pkg)}
+                          className="w-full flex items-center justify-between text-xs rounded-lg px-3 py-2 hover:bg-violet-50 hover:text-violet-700 border border-transparent hover:border-violet-200 transition-all text-left"
+                        >
+                          <span className="font-semibold truncate">{pkg.name}</span>
+                          <span className="text-neutral-400 font-mono ml-2 shrink-0">{fmt(pkg.price)}</span>
+                        </button>
+                      ))}
+                      {packages.length === 0 && (
+                        <p className="text-xs text-neutral-400 italic text-center py-4">Nenhum pacote cadastrado.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Cart */}
+                <div className="p-4 space-y-4 flex flex-col">
+                  <div>
+                    <p className="text-[10px] font-black text-neutral-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                      <ClipboardListIcon className="h-3 w-3" /> Itens Selecionados
+                    </p>
+                    <div className="space-y-2 min-h-16">
+                      {items.length === 0 && (
+                        <p className="text-xs text-neutral-400 italic text-center py-6">
+                          Selecione procedimentos ou pacotes ao lado →
+                        </p>
+                      )}
+                      {items.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-neutral-800 truncate">{item.name}</p>
+                            <p className="text-[10px] text-neutral-400">{fmt(item.unit_price)} cada</p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => updateItemQty(idx, item.quantity - 1)}
+                              className="h-5 w-5 rounded bg-neutral-200 hover:bg-neutral-300 text-xs font-bold flex items-center justify-center"
+                            >−</button>
+                            <span className="w-5 text-center text-xs font-bold">{item.quantity}</span>
+                            <button
+                              onClick={() => updateItemQty(idx, item.quantity + 1)}
+                              className="h-5 w-5 rounded bg-neutral-200 hover:bg-neutral-300 text-xs font-bold flex items-center justify-center"
+                            >+</button>
+                          </div>
+                          <span className="text-xs font-black text-blue-700 w-16 text-right shrink-0">{fmt(item.total_price)}</span>
+                          <button onClick={() => removeItem(idx)} className="text-rose-400 hover:text-rose-600 shrink-0">
+                            <TrashIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Discount */}
+                  <div className="space-y-2 border-t border-neutral-100 pt-3">
+                    <p className="text-[10px] font-black text-neutral-500 uppercase tracking-wide">Desconto</p>
+                    <div className="flex gap-2">
+                      <select
+                        value={discountType}
+                        onChange={(e) => setDiscountType(e.target.value as "fixed" | "percent")}
+                        className="text-xs h-8 rounded-md border border-neutral-200 bg-white px-2"
+                      >
+                        <option value="fixed">R$ Fixo</option>
+                        <option value="percent">% Percentual</option>
+                      </select>
+                      <Input
+                        placeholder="0"
+                        value={discountValue}
+                        onChange={(e) => setDiscountValue(e.target.value)}
+                        className="h-8 text-xs flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Condition */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Condição especial (opcional)</Label>
+                    <Input
+                      placeholder="Ex: Parcelado em 3x sem juros"
+                      value={specialCondition}
+                      onChange={(e) => setSpecialCondition(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+
+                  {/* Total */}
+                  <div className="mt-auto border-t border-neutral-100 pt-3 space-y-1">
+                    <div className="flex justify-between text-xs text-neutral-500">
+                      <span>Subtotal</span>
+                      <span className="font-mono">{fmt(subtotal)}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-xs text-emerald-600">
+                        <span>Desconto</span>
+                        <span className="font-mono">-{fmt(discountAmount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-black text-neutral-900">
+                      <span>Total</span>
+                      <span className="text-blue-700">{fmt(total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center gap-3 shrink-0">
+              {contactId && (
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={saving || items.length === 0}
+                  className="text-xs font-bold text-neutral-500 hover:text-neutral-800 disabled:opacity-40 transition-colors"
+                >
+                  {saving ? "Salvando..." : "Salvar rascunho"}
+                </button>
+              )}
+              <Button
+                onClick={buildMessage}
+                disabled={items.length === 0}
+                className="ml-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl"
+              >
+                Gerar mensagem WhatsApp →
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={14}
+                className="w-full text-sm font-mono rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+              />
+              <p className="text-xs text-neutral-400">
+                Você pode editar o texto acima antes de enviar.
+                Variáveis disponíveis: <code className="bg-neutral-100 px-1 rounded">{"{{nome}}"}</code>{" "}
+                <code className="bg-neutral-100 px-1 rounded">{"{{total}}"}</code>
+              </p>
+
+              {/* Summary */}
+              <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black text-blue-900">{items.length} item{items.length > 1 ? "ns" : ""} — Total: {fmt(total)}</p>
+                  {specialCondition && <p className="text-[10px] text-blue-600 mt-0.5">{specialCondition}</p>}
+                </div>
+                <span className="text-xs font-bold text-blue-600">{contactName}</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => setStep("build")}
+                className="text-xs font-bold text-neutral-500 hover:text-neutral-800 transition-colors"
+              >
+                ← Voltar
+              </button>
+
+              <button
+                onClick={handleCopyMessage}
+                className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
+              >
+                {copied ? <CheckCircle2Icon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}
+                {copied ? "Copiado!" : "Copiar"}
+              </button>
+
+              <Button
+                onClick={handleSendWhatsApp}
+                disabled={sending || !contactPhone}
+                className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl gap-2"
+              >
+                {sending ? (
+                  <><Loader2Icon className="h-4 w-4 animate-spin" /> Enviando...</>
+                ) : (
+                  <><SendIcon className="h-4 w-4" /> Enviar pelo WhatsApp</>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

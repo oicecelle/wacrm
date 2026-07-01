@@ -11,6 +11,7 @@ import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
 } from '@/lib/whatsapp/template-webhook'
+import { analyseWhatsAppConversationWithAI } from '@/lib/ai/webhook-analyser'
 
 import { getEnv } from '@/lib/env'
 
@@ -277,7 +278,8 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           // inserts that need it for NOT NULL FK compliance. Always
           // the admin who saved the WhatsApp config.
           config.user_id,
-          decryptedAccessToken
+          decryptedAccessToken,
+          config.source_rules
         )
       }
     }
@@ -511,7 +513,8 @@ async function processMessage(
   // (contacts, conversations). Always the admin who saved the
   // WhatsApp config; the choice is arbitrary post-017 but stable.
   configOwnerUserId: string,
-  accessToken: string
+  accessToken: string,
+  sourceRules?: any
 ) {
   const senderPhone = normalizePhone(message.from)
   const contactName = contact.profile.name
@@ -545,6 +548,22 @@ async function processMessage(
   // Parse message content based on type
   const { contentText, mediaUrl, mediaType, interactiveReplyId } =
     await parseMessageContent(message, accessToken)
+
+  // Evaluate campaign source rules if message text matches keywords
+  const inboundTextForRules = contentText ?? message.text?.body ?? ''
+  if (inboundTextForRules && Array.isArray(sourceRules)) {
+    const matchedRule = (sourceRules as any[]).find((rule) => {
+      if (!rule.keyword || !rule.source) return false;
+      return inboundTextForRules.toLowerCase().includes(rule.keyword.toLowerCase());
+    });
+    if (matchedRule) {
+      await supabaseAdmin()
+        .from('contacts')
+        .update({ source: matchedRule.source, updated_at: new Date().toISOString() })
+        .eq('id', contactRecord.id)
+      contactRecord.source = matchedRule.source
+    }
+  }
 
   // Resolve swipe-reply context if present. A missing parent is fine —
   // we just store NULL and the UI renders the message without a quote.
@@ -715,6 +734,14 @@ async function processMessage(
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err))
   }
+
+  // Trigger contextual AI Analysis asynchronously
+  analyseWhatsAppConversationWithAI(
+    conversation.id,
+    contactRecord.id,
+    accountId,
+    message.id
+  ).catch((err) => console.error('[webhook] AI Analysis trigger failed:', err))
 }
 
 async function parseMessageContent(

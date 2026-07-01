@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getEnv } from '@/lib/env';
+import { dispatchSendMessage } from '@/lib/whatsapp/sender-dispatcher';
 
 // Lazy-initialized admin client to bypass RLS for background sweeps
 let _adminClient: any = null;
@@ -266,6 +267,64 @@ export async function GET(request: Request) {
           }
         }
       }
+
+      // C. METRICS REPORT SWEEP
+      const reportConfig = config.metric_reports_config;
+      if (reportConfig && reportConfig.enabled && reportConfig.recipient_phone) {
+        const reportTime = reportConfig.time || '17:00';
+        const reportHour = parseInt(reportTime.split(':')[0]) || 17;
+
+        if (currentHour === reportHour) {
+          const todayDateStr = now.toISOString().slice(0, 10);
+          let updatedConfig = false;
+          const updatedReportConfig = { ...reportConfig };
+
+          // 1. Daily Report
+          if (reportConfig.frequency?.includes('daily') && reportConfig.last_daily_sent !== todayDateStr) {
+            const reportText = await generateReportMessage(db, accountId, 'diario');
+            const sent = await sendReportMessage(config, reportConfig.recipient_phone, reportText);
+            if (sent) {
+              updatedReportConfig.last_daily_sent = todayDateStr;
+              updatedConfig = true;
+            }
+          }
+
+          // 2. Biweekly Report
+          const dayOfMonth = now.getDate();
+          const isBiweeklyDay = dayOfMonth === 15 || dayOfMonth === 28 || dayOfMonth === 30 || dayOfMonth === 31;
+          if (reportConfig.frequency?.includes('biweekly') && isBiweeklyDay && reportConfig.last_biweekly_sent !== todayDateStr) {
+            const reportText = await generateReportMessage(db, accountId, 'quinzenal');
+            const sent = await sendReportMessage(config, reportConfig.recipient_phone, reportText);
+            if (sent) {
+              updatedReportConfig.last_biweekly_sent = todayDateStr;
+              updatedConfig = true;
+            }
+          }
+
+          // 3. Monthly Report
+          if (reportConfig.frequency?.includes('monthly') && dayOfMonth === 1 && reportConfig.last_monthly_sent !== todayDateStr) {
+            const reportText = await generateReportMessage(db, accountId, 'mensal');
+            const sent = await sendReportMessage(config, reportConfig.recipient_phone, reportText);
+            if (sent) {
+              updatedReportConfig.last_monthly_sent = todayDateStr;
+              updatedConfig = true;
+            }
+          }
+
+          if (updatedConfig) {
+            await db
+              .from('whatsapp_config')
+              .update({ metric_reports_config: updatedReportConfig })
+              .eq('id', config.id);
+
+            results.push({
+              account_id: accountId,
+              event_type: 'metric_report_sent',
+              success: true,
+            });
+          }
+        }
+      }
     }
 
     return NextResponse.json({ success: true, processed: results });
@@ -273,4 +332,104 @@ export async function GET(request: Request) {
     console.error('Error in cron GET:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
+}
+
+// ─── Helpers for Metric Reports ───
+
+async function sendReportMessage(config: any, to: string, text: string): Promise<boolean> {
+  try {
+    const res = await dispatchSendMessage({
+      config: {
+        provider_type: config.provider_type || 'meta',
+        phone_number_id: config.phone_number_id,
+        access_token: config.access_token,
+        uazapi_token: config.uazapi_token,
+        uazapi_base_url: config.uazapi_base_url,
+        uazapi_instance_name: config.uazapi_instance_name,
+      },
+      to,
+      messageType: 'text',
+      content_text: text,
+    });
+    return res.success;
+  } catch (err) {
+    console.error('Error sending report message:', err);
+    return false;
+  }
+}
+
+async function generateReportMessage(db: any, accountId: string, type: 'diario' | 'quinzenal' | 'mensal'): Promise<string> {
+  const now = new Date();
+  const days = type === 'diario' ? 1 : type === 'quinzenal' ? 15 : 30;
+  const startRange = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  // 1. Fetch clinic name
+  const { data: clinic } = await db.from('accounts').select('name').eq('id', accountId).maybeSingle();
+  const clinicName = clinic?.name || 'LeadPluz Clínica';
+
+  // 2. Fetch metrics
+  const { count: leadsCount } = await db
+    .from('contacts')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .eq('contact_type', 'lead')
+    .gte('created_at', startRange);
+
+  const { count: rescuesCount } = await db
+    .from('contact_timeline')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .eq('event_type', 'payment')
+    .gte('created_at', startRange);
+
+  const { count: followupsCount } = await db
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('sender_type', 'bot')
+    .gte('created_at', startRange);
+
+  const { count: bookingsCount } = await db
+    .from('appointments')
+    .select('id', { count: 'exact', head: true })
+    .eq('clinic_id', accountId)
+    .gte('created_at', startRange);
+
+  const { count: compCount } = await db
+    .from('appointments')
+    .select('id', { count: 'exact', head: true })
+    .eq('clinic_id', accountId)
+    .in('status', ['completed', 'confirmed'])
+    .gte('created_at', startRange);
+
+  const { count: cancCount } = await db
+    .from('appointments')
+    .select('id', { count: 'exact', head: true })
+    .eq('clinic_id', accountId)
+    .in('status', ['cancelled', 'no_show'])
+    .gte('created_at', startRange);
+
+  const { count: unansweredCount } = await db
+    .from('conversations')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .gt('unread_count', 0);
+
+  const title = type === 'diario' ? 'Diário' : type === 'quinzenal' ? 'Quinzenal' : 'Mensal';
+  
+  return `📊 *LeadPluz CRM — Relatório ${title}*
+Clínica: ${clinicName}
+Data: ${new Date().toLocaleDateString('pt-BR')}
+
+📈 *Indicadores Principais (${days} dia(s)):*
+• Novos Leads: ${leadsCount || 0}
+• Resgates Efetuados: ${rescuesCount || 0}
+• Mensagens Enviadas: ${followupsCount || 0}
+• Agendamentos Criados: ${bookingsCount || 0}
+• Comparecimentos: ${compCount || 0}
+• Cancelamentos: ${cancCount || 0}
+
+⚠️ *Atenção (Inbox):*
+• Leads Aguardando Retorno: ${unansweredCount || 0}
+
+_Relatório enviado de forma automática._`;
 }

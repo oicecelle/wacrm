@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { AppointmentModal } from "@/components/ui/appointment-modal";
+import { AppointmentDetailModal } from "@/components/agenda/appointment-detail-modal";
+import { QuoteModal } from "@/components/quotes/quote-modal";
+import { toast } from "sonner";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -15,6 +18,7 @@ import {
   FilterXIcon,
   CakeIcon,
   ClipboardList,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Appointment {
@@ -79,6 +83,14 @@ export default function AgendaPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
+
+  // Detail Modal (Prontuário / Evolução / Financeiro / Pacotes)
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailApptId, setDetailApptId] = useState<string | null>(null);
+
+  // Quote Modal states
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [quoteContact, setQuoteContact] = useState<{ id: string; name: string; phone: string } | null>(null);
 
   // Popover States
   const [popoverAppt, setPopoverAppt] = useState<Appointment | null>(null);
@@ -880,8 +892,10 @@ export default function AgendaPage() {
                                 <span className="text-[11px] font-extrabold truncate flex-1 leading-tight">
                                   {appt.patients?.name || "Sem Nome"}
                                 </span>
-                              </div>
-                              {/* Procedure / Title */}
+                                {appt.status === "provisional" && (
+                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                )}
+                              </div>                              {/* Procedure / Title */}
                               <p className="text-[9px] text-neutral-600 truncate font-semibold leading-tight pr-1">
                                 {appt.type || appt.title || "Consulta"}
                               </p>
@@ -1053,7 +1067,7 @@ export default function AgendaPage() {
             <div className="border-t border-neutral-100" />
 
             {/* Footers */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -1068,21 +1082,60 @@ export default function AgendaPage() {
                 Editar
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (popoverAppt.patients) {
+                    setQuoteContact({
+                      id: popoverAppt.patient_id,
+                      name: popoverAppt.patients.name,
+                      phone: popoverAppt.patients.phone,
+                    });
+                    setQuoteModalOpen(true);
+                  } else {
+                    toast.error("Paciente não identificado para este agendamento.");
+                  }
+                  setPopoverAppt(null);
+                  setPopoverPosition(null);
+                }}
+                className="flex-1 text-xs font-bold h-8 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+              >
+                Orçamento
+              </Button>
+              <Button
                 size="sm"
                 onClick={() => {
                   const id = popoverAppt.id;
                   setPopoverAppt(null);
                   setPopoverPosition(null);
-                  handleEditAppointment(id);
+                  setDetailApptId(id);
+                  setDetailModalOpen(true);
                 }}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-8 rounded-lg"
               >
-                Ver detalhes
+                Detalhes
               </Button>
             </div>
           </div>
         </>
       )}
+
+      {/* Appointment Detail Modal (Prontuário, Evolução, Financeiro, Pacotes) */}
+      <AppointmentDetailModal
+        open={detailModalOpen}
+        appointmentId={detailApptId}
+        onClose={() => setDetailModalOpen(false)}
+        onUpdated={fetchAppointments}
+      />
+
+      {/* Quote Modal */}
+      <QuoteModal
+        open={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        contactId={quoteContact?.id}
+        contactName={quoteContact?.name}
+        contactPhone={quoteContact?.phone}
+      />
     </div>
   );
 }

@@ -60,7 +60,10 @@ function LoginPageInner() {
       return;
     }
 
-    if (inviteToken) {
+    const redirectTo = searchParams.get("redirectTo");
+    if (redirectTo) {
+      window.location.href = redirectTo;
+    } else if (inviteToken) {
       window.location.href = `/join/${encodeURIComponent(inviteToken)}`;
     } else {
       window.location.href = "/agenda";

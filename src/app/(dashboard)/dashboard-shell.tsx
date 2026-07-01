@@ -7,6 +7,8 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 import { createClient } from "@/lib/supabase/client";
+import { CopilotChat } from "@/components/copilot/copilot-chat";
+import { ShieldAlert, AlertCircle } from "lucide-react";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -20,12 +22,59 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // always visible and this stays at `false` (ignored by the component).
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const [isSuspended, setIsSuspended] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (loading || !user || !profile || !profile.account_id) return;
+
+    const checkSuspension = async () => {
+      const supabase = createClient();
+      const { data: clinicData } = await supabase
+        .from("clinics")
+        .select("status")
+        .eq("id", profile.account_id)
+        .maybeSingle();
+
+      const hasAdminBypass = profile?.role === "system_admin" || user?.email === "marcelle@leadpluz.com.br";
+      if (clinicData && clinicData.status === "suspended" && !hasAdminBypass) {
+        setIsSuspended(true);
+      } else {
+        setIsSuspended(false);
+      }
+    };
+
+    checkSuspension();
+  }, [loading, user, profile]);
+
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (loading || !user || !profile || !profile.account_id) return;
+
+    const fetchAlerts = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("system_alerts")
+        .select("*")
+        .or(`clinic_id.eq.${profile.account_id},clinic_id.is.null`)
+        .is("resolved_at", null)
+        .order("created_at", { ascending: false });
+
+      setAlerts(data || []);
+    };
+
+    fetchAlerts();
+
+    // Poll for alerts every 5 minutes
+    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [loading, user, profile]);
 
   useEffect(() => {
     if (loading || !user || !profile) return;
@@ -122,6 +171,25 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   if (!user) return null;
 
+  if (isSuspended) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-neutral-950 px-4 text-center text-white">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 max-w-md space-y-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 mx-auto">
+            <ShieldAlert className="h-6 w-6 text-red-500 animate-bounce" />
+          </div>
+          <h1 className="text-xl font-bold">Acesso Suspenso</h1>
+          <p className="text-xs text-neutral-400">
+            A assinatura da sua clínica foi suspensa temporariamente por motivos administrativos ou de faturamento.
+          </p>
+          <p className="text-xs text-neutral-500">
+            Entre em contato com o suporte ou o administrador da clínica para regularizar a situação.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Reports this tab's online/away presence once we know a user is
@@ -131,8 +199,52 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 animate-fade-in">
+          {/* Active System Alerts Banner */}
+          {alerts.length > 0 && (
+            <div className="mb-4 space-y-2">
+              {alerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className={`flex items-start justify-between rounded-xl border p-4 text-xs font-medium shadow-sm transition-all duration-200 ${
+                    alert.severity === "error"
+                      ? "border-red-500/20 bg-red-500/10 text-red-400"
+                      : alert.severity === "warning"
+                      ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-400"
+                      : "border-blue-500/20 bg-blue-500/10 text-blue-400"
+                  }`}
+                >
+                  <div className="flex gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold mb-0.5">{alert.title}</strong>
+                      <span className="opacity-90 leading-relaxed block">{alert.message}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const supabase = createClient();
+                      // Optimistic dismiss
+                      setAlerts((prev) => prev.filter((a) => a.id !== alert.id));
+                      // Resolve alert in DB
+                      await supabase
+                        .from("system_alerts")
+                        .update({ resolved_at: new Date().toISOString() })
+                        .eq("id", alert.id);
+                    }}
+                    className="opacity-60 hover:opacity-100 font-bold transition-opacity ml-2 shrink-0 cursor-pointer text-[10px] underline"
+                  >
+                    Dispensar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {children}
+        </main>
       </div>
+      {/* Copiloto flutuante — visível em todas as telas autenticadas */}
+      <CopilotChat />
     </div>
   );
 }

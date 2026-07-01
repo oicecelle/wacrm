@@ -315,6 +315,18 @@ export interface Deal {
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
+  // AI fields
+  interest?: string;
+  crm_stage?: string;
+  temperature?: 'hot' | 'warm' | 'cold';
+  main_objection?: string;
+  score?: number;
+  waiting_since?: string;
+  waiting_side?: 'us' | 'lead';
+  next_action?: string;
+  last_message_summary?: string;
+  source?: string;
+  responsible_user_id?: string;
 }
 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';

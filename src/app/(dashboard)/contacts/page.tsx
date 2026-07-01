@@ -48,7 +48,11 @@ import {
   SlidersHorizontal,
   Filter,
   X,
+  FileText,
+  UserCheck,
+  TrendingUp,
 } from 'lucide-react';
+import { QuoteModal } from '@/components/quotes/quote-modal';
 import { ContactForm } from '@/components/contacts/contact-form';
 import { ContactDetailView } from '@/components/contacts/contact-detail-view';
 import { ImportModal } from '@/components/contacts/import-modal';
@@ -75,6 +79,11 @@ export default function ContactsPage() {
   const [totalCount, setTotalCount] = useState(0);
   // Tag filter — contacts shown must have ANY of these tags (OR).
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  // Leads vs Clients tab
+  const [contactTypeTab, setContactTypeTab] = useState<'all' | 'lead' | 'client'>('all');
+  // Quote modal
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [quoteContact, setQuoteContact] = useState<{ id: string; name: string; phone: string } | null>(null);
 
   // Modals
   const [formOpen, setFormOpen] = useState(false);
@@ -163,6 +172,10 @@ export default function ContactsPage() {
         query = query.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like}`);
       }
 
+      if (contactTypeTab === 'lead' || contactTypeTab === 'client') {
+        query = query.eq('contact_type', contactTypeTab);
+      }
+
       const { data, count: exactCount, error } = await query;
       if (seq !== fetchSeq.current) return; // superseded by a newer fetch
       if (error) {
@@ -205,7 +218,7 @@ export default function ContactsPage() {
 
     setContacts(enriched);
     setLoading(false);
-  }, [supabase, page, search, selectedTagIds, tagsMap]);
+  }, [supabase, page, search, selectedTagIds, tagsMap, contactTypeTab]);
 
   // Load-once-on-mount-ish data fetches. Each setter inside runs
   // inside an async promise completion (Supabase await), not
@@ -337,14 +350,19 @@ export default function ContactsPage() {
     setPage(0);
   }
 
+  function openQuoteModal(contact: { id: string; name: string; phone: string }) {
+    setQuoteContact(contact);
+    setQuoteModalOpen(true);
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
+          <h1 className="text-2xl font-bold text-foreground">Contatos</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your contact list. {totalCount > 0 && `${totalCount} total contacts.`}
+            Gerencie leads e clientes. {totalCount > 0 && `${totalCount} contatos.`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -497,6 +515,26 @@ export default function ContactsPage() {
       </div>
 
       {/* Bulk action bar */}
+      {/* Leads / Clients tabs */}
+      <div className="flex gap-1 border-b border-border">
+        {(['all', 'lead', 'client'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => { setContactTypeTab(t); setPage(0); }}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors cursor-pointer ${
+              contactTypeTab === t
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t === 'all' && <Users className="size-4" />}
+            {t === 'lead' && <TrendingUp className="size-4" />}
+            {t === 'client' && <UserCheck className="size-4" />}
+            {t === 'all' ? 'Todos' : t === 'lead' ? 'Leads' : 'Clientes'}
+          </button>
+        ))}
+      </div>
+
       {selected.size > 0 && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2">
           <p className="text-sm text-foreground">
@@ -598,7 +636,18 @@ export default function ContactsPage() {
                     />
                   </TableCell>
                   <TableCell className="text-foreground font-medium">
-                    {contact.name || <span className="text-muted-foreground italic">Unnamed</span>}
+                    <div className="flex items-center gap-2">
+                      <span>{contact.name || <span className="text-muted-foreground italic">Sem nome</span>}</span>
+                      {(contact as unknown as { contact_type?: string }).contact_type === 'client' ? (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-black text-emerald-700 uppercase">
+                          <UserCheck className="size-2.5" /> Cliente
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 border border-blue-200 px-1.5 py-0.5 text-[9px] font-black text-blue-700 uppercase">
+                          <TrendingUp className="size-2.5" /> Lead
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground font-mono text-xs">
                     {contact.phone}
@@ -667,7 +716,17 @@ export default function ContactsPage() {
                           className="text-popover-foreground focus:bg-muted focus:text-foreground"
                         >
                           <Pencil className="size-4" />
-                          Edit
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openQuoteModal({ id: contact.id, name: contact.name || '', phone: contact.phone || '' });
+                          }}
+                          className="text-popover-foreground focus:bg-muted focus:text-foreground"
+                        >
+                          <FileText className="size-4" />
+                          Criar Orçamento
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-border" />
                         <DropdownMenuItem
@@ -678,7 +737,7 @@ export default function ContactsPage() {
                           }}
                         >
                           <Trash2 className="size-4" />
-                          Delete
+                          Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -761,6 +820,16 @@ export default function ContactsPage() {
           onOpenChange={setCustomFieldsOpen}
         />
       )}
+
+      {/* Quote Modal */}
+      <QuoteModal
+        open={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        contactId={quoteContact?.id}
+        contactName={quoteContact?.name}
+        contactPhone={quoteContact?.phone}
+        onQuoteCreated={() => { /* could show a toast or badge */ }}
+      />
 
       {/* Delete Confirmation */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Pipeline, PipelineStage, Deal } from "@/types";
 import { PipelineBoard } from "@/components/pipelines/pipeline-board";
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus, ChevronDown, Settings } from "lucide-react";
+import { GitBranch, Plus, ChevronDown, Settings, AlertCircle, Clock, X, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +47,7 @@ const SPEC_DEFAULT_STAGES = [
 
 export default function PipelinesPage() {
   const supabase = createClient();
+  const router = useRouter();
   const canEditSettings = useCan("edit-settings");
   const canCreateDeals = useCan("send-messages");
   const { accountId } = useAuth();
@@ -55,6 +57,10 @@ export default function PipelinesPage() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Unanswered Conversations / Leads
+  const [unansweredConversations, setUnansweredConversations] = useState<any[]>([]);
+  const [showUnansweredSheet, setShowUnansweredSheet] = useState(false);
 
   // Dialog / sheet state
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
@@ -70,6 +76,18 @@ export default function PipelinesPage() {
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
+
+  const loadUnanswered = useCallback(async () => {
+    if (!accountId) return;
+    const { data } = await supabase
+      .from("conversations")
+      .select("*, contact:contacts(*)")
+      .eq("account_id", accountId)
+      .gt("unread_count", 0)
+      .order("last_message_at", { ascending: true }); // oldest first
+    
+    setUnansweredConversations(data || []);
+  }, [supabase, accountId]);
 
   const loadPipelines = useCallback(async () => {
     const { data, error } = await supabase
@@ -193,6 +211,10 @@ export default function PipelinesPage() {
       cancelled = true;
     };
   }, [selectedPipelineId, loadStages, loadDeals]);
+
+  useEffect(() => {
+    loadUnanswered();
+  }, [loadUnanswered, selectedPipelineId]);
 
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
@@ -362,6 +384,19 @@ export default function PipelinesPage() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {unansweredConversations.length > 0 && (
+            <button
+              onClick={() => {
+                loadUnanswered();
+                setShowUnansweredSheet(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-2 text-xs font-bold text-amber-500 transition-colors cursor-pointer shrink-0"
+            >
+              <AlertCircle className="h-3.5 w-3.5" />
+              Sem Resposta ({unansweredConversations.length})
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -487,6 +522,75 @@ export default function PipelinesPage() {
         defaultStageId={defaultStageId}
         onSaved={refreshDeals}
       />
+
+      {/* Unanswered Leads Sidebar Sheet */}
+      {showUnansweredSheet && (
+        <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-background border-l border-border z-[100] shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/20">
+            <div>
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                Leads Sem Resposta
+              </h2>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Leads com mensagens pendentes aguardando retorno</p>
+            </div>
+            <button
+              onClick={() => setShowUnansweredSheet(false)}
+              className="text-muted-foreground hover:text-foreground rounded-lg p-1.5 hover:bg-muted transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {unansweredConversations.length === 0 ? (
+              <div className="text-center py-12 text-xs text-muted-foreground italic">
+                Nenhum lead aguardando retorno no momento!
+              </div>
+            ) : (
+              unansweredConversations.map((conv) => {
+                const waitingTime = (() => {
+                  if (!conv.last_message_at) return "—";
+                  const diffMs = Date.now() - new Date(conv.last_message_at).getTime();
+                  const diffMins = Math.round(diffMs / (1000 * 60));
+                  if (diffMins < 60) return `Há ${diffMins} min`;
+                  const diffHours = Math.floor(diffMins / 60);
+                  if (diffHours < 24) return `Há ${diffHours} hora(s)`;
+                  const diffDays = Math.floor(diffHours / 24);
+                  return `Há ${diffDays} dia(s)`;
+                })();
+
+                return (
+                  <div key={conv.id} className="rounded-xl border border-border bg-card p-4 space-y-2 hover:border-amber-500/40 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-foreground">{conv.contact?.name || "Paciente"}</h4>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-500 bg-amber-500/10 rounded-full px-2 py-0.5">
+                        <Clock className="h-2.5 w-2.5" />
+                        {waitingTime}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground italic border-l-2 border-border pl-2 line-clamp-2">
+                      "{conv.last_message_text || "Mídia ou arquivo"}"
+                    </p>
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => {
+                          setShowUnansweredSheet(false);
+                          router.push("/inbox");
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                      >
+                        <MessageSquare className="h-3 w-3" />
+                        Responder no Inbox
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { getEnv } from '@/lib/env'
+import { analyseWhatsAppConversationWithAI } from '@/lib/ai/webhook-analyser'
 
 // Lazy-initialized admin client to avoid build-time issues
 let _adminClient: any = null
@@ -148,6 +149,21 @@ export async function POST(request: Request) {
     }
     const contactRecord = contactOutcome.contact
 
+    // Evaluate campaign source rules if message text matches keywords
+    if (contentText && Array.isArray(config.source_rules)) {
+      const matchedRule = (config.source_rules as any[]).find((rule) => {
+        if (!rule.keyword || !rule.source) return false;
+        return contentText.toLowerCase().includes(rule.keyword.toLowerCase());
+      });
+      if (matchedRule) {
+        await db
+          .from('contacts')
+          .update({ source: matchedRule.source, updated_at: new Date().toISOString() })
+          .eq('id', contactRecord.id)
+        contactRecord.source = matchedRule.source
+      }
+    }
+
     // Resolve or create conversation
     const conversation = await findOrCreateConversation(
       accountId,
@@ -245,6 +261,14 @@ export async function POST(request: Request) {
         },
       }).catch((err) => console.error('[uazapi-webhook] Automations dispatch failed:', err))
     }
+
+    // Trigger contextual AI Analysis asynchronously
+    analyseWhatsAppConversationWithAI(
+      conversation.id,
+      contactRecord.id,
+      accountId,
+      messageId
+    ).catch((err) => console.error('[uazapi-webhook] AI Analysis trigger failed:', err))
 
     return NextResponse.json({ status: 'success', messageId })
   } catch (error) {
