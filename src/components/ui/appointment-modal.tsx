@@ -691,6 +691,16 @@ export function AppointmentModal({
           }),
         }).catch((err) => console.error("Error triggering appointment update/status:", err));
 
+        // Trigger Google Calendar sync
+        fetch("/api/integrations/google/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update",
+            appointmentId: appointmentId,
+          }),
+        }).catch((err) => console.error("Error syncing Google Calendar update:", err));
+
       } else {
         // Create appointment
         const { data: newAppt, error: createErr } = await supabase
@@ -745,6 +755,16 @@ export function AppointmentModal({
               },
             }),
           }).catch((err) => console.error("Error triggering appointment_created:", err));
+
+          // Trigger Google Calendar sync
+          fetch("/api/integrations/google/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "create",
+              appointmentId: newAppt.id,
+            }),
+          }).catch((err) => console.error("Error syncing Google Calendar create:", err));
         }
       }
 
@@ -811,6 +831,16 @@ export function AppointmentModal({
           },
         }),
       }).catch((err) => console.error("Error triggering cancellation notification:", err));
+
+      // Trigger Google Calendar sync
+      fetch("/api/integrations/google/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          appointmentId: appointmentId,
+        }),
+      }).catch((err) => console.error("Error syncing Google Calendar delete:", err));
 
       const { error: deleteErr } = await supabase
         .from("appointments")

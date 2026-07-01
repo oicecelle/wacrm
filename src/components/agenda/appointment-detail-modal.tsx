@@ -212,6 +212,16 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
       toast.success("Status atualizado!");
       setAppointment({ ...appointment, status: newStatus });
       onUpdated?.();
+
+      // Trigger Google Calendar sync
+      fetch("/api/integrations/google/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          appointmentId: appointment.id,
+        }),
+      }).catch((err) => console.error("Error syncing Google Calendar update:", err));
     }
     setSavingStatus(false);
   };
