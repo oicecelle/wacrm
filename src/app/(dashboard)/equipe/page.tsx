@@ -38,6 +38,7 @@ interface TeamMember {
   specialty: string;
   email: string;
   phone: string;
+  avatar_url?: string | null;
   is_active: boolean;
   invite_status: "pending" | "active" | "disabled";
   invite_email: string | null;
@@ -185,6 +186,21 @@ export default function EquipePage() {
 
       if (usersErr) throw usersErr;
 
+      // Fetch profile avatars for the user accounts
+      const userIds = (users || []).map((u) => u.user_id).filter(Boolean);
+      const profilesMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, avatar_url")
+          .in("user_id", userIds);
+        (profs || []).forEach((p) => {
+          if (p.avatar_url && p.user_id) {
+            profilesMap[p.user_id] = p.avatar_url;
+          }
+        });
+      }
+
       // Fetch appointments for commission calc
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -227,6 +243,7 @@ export default function EquipePage() {
           specialty: u.specialty || "",
           email: u.email || "",
           phone: u.phone || "",
+          avatar_url: u.user_id ? (profilesMap[u.user_id] || null) : null,
           is_active: u.is_active !== false,
           invite_status: (u.invite_status || (u.user_id ? "active" : "pending")) as "pending" | "active" | "disabled",
           invite_email: u.invite_email || null,
@@ -464,16 +481,33 @@ export default function EquipePage() {
               )}
 
               <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full text-base font-black shrink-0 ${roleConf.cls.replace("border-", "").split(" ")[0]} bg-opacity-20`}
-                  style={{ background: "var(--tw-bg-opacity)", backgroundColor: "currentColor" }}
-                >
-                  <span className="h-10 w-10 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-700 font-black text-base">
-                    {member.name.charAt(0).toUpperCase()}
-                  </span>
+                <div className="size-10 rounded-full flex items-center justify-center shrink-0 bg-neutral-100 border border-neutral-200 overflow-hidden text-neutral-700 font-black text-base">
+                  {member.avatar_url ? (
+                    <img 
+                      src={member.avatar_url} 
+                      alt={member.name} 
+                      className="size-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    member.name.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-extrabold text-neutral-800 truncate">{member.name}</p>
                   <p className="text-xs text-neutral-400 truncate">{member.specialty || member.email}</p>
+                  {member.phone && (
+                    <a 
+                      href={`https://wa.me/${member.phone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono text-primary hover:underline mt-0.5 flex items-center gap-1 w-max"
+                    >
+                      {member.phone}
+                    </a>
+                  )}
                 </div>
               </div>
 

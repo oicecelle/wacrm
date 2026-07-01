@@ -35,6 +35,7 @@ interface Appointment {
   patients: {
     name: string;
     phone: string;
+    avatar_url?: string | null;
   } | null;
 }
 
@@ -48,6 +49,7 @@ interface FilterOption {
   id: string;
   name: string;
   valor?: number;
+  avatar_url?: string | null;
 }
 
 export default function AgendaPage() {
@@ -189,11 +191,30 @@ export default function AgendaPage() {
       // 2. Fetch Staff (clinic_users) - Map to id (matching clinic_users.id constraint)
       const { data: st } = await supabase
         .from("clinic_users")
-        .select("id, name")
+        .select("id, name, user_id")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("name");
-      setStaff((st || []).map((s) => ({ id: s.id, name: s.name })));
+
+      const staffUserIds = (st || []).map((s) => s.user_id).filter(Boolean);
+      const staffAvatarsMap: Record<string, string> = {};
+      if (staffUserIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, avatar_url")
+          .in("user_id", staffUserIds);
+        (profs || []).forEach((p) => {
+          if (p.avatar_url && p.user_id) {
+            staffAvatarsMap[p.user_id] = p.avatar_url;
+          }
+        });
+      }
+
+      setStaff((st || []).map((s) => ({ 
+        id: s.id, 
+        name: s.name,
+        avatar_url: s.user_id ? (staffAvatarsMap[s.user_id] || null) : null
+      })));
 
       // 3. Fetch Procedures (with valor)
       const { data: procs } = await supabase
@@ -249,7 +270,8 @@ export default function AgendaPage() {
           end_time,
           patients (
             name,
-            phone
+            phone,
+            avatar_url
           )
         `)
         .eq("clinic_id", accountId)
@@ -1006,8 +1028,22 @@ export default function AgendaPage() {
             <div className="space-y-3">
               {/* Professional */}
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center text-[10px] font-bold">
-                  {getInitials(staff.find((s) => s.id === popoverAppt.professional_id)?.name || "NT")}
+                <div className="h-7 w-7 rounded-full bg-neutral-100 border border-neutral-200 overflow-hidden text-neutral-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {(() => {
+                    const prof = staff.find((s) => s.id === popoverAppt.professional_id);
+                    return prof?.avatar_url ? (
+                      <img 
+                        src={prof.avatar_url} 
+                        alt={prof.name} 
+                        className="size-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      getInitials(prof?.name || "NT")
+                    );
+                  })()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Profissional</p>
@@ -1019,21 +1055,43 @@ export default function AgendaPage() {
 
               {/* Patient */}
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">
-                  {getInitials(popoverAppt.patients?.name || "Sem Nome")}
+                <div className="h-7 w-7 rounded-full bg-blue-100 border border-blue-200 overflow-hidden text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {popoverAppt.patients?.avatar_url ? (
+                    <img 
+                      src={popoverAppt.patients.avatar_url} 
+                      alt={popoverAppt.patients.name} 
+                      className="size-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    getInitials(popoverAppt.patients?.name || "Sem Nome")
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Paciente</p>
                   <p className="text-xs font-bold text-neutral-700 truncate">
                     {popoverAppt.patients?.name || "Sem Nome"}
                   </p>
+                  {popoverAppt.patients?.phone && (
+                    <a 
+                      href={`https://wa.me/${popoverAppt.patients.phone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] font-mono text-primary hover:underline block mt-0.5"
+                    >
+                      {popoverAppt.patients.phone}
+                    </a>
+                  )}
                 </div>
                 {popoverAppt.patients?.phone && (
                   <a
                     href={getWaLink(popoverAppt.patients.phone)}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 rounded-lg text-emerald-600 transition-colors flex items-center justify-center"
+                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 rounded-lg text-emerald-600 transition-colors flex items-center justify-center shrink-0"
                     title="Conversar no WhatsApp"
                     onClick={(e) => e.stopPropagation()}
                   >

@@ -579,7 +579,6 @@ export default function ContactsPage() {
                 />
               </TableHead>
               <TableHead className="text-muted-foreground">Name</TableHead>
-              <TableHead className="text-muted-foreground">Phone</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">Email</TableHead>
               <TableHead className="text-muted-foreground hidden lg:table-cell">Company</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">Tags</TableHead>
@@ -590,7 +589,7 @@ export default function ContactsPage() {
           <TableBody>
             {loading ? (
               <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="size-6 animate-spin text-primary" />
                     <p className="text-sm text-muted-foreground">Loading contacts...</p>
@@ -599,7 +598,7 @@ export default function ContactsPage() {
               </TableRow>
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="size-8 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
@@ -636,21 +635,47 @@ export default function ContactsPage() {
                     />
                   </TableCell>
                   <TableCell className="text-foreground font-medium">
-                    <div className="flex items-center gap-2">
-                      <span>{contact.name || <span className="text-muted-foreground italic">Sem nome</span>}</span>
-                      {(contact as unknown as { contact_type?: string }).contact_type === 'client' ? (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-black text-emerald-700 uppercase">
-                          <UserCheck className="size-2.5" /> Cliente
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 border border-blue-200 px-1.5 py-0.5 text-[9px] font-black text-blue-700 uppercase">
-                          <TrendingUp className="size-2.5" /> Lead
-                        </span>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className="size-9 rounded-full flex items-center justify-center shrink-0 bg-primary/10 text-primary font-bold text-sm border border-primary/20 overflow-hidden">
+                        {(contact.avatar_url || (contact as any).foto_url) ? (
+                          <img 
+                            src={contact.avatar_url || (contact as any).foto_url} 
+                            alt={contact.name || ''} 
+                            className="size-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          (contact.name || '?').trim().charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground truncate">
+                            {contact.name || <span className="text-muted-foreground italic">Sem nome</span>}
+                          </span>
+                          {(contact as unknown as { contact_type?: string }).contact_type === 'client' ? (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-black text-emerald-700 uppercase">
+                              <UserCheck className="size-2.5" /> Cliente
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 border border-blue-200 px-1.5 py-0.5 text-[9px] font-black text-blue-700 uppercase">
+                              <TrendingUp className="size-2.5" /> Lead
+                            </span>
+                          )}
+                        </div>
+                        <a 
+                          href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-mono text-primary hover:underline mt-0.5 flex items-center gap-1"
+                        >
+                          {contact.phone}
+                        </a>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {contact.phone}
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell text-sm">
                     {contact.email || <span className="text-muted-foreground">-</span>}
