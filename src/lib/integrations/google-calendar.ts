@@ -130,7 +130,7 @@ export async function createGoogleEvent(
   if (!token) return null;
 
   const eventTitle = `${appointment.type || "Consulta"} - ${appointment.patient_name || "Sem Nome"}`;
-  const eventDesc = `Paciente: ${appointment.patient_name || "N/A"}\nTelefone: ${appointment.patient_phone || "N/A"}\nNotas: ${appointment.notes || "Nenhuma"}\nAgendado pelo WACRM.`;
+  const eventDesc = `Paciente: ${appointment.patient_name || "N/A"}\nTelefone: ${appointment.patient_phone || "N/A"}\nNotas: ${appointment.notes || "Nenhuma"}\nAgendado pelo LeadPluz.`;
 
   try {
     const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
@@ -184,7 +184,7 @@ export async function updateGoogleEvent(
 
   const isCancelled = appointment.status === "cancelled" || appointment.status === "provisional";
   const eventTitle = `${appointment.type || "Consulta"} - ${appointment.patient_name || "Sem Nome"}${isCancelled ? " (DESMARCADO)" : ""}`;
-  const eventDesc = `Paciente: ${appointment.patient_name || "N/A"}\nTelefone: ${appointment.patient_phone || "N/A"}\nNotas: ${appointment.notes || "Nenhuma"}\nStatus: ${appointment.status || "N/A"}\nAgendado pelo WACRM.`;
+  const eventDesc = `Paciente: ${appointment.patient_name || "N/A"}\nTelefone: ${appointment.patient_phone || "N/A"}\nNotas: ${appointment.notes || "Nenhuma"}\nStatus: ${appointment.status || "N/A"}\nAgendado pelo LeadPluz.`;
 
   try {
     const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`, {
@@ -353,7 +353,7 @@ export async function syncGoogleEventsToDatabase(accountId: string, userId: stri
         }
       } else if (!isGoogleCancelled) {
         // Only import if not cancelled and does not contain WACRM in description (prevent looping)
-        const isFromWacrm = event.description?.includes("Agendado pelo WACRM");
+        const isFromWacrm = event.description?.includes("Agendado pelo WACRM") || event.description?.includes("Agendado pelo LeadPluz");
         if (isFromWacrm) continue;
 
         // Create a blocker/provisional appointment for the professional

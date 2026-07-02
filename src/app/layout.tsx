@@ -20,13 +20,19 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "LeadPluz — O CRM que se organiza sozinho pelo WhatsApp",
+    template: "%s — LeadPluz",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "LeadPluz é o CRM autônomo integrado ao WhatsApp: leads, agenda, assinaturas digitais e financeiro organizados automaticamente por IA, sem digitação manual. Teste grátis por 7 dias.",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "LeadPluz — O CRM que se organiza sozinho pelo WhatsApp",
+    description: "Seu WhatsApp alimenta o CRM automaticamente. Leads, agenda e financeiro organizados por IA. Teste grátis por 7 dias.",
+    type: "website",
+    locale: "pt_BR",
   },
   icons: {
     icon: [{ url: "/icon" }],
@@ -39,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#eef4ff",
   colorScheme: "dark light",
 };
 
