@@ -28,6 +28,7 @@ import {
   Tag,
   UserPlus,
   Workflow,
+  RefreshCw,
 } from "lucide-react";
 
 // ============================================================
@@ -47,6 +48,7 @@ export type NodeType =
   | "collect_input"
   | "condition"
   | "set_tag"
+  | "set_crm_status"
   | "handoff"
   | "end";
 
@@ -104,6 +106,11 @@ export const NODE_META: Record<
     label: "Tag contact",
     icon: Tag,
     color: "text-pink-400",
+  },
+  set_crm_status: {
+    label: "Alterar Status CRM",
+    icon: RefreshCw,
+    color: "text-amber-500",
   },
   handoff: {
     label: "Handoff to agent",
@@ -219,9 +226,15 @@ export function summarizeNode(node: BuilderNode): string | null {
           ? "tag"
           : cfg.subject === "contact_field"
             ? "field"
-            : "var";
+            : cfg.subject === "crm_status"
+              ? "status"
+              : "var";
       const subjectStr =
-        subject === "tag" ? `has tag ${truncate(subjectKey, 24)}` : `${subject}.${subjectKey}`;
+        subject === "tag"
+          ? `has tag ${truncate(subjectKey, 24)}`
+          : subject === "status"
+            ? "crm_stage"
+            : `${subject}.${subjectKey}`;
       const op =
         cfg.operator === "equals"
           ? "=="
@@ -246,6 +259,10 @@ export function summarizeNode(node: BuilderNode): string | null {
       // short prefix of the UUID so users can disambiguate between
       // multiple set_tag nodes at a glance.
       return tagId ? `${mode} tag ${tagId.slice(0, 8)}…` : `${mode} tag (none picked)`;
+    }
+    case "set_crm_status": {
+      const stage = typeof cfg.crm_stage === "string" ? cfg.crm_stage : "";
+      return stage ? `Mudar status para "${stage}"` : "Mudar status (vazio)";
     }
     case "handoff": {
       const note = typeof cfg.note === "string" ? cfg.note : "";

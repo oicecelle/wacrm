@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { Logo } from "@/components/ui/logo";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import {
   Crown,
@@ -31,6 +32,9 @@ import {
   Lock,
   Award,
   Sparkles,
+  CalendarClock,
+  Upload,
+  Globe,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 import { ClinicSwitcherModal } from "@/components/layout/clinic-switcher-modal";
@@ -107,6 +111,9 @@ const navItems: NavItem[] = [
   { href: "/pipelines", label: "Funis de Vendas", icon: GitBranch },
   { href: "/broadcasts", label: "Disparos", icon: Radio },
   { href: "/comunicacao/modelos", label: "Modelos de Mensagem", icon: Sparkles },
+  { href: "/comunicacao/agendados", label: "Mensagens Agendadas", icon: CalendarClock },
+  { href: "/comunicacao/importacao", label: "Migração de Dados", icon: Upload },
+  { href: "/comunicacao/portal-config", label: "Configurar Portal", icon: Globe },
   { href: "/automations", label: "Automações", icon: Zap },
   { href: "/relatorios", label: "Relatórios", icon: TrendingUp },
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -197,11 +204,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageSquare className="h-4 w-4" />
-            </div>
-            <span className="text-sm font-bold text-foreground tracking-tight">
-              LeadPluz
+            <Logo className="h-8 w-8 shrink-0" />
+            <span className="text-sm font-bold tracking-tight text-foreground">
+              <span className="font-medium text-[#2585fc]">LEAD</span>{" "}
+              <span className="font-extrabold text-[#003bbd]">PLUZ</span>
             </span>
           </Link>
           <button

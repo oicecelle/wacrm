@@ -142,7 +142,7 @@ export type ConditionOperator =
   | "present"
   | "absent";
 
-export type ConditionSubject = "var" | "tag" | "contact_field";
+export type ConditionSubject = "var" | "tag" | "contact_field" | "crm_status";
 
 /**
  * Routes the run based on a predicate over the contact's tags,
@@ -155,6 +155,7 @@ export interface ConditionNodeConfig {
    * For `var`: the key in flow_runs.vars.
    * For `tag`: the tag UUID (matched against contact_tags).
    * For `contact_field`: one of 'name' | 'email' | 'phone' | 'company'.
+   * For `crm_status`: not used (looks directly at deals.crm_stage).
    */
   subject_key: string;
   operator: ConditionOperator;
@@ -170,6 +171,11 @@ export interface SetTagNodeConfig {
   mode: "add" | "remove";
   /** Tag UUID. The builder picks from the user's existing tags. */
   tag_id: string;
+  next_node_key: string;
+}
+
+export interface SetCrmStatusNodeConfig {
+  crm_stage: string;
   next_node_key: string;
 }
 
@@ -193,6 +199,7 @@ export type FlowNodeConfig =
   | { node_type: "collect_input"; config: CollectInputNodeConfig }
   | { node_type: "condition"; config: ConditionNodeConfig }
   | { node_type: "set_tag"; config: SetTagNodeConfig }
+  | { node_type: "set_crm_status"; config: SetCrmStatusNodeConfig }
   | { node_type: "handoff"; config: HandoffNodeConfig }
   | { node_type: "end"; config: EndNodeConfig };
 

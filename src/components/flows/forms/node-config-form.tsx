@@ -188,6 +188,16 @@ export function NodeConfigForm({
         />
       );
 
+    case "set_crm_status":
+      return (
+        <SetCrmStatusForm
+          cfg={cfg as SetCrmStatusCfg}
+          allNodes={allNodes}
+          currentKey={node.node_key}
+          onUpdateConfig={onUpdateConfig}
+        />
+      );
+
     case "handoff":
       return (
         <TextRow
@@ -579,7 +589,7 @@ function SendListForm({
 // ============================================================
 
 interface ConditionCfg {
-  subject?: "var" | "tag" | "contact_field";
+  subject?: "var" | "tag" | "contact_field" | "crm_status";
   subject_key?: string;
   operator?: "equals" | "contains" | "present" | "absent";
   value?: string;
@@ -628,6 +638,7 @@ function ConditionForm({
               <SelectItem value="var">Captured variable</SelectItem>
               <SelectItem value="tag">Contact has tag</SelectItem>
               <SelectItem value="contact_field">Contact field</SelectItem>
+              <SelectItem value="crm_status">Status do CRM (crm_stage)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -637,7 +648,9 @@ function ConditionForm({
               ? "var name"
               : subject === "tag"
                 ? "Tag"
-                : "Field"}
+                : subject === "crm_status"
+                  ? "CRM Stage"
+                  : "Field"}
           </label>
           {subject === "tag" && tags.length > 0 ? (
             <Select
@@ -670,6 +683,12 @@ function ConditionForm({
                 <SelectItem value="company">company</SelectItem>
               </SelectContent>
             </Select>
+          ) : subject === "crm_status" ? (
+            <Input
+              value="Deals.crm_stage"
+              disabled
+              className="bg-muted text-xs cursor-not-allowed opacity-60 font-mono"
+            />
           ) : (
             <Input
               value={cfg.subject_key ?? ""}
@@ -1042,6 +1061,49 @@ function SendMediaForm({
         currentKey={currentKey}
         onChange={(v) => onUpdateConfig({ next_node_key: v })}
         label="After sending, advance to"
+      />
+    </>
+  );
+}
+
+interface SetCrmStatusCfg {
+  crm_stage?: string;
+  next_node_key?: string;
+}
+
+function SetCrmStatusForm({
+  cfg,
+  allNodes,
+  currentKey,
+  onUpdateConfig,
+}: {
+  cfg: SetCrmStatusCfg;
+  allNodes: BuilderNode[];
+  currentKey: string;
+  onUpdateConfig: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <>
+      <div>
+        <label className="mb-1 block text-xs text-muted-foreground">
+          Novo Estágio do CRM (crm_stage)
+        </label>
+        <Input
+          value={cfg.crm_stage ?? ""}
+          onChange={(e) => onUpdateConfig({ crm_stage: e.target.value })}
+          placeholder="Ex: Novo, Mensagem 1 Enviada, Contatado, Sem Interesse"
+          className="bg-muted text-xs"
+        />
+        <p className="mt-1 text-[10px] text-muted-foreground leading-relaxed">
+          O bot irá atualizar o estágio do lead na tabela de negócios para este valor ao passar por aqui.
+        </p>
+      </div>
+      <NextNodeRow
+        value={cfg.next_node_key ?? ""}
+        allNodes={allNodes}
+        currentKey={currentKey}
+        onChange={(v) => onUpdateConfig({ next_node_key: v })}
+        label="Then advance to"
       />
     </>
   );

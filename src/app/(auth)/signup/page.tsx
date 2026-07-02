@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageSquare, CheckCircle, UsersRound, Eye, EyeOff } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -151,7 +152,7 @@ function SignupPageInner() {
             {inviteToken ? (
               <UsersRound className="h-6 w-6 text-primary" />
             ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
+              <Logo className="h-6 w-6 text-primary shrink-0" />
             )}
           </div>
           <CardTitle className="text-xl text-foreground">
@@ -160,7 +161,7 @@ function SignupPageInner() {
           <CardDescription className="text-muted-foreground">
             {inviteToken
               ? "Verifique seu e-mail e depois aceite o convite para se juntar à equipe."
-              : "Comece a usar a LeadPluz"}
+              : "Comece a usar a LEAD PLUZ"}
           </CardDescription>
         </CardHeader>
         <CardContent>

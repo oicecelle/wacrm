@@ -469,34 +469,34 @@ export default function AgendaPage() {
     switch (status) {
       case "confirmed":
         return {
-          border: "border-l-4 border-l-emerald-500 border-neutral-200/80",
-          bg: "bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100/90",
-          dot: "bg-emerald-500",
+          border: "border-l-4 border-l-[#4caf50] border-neutral-200/80",
+          bg: "bg-[#edf6ed] text-[#1c4d24] hover:bg-[#e2f0e2]",
+          dot: "bg-[#4caf50]",
         };
       case "attended":
         return {
-          border: "border-l-4 border-l-slate-400 border-neutral-200/80",
-          bg: "bg-slate-50/90 text-slate-800 hover:bg-slate-100/90",
-          dot: "bg-slate-400",
+          border: "border-l-4 border-l-[#787774] border-neutral-200/80",
+          bg: "bg-[#f1f1ef] text-[#37352f] hover:bg-[#e8e8e6]",
+          dot: "bg-[#787774]",
         };
       case "cancelled":
         return {
-          border: "border-l-4 border-l-rose-500 border-neutral-200/80 line-through text-rose-700/80",
-          bg: "bg-rose-50/70 text-rose-800 hover:bg-rose-100/70",
-          dot: "bg-rose-500",
+          border: "border-l-4 border-l-[#e05b5c] border-neutral-200/80 line-through text-[#6e1e1e]/80",
+          bg: "bg-[#fdebeb] text-[#6e1e1e] hover:bg-[#fbdad9]",
+          dot: "bg-[#e05b5c]",
         };
       case "no_show":
         return {
-          border: "border-l-4 border-l-amber-500 border-neutral-200/80",
-          bg: "bg-amber-50/80 text-amber-900 hover:bg-amber-100/90",
-          dot: "bg-amber-500",
+          border: "border-l-4 border-l-[#dfab01] border-neutral-200/80",
+          bg: "bg-[#fbf3db] text-[#5c3e09] hover:bg-[#f6e9c3]",
+          dot: "bg-[#dfab01]",
         };
       case "provisional":
       default:
         return {
-          border: "border-l-4 border-l-blue-500 border-neutral-200/80",
-          bg: "bg-blue-50/80 text-blue-900 hover:bg-blue-100/90",
-          dot: "bg-blue-500",
+          border: "border-l-4 border-l-[#3ba2e8] border-neutral-200/80",
+          bg: "bg-[#e8f4fc] text-[#09456b] hover:bg-[#d4e9f7]",
+          dot: "bg-[#3ba2e8]",
         };
     }
   };
@@ -734,9 +734,9 @@ export default function AgendaPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={triggerCopilot}
-                className="h-8 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-medium hover:opacity-90 active:scale-95 transition-all text-xs px-3.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-blue-500/10"
+                className="h-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:opacity-90 active:scale-95 transition-all text-xs px-3.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-blue-500/10"
               >
-                <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-blue-200" />
+                <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-blue-100" />
                 Pedir ao Copiloto
               </button>
 

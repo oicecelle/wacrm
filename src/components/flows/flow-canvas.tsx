@@ -627,6 +627,7 @@ const ADD_NODE_TYPES: NodeType[] = [
   "collect_input",
   "condition",
   "set_tag",
+  "set_crm_status",
   "handoff",
   "end",
 ];

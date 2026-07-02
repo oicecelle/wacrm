@@ -1406,7 +1406,7 @@ export function AppointmentModal({
               onClick={() => setApptType(type)}
               className={`flex-1 py-1.5 rounded-lg text-center transition-all capitalize cursor-pointer ${
                 apptType === type
-                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md font-extrabold"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-extrabold"
                   : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/30"
               }`}
             >

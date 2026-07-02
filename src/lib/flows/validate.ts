@@ -586,23 +586,23 @@ function validateNode(
 
     case "condition": {
       const cfg = node.config as {
-        subject?: "var" | "tag" | "contact_field";
+        subject?: "var" | "tag" | "contact_field" | "crm_status";
         subject_key?: string;
         operator?: "equals" | "contains" | "present" | "absent";
         value?: string;
         true_next?: string;
         false_next?: string;
       };
-      if (!cfg.subject || !["var", "tag", "contact_field"].includes(cfg.subject)) {
+      if (!cfg.subject || !["var", "tag", "contact_field", "crm_status"].includes(cfg.subject)) {
         issues.push({
           severity: "error",
           scope: "node",
           node_key: node.node_key,
           field: "subject",
-          message: "Condition needs a subject (var / tag / contact_field).",
+          message: "Condition needs a subject (var / tag / contact_field / crm_status).",
         });
       }
-      if (!cfg.subject_key?.trim()) {
+      if (!cfg.subject_key?.trim() && cfg.subject !== "crm_status") {
         issues.push({
           severity: "error",
           scope: "node",
@@ -701,6 +701,40 @@ function validateNode(
       break;
     }
 
+    case "set_crm_status": {
+      const cfg = node.config as {
+        crm_stage?: string;
+        next_node_key?: string;
+      };
+      if (!cfg.crm_stage || !cfg.crm_stage.trim()) {
+        issues.push({
+          severity: "error",
+          scope: "node",
+          node_key: node.node_key,
+          field: "crm_stage",
+          message: "Set-status needs a CRM stage to apply.",
+        });
+      }
+      if (!cfg.next_node_key) {
+        issues.push({
+          severity: "error",
+          scope: "node",
+          node_key: node.node_key,
+          field: "next_node_key",
+          message: "Set-status must point to a next node.",
+        });
+      } else if (!knownKeys.has(cfg.next_node_key)) {
+        issues.push({
+          severity: "error",
+          scope: "node",
+          node_key: node.node_key,
+          field: "next_node_key",
+          message: `Set-status points to non-existent node "${cfg.next_node_key}".`,
+        });
+      }
+      break;
+    }
+
     case "handoff":
     case "end":
       // Terminal nodes have no outgoing edges; nothing to validate
@@ -751,7 +785,8 @@ function outgoingEdges(node: NodeInput): string[] {
     case "send_message":
     case "send_media":
     case "collect_input":
-    case "set_tag": {
+    case "set_tag":
+    case "set_crm_status": {
       const cfg = node.config as { next_node_key?: string };
       return cfg.next_node_key ? [cfg.next_node_key] : [];
     }

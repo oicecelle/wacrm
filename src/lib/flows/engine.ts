@@ -54,6 +54,7 @@ import {
   type SendMediaNodeConfig,
   type SendMessageNodeConfig,
   type SetTagNodeConfig,
+  type SetCrmStatusNodeConfig,
   type StartNodeConfig,
   type KeywordTriggerConfig,
 } from "./types";
@@ -116,7 +117,8 @@ export function isAutoAdvancing(node_type: string): boolean {
     node_type === "send_message" ||
     node_type === "send_media" ||
     node_type === "condition" ||
-    node_type === "set_tag"
+    node_type === "set_tag" ||
+    node_type === "set_crm_status"
   );
 }
 
@@ -486,6 +488,14 @@ async function evaluateConditionNode(
     // against a tag UUID would still work mechanically (compare its
     // existence to the value).
     subjectValue = (count ?? 0) > 0 ? cfg.subject_key : undefined;
+  } else if (cfg.subject === "crm_status") {
+    const { data } = await db
+      .from("deals")
+      .select("crm_stage")
+      .eq("contact_id", run.contact_id!)
+      .maybeSingle();
+    const raw = (data as any)?.crm_stage;
+    subjectValue = typeof raw === "string" && raw.length > 0 ? raw : undefined;
   } else {
     const ALLOWED = ["name", "email", "phone", "company"] as const;
     type AllowedField = (typeof ALLOWED)[number];
@@ -726,6 +736,31 @@ async function advanceFromNodeKey(
         // strand the customer mid-flow.
         await logEvent(db, run.id, "error", node.node_key, {
           reason: "set_tag_failed",
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
+      currentKey = cfg.next_node_key;
+      continue;
+    }
+    if (node.node_type === "set_crm_status") {
+      const cfg = node.config as unknown as SetCrmStatusNodeConfig;
+      try {
+        await db
+          .from("deals")
+          .update({ crm_stage: cfg.crm_stage })
+          .eq("contact_id", run.contact_id!);
+
+        await db.from("contact_timeline").insert({
+          account_id: run.account_id,
+          contact_id: run.contact_id!,
+          event_type: "status_change",
+          title: "Estágio do CRM atualizado",
+          description: `Estágio atualizado automaticamente pelo fluxo para: ${cfg.crm_stage}`,
+          metadata: { origin: "flow", flow_run_id: run.id },
+        });
+      } catch (err) {
+        await logEvent(db, run.id, "error", node.node_key, {
+          reason: "set_crm_status_failed",
           detail: err instanceof Error ? err.message : String(err),
         });
       }

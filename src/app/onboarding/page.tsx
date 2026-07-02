@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/ui/logo";
 import {
   MessageSquareIcon,
   CheckCircle2Icon,
@@ -490,10 +491,11 @@ export default function OnboardingPage() {
       <div className="w-full max-w-2xl mb-8 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold shadow-sm">
-              lp
-            </div>
-            <span className="font-extrabold text-base tracking-tight text-slate-900">LeadPluz</span>
+            <Logo className="h-8 w-8 shrink-0" />
+            <span className="text-base font-bold tracking-tight text-slate-900">
+              <span className="font-medium text-[#2585fc]">LEAD</span>{" "}
+              <span className="font-extrabold text-[#003bbd]">PLUZ</span>
+            </span>
           </div>
           <span className="text-xs font-bold text-slate-400">
             Passo {currentStep} de 7
@@ -523,7 +525,7 @@ export default function OnboardingPage() {
             </div>
             <div className="space-y-2">
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Bem-vindo à LeadPluz 🚀
+                Bem-vindo à LEAD PLUZ 🚀
               </h1>
               <p className="text-sm sm:text-base text-slate-500 max-w-lg mx-auto leading-relaxed">
                 Seu CRM inteligente e agenda conectada trabalham em tempo real para organizar consultas, comissões, automações e WhatsApp.
@@ -1213,7 +1215,7 @@ export default function OnboardingPage() {
                 Tudo pronto 🎉
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
-                Seu consultório está com a base configurada. A partir de agora você já pode gerenciar sua agenda com a LeadPluz!
+                Seu consultório está com a base configurada. A partir de agora você já pode gerenciar sua agenda com a LEAD PLUZ!
               </p>
             </div>
 

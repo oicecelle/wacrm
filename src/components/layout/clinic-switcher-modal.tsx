@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { Logo } from "@/components/ui/logo";
 import {
   Dialog,
   DialogContent,
@@ -150,8 +151,11 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
         <DialogHeader className="space-y-2">
           {/* Logo element placeholder matching aesthetics */}
           <div className="flex justify-center items-center gap-1.5 mb-1">
-            <span className="text-xl font-black tracking-tight text-blue-600">lp</span>
-            <span className="text-xl font-bold text-neutral-800">leadpluz</span>
+            <Logo className="h-6 w-6 shrink-0" />
+            <span className="text-xl tracking-tight">
+              <span className="font-medium text-[#2585fc]">LEAD</span>{" "}
+              <span className="font-extrabold text-[#003bbd]">PLUZ</span>
+            </span>
           </div>
           <DialogTitle className="text-lg font-black text-neutral-900 leading-tight">
             Bem vindo, {profile?.full_name || "Usuário"}!

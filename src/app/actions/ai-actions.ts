@@ -59,7 +59,7 @@ export async function askCopilot(question: string, contextData: any) {
     throw new Error("Chave OpenAI não configurada no servidor.");
   }
 
-  const prompt = `Você é o Copiloto IA interno do sistema Lead Pluz CRM da clínica.
+  const prompt = `Você é o Copiloto IA interno do sistema LEAD PLUZ CRM da clínica.
 Você ajuda a equipe da clínica a entender os dados de negócios, responder dúvidas operacionais e sugerir ações.
 Aqui está o contexto atual de dados da clínica que você pode consultar para responder à pergunta:
 ${JSON.stringify(contextData, null, 2)}

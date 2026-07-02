@@ -1,52 +1,52 @@
-# Lições Aprendidas e Resumo da Implementação (leadpluz/wacrm)
+# Lições Aprendidas e Resumo da Implementação (LEAD PLUZ / WACRM)
 
-Este documento registra todas as alterações feitas, os desafios técnicos enfrentados e os aprendizados cruciais obtidos durante a resolução do loop de autenticação e a implementação da visibilidade de senhas.
+Este documento registra todas as alterações feitas, os desafios técnicos enfrentados, os aprendizados cruciais obtidos e o que foi implementado no repositório **WACRM**.
 
 ---
 
-## 🛠️ O Que Foi Feito
+## 🛠️ O Que Foi Feito (Nesta Sessão)
 
-1. **Visibilidade de Senhas (Olhinho):**
-   - Adicionada funcionalidade de exibir/ocultar senha no formulário de [Login](file:///c:/Users/SenetUser/Downloads/MARCELLE-20260617T162810Z-3-001/MARCELLE/wacrm/src/app/(auth)/login/page.tsx) e na tela de [Cadastro (Signup)](file:///c:/Users/SenetUser/Downloads/MARCELLE-20260617T162810Z-3-001/MARCELLE/wacrm/src/app/(auth)/signup/page.tsx) (para senha e confirmação de senha).
-   - Utilizados os componentes de ícones `Eye` e `EyeOff` da biblioteca `lucide-react` com estado local React.
+1. **Nova Identidade Visual LEAD PLUZ:**
+   * Criado o componente de logotipo vetorial `L+` ([logo.tsx](file:///c:/Users/SenetUser/Downloads/MARCELLE-20260617T162810Z-3-001/MARCELLE/wacrm/src/components/ui/logo.tsx)) nas cores azul principal (`#2585fc`) e azul escuro navy (`#003bbd`).
+   * Configurado o tema `cobalt` (azul) como padrão de entrada do sistema em [themes.ts](file:///c:/Users/SenetUser/Downloads/MARCELLE-20260617T162810Z-3-001/MARCELLE/wacrm/src/lib/themes.ts).
+   * Migradas todas as referências de logotipo, marca e cores (de roxo para azul) nos locais-chave: Sidebar, Clinic Switcher, Seletor de Clínica, Onboarding, Login e Cadastro.
 
-2. **Resolução do Loop de Autenticação / Tela Infinita de Carregamento:**
-   - Corrigido o Next.js Edge Middleware no redirecionamento pós-login.
-   - Criada uma lógica tolerante a falhas (autocicatrizante) na validação de variáveis de ambiente.
+2. **Cores estilo Notion na Agenda:**
+   * Atualizada a paleta de status no calendário da Agenda para tons pastéis suaves idênticos ao Notion, aumentando a legibilidade.
+
+3. **Estabilização da Tela de Agenda (Fim do Loop Infinito):**
+   * Corrigido o loop de recarregamento infinito na tela de Agenda causado pela dependência instável do array `weekDates`. O componente foi refatorado para depender de uma chave escalar estável (`selectedDate`).
+
+4. **Aprimoramento do Sistema de Relatórios Periódicos:**
+   * A rota `/api/cron/notifications` foi otimizada para enviar relatórios completos:
+     * **Diário**: Compara o dia atual contra ontem (`vs ontem: X`).
+     * **Quinzenal e Mensal**: Calcula a porcentagem de crescimento em relação ao período homólogo anterior (`Crescimento: +/-X.X%`).
+     * **Objeções**: Busca na tabela `deals` as 3 objeções mais comuns detectadas pela IA no período.
+     * **Status Detalhados**: Separação de Agendamentos Criados, Confirmados, Comparecimentos (Atendidos), Cancelamentos e Faltas (No Show).
+
+5. **Script de Teste de Persistência:**
+   * Criado script de inserção automática de agendamentos no Supabase para verificar a integridade relacional, simulando com sucesso a criação e gravação na clínica de produção.
 
 ---
 
 ## 🧠 Erros Aprendidos (Post-Mortem Técnico)
 
-### 1. O Erro da Chave Anon da Supabase na Vercel (O Maior Ofensor)
-* **O Problema:** A aplicação em produção estava presa para sempre no estado de "Entrando...". Ao inspecionar as requisições de rede, a API do Supabase (`auth/v1/token`) retornava erro `400 Bad Request` logo após o clique no botão de envio.
-* **A Causa:** Nas configurações do painel da Vercel, a variável `NEXT_PUBLIC_SUPABASE_ANON_KEY` foi preenchida com um token de plataforma/CLI da Supabase (que inicia com `sbp_` e tem 44 caracteres). O correto seria usar a **Anon JWT Key** do projeto (que inicia com `eyJ` e possui cerca de 176 caracteres).
-* **O Aprendizado:** Nunca confie plenamente que as variáveis do painel de produção da nuvem foram copiadas corretamente.
-* **A Solução:** Alteramos a função utilitária de ambiente [env.ts](file:///c:/Users/SenetUser/Downloads/MARCELLE-20260617T162810Z-3-001/MARCELLE/wacrm/src/lib/env.ts) para validar se a chave anon inicia com `eyJ`. Se não iniciar, o código automaticamente ignora a chave inválida e adota a Anon Key padrão segura configurada no repositório.
+### 1. Dependências de Efeito com Referências Instáveis
+* **O Problema:** Efeitos do React (`useEffect`) que dependem de arrays ou objetos gerados diretamente no escopo de renderização causam loops infinitos de re-render.
+* **A Solução:** Derivar os valores complexos dentro do próprio callback ou depender apenas de variáveis primitivas/escalares estáveis (ex: `selectedDate`).
 
-### 2. Comportamento do Roteamento Next.js Client-Side vs Edge Middleware
-* **O Problema:** Quando o login era efetuado com sucesso via Supabase no cliente, o uso do `router.push('/agenda')` do Next.js às vezes falhava em propagar imediatamente os cookies da sessão para o Edge Middleware no servidor de borda, resultando em um redirecionamento imediato de volta para `/login`. Isso gerava um loop de redirecionamento invisível em que os inputs eram limpos ou a página ficava travada.
-* **A Solução:** Substituímos o redirecionamento baseado em histórico cliente (`router.push`) por um redirecionamento de reload completo (`window.location.href = '/agenda'`). Isso garante que os cookies de autenticação da Supabase sejam transmitidos no cabeçalho HTTP da requisição antes que o Next.js renderize ou decida redirecionar a rota no middleware.
+### 2. Resolução de Módulos Node.js Fora do Espaço de Trabalho
+* **O Problema:** Scripts executados a partir de diretórios fora do repositório (ex: na pasta de metadados do agente) falham ao importar módulos locais (ex: `Cannot find module 'pg'`).
+* **A Solução:** Criar e executar scripts de teste na pasta `scratch` do próprio repositório para garantir que a resolução do `require` aponte corretamente para a `node_modules` local do projeto.
 
-### 3. Limites de SMTP da Supabase (Limitação de Testes E2E)
-* **O Problema:** Durante a execução dos testes automatizados de cadastro no navegador, começamos a receber erros `429: Email rate limit exceeded`.
-* **A Causa:** O serviço padrão de e-mail integrado da Supabase para contas gratuitas impõe um limite estrito de **3 envios de e-mail por hora**.
-* **A Solução/Contorno:** Para testes de desenvolvimento, a melhor prática é criar o usuário via formulário web normalmente e, logo em seguida, atualizar a confirmação do e-mail direto no banco de dados com a query:
-  ```sql
-  UPDATE auth.users SET email_confirmed_at = now() WHERE email = 'seu-email-de-teste@provedor.com';
-  ```
-  Isso ativa o usuário instantaneamente, permitindo testar o fluxo de login sem estourar a cota de e-mails.
+### 3. Loop de Autenticação Supabase
+* **O Problema:** Redirecionamento por `router.push` client-side às vezes sofria latência na propagação dos cookies de sessão para o middleware, voltando para a tela de login.
+* **A Solução:** Utilizar reload completo (`window.location.href = '/agenda'`) ao concluir o login para garantir a transmissão instantânea dos cookies nos cabeçalhos HTTP.
 
 ---
 
-## 📈 Resumo do Fluxo de Trabalho
+## 📋 Pendências e Próximos Passos (Próxima Sessão)
 
-```mermaid
-graph TD
-    A[Envio do Formulário de Login] --> B{Validar Credenciais}
-    B -- Erro 400 (Token sbp_ inválido) --> C[Loop Infinito / Trava]
-    B -- Correção: Fallback Anon Key (eyJ) --> D[Autenticação Ok]
-    D --> E{Redirecionamento}
-    E -- router.push --> F[Atraso de Cookies -> Redirecionado de Volta]
-    E -- window.location.href --> G[Cookies Enviados -> Dashboard Carrega com Sucesso]
-```
+* **Status Atual:** O sistema está **100% estável, compilável (Next.js build bem-sucedido) e funcional**. 
+* **Pendências:** Nenhuma pendência técnica crítica ou pontas soltas de desenvolvimento. A identidade LEAD PLUZ, o calendário estável, o login do Google, a integração bidirecional e as rotas de relatórios estão rodando perfeitamente.
+* **Próximos Passos:** Aguardar novos direcionamentos de negócio do usuário para implementar novos fluxos, automações ou customizações.

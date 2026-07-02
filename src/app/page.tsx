@@ -1,5 +1,13 @@
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 
-export default function RootPage() {
-  redirect('/agenda')
+export default async function RootPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect('/agenda');
+  } else {
+    redirect('/landing');
+  }
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/ui/logo";
 import {
   Loader2Icon,
   CheckIcon,
@@ -216,13 +217,11 @@ export default function SelecionarClinicaPage() {
         {/* Logo */}
         <div className="text-center space-y-1">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-lg"
-              style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
-            >
-              lp
-            </div>
-            <span className="text-xl font-black text-white tracking-tight">leadpluz</span>
+            <Logo className="h-10 w-10 shrink-0" />
+            <span className="text-xl tracking-tight text-white">
+              <span className="font-medium text-[#2585fc]">LEAD</span>{" "}
+              <span className="font-extrabold text-[#003bbd]">PLUZ</span>
+            </span>
           </div>
           {loading ? (
             <p className="text-sm text-neutral-400">Carregando suas clínicas...</p>
