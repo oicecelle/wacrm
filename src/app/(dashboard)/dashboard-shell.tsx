@@ -8,7 +8,7 @@ import { Header } from "@/components/layout/header";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 import { createClient } from "@/lib/supabase/client";
 import { CopilotChat } from "@/components/copilot/copilot-chat";
-import { ShieldAlert, AlertCircle } from "lucide-react";
+import { ShieldAlert, AlertCircle, Sparkles } from "lucide-react";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -197,6 +197,14 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <PresenceHeartbeat />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
+        {user?.created_at && (
+          <div className="bg-blue-600 text-white text-center py-2 px-4 text-[11px] font-bold shadow-xs flex items-center justify-center gap-2 relative z-50">
+            <Sparkles className="w-3.5 h-3.5 shrink-0 text-yellow-300 animate-pulse" />
+            <span>
+              Você está no dia {Math.min(Math.max(Math.ceil((new Date().getTime() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)), 1), 7)} de 7 dias de teste. Aproveite ao máximo, conte com o nosso suporte.
+            </span>
+          </div>
+        )}
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 animate-fade-in">

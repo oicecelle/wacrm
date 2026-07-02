@@ -7,6 +7,7 @@ import {
   Check,
   MessageSquare,
   Calendar,
+  CreditCard,
   Users,
   Zap,
   ShieldCheck,
@@ -276,14 +277,14 @@ export default function LandingPage() {
                 href="/signup"
                 className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-bold text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/25 glow-blue"
               >
-                Criar minha conta grátis
+                Iniciar meu teste grátis de 7 dias
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link href="/login" className="flex items-center gap-2 rounded-xl border border-neutral-200 px-6 py-3 text-xs font-bold text-neutral-600 hover:bg-neutral-100 transition-colors bg-white">
                 Entrar no Painel
               </Link>
             </div>
-            <p className="text-[10px] text-neutral-400 mt-3">Teste sem compromisso por 14 dias · Sem cartão de crédito · Integração em 5 min</p>
+            <p className="text-[10px] text-neutral-400 mt-3">Teste sem compromisso por 7 dias grátis · Sem cartão de crédito · Integração em 5 min</p>
           </div>
 
           {/* Demo Grid */}
@@ -466,6 +467,81 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── SECTION 5: PLANOS E PREÇOS ── */}
+      <section id="planos" className="py-20 px-6 bg-white border-t">
+        <div className="mx-auto max-w-4xl space-y-12">
+          <div className="text-center space-y-3">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 uppercase">
+              <CreditCard className="w-3 h-3" /> Nossos Planos
+            </span>
+            <h2 className="text-3xl font-black tracking-tight text-neutral-900">
+              Escolha o plano ideal para a sua clínica
+            </h2>
+            <p className="text-xs text-neutral-500 max-w-xl mx-auto leading-relaxed">
+              Todos os planos incluem acesso completo a todos os recursos do WA CRM. Teste grátis por 7 dias.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto">
+            {/* Monthly */}
+            <div className="bg-card border rounded-3xl p-6 shadow-2xs flex flex-col justify-between space-y-6">
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-neutral-400 uppercase">Mensal</span>
+                  <span className="text-xs bg-muted px-2.5 py-0.5 rounded-full font-bold">Básico</span>
+                </div>
+                <div className="mt-4">
+                  <span className="text-3xl font-black text-foreground">R$ 397</span>
+                  <span className="text-xs text-muted-foreground"> /mês</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  Perfeito para clínicas e consultórios que querem agilidade sem compromisso de fidelidade.
+                </p>
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-2 border-t pt-4">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 shrink-0" /> CRM inteligente e autônomo</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 shrink-0" /> Integração oficial e não oficial de WhatsApp</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 shrink-0" /> Agenda e Google Agenda automática</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 shrink-0" /> Assinaturas eletrônicas ilimitadas</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 shrink-0" /> Financeiro e Receita Prevista</li>
+              </ul>
+              <Link href="/signup" className="block text-center rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 px-6 py-3 text-xs font-bold text-neutral-800 transition-colors">
+                Inicie seu teste grátis de 7 dias
+              </Link>
+            </div>
+
+            {/* Annual */}
+            <div className="bg-card border-2 border-blue-600 rounded-3xl p-6 shadow-md flex flex-col justify-between space-y-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                Melhor Custo-Benefício
+              </div>
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-neutral-400 uppercase">Anual</span>
+                  <span className="text-xs bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full font-bold">25% OFF</span>
+                </div>
+                <div className="mt-4">
+                  <span className="text-3xl font-black text-foreground">R$ 297</span>
+                  <span className="text-xs text-muted-foreground"> /mês</span>
+                  <span className="text-[10px] text-muted-foreground block mt-1">(Faturamento anual de R$ 3.564)</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  Para quem deseja o melhor preço e suporte premium prioritário.
+                </p>
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-2 border-t pt-4">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 shrink-0" /> Todos os recursos do plano mensal</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 shrink-0" /> Suporte VIP dedicado no WhatsApp</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 shrink-0" /> Treinamento de equipe incluso</li>
+              </ul>
+              <Link href="/signup" className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-3 text-xs font-bold text-white transition-all shadow-md">
+                Começar agora gratuitamente
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── FAQ ── */}
       <section id="faq" className="py-20 px-6 bg-neutral-50 border-t">
         <div className="mx-auto max-w-2xl">
@@ -500,7 +576,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-2xl space-y-6">
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold text-blue-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
-            14 dias grátis · Conecte em 2 min
+            7 dias de teste grátis · Conecte em 2 min
           </div>
           <h2 className="text-4xl font-black">
             Seu WhatsApp mais inteligente.<br />
@@ -511,7 +587,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link href="/signup" className="group inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all shadow-xl shadow-blue-900/50">
-              Criar Conta Grátis
+              Começar agora gratuitamente
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link href="/login" className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/10 text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all">
