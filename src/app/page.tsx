@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import LandingPage from './landing/page';
 
 export default async function RootPage() {
   const supabase = await createClient();
@@ -7,7 +8,7 @@ export default async function RootPage() {
 
   if (user) {
     redirect('/agenda');
-  } else {
-    redirect('/landing');
   }
+
+  return <LandingPage />;
 }

@@ -26,6 +26,36 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  const host = request.headers.get('host') || ''
+  const pathname = request.nextUrl.pathname
+
+  // Configuração de Domínios
+  const mainDomain = 'leadpluz.com'
+  const appSubdomain = 'go.leadpluz.com'
+
+  const isMainDomain = host === mainDomain || host === `www.${mainDomain}` || host === 'wacrm.app' || host === 'www.wacrm.app'
+  const isAppSubdomain = host === appSubdomain || host === 'app.leadpluz.com' || host === 'go.wacrm.app'
+
+  // 1. Subdomínio de App: Rota raiz "/" redireciona para a agenda ou login
+  if (isAppSubdomain && (pathname === '/' || pathname === '/landing')) {
+    const url = request.nextUrl.clone()
+    url.pathname = user ? '/agenda' : '/login'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
+
+  // 2. Domínio Principal: Acesso a rotas autenticadas ou fluxos internos redireciona para o subdomínio
+  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/agenda', '/financeiro', '/documentos', '/equipe', '/servicos', '/relatorios', '/onboarding', '/selecionar-clinica', '/comunicacao']
+  const isAuthRoute = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password'
+  const isProtectedRoute = protectedPaths.some(path => pathname.startsWith(path))
+
+  if (isMainDomain && (isAuthRoute || isProtectedRoute)) {
+    const url = request.nextUrl.clone()
+    url.host = appSubdomain
+    url.protocol = 'https:'
+    return NextResponse.redirect(url)
+  }
+
   // Auth pages - redirect to dashboard if already logged in.
   // Exception: when an invite token is in the query string we
   // send the already-signed-in user to /join/<token> instead so
@@ -33,9 +63,9 @@ export async function middleware(request: NextRequest) {
   // a forwarded invite link to someone who's already signed in
   // would silently drop them on /dashboard.
   if (user && (
-    request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname === '/signup' ||
-    request.nextUrl.pathname === '/forgot-password'
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password'
   )) {
     const url = request.nextUrl.clone()
     const inviteToken = request.nextUrl.searchParams.get('invite')
@@ -54,7 +84,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected pages - redirect to login if not authenticated
-  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/agenda', '/financeiro', '/documentos', '/equipe', '/servicos', '/relatorios', '/onboarding', '/selecionar-clinica', '/comunicacao']
   if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
