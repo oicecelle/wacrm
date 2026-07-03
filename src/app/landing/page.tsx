@@ -214,9 +214,7 @@ export default function LandingPage() {
       <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/80 backdrop-blur-md border-b border-[#E3E9F5]/80 shadow-xs" : "bg-transparent"}`}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6C9BFF] shadow-xs">
-              <Zap className="h-4 w-4 text-white" />
-            </div>
+            <img src="/images/logo.png" className="h-7 w-7 object-contain" alt="LeadPluz Logo" />
             <span className="text-lg font-black tracking-tight text-[#10182B] uppercase">LeadPluz</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
@@ -272,7 +270,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-base sm:text-lg text-[#5B6478] max-w-2xl mx-auto leading-relaxed mb-10">
-              Diga adeus à alimentação manual de planilhas. Nosso diferencial é um **CRM inteligente e automatizado** onde cada conversa pelo WhatsApp vira dado estruturado na hora. Acompanhe a **agenda, assinaturas digitais, financeiro** e o progresso do lead sem levantar um dedo.
+              Diga adeus à alimentação manual de planilhas. Nosso diferencial é um <strong className="font-bold text-neutral-800">CRM inteligente e automatizado</strong> onde cada conversa pelo WhatsApp vira dado estruturado na hora. Acompanhe a <strong className="font-bold text-neutral-800">agenda, assinaturas digitais, financeiro</strong> e o progresso do lead sem levantar um dedo.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -600,9 +598,7 @@ export default function LandingPage() {
       <footer className="bg-[#10182B] text-neutral-500 border-t border-white/5 py-8 px-6 text-xs">
         <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-[#6C9BFF] flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-white" />
-            </div>
+            <img src="/images/logo.png" className="h-6 w-6 object-contain" alt="LeadPluz Logo" />
             <span className="text-sm font-bold text-neutral-400 uppercase">LeadPluz</span>
           </div>
           <p>© 2026 LeadPluz. Todos os direitos reservados.</p>
