@@ -270,8 +270,7 @@ export default function AgendaPage() {
           end_time,
           patients (
             name,
-            phone,
-            avatar_url
+            phone
           )
         `)
         .eq("clinic_id", accountId)
