@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [{ url: "/icon.png" }],
   },
   formatDetection: {
     email: false,
