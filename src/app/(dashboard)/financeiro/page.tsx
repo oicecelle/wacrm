@@ -366,12 +366,12 @@ export default function FinanceiroPage() {
       const { data: pPkgsData, error: pPkgsErr } = await supabase
         .from("patient_packages")
         .select("*")
-        .eq("clinic_id", clinicId)
-        .order("sold_at", { ascending: false });
+        .eq("account_id", clinicId)
+        .order("purchased_at", { ascending: false });
 
       if (pPkgsErr) throw pPkgsErr;
 
-      const ptPkgIds = (pPkgsData || []).map((p) => p.patient_id).filter((id): id is string => !!id);
+      const ptPkgIds = (pPkgsData || []).map((p) => p.contact_id).filter((id): id is string => !!id);
       let pkgPatientsMap: Record<string, string> = {};
       if (ptPkgIds.length > 0) {
         const { data: ptsData } = await supabase
@@ -387,7 +387,7 @@ export default function FinanceiroPage() {
       const { data: templData } = await supabase
         .from("packages")
         .select("id, name")
-        .eq("clinic_id", clinicId);
+        .eq("account_id", clinicId);
 
       let templatesMap: Record<string, string> = {};
       (templData || []).forEach((t) => {
@@ -408,7 +408,7 @@ export default function FinanceiroPage() {
 
         return {
           id: pkg.id,
-          contactName: pkg.patient_id ? pkgPatientsMap[pkg.patient_id] || "Paciente" : "Paciente",
+          contactName: pkg.contact_id ? pkgPatientsMap[pkg.contact_id] || "Paciente" : "Paciente",
           procedure: templName,
           totalSessions: pkg.sessions_total,
           remainingSessions: pctRemaining,
