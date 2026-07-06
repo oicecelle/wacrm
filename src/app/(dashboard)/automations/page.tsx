@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Zap,
   Plus,
@@ -16,21 +16,25 @@ import {
   Users,
   PhoneCall,
   Loader2,
-} from "lucide-react"
+  Workflow,
+  HelpCircle,
+  UserPlus,
+  MessageSquare,
+} from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client"
-import { useCan } from "@/hooks/use-can"
-import type { Automation } from "@/types"
-import { Button } from "@/components/ui/button"
-import { GatedButton } from "@/components/ui/gated-button"
-import { Switch } from "@/components/ui/switch"
+import { createClient } from "@/lib/supabase/client";
+import { useCan } from "@/hooks/use-can";
+import type { Automation } from "@/types";
+import { Button } from "@/components/ui/button";
+import { GatedButton } from "@/components/ui/gated-button";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -38,228 +42,526 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/automations/templates"
-import { triggerMeta, formatRelative } from "@/lib/automations/trigger-meta"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/automations/templates";
+import { triggerMeta, formatRelative } from "@/lib/automations/trigger-meta";
+import { cn } from "@/lib/utils";
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
   "welcome_message",
   "out_of_office",
   "lead_qualifier",
   "follow_up_reminder",
-]
+];
 
 const TEMPLATE_ICON: Record<TemplateSlug, typeof Zap> = {
   welcome_message: MessageCircle,
   out_of_office: Clock,
   lead_qualifier: Users,
   follow_up_reminder: PhoneCall,
+};
+
+/* ─── Flows interfaces ─────────────────────────────────────── */
+interface FlowRow {
+  id: string;
+  name: string;
+  description: string | null;
+  status: "draft" | "active" | "archived";
+  trigger_type: "keyword" | "first_inbound_message" | "manual";
+  trigger_config: { keywords?: string[] } | Record<string, unknown>;
+  execution_count: number;
+  last_executed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export default function AutomationsPage() {
-  const router = useRouter()
-  const canCreate = useCan("send-messages")
-  const [automations, setAutomations] = useState<Automation[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [pendingDelete, setPendingDelete] = useState<Automation | null>(null)
-  const [deleting, setDeleting] = useState(false)
+interface FlowTemplateSummary {
+  slug: string;
+  name: string;
+  description: string;
+  icon: "MessageSquare" | "HelpCircle" | "UserPlus";
+  trigger_type: string;
+  node_count: number;
+}
 
-  async function load() {
+const FLOW_TEMPLATE_ICONS = {
+  MessageSquare,
+  HelpCircle,
+  UserPlus,
+} as const;
+
+const FLOW_STATUS_LABELS: Record<FlowRow["status"], string> = {
+  draft: "Rascunho",
+  active: "Ativo",
+  archived: "Arquivado",
+};
+
+const FLOW_STATUS_COLORS: Record<FlowRow["status"], string> = {
+  draft: "border-border bg-muted text-muted-foreground",
+  active: "border-emerald-600/40 bg-emerald-500/10 text-emerald-600",
+  archived: "border-border bg-muted/50 text-muted-foreground",
+};
+
+export default function AutomationsPage() {
+  const router = useRouter();
+  const canCreate = useCan("send-messages");
+  const [activeTab, setActiveTab] = useState<"rules" | "flows">("rules");
+
+  /* --- Automation Rules state --- */
+  const [automations, setAutomations] = useState<Automation[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Automation | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  /* --- Flows state --- */
+  const [flows, setFlows] = useState<FlowRow[]>([]);
+  const [flowTemplates, setFlowTemplates] = useState<FlowTemplateSummary[]>([]);
+  const [loadingFlows, setLoadingFlows] = useState(true);
+  const [createFlowOpen, setCreateFlowOpen] = useState(false);
+  const [newFlowName, setNewFlowName] = useState("");
+  const [creatingFlow, setCreatingFlow] = useState(false);
+
+  async function loadAutomations() {
     try {
-      const supabase = createClient()
+      const supabase = createClient();
       const { data, error: fetchErr } = await supabase
         .from("automations")
         .select("*")
-        .order("created_at", { ascending: false })
-      if (fetchErr) throw fetchErr
-      setAutomations((data ?? []) as Automation[])
+        .order("created_at", { ascending: false });
+      if (fetchErr) throw fetchErr;
+      setAutomations((data ?? []) as Automation[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load automations")
+      setError(err instanceof Error ? err.message : "Erro ao carregar automações");
+    }
+  }
+
+  async function loadFlows() {
+    setLoadingFlows(true);
+    try {
+      const [flowsRes, tmplRes] = await Promise.all([
+        fetch("/api/flows"),
+        fetch("/api/flows/templates"),
+      ]);
+      if (flowsRes.ok) {
+        const flowsJson = (await flowsRes.json()) as { flows: FlowRow[] };
+        setFlows(flowsJson.flows ?? []);
+      }
+      if (tmplRes.ok) {
+        const tmplJson = (await tmplRes.json()) as { templates: FlowTemplateSummary[] };
+        setFlowTemplates(tmplJson.templates ?? []);
+      }
+    } catch (err) {
+      console.error("Error loading flows:", err);
+      toast.error("Não foi possível carregar os fluxos.");
+    } finally {
+      setLoadingFlows(false);
     }
   }
 
   useEffect(() => {
-    load()
-  }, [])
+    loadAutomations();
+    loadFlows();
+  }, []);
 
+  /* --- Automation Rules Actions --- */
   async function toggleActive(a: Automation, next: boolean) {
-    // Optimistic flip so the switch feels instant.
     setAutomations((prev) =>
-      prev?.map((x) => (x.id === a.id ? { ...x, is_active: next } : x)) ?? prev,
-    )
+      prev?.map((x) => (x.id === a.id ? { ...x, is_active: next } : x)) ?? prev
+    );
     const res = await fetch(`/api/automations/${a.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ is_active: next }),
-    })
+    });
     if (!res.ok) {
-      // Roll back on error.
       setAutomations((prev) =>
-        prev?.map((x) => (x.id === a.id ? { ...x, is_active: !next } : x)) ?? prev,
-      )
-      const body = await res.json().catch(() => ({}))
-      toast.error(body?.error ?? "Failed to update")
-      return
+        prev?.map((x) => (x.id === a.id ? { ...x, is_active: !next } : x)) ?? prev
+      );
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error ?? "Erro ao atualizar");
+      return;
     }
-    toast.success(next ? "Automation activated" : "Automation paused")
+    toast.success(next ? "Automação ativada" : "Automação pausada");
   }
 
   async function duplicate(a: Automation) {
-    const res = await fetch(`/api/automations/${a.id}/duplicate`, { method: "POST" })
+    const res = await fetch(`/api/automations/${a.id}/duplicate`, { method: "POST" });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body?.error ?? "Failed to duplicate")
-      return
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error ?? "Erro ao duplicar");
+      return;
     }
-    toast.success("Automation duplicated")
-    load()
+    toast.success("Automação duplicada com sucesso");
+    loadAutomations();
   }
 
   async function confirmDelete() {
-    if (!pendingDelete) return
-    setDeleting(true)
-    const res = await fetch(`/api/automations/${pendingDelete.id}`, { method: "DELETE" })
-    setDeleting(false)
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const res = await fetch(`/api/automations/${pendingDelete.id}`, { method: "DELETE" });
+    setDeleting(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body?.error ?? "Failed to delete")
-      return
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error ?? "Erro ao excluir");
+      return;
     }
-    toast.success("Automation deleted")
-    setPendingDelete(null)
-    load()
+    toast.success("Automação excluída");
+    setPendingDelete(null);
+    loadAutomations();
   }
 
-  async function startFromTemplate(slug: TemplateSlug) {
-    router.push(`/automations/new?template=${slug}`)
+  function startFromTemplate(slug: TemplateSlug) {
+    router.push(`/automations/new?template=${slug}`);
+  }
+
+  /* --- Flows Actions --- */
+  async function handleCreateFlow() {
+    if (!newFlowName.trim()) return;
+    setCreatingFlow(true);
+    try {
+      const res = await fetch("/api/flows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newFlowName.trim(),
+          trigger_type: "keyword",
+          trigger_config: { keywords: [] },
+        }),
+      });
+      if (!res.ok) throw new Error(`Create failed: ${res.status}`);
+      const json = (await res.json()) as { flow: FlowRow };
+      setCreateFlowOpen(false);
+      setNewFlowName("");
+      router.push(`/flows/${json.flow.id}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível criar o fluxo.");
+    } finally {
+      setCreatingFlow(false);
+    }
+  }
+
+  async function handleUseFlowTemplate(slug: string) {
+    setCreatingFlow(true);
+    try {
+      const res = await fetch("/api/flows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template_slug: slug }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? `Clone failed: ${res.status}`);
+      }
+      const json = (await res.json()) as { flow: FlowRow };
+      setCreateFlowOpen(false);
+      router.push(`/flows/${json.flow.id}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao criar do modelo";
+      toast.error(msg);
+    } finally {
+      setCreatingFlow(false);
+    }
+  }
+
+  async function handleDeleteFlow(flow: FlowRow) {
+    const yes = window.confirm(
+      `Excluir o fluxo "${flow.name}"? Qualquer execução ativa será encerrada imediatamente.`
+    );
+    if (!yes) return;
+    try {
+      const res = await fetch(`/api/flows/${flow.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      setFlows((prev) => prev.filter((f) => f.id !== flow.id));
+      toast.success("Fluxo excluído com sucesso.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Não foi possível excluir o fluxo.");
+    }
   }
 
   if (error) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error}</p>
+      <div className="flex h-64 flex-col items-center justify-center gap-2 text-left">
+        <p className="text-sm text-red-500 font-bold">{error}</p>
         <Button variant="outline" onClick={() => window.location.reload()}>
-          Retry
+          Tentar Novamente
         </Button>
       </div>
-    )
+    );
   }
-
-  if (automations === null) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  const showTemplates = automations.length < 3
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 text-left">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Automations</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Build workflows that react to WhatsApp® events automatically.
+          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Automações</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Construa fluxos inteligentes e regras automatizadas para responder no WhatsApp®.
           </p>
         </div>
-        <GatedButton
-          canAct={canCreate}
-          gateReason="create automations"
-          onClick={() => router.push("/automations/new")}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Create Automation
-        </GatedButton>
+        <div className="flex items-center gap-2">
+          {activeTab === "rules" ? (
+            <GatedButton
+              canAct={canCreate}
+              gateReason="criar automações"
+              onClick={() => router.push("/automations/new")}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200"
+            >
+              <Plus className="h-4 w-4" />
+              Criar Automação
+            </GatedButton>
+          ) : (
+            <GatedButton
+              canAct={canCreate}
+              gateReason="criar fluxos"
+              onClick={() => setCreateFlowOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200"
+            >
+              <Plus className="h-4 w-4" />
+              Novo Fluxo
+            </GatedButton>
+          )}
+        </div>
       </div>
 
-      {showTemplates && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Quick-start templates</h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {TEMPLATE_ORDER.map((slug) => {
-              const t = AUTOMATION_TEMPLATES[slug]
-              const Icon = TEMPLATE_ICON[slug]
-              return (
-                <button
-                  key={slug}
-                  onClick={() => startFromTemplate(slug)}
-                  className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-card/80"
-                >
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm font-semibold text-foreground">{t.name}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      )}
+      {/* Navigation tabs */}
+      <div className="flex border-b border-neutral-200 gap-2">
+        <button
+          onClick={() => setActiveTab("rules")}
+          className={cn(
+            "px-4 py-2.5 text-xs font-bold transition-all border-b-2",
+            activeTab === "rules"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-neutral-500 hover:text-neutral-800"
+          )}
+        >
+          Regras de Automação
+        </button>
+        <button
+          onClick={() => setActiveTab("flows")}
+          className={cn(
+            "px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5",
+            activeTab === "flows"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-neutral-500 hover:text-neutral-800"
+          )}
+        >
+          Fluxos de Mensagens
+          <Badge className="rounded-full bg-blue-100 border border-blue-200/50 text-blue-700 px-1 py-0 text-[8px] font-black uppercase shrink-0">
+            BETA
+          </Badge>
+        </button>
+      </div>
 
-      {automations.length === 0 ? (
-        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Zap className="h-6 w-6 text-primary" />
-          </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No automations yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Pick a template above or create one from scratch.
-          </p>
+      {/* Render tab content */}
+      {activeTab === "rules" ? (
+        /* --- TAB 1: AUTOMATION RULES --- */
+        <div className="space-y-6">
+          {automations === null ? (
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <>
+              {automations.length < 3 && (
+                <section className="space-y-3">
+                  <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Modelos de início rápido</h2>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {TEMPLATE_ORDER.map((slug) => {
+                      const t = AUTOMATION_TEMPLATES[slug];
+                      const Icon = TEMPLATE_ICON[slug];
+                      return (
+                        <button
+                          key={slug}
+                          onClick={() => startFromTemplate(slug)}
+                          className="group flex flex-col items-start rounded-xl border border-neutral-200 bg-white p-4 text-left transition-all hover:border-blue-300 hover:shadow-xs"
+                        >
+                          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="text-xs font-bold text-neutral-800">{t.name}</div>
+                          <p className="mt-1 text-[10px] text-neutral-400 font-semibold leading-relaxed">{t.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {automations.length === 0 ? (
+                <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-white shadow-xs">
+                  <Zap className="h-8 w-8 text-neutral-300 mb-2 animate-pulse" />
+                  <p className="text-xs font-bold text-neutral-800">Nenhuma regra de automação criada</p>
+                  <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
+                    Escolha um modelo acima ou crie uma do zero no botão superior.
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {automations.map((a) => (
+                    <AutomationCard
+                      key={a.id}
+                      automation={a}
+                      onToggle={(next) => toggleActive(a, next)}
+                      onEdit={() => router.push(`/automations/${a.id}/edit`)}
+                      onDuplicate={() => duplicate(a)}
+                      onLogs={() => router.push(`/automations/${a.id}/logs`)}
+                      onDelete={() => setPendingDelete(a)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
         </div>
       ) : (
-        <ul className="space-y-3">
-          {automations.map((a) => (
-            <AutomationCard
-              key={a.id}
-              automation={a}
-              onToggle={(next) => toggleActive(a, next)}
-              onEdit={() => router.push(`/automations/${a.id}/edit`)}
-              onDuplicate={() => duplicate(a)}
-              onLogs={() => router.push(`/automations/${a.id}/logs`)}
-              onDelete={() => setPendingDelete(a)}
-            />
-          ))}
-        </ul>
+        /* --- TAB 2: FLOWS --- */
+        <div className="space-y-6">
+          {loadingFlows ? (
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            </div>
+          ) : flows.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-white shadow-xs">
+              <Workflow className="h-8 w-8 text-neutral-300 mb-2 animate-pulse" />
+              <p className="text-xs font-bold text-neutral-800">Nenhum fluxo interativo criado</p>
+              <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
+                Crie menus automáticos e triagens guiadas por botões para o seu WhatsApp.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateFlowOpen(true)}
+                className="mt-3 text-xs font-bold border-neutral-200 text-neutral-700 bg-white hover:bg-neutral-50 h-8 rounded-lg"
+              >
+                Começar Fluxo
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {flows.map((flow) => (
+                <FlowCard
+                  key={flow.id}
+                  flow={flow}
+                  onEdit={() => router.push(`/flows/${flow.id}`)}
+                  onDelete={() => handleDeleteFlow(flow)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
+      {/* Delete Rule Confirmation Dialog */}
       <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
-        <DialogContent>
+        <DialogContent className="bg-white border border-neutral-200 shadow-xl rounded-2xl max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete automation</DialogTitle>
-            <DialogDescription>
-              This permanently removes{" "}
-              <span className="text-foreground">{pendingDelete?.name}</span> and its execution
-              history. This cannot be undone.
+            <DialogTitle className="text-sm font-bold text-neutral-900">Excluir Automação</DialogTitle>
+            <DialogDescription className="text-xs font-semibold text-neutral-400 leading-relaxed mt-1">
+              Tem certeza que deseja excluir permanentemente a automação <span className="font-bold text-neutral-700">{pendingDelete?.name}</span> e todo o seu histórico? Esta ação não poderá ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 pt-3 flex items-center justify-end">
             <Button
               variant="ghost"
               onClick={() => setPendingDelete(null)}
               disabled={deleting}
+              className="text-xs font-bold text-neutral-500 hover:bg-neutral-100 rounded-lg h-9 px-3"
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
               variant="destructive"
               onClick={confirmDelete}
               disabled={deleting}
+              className="text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg h-9 px-3 flex items-center justify-center gap-1.5"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Delete
+              Excluir
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Flow Dialog */}
+      <Dialog open={createFlowOpen} onOpenChange={setCreateFlowOpen}>
+        <DialogContent className="sm:max-w-3xl bg-white border border-neutral-200 shadow-2xl rounded-2xl p-6 text-left space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-neutral-800">Criar Novo Fluxo de Conversa</DialogTitle>
+            <DialogDescription className="text-xs text-neutral-400 font-semibold leading-relaxed mt-1">
+              Desenhe um fluxo de mensagens ramificado e automatizado. Escolha um modelo abaixo ou crie em branco.
+            </DialogDescription>
+          </DialogHeader>
+
+          {flowTemplates.length > 0 && (
+            <div className="space-y-2.5">
+              <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                Começar de um modelo
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {flowTemplates.map((t) => {
+                  const Icon = FLOW_TEMPLATE_ICONS[t.icon] ?? FileText;
+                  return (
+                    <button
+                      key={t.slug}
+                      type="button"
+                      onClick={() => handleUseFlowTemplate(t.slug)}
+                      disabled={creatingFlow}
+                      className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 text-left transition-all hover:border-blue-400 hover:shadow-xs disabled:opacity-50"
+                    >
+                      <Icon className="h-5 w-5 text-blue-600" />
+                      <span className="text-xs font-bold text-neutral-800 leading-tight">
+                        {t.name}
+                      </span>
+                      <span className="text-[10px] leading-relaxed text-neutral-400 font-semibold flex-1">
+                        {t.description}
+                      </span>
+                      <span className="mt-2 border-t border-neutral-100 pt-2 text-[9px] font-bold text-neutral-400">
+                        {t.node_count} {t.node_count === 1 ? "bloco" : "blocos"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 border-t border-neutral-100 pt-4">
+            <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+              Ou comece em branco
+            </p>
+            <div className="flex gap-2 items-center">
+              <Input
+                value={newFlowName}
+                onChange={(e) => setNewFlowName(e.target.value)}
+                placeholder="Ex: Menu de boas-vindas da clínica"
+                className="bg-neutral-50 border-neutral-200 outline-none placeholder:text-neutral-400 font-semibold text-xs h-10 w-full"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newFlowName.trim()) {
+                    handleCreateFlow();
+                  }
+                }}
+              />
+              <Button
+                disabled={creatingFlow || !newFlowName.trim()}
+                onClick={handleCreateFlow}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 text-xs shrink-0 rounded-xl"
+              >
+                {creatingFlow ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar Fluxo"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }
 
+/* --- Sub-Components --- */
 function AutomationCard({
   automation,
   onToggle,
@@ -268,57 +570,53 @@ function AutomationCard({
   onLogs,
   onDelete,
 }: {
-  automation: Automation
-  onToggle: (next: boolean) => void
-  onEdit: () => void
-  onDuplicate: () => void
-  onLogs: () => void
-  onDelete: () => void
+  automation: Automation;
+  onToggle: (next: boolean) => void;
+  onEdit: () => void;
+  onDuplicate: () => void;
+  onLogs: () => void;
+  onDelete: () => void;
 }) {
-  const meta = triggerMeta(automation.trigger_type)
+  const meta = triggerMeta(automation.trigger_type);
+  
+  // Custom translates for trigger triggers labels in Portuguese
+  let localizedTriggerLabel = meta.label;
+  if (automation.trigger_type === "keyword_match") localizedTriggerLabel = "Palavra-chave";
+  else if (automation.trigger_type === "new_message_received") localizedTriggerLabel = "Nova Mensagem";
+  else if (automation.trigger_type === "first_inbound_message") localizedTriggerLabel = "Primeiro Contato";
+  else if (automation.trigger_type === "new_contact_created") localizedTriggerLabel = "Novo Contato";
+
   return (
-    <li className="rounded-xl border border-border bg-card transition-colors hover:border-border">
+    <li className="rounded-xl border border-neutral-200 bg-white transition-all hover:border-blue-200 shadow-xs">
       <div className="flex items-center gap-4 p-4">
-        <div
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
-          aria-hidden
-        >
-          <Zap className="h-5 w-5 text-primary" />
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <Zap className="h-5 w-5" />
         </div>
 
-        <button
-          type="button"
-          onClick={onEdit}
-          className="min-w-0 flex-1 text-left"
-        >
+        <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-foreground">
+            <span className="truncate text-xs font-bold text-neutral-800">
               {automation.name}
             </span>
             {automation.is_active && (
-              <span className="relative flex h-2 w-2" aria-label="active">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              <span className="relative flex h-2 w-2" aria-label="ativo">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
               </span>
             )}
           </div>
           {automation.description && (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{automation.description}</p>
+            <p className="mt-0.5 truncate text-[10px] text-neutral-400 font-semibold">{automation.description}</p>
           )}
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                meta.pillClass,
-              )}
-            >
-              {meta.label}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-400 font-semibold">
+            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase", meta.pillClass)}>
+              {localizedTriggerLabel}
             </span>
             <span className="tabular-nums">
-              {automation.execution_count} run{automation.execution_count === 1 ? "" : "s"}
+              {automation.execution_count} execuç{automation.execution_count === 1 ? "ão" : "ões"}
             </span>
             <span aria-hidden>·</span>
-            <span>last {formatRelative(automation.last_executed_at)}</span>
+            <span>executada {formatRelative(automation.last_executed_at)}</span>
           </div>
         </button>
 
@@ -326,38 +624,104 @@ function AutomationCard({
           <Switch
             checked={automation.is_active}
             onCheckedChange={(v) => onToggle(!!v)}
-            aria-label={automation.is_active ? "Deactivate" : "Activate"}
+            aria-label={automation.is_active ? "Pausar" : "Ativar"}
           />
 
           <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label="Open menu"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[popup-open]:bg-muted"
-            >
+            <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-600">
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="h-4 w-4" />
-                Edit
+            <DropdownMenuContent align="end" className="min-w-40 bg-white border border-neutral-200 shadow-lg text-xs">
+              <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
+                <Pencil className="h-3.5 w-3.5" />
+                Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDuplicate}>
-                <Copy className="h-4 w-4" />
-                Duplicate
+              <DropdownMenuItem onClick={onDuplicate} className="cursor-pointer">
+                <Copy className="h-3.5 w-3.5" />
+                Duplicar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onLogs}>
-                <FileText className="h-4 w-4" />
-                View Logs
+              <DropdownMenuItem onClick={onLogs} className="cursor-pointer">
+                <FileText className="h-3.5 w-3.5" />
+                Ver Logs
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                <Trash2 className="h-4 w-4" />
-                Delete
+              <DropdownMenuSeparator className="bg-neutral-100" />
+              <DropdownMenuItem variant="destructive" onClick={onDelete} className="cursor-pointer text-red-600 focus:text-red-700">
+                <Trash2 className="h-3.5 w-3.5" />
+                Excluir
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
     </li>
-  )
+  );
+}
+
+function FlowCard({
+  flow,
+  onEdit,
+  onDelete,
+}: {
+  flow: FlowRow;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  let triggerLabel: string = flow.trigger_type;
+  if (flow.trigger_type === "keyword") triggerLabel = "Palavra-chave";
+  else if (flow.trigger_type === "first_inbound_message") triggerLabel = "Primeiro contato";
+  else if (flow.trigger_type === "manual") triggerLabel = "Manual";
+
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white p-4 hover:border-blue-200 transition-all shadow-xs flex flex-col justify-between">
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Workflow className="h-4 w-4 text-blue-600 shrink-0" />
+            <h3 className="text-xs font-bold text-neutral-800 truncate" title={flow.name}>
+              {flow.name}
+            </h3>
+          </div>
+          <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[9px] font-black uppercase ${FLOW_STATUS_COLORS[flow.status]}`}>
+            {FLOW_STATUS_LABELS[flow.status]}
+          </span>
+        </div>
+        
+        {flow.description && (
+          <p className="text-[10px] text-neutral-400 font-semibold leading-relaxed truncate">{flow.description}</p>
+        )}
+
+        <div className="flex items-center gap-1.5 flex-wrap pt-1.5 text-[9px] text-neutral-400 font-bold">
+          <span className="bg-neutral-50 text-neutral-600 border border-neutral-100 rounded px-1.5 py-0.2 uppercase">
+            {triggerLabel}
+          </span>
+          <span>•</span>
+          <span>{flow.execution_count} execuç{flow.execution_count === 1 ? "ão" : "ões"}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-neutral-100 mt-4 pt-3 gap-2">
+        <span className="text-[8px] text-neutral-400 font-semibold">
+          {flow.last_executed_at ? `Última em ${new Date(flow.last_executed_at).toLocaleDateString("pt-BR")}` : "Nunca executado"}
+        </span>
+        <div className="flex gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onEdit}
+            className="h-7 text-[10px] font-bold border-neutral-200 text-neutral-700 bg-white hover:bg-neutral-50 px-2.5 rounded-lg"
+          >
+            Editar
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onDelete}
+            className="h-7 text-[10px] font-bold border-red-100 hover:bg-red-50 text-red-600 hover:text-red-700 px-2.5 rounded-lg"
+          >
+            Excluir
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }

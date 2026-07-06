@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,7 @@ export default function AgendaPage() {
   // Popover States
   const [popoverAppt, setPopoverAppt] = useState<Appointment | null>(null);
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get week date list starting Sunday to Saturday
   const getWeekDates = (date: Date) => {
@@ -151,10 +152,13 @@ export default function AgendaPage() {
     return `https://wa.me/${finalPhone}`;
   };
 
-  const handleApptClick = (appt: Appointment, e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
+  const handleApptMouseEnter = (appt: Appointment, e: React.MouseEvent<HTMLDivElement>) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
-    
     let left = rect.right + 8;
     let top = rect.top;
     
@@ -172,6 +176,13 @@ export default function AgendaPage() {
     
     setPopoverAppt(appt);
     setPopoverPosition({ top, left });
+  };
+
+  const handleApptMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setPopoverAppt(null);
+      setPopoverPosition(null);
+    }, 200);
   };
 
   // Fetch data
@@ -901,8 +912,13 @@ export default function AgendaPage() {
                               top: `${topPx}px`,
                               height: `${heightPx}px`,
                             }}
+                            onMouseEnter={(e) => {
+                              handleApptMouseEnter(appt, e);
+                            }}
+                            onMouseLeave={handleApptMouseLeave}
                             onClick={(e) => {
-                              handleApptClick(appt, e);
+                              e.stopPropagation();
+                              handleEditAppointment(appt.id);
                             }}
                             className={`absolute left-1 right-1 rounded-xl shadow-xs transition-all duration-200 text-left border p-2 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between ${styles.border} ${styles.bg}`}
                           >
@@ -987,6 +1003,13 @@ export default function AgendaPage() {
               top: `${popoverPosition.top}px`, 
               left: `${popoverPosition.left}px`,
             }}
+            onMouseEnter={() => {
+              if (hoverTimeoutRef.current) {
+                clearTimeout(hoverTimeoutRef.current);
+                hoverTimeoutRef.current = null;
+              }
+            }}
+            onMouseLeave={handleApptMouseLeave}
             className="z-50 w-[310px] bg-white border border-neutral-200 shadow-2xl rounded-2xl p-4 text-left space-y-4 animate-in fade-in zoom-in-95 duration-100"
           >
             {/* Header: status and "Agendamento" */}

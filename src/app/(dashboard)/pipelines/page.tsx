@@ -38,11 +38,11 @@ import { GatedButton } from "@/components/ui/gated-button";
 
 // Spec-defined seed — name and color per the product spec.
 const SPEC_DEFAULT_STAGES = [
-  { name: "New Lead", color: "#3b82f6", position: 0 }, // blue
-  { name: "Qualified", color: "#eab308", position: 1 }, // yellow
-  { name: "Proposal Sent", color: "#f97316", position: 2 }, // orange
-  { name: "Negotiation", color: "#8b5cf6", position: 3 }, // purple
-  { name: "Won", color: "#22c55e", position: 4 }, // green
+  { name: "Novo Lead", color: "#3b82f6", position: 0 }, // blue
+  { name: "Qualificado", color: "#eab308", position: 1 }, // yellow
+  { name: "Proposta Enviada", color: "#f97316", position: 2 }, // orange
+  { name: "Negociação", color: "#8b5cf6", position: 3 }, // purple
+  { name: "Ganha", color: "#22c55e", position: 4 }, // green
 ];
 
 export default function PipelinesPage() {
@@ -98,7 +98,18 @@ export default function PipelinesPage() {
       console.error("Failed to load pipelines:", error.message);
       return [];
     }
-    return data ?? [];
+    const fetched = data ?? [];
+    for (const pipe of fetched) {
+      if (pipe.name === "Sales Pipeline") {
+        supabase
+          .from("pipelines")
+          .update({ name: "Funil de Vendas" })
+          .eq("id", pipe.id)
+          .then(() => {});
+        pipe.name = "Funil de Vendas";
+      }
+    }
+    return fetched;
   }, [supabase]);
 
   const loadStages = useCallback(
@@ -108,7 +119,28 @@ export default function PipelinesPage() {
         .select("*")
         .eq("pipeline_id", pipelineId)
         .order("position");
-      return data ?? [];
+      
+      const fetched = data ?? [];
+      const translations: Record<string, string> = {
+        "New Lead": "Novo Lead",
+        "Qualified": "Qualificado",
+        "Proposal Sent": "Proposta Enviada",
+        "Negotiation": "Negociação",
+        "Won": "Ganha"
+      };
+      
+      for (const stage of fetched) {
+        if (translations[stage.name]) {
+          const newName = translations[stage.name];
+          supabase
+            .from("pipeline_stages")
+            .update({ name: newName })
+            .eq("id", stage.id)
+            .then(() => {});
+          stage.name = newName;
+        }
+      }
+      return fetched;
     },
     [supabase],
   );
@@ -136,7 +168,7 @@ export default function PipelinesPage() {
 
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, account_id: accountId, name: "Sales Pipeline" })
+      .insert({ user_id: user.id, account_id: accountId, name: "Funil de Vendas" })
       .select()
       .single();
 

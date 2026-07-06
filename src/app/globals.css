@@ -176,17 +176,17 @@ html[data-theme="emerald"] {
 }
 
 html[data-theme="cobalt"] {
-  --primary: oklch(0.585 0.2 254);
+  --primary: oklch(0.60 0.18 250);
   --primary-foreground: oklch(0.985 0 0);
-  --primary-hover: oklch(0.66 0.18 254);
-  --primary-soft: oklch(0.585 0.2 254 / 0.12);
-  --primary-soft-2: oklch(0.585 0.2 254 / 0.22);
-  --ring: oklch(0.585 0.2 254);
-  --chart-1: oklch(0.585 0.2 254);
+  --primary-hover: oklch(0.55 0.18 250);
+  --primary-soft: oklch(0.60 0.18 250 / 0.12);
+  --primary-soft-2: oklch(0.60 0.18 250 / 0.22);
+  --ring: oklch(0.60 0.18 250);
+  --chart-1: oklch(0.60 0.18 250);
   --chart-2: oklch(0.7 0.15 220);
-  --sidebar-primary: oklch(0.585 0.2 254);
+  --sidebar-primary: oklch(0.60 0.18 250);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-ring: oklch(0.585 0.2 254);
+  --sidebar-ring: oklch(0.60 0.18 250);
 }
 
 html[data-theme="amber"] {
@@ -226,5 +226,31 @@ html[data-theme="rose"] {
   }
   html {
     @apply font-sans;
+  }
+
+  /* Custom Sleek Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(96, 165, 250, 0.25);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(96, 165, 250, 0.45);
+  }
+
+  /* Custom Sleek Select Tags */
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
   }
 }
