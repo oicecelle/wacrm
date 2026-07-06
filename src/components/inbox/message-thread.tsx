@@ -110,9 +110,9 @@ interface MessageThreadProps {
 
 function formatDateSeparator(dateStr: string): string {
   const date = new Date(dateStr);
-  if (isToday(date)) return "Today";
-  if (isYesterday(date)) return "Yesterday";
-  return format(date, "MMMM d, yyyy");
+  if (isToday(date)) return "Hoje";
+  if (isYesterday(date)) return "Ontem";
+  return date.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function groupMessagesByDate(messages: Message[]) {
@@ -133,9 +133,9 @@ function groupMessagesByDate(messages: Message[]) {
 }
 
 const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
-  { label: "Open", value: "open", color: "text-primary" },
-  { label: "Pending", value: "pending", color: "text-amber-400" },
-  { label: "Closed", value: "closed", color: "text-muted-foreground" },
+  { label: "Aberta", value: "open", color: "text-primary" },
+  { label: "Pendente", value: "pending", color: "text-amber-400" },
+  { label: "Fechada", value: "closed", color: "text-muted-foreground" },
 ];
 
 /**
@@ -788,10 +788,10 @@ export function MessageThread({
           <MessageSquare className="h-8 w-8 text-muted-foreground" />
         </div>
         <h3 className="mt-4 text-sm font-medium text-muted-foreground">
-          Select a conversation
+          Selecione uma conversa
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Choose a conversation from the left to start messaging
+          Escolha uma conversa à esquerda para começar a enviar mensagens
         </p>
       </div>
     );
@@ -805,8 +805,8 @@ export function MessageThread({
   const assignedAgentId = conversation.assigned_agent_id ?? null;
   const currentAssignee = profiles.find((p) => p.user_id === assignedAgentId);
   const assignLabel = assignedAgentId
-    ? (currentAssignee?.full_name ?? "Assigned")
-    : "Assign";
+    ? (currentAssignee?.full_name ?? "Atribuído")
+    : "Atribuir";
 
   return (
     // `min-w-0` is load-bearing: the page already puts min-w-0 on the

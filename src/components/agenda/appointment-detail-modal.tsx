@@ -97,7 +97,7 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   scheduled: { label: "Agendado", cls: "bg-blue-100 text-blue-700 border-blue-200" },
   confirmed: { label: "Confirmado", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  attended: { label: "Realizado", cls: "bg-violet-100 text-violet-700 border-violet-200" },
+  attended: { label: "Realizado", cls: "bg-blue-100 text-blue-700 border-blue-200" },
   cancelled: { label: "Cancelado", cls: "bg-rose-100 text-rose-700 border-rose-200" },
   no_show: { label: "Faltou", cls: "bg-amber-100 text-amber-700 border-amber-200" },
 };
@@ -422,7 +422,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                     <Button
                       onClick={handleAddEvolucao}
                       disabled={savingEvolucao || !newEvolucao.trim()}
-                      className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl h-9"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-9"
                     >
                       {savingEvolucao ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <><PlusIcon className="h-4 w-4 mr-1.5" /> Registrar Evolução</>}
                     </Button>
@@ -435,7 +435,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                     {evolucoes.filter(e => e.note_type !== "prontuario").map((entry, idx) => (
                       <div key={idx} className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <div className="h-2.5 w-2.5 rounded-full bg-violet-400 mt-1.5 shrink-0" />
+                          <div className="h-2.5 w-2.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
                           {idx < evolucoes.filter(e => e.note_type !== "prontuario").length - 1 && (
                             <div className="w-px flex-1 bg-neutral-200 mt-1" />
                           )}

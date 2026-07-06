@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { AppointmentModal } from "@/components/ui/appointment-modal";
 import { AppointmentDetailModal } from "@/components/agenda/appointment-detail-modal";
 import { QuoteModal } from "@/components/quotes/quote-modal";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -53,7 +54,7 @@ interface FilterOption {
 }
 
 export default function AgendaPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { accountId } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +99,7 @@ export default function AgendaPage() {
   const [popoverAppt, setPopoverAppt] = useState<Appointment | null>(null);
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [calendarView, setCalendarView] = useState<"dia" | "semana" | "mes">("semana");
 
   // Get week date list starting Sunday to Saturday
   const getWeekDates = (date: Date) => {
@@ -116,6 +118,12 @@ export default function AgendaPage() {
   };
 
   const weekDates = getWeekDates(selectedDate);
+  const displayedDates = useMemo(() => {
+    if (calendarView === "dia") {
+      return [selectedDate];
+    }
+    return weekDates;
+  }, [calendarView, selectedDate, weekDates]);
 
   // Helpers for Popover and formatting
   const formatPopoverDate = (startStr: string, endStr: string) => {
@@ -525,8 +533,143 @@ export default function AgendaPage() {
         }
       `}</style>
 
-      {/* Double Column Split Layout */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      {/* Mobile-only view layout */}
+      <div className="lg:hidden space-y-4">
+        {/* Mini Calendar (Month selector + cells) */}
+        <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-bold text-neutral-800 capitalize">
+              {monthNames[pickerMonth].toLowerCase()} de {pickerYear}
+            </span>
+            <div className="flex gap-0.5">
+              <button
+                onClick={handlePickerPrevMonth}
+                className="p-1 hover:bg-neutral-100 rounded text-neutral-600 transition-colors"
+              >
+                <ChevronLeftIcon className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={handlePickerNextMonth}
+                className="p-1 hover:bg-neutral-100 rounded text-neutral-600 transition-colors"
+              >
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-neutral-400">
+            {weekdayInitials.map((initial, i) => (
+              <div key={i}>{initial}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center text-xs">
+            {miniCalendarCells.map((cellDate, cellIdx) => {
+              const isSelected = cellDate.toDateString() === selectedDate.toDateString();
+              const isToday = cellDate.toDateString() === new Date().toDateString();
+              const isCurrentMonth = cellDate.getMonth() === pickerMonth;
+
+              return (
+                <button
+                  key={cellIdx}
+                  onClick={() => {
+                    setSelectedDate(cellDate);
+                    setPickerMonth(cellDate.getMonth());
+                    setPickerYear(cellDate.getFullYear());
+                  }}
+                  className={`h-7 w-7 rounded-full flex items-center justify-center transition-all ${
+                    isSelected
+                      ? "bg-blue-600 text-white font-bold shadow-xs"
+                      : isToday
+                      ? "border border-blue-600 text-blue-600 font-semibold"
+                      : isCurrentMonth
+                      ? "text-neutral-700 hover:bg-neutral-100"
+                      : "text-neutral-300 dark:text-neutral-600 hover:bg-neutral-50"
+                  }`}
+                >
+                  {cellDate.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected date display */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-black text-neutral-500 uppercase tracking-wider">
+            Consultas de {selectedDate.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          </span>
+        </div>
+
+        {/* Appointments List for selectedDate */}
+        <div className="space-y-2.5">
+          {loading ? (
+            <div className="flex items-center justify-center py-10 text-neutral-400">
+              <Loader2Icon className="h-5 w-5 animate-spin text-blue-600 mr-2" />
+              <span className="text-xs">Buscando agendamentos...</span>
+            </div>
+          ) : (() => {
+            const dayAppts = filteredAppointments.filter((appt) => {
+              const startLocal = new Date(appt.start_time);
+              return startLocal.toDateString() === selectedDate.toDateString();
+            });
+
+            if (dayAppts.length === 0) {
+              return (
+                <div className="rounded-2xl border border-dashed border-neutral-200 bg-white p-8 text-center text-neutral-400 shadow-xs">
+                  <p className="text-xs font-bold">Nenhum agendamento para este dia.</p>
+                </div>
+              );
+            }
+
+            return dayAppts.map((appt) => {
+              const start = new Date(appt.start_time);
+              const end = new Date(appt.end_time);
+              const timeStr = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")} - ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
+              const dayStr = start.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+              const styles = getCardStatusStyles(appt.status);
+
+              return (
+                <div
+                  key={appt.id}
+                  onClick={() => handleEditAppointment(appt.id)}
+                  className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Patient avatar */}
+                    <div className="h-10 w-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-xs font-black text-blue-700 shrink-0 overflow-hidden">
+                      {appt.patients?.avatar_url ? (
+                        <img src={appt.patients.avatar_url} alt={appt.patients.name} className="size-full object-cover" />
+                      ) : (
+                        getInitials(appt.patients?.name || "Sem Nome")
+                      )}
+                    </div>
+                    
+                    <div className="min-w-0 text-left space-y-0.5">
+                      <p className="text-xs font-extrabold text-neutral-800 truncate">
+                        {appt.patients?.name || "Sem Nome"}
+                      </p>
+                      <p className="text-[10px] text-neutral-500 font-semibold truncate">
+                        {appt.type || appt.title || "Consulta"}
+                      </p>
+                      <p className="text-[9px] text-neutral-400 font-medium">
+                        {dayStr} • {timeStr}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wider shrink-0 ${styles.bg} ${styles.border}`}>
+                    {appt.status === "confirmed" ? "Confirmado" : appt.status === "attended" ? "Realizado" : appt.status === "cancelled" ? "Cancelado" : appt.status === "no_show" ? "Faltou" : "Pendente"}
+                  </span>
+                </div>
+              );
+            });
+          })()}
+        </div>
+      </div>
+
+      {/* Double Column Split Layout - Desktop Only */}
+      <div className="hidden lg:flex flex-row gap-6">
         {/* Left Sidebar: Mini Calendar and Dropdown Filters */}
         <aside className="w-full lg:w-[260px] shrink-0 space-y-5 flex flex-col">
           {/* Mini Month Picker */}
@@ -761,17 +904,22 @@ export default function AgendaPage() {
               </Button>
 
               <select
-                disabled
-                className="h-8 rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none opacity-90 cursor-not-allowed font-medium"
+                value={calendarView}
+                onChange={(e) => setCalendarView(e.target.value as any)}
+                className="h-8 rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none font-medium cursor-pointer"
               >
-                <option>Semana</option>
+                <option value="dia">Dia</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mês</option>
               </select>
             </div>
           </div>
 
           {/* Grid column headers (Weekdays row) */}
-          <div className="grid grid-cols-7 border-b border-neutral-200 text-center bg-[#fafbfc]/30 divide-x divide-neutral-100">
-            {weekDates.map((dayDate, i) => {
+          <div className={cn("grid border-b border-neutral-200 text-center bg-[#fafbfc]/30 divide-x divide-neutral-100",
+            calendarView === "dia" ? "grid-cols-1" : "grid-cols-7"
+          )}>
+            {displayedDates.map((dayDate, i) => {
               const isToday = dayDate.toDateString() === new Date().toDateString();
               const dayName = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][dayDate.getDay()];
               const dayNum = dayDate.getDate();
@@ -833,7 +981,10 @@ export default function AgendaPage() {
               </div>
 
               {/* Main week columns container */}
-              <div className="flex-1 grid grid-cols-7 relative h-[1000px] divide-x divide-neutral-100">
+              {/* Main week columns container */}
+              <div className={cn("flex-1 grid relative h-[1000px] divide-x divide-neutral-100",
+                calendarView === "dia" ? "grid-cols-1" : "grid-cols-7"
+              )}>
                 {/* Horizontal grid rows */}
                 <div className="absolute inset-0 pointer-events-none flex flex-col z-0">
                   {timeSlots.map((slot, idx) => (
@@ -846,7 +997,7 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Day Columns */}
-                {weekDates.map((dayDate, dayIdx) => {
+                {displayedDates.map((dayDate, dayIdx) => {
                   const dayOfWeek = dayDate.getDay();
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
 
@@ -956,15 +1107,6 @@ export default function AgendaPage() {
 
       {/* Floating Action Buttons bottom-right */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
-        {/* Sparkles Assistant FAB */}
-        <button
-          onClick={triggerCopilot}
-          className="h-12 w-12 rounded-full bg-gradient-to-tr from-blue-500 via-pink-500 to-indigo-500 text-white flex items-center justify-center shadow-lg hover:shadow-pink-500/20 hover:scale-105 active:scale-95 transition-all animate-bounce"
-          title="Pedir ajuda ao Assistente AI"
-        >
-          <SparklesIcon className="h-5 w-5 text-white" />
-        </button>
-
         {/* Plus Appointment FAB */}
         <button
           onClick={() => {
