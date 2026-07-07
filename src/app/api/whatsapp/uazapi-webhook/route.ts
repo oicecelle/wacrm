@@ -105,10 +105,7 @@ export async function POST(request: Request) {
     const fromMe = msg.fromMe ?? dataObj.key?.fromMe ?? false
     const isGroup = msg.isGroup ?? dataObj.key?.remoteJid?.includes('@g.us') ?? false
 
-    // We only process private chats (ignore group messages to avoid polluting CRM contacts/pipelines)
-    if (isGroup) {
-      return NextResponse.json({ status: 'ignored', reason: 'group_message' })
-    }
+    // We process both private chats and groups (as requested by user)
 
     // Resolve phone number
     const chatid = msg.chatid || dataObj.chat?.wa_chatid || dataObj.chat?.id || msg.key?.remoteJid || dataObj.key?.remoteJid || ''
@@ -118,12 +115,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Phone number not found' }, { status: 400 })
     }
 
-    const pushName = dataObj.chat?.wa_name || dataObj.chat?.name || body.sender?.name || ''
+    let pushName = ''
+    if (isGroup) {
+      pushName = dataObj.chat?.name || dataObj.chat?.wa_name || `Grupo ${phone}`
+    } else {
+      pushName = dataObj.chat?.wa_name || dataObj.chat?.name || body.sender?.name || dataObj.pushName || ''
+    }
+
     const messageId = msg.messageId || msg.key?.id || dataObj.key?.id || `uaz-in-${Date.now()}`
     const mediaType = msg.mediaType || msg.type || dataObj.messageType || 'text'
     
     // Determine content text and content type
     let contentText = (msg.text || msg.content || dataObj.message?.conversation || dataObj.message?.extendedTextMessage?.text || '').trim()
+    if (isGroup && !fromMe) {
+      const senderName = body.sender?.name || dataObj.sender?.name || dataObj.pushName || 'Membro'
+      contentText = `[${senderName}]: ${contentText}`
+    }
     let contentType = 'text'
 
     if (mediaType === 'image') {
@@ -231,8 +238,8 @@ export async function POST(request: Request) {
       console.error('[uazapi-webhook] Error updating conversation:', convError)
     }
 
-    // Only run flows, automations, and AI analysis for customer inbound messages (ignore if fromMe === true)
-    if (!fromMe) {
+    // Only run flows, automations, and AI analysis for customer inbound private messages (ignore if fromMe === true or it is a group message)
+    if (!fromMe && !isGroup) {
       // Flip broadcast status to replied if appropriate
       await flagBroadcastReplyIfAny(accountId, contactRecord.id)
 
