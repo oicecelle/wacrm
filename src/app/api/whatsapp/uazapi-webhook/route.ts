@@ -297,9 +297,13 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ status: 'success', messageId })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[uazapi-webhook] Error processing webhook:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({
+      error: 'Internal server error',
+      message: error?.message || String(error),
+      stack: error?.stack || null
+    }, { status: 500 })
   }
 }
 
