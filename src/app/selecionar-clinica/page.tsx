@@ -269,10 +269,10 @@ export default function SelecionarClinicaPage() {
                   className="w-full text-left rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all"
                   style={{
                     background: isSelected
-                      ? "rgba(99,102,241,0.15)"
+                      ? "rgba(37,133,252,0.15)"
                       : "rgba(255,255,255,0.03)",
                     border: isSelected
-                      ? "1px solid rgba(99,102,241,0.45)"
+                      ? "1px solid rgba(37,133,252,0.45)"
                       : "1px solid rgba(255,255,255,0.05)",
                   }}
                 >
@@ -281,7 +281,7 @@ export default function SelecionarClinicaPage() {
                     className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-base font-black text-white"
                     style={{
                       background: isSelected
-                        ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+                        ? "linear-gradient(135deg, #2585fc, #003bbd)"
                         : "rgba(255,255,255,0.08)",
                     }}
                   >
@@ -329,7 +329,7 @@ export default function SelecionarClinicaPage() {
                       className="h-5 w-5 rounded-full flex items-center justify-center transition-all"
                       style={{
                         background: isSelected
-                          ? "rgba(99,102,241,1)"
+                          ? "#2585fc"
                           : "rgba(255,255,255,0.07)",
                         border: isSelected
                           ? "none"
@@ -357,7 +357,7 @@ export default function SelecionarClinicaPage() {
           disabled={!selectedId || switching || loading}
           className="w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-lg"
           style={{
-            background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+            background: "linear-gradient(135deg, #2585fc, #003bbd)",
             color: "white",
           }}
         >

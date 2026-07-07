@@ -1816,7 +1816,7 @@ export function AppointmentModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 ${
-        appointmentId !== null 
+        patientId !== "" 
           ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" 
           : showNewPatientForm 
             ? "sm:max-w-md p-6 rounded-2xl" 
@@ -1826,8 +1826,8 @@ export function AppointmentModal({
           <div className="flex flex-1 items-center justify-center py-20 min-h-[300px]">
             <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
           </div>
-        ) : appointmentId === null ? (
-          /* CREATING WORKFLOW */
+        ) : patientId === "" ? (
+          /* CREATING WORKFLOW: Patient Picker */
           showNewPatientForm ? (
             /* Sub-view: Register New Patient */
             <div className="space-y-4 text-left">
@@ -1917,51 +1917,81 @@ export function AppointmentModal({
               </form>
             </div>
           ) : (
-            /* Creation Form View using renderFormContent() */
-            <div className="flex flex-col h-full max-h-[75vh] overflow-hidden text-left">
-              <DialogHeader className="mb-4">
+            /* Initial view: Patient Picker / Search */
+            <div className="space-y-4 text-left">
+              <DialogHeader>
                 <DialogTitle className="text-xl font-black text-neutral-900">Novo Agendamento</DialogTitle>
                 <DialogDescription className="text-sm text-neutral-500">
-                  Preencha os detalhes para agendar um novo compromisso.
+                  Busque um contato cadastrado no WhatsApp/CRM para abrir o operacional cockpit.
                 </DialogDescription>
               </DialogHeader>
 
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription className="text-xs">{error}</AlertDescription>
-                </Alert>
-              )}
+              <div className="space-y-3 py-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="search-pt" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Pesquisar Paciente</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewPatientForm(true);
+                      setNewPatientError(null);
+                    }}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 transition-all"
+                  >
+                    <UserPlusIcon className="h-3.5 w-3.5" /> + Cadastrar Novo
+                  </button>
+                </div>
+                
+                <div className="relative">
+                  <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                  <Input
+                    id="search-pt"
+                    type="text"
+                    placeholder="Digite nome, e-mail ou telefone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="rounded-xl border-neutral-200 pl-10 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
 
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4">
-                <form id="appt-modal-form-create" onSubmit={handleSave}>
-                  {renderFormContent()}
-                </form>
+                <div className="max-h-[280px] overflow-y-auto divide-y divide-neutral-100 border border-neutral-100 rounded-xl bg-neutral-50/50 shadow-inner mt-2">
+                  {filteredPatients.length === 0 ? (
+                    <p className="text-xs text-neutral-400 italic p-6 text-center">Nenhum paciente cadastrado encontrado.</p>
+                  ) : (
+                    filteredPatients.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setPatientId(p.id)}
+                        className="w-full text-left p-3 hover:bg-blue-50/50 flex items-center justify-between gap-3 transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black shrink-0">
+                            {p.name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-neutral-800 truncate">{p.name}</p>
+                            <p className="text-[10px] text-neutral-500 truncate">
+                              {p.phone ? p.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) $3-$4") : "Sem Telefone"} 
+                              {p.email ? ` • ${p.email}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRightIcon className="h-4 w-4 text-neutral-400 shrink-0" />
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
 
-              <div className="border-t border-neutral-100 pt-4 mt-4 flex justify-end gap-2 bg-white">
-                <DialogClose render={<Button type="button" variant="outline" className="text-xs h-9 rounded-lg" />}>
+              <DialogFooter className="flex justify-end pt-2">
+                <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>
                   Cancelar
                 </DialogClose>
-                <Button
-                  type="submit"
-                  form="appt-modal-form-create"
-                  disabled={saving || loading || !patientId}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 rounded-lg px-5 font-bold"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar Agendamento"
-                  )}
-                </Button>
-              </div>
+              </DialogFooter>
             </div>
           )
         ) : (
-          /* EDITING WORKFLOW: Operational Cockpit Layout */
+          /* EDITING & CREATING COCKPIT WORKFLOW: Operational Cockpit Layout */
           <div className="flex flex-col h-full overflow-hidden text-left">
             {/* Header: Patient Profile info */}
             <header className="bg-neutral-900 text-white p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-800">

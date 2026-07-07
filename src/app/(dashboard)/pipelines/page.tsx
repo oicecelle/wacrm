@@ -389,7 +389,7 @@ export default function PipelinesPage() {
             >
               <GitBranch className="h-4 w-4 text-primary" />
               <span className="font-semibold">
-                {selectedPipeline?.name ?? "Select Pipeline"}
+                {selectedPipeline?.name ?? "Selecionar Funil"}
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </DropdownMenuTrigger>
@@ -399,7 +399,7 @@ export default function PipelinesPage() {
             >
               {pipelines.length === 0 && (
                 <DropdownMenuItem disabled className="text-muted-foreground">
-                  No pipelines yet
+                  Nenhum funil ainda
                 </DropdownMenuItem>
               )}
               {pipelines.map((p) => (
@@ -423,7 +423,7 @@ export default function PipelinesPage() {
                   className="text-popover-foreground"
                 >
                   <Settings className="mr-2 h-3.5 w-3.5" />
-                  Manage Pipelines
+                  Gerenciar Funis
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -464,7 +464,7 @@ export default function PipelinesPage() {
             className="border-border bg-card text-foreground hover:bg-muted"
           >
             <Plus className="mr-1 h-4 w-4" />
-            Add Pipeline
+            Adicionar Funil
           </GatedButton>
           <GatedButton
             canAct={canCreateDeals}
@@ -474,7 +474,7 @@ export default function PipelinesPage() {
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="mr-1 h-4 w-4" />
-            Add Deal
+            Adicionar Lead
           </GatedButton>
         </div>
       </div>
@@ -484,10 +484,10 @@ export default function PipelinesPage() {
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20">
           <GitBranch className="h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-medium text-foreground">
-            No pipelines yet
+            Nenhum funil cadastrado
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create a pipeline to start tracking deals
+            Crie um funil para começar a gerenciar seus leads
           </p>
           <GatedButton
             canAct={canEditSettings}
@@ -496,7 +496,7 @@ export default function PipelinesPage() {
             className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="mr-1 h-4 w-4" />
-            Create Pipeline
+            Criar Funil
           </GatedButton>
         </div>
       ) : (
