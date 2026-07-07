@@ -35,7 +35,10 @@ export const metadata: Metadata = {
     locale: "pt_BR",
   },
   icons: {
-    icon: [{ url: "/icon.png" }],
+    icon: [
+      { url: "/icon.png?v=3", type: "image/png" },
+      { url: "/favicon.ico?v=3", type: "image/x-icon" }
+    ],
   },
   formatDetection: {
     email: false,
