@@ -73,14 +73,20 @@ export async function POST(request: Request) {
     }
 
     // 2. Handle connection status updates
+    const dataObj = body.data || body || {}
     const eventType = body.event || body.type
-    if (eventType === 'connection.update' || body.connectionState || body.state) {
+    const connectionState = body.connectionState || body.state || dataObj.connectionState || dataObj.state
+    if (eventType === 'connection.update' || connectionState) {
       const isConnected =
         body.connected === true ||
         body.state === 'connected' ||
         body.status === 'connected' ||
         body.connectionState === 'connected' ||
-        body.instance?.state === 'connected'
+        body.instance?.state === 'connected' ||
+        dataObj.connected === true ||
+        dataObj.state === 'connected' ||
+        dataObj.status === 'connected' ||
+        dataObj.connectionState === 'connected'
 
       await db
         .from('whatsapp_config')
@@ -95,9 +101,9 @@ export async function POST(request: Request) {
     }
 
     // 3. Process incoming messages
-    const msg = body.message || {}
-    const fromMe = msg.fromMe ?? false
-    const isGroup = msg.isGroup ?? false
+    const msg = dataObj.message || {}
+    const fromMe = msg.fromMe ?? dataObj.key?.fromMe ?? false
+    const isGroup = msg.isGroup ?? dataObj.key?.remoteJid?.includes('@g.us') ?? false
 
     // We only process inbound messages from customers
     if (fromMe || isGroup) {
@@ -105,19 +111,19 @@ export async function POST(request: Request) {
     }
 
     // Resolve phone number
-    const chatid = msg.chatid || body.chat?.wa_chatid || msg.key?.remoteJid || body.key?.remoteJid || ''
+    const chatid = msg.chatid || dataObj.chat?.wa_chatid || dataObj.chat?.id || msg.key?.remoteJid || dataObj.key?.remoteJid || ''
     const phone = normalizePhone(chatid.replace(/@s\.whatsapp\.net$/, '').replace(/@c\.us$/, '').trim())
     if (!phone) {
       console.warn('[uazapi-webhook] Could not extract phone number from payload:', JSON.stringify(body))
       return NextResponse.json({ error: 'Phone number not found' }, { status: 400 })
     }
 
-    const pushName = body.chat?.wa_name || body.chat?.name || ''
-    const messageId = msg.messageId || msg.key?.id || `uaz-in-${Date.now()}`
-    const mediaType = msg.mediaType || msg.type || 'text'
+    const pushName = dataObj.chat?.wa_name || dataObj.chat?.name || body.sender?.name || ''
+    const messageId = msg.messageId || msg.key?.id || dataObj.key?.id || `uaz-in-${Date.now()}`
+    const mediaType = msg.mediaType || msg.type || dataObj.messageType || 'text'
     
     // Determine content text and content type
-    let contentText = (msg.text || msg.content || '').trim()
+    let contentText = (msg.text || msg.content || dataObj.message?.conversation || dataObj.message?.extendedTextMessage?.text || '').trim()
     let contentType = 'text'
 
     if (mediaType === 'image') {
