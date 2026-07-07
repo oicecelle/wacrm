@@ -25,11 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus, ChevronDown, Settings, AlertCircle, Clock, X, MessageSquare } from "lucide-react";
+import { GitBranch, Plus, ChevronDown, Settings, AlertCircle, Clock, X, MessageSquare, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
+import { FollowupQueue } from "@/components/pipelines/followup-queue";
 
 // Pipeline creation is admin-class (settings-tier write under
 // the new RLS); deal creation is operational and only requires
@@ -61,6 +62,9 @@ export default function PipelinesPage() {
   // Unanswered Conversations / Leads
   const [unansweredConversations, setUnansweredConversations] = useState<any[]>([]);
   const [showUnansweredSheet, setShowUnansweredSheet] = useState(false);
+  // Follow-up queue
+  const [pendingFollowupsCount, setPendingFollowupsCount] = useState(0);
+  const [showFollowupSheet, setShowFollowupSheet] = useState(false);
 
   // Dialog / sheet state
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
@@ -88,6 +92,13 @@ export default function PipelinesPage() {
     
     setUnansweredConversations(data || []);
   }, [supabase, accountId]);
+
+  const loadFollowupCount = useCallback(async () => {
+    const res = await fetch('/api/followups?status=pending&limit=1');
+    const json = await res.json();
+    const all = await fetch('/api/followups?status=pending&limit=200').then(r => r.json());
+    setPendingFollowupsCount(all.followups?.length ?? 0);
+  }, []);
 
   const loadPipelines = useCallback(async () => {
     const { data, error } = await supabase
@@ -246,7 +257,8 @@ export default function PipelinesPage() {
 
   useEffect(() => {
     loadUnanswered();
-  }, [loadUnanswered, selectedPipelineId]);
+    loadFollowupCount();
+  }, [loadUnanswered, loadFollowupCount, selectedPipelineId]);
 
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
@@ -429,6 +441,18 @@ export default function PipelinesPage() {
               Sem Resposta ({unansweredConversations.length})
             </button>
           )}
+          {/* Follow-up queue button */}
+          <button
+            onClick={() => setShowFollowupSheet(true)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+              pendingFollowupsCount > 0
+                ? 'border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700'
+                : 'border-border bg-muted/30 hover:bg-muted text-muted-foreground'
+            }`}
+          >
+            <CalendarClock className="h-3.5 w-3.5" />
+            Follow-ups{pendingFollowupsCount > 0 ? ` (${pendingFollowupsCount})` : ''}
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -620,6 +644,29 @@ export default function PipelinesPage() {
                 );
               })
             )}
+          </div>
+        </div>
+      )}
+      {/* Follow-up Queue Sidebar */}
+      {showFollowupSheet && (
+        <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-background border-l border-border z-[100] shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
+            <div>
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <CalendarClock className="h-4 w-4 text-emerald-600" />
+                Fila de Follow-ups
+              </h2>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Mensagens programadas para envio automático</p>
+            </div>
+            <button
+              onClick={() => { setShowFollowupSheet(false); loadFollowupCount(); }}
+              className="text-muted-foreground hover:text-foreground rounded-lg p-1.5 hover:bg-muted transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <FollowupQueue />
           </div>
         </div>
       )}

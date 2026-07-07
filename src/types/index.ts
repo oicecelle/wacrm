@@ -327,6 +327,15 @@ export interface Deal {
   last_message_summary?: string;
   source?: string;
   responsible_user_id?: string;
+  // Follow-up & CRM enhanced fields
+  followup_scheduled_at?: string | null;
+  followup_type?: 'auto' | 'manual' | null;
+  followup_message?: string | null;
+  future_task_date?: string | null;
+  future_task_note?: string | null;
+  alert_scheduled_at?: string | null;
+  alert_note?: string | null;
+  objections?: string[];
 }
 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
@@ -553,4 +562,41 @@ export interface AutomationLog {
   error_message?: string | null;
   created_at: string;
   contact?: Contact;
+}
+
+// ─────────────────────────────────────────
+// Deal Follow-ups
+// ─────────────────────────────────────────
+
+export type DealFollowupStatus = 'pending' | 'sent' | 'cancelled' | 'failed';
+export type DealFollowupType = 'auto' | 'manual';
+
+export interface DealFollowup {
+  id: string;
+  account_id: string;
+  deal_id?: string | null;
+  contact_id?: string | null;
+  conversation_id?: string | null;
+  scheduled_at: string;
+  message: string;
+  ai_generated: boolean;
+  type: DealFollowupType;
+  status: DealFollowupStatus;
+  sent_at?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  deal?: Deal | null;
+  contact?: Contact | null;
+}
+
+export interface FollowupSettings {
+  followup_delay_hours: number;
+  followup_schedule_type: 'next_day_at_time' | 'hours_after';
+  followup_send_time: string;
+  followup_hours_after: number;
+  followup_use_ai: boolean;
+  followup_default_template: string | null;
+  lead_sources: string[];
 }

@@ -10,6 +10,7 @@ import type {
   Conversation,
   Deal,
   DealStatus,
+  FollowupSettings,
   PipelineStage,
   Profile,
 } from "@/types";
@@ -30,6 +31,10 @@ import {
   MessageSquare,
   DollarSign,
   Loader2,
+  Sparkles,
+  CalendarClock,
+  BellRing,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,6 +75,17 @@ export function DealForm({
   const [score, setScore] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [source, setSource] = useState("");
+  // New CRM fields
+  const [objections, setObjections] = useState<string[]>([]);
+  const [objectionInput, setObjectionInput] = useState("");
+  const [futureTaskDate, setFutureTaskDate] = useState("");
+  const [futureTaskNote, setFutureTaskNote] = useState("");
+  const [followupDateTime, setFollowupDateTime] = useState("");
+  const [followupMessage, setFollowupMessage] = useState("");
+  const [alertDate, setAlertDate] = useState("");
+  const [alertNote, setAlertNote] = useState("");
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [followupSettings, setFollowupSettings] = useState<FollowupSettings | null>(null);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -105,6 +121,13 @@ export function DealForm({
       setScore(deal.score !== undefined && deal.score !== null ? String(deal.score) : "");
       setNextAction(deal.next_action ?? "");
       setSource(deal.source ?? "");
+      setObjections(deal.objections ?? []);
+      setFutureTaskDate(deal.future_task_date ? deal.future_task_date.substring(0, 10) : "");
+      setFutureTaskNote(deal.future_task_note ?? "");
+      setFollowupDateTime(deal.followup_scheduled_at ? deal.followup_scheduled_at.substring(0, 16) : "");
+      setFollowupMessage(deal.followup_message ?? "");
+      setAlertDate(deal.alert_scheduled_at ? deal.alert_scheduled_at.substring(0, 16) : "");
+      setAlertNote(deal.alert_note ?? "");
     } else {
       setTitle("");
       setValue("");
@@ -120,22 +143,31 @@ export function DealForm({
       setScore("");
       setNextAction("");
       setSource("");
+      setObjections([]);
+      setFutureTaskDate("");
+      setFutureTaskNote("");
+      setFollowupDateTime("");
+      setFollowupMessage("");
+      setAlertDate("");
+      setAlertNote("");
     }
   }, [open, deal, defaultStageId, stages, defaultCurrency]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Load supporting data once the sheet is open
+  // Load supporting data + followup settings once sheet opens
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const [c, p] = await Promise.all([
+      const [c, p, fs] = await Promise.all([
         supabase.from("contacts").select("*").order("name"),
         supabase.from("profiles").select("*").order("full_name"),
+        fetch("/api/account/followup-settings").then(r => r.json()),
       ]);
       if (cancelled) return;
       setContacts((c.data ?? []) as Contact[]);
       setProfiles((p.data ?? []) as Profile[]);
+      if (fs?.settings) setFollowupSettings(fs.settings);
     })();
     return () => {
       cancelled = true;
@@ -191,6 +223,16 @@ export function DealForm({
       score: score ? parseInt(score, 10) : null,
       next_action: nextAction.trim() || null,
       source: source.trim() || null,
+      objections: objections.length > 0 ? objections : [],
+      future_task_date: futureTaskDate || null,
+      future_task_note: futureTaskNote.trim() || null,
+      followup_scheduled_at: followupDateTime || null,
+      followup_type: followupDateTime ? 'manual' : null,
+      followup_message: followupMessage.trim() || null,
+      alert_scheduled_at: alertDate || null,
+      alert_note: alertNote.trim() || null,
+      // Auto-link conversation if contact has one
+      conversation_id: linkedConversation?.id || null,
     };
 
     if (deal) {
@@ -436,13 +478,17 @@ export function DealForm({
                 </div>
 
                 <div className="grid gap-1.5">
-                  <Label className="text-xs font-bold text-neutral-600">Origem (Source)</Label>
-                  <Input
+                  <Label className="text-xs font-bold text-neutral-600">Origem do Lead</Label>
+                  <select
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
-                    placeholder="Ex: Instagram, Google"
-                    className="border-border bg-white text-xs h-9 text-foreground"
-                  />
+                    className="h-9 w-full rounded-lg border border-border bg-white px-2.5 text-xs text-foreground outline-none"
+                  >
+                    <option value="">Selecione...</option>
+                    {(followupSettings?.lead_sources ?? ['WhatsApp Orgânico','Instagram','Indicação','Site','Google','TikTok']).map((s: string) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -456,12 +502,147 @@ export function DealForm({
                 />
               </div>
 
+              {/* Objeções múltiplas (tags) */}
+              <div className="grid gap-1.5">
+                <Label className="text-xs font-bold text-neutral-600">Objeções (múltiplas)</Label>
+                <div className="flex flex-wrap gap-1 min-h-[32px] p-1.5 rounded-lg border border-border bg-white">
+                  {objections.map((obj, i) => (
+                    <span key={i} className="inline-flex items-center gap-0.5 bg-red-100 text-red-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                      {obj}
+                      <button type="button" onClick={() => setObjections(prev => prev.filter((_, idx) => idx !== i))} className="ml-0.5 hover:text-red-900">×</button>
+                    </span>
+                  ))}
+                  <input
+                    value={objectionInput}
+                    onChange={e => setObjectionInput(e.target.value)}
+                    onKeyDown={e => {
+                      if ((e.key === 'Enter' || e.key === ',') && objectionInput.trim()) {
+                        e.preventDefault();
+                        setObjections(prev => [...prev, objectionInput.trim()]);
+                        setObjectionInput('');
+                      }
+                    }}
+                    placeholder="Digite e pressione Enter..."
+                    className="flex-1 min-w-[120px] text-xs outline-none bg-transparent"
+                  />
+                </div>
+              </div>
+
               <div className="grid gap-1.5">
                 <Label className="text-xs font-bold text-neutral-600">Próxima Ação</Label>
                 <Input
                   value={nextAction}
                   onChange={(e) => setNextAction(e.target.value)}
                   placeholder="Ex: Enviar proposta de parcelamento na segunda"
+                  className="border-border bg-white text-xs h-9 text-foreground"
+                />
+              </div>
+            </div>
+
+            {/* Follow-up Section */}
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
+              <p className="text-xs font-black text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                <CalendarClock className="h-3.5 w-3.5" /> Follow-up Programado
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Data e Hora</Label>
+                  <Input
+                    type="datetime-local"
+                    value={followupDateTime}
+                    onChange={e => setFollowupDateTime(e.target.value)}
+                    className="border-border bg-white text-xs h-9 text-foreground"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={generatingAI || !contactId}
+                    onClick={async () => {
+                      setGeneratingAI(true);
+                      try {
+                        const contact = contacts.find(c => c.id === contactId);
+                        const res = await fetch('/api/ai/followup-suggestion', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            contact_name: contact?.name || contact?.phone || 'lead',
+                            deal_title: title,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.suggestion) setFollowupMessage(data.suggestion);
+                      } catch { toast.error('Erro ao gerar sugestão'); }
+                      setGeneratingAI(false);
+                    }}
+                    className="w-full text-xs h-9 border-emerald-500/30 text-emerald-700 hover:bg-emerald-50"
+                  >
+                    {generatingAI ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                    Gerar com IA
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs font-bold text-neutral-600">Mensagem do Follow-up</Label>
+                <Textarea
+                  value={followupMessage}
+                  onChange={e => setFollowupMessage(e.target.value)}
+                  placeholder="Olá! Tudo bem? Passando para saber se ainda tem interesse..."
+                  className="min-h-[70px] border-border bg-white text-xs text-foreground"
+                />
+              </div>
+            </div>
+
+            {/* Tarefa Futura */}
+            <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-3">
+              <p className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> Tarefa Futura
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Data disponível</Label>
+                  <Input
+                    type="date"
+                    value={futureTaskDate}
+                    onChange={e => setFutureTaskDate(e.target.value)}
+                    className="border-border bg-white text-xs h-9 text-foreground"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs font-bold text-neutral-600">Anotação</Label>
+                <Input
+                  value={futureTaskNote}
+                  onChange={e => setFutureTaskNote(e.target.value)}
+                  placeholder='Ex: "Lead volta em agosto"'
+                  className="border-border bg-white text-xs h-9 text-foreground"
+                />
+              </div>
+            </div>
+
+            {/* Alerta */}
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+              <p className="text-xs font-black text-amber-700 uppercase tracking-wider flex items-center gap-1">
+                <BellRing className="h-3.5 w-3.5" /> Alerta
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Data e Hora</Label>
+                  <Input
+                    type="datetime-local"
+                    value={alertDate}
+                    onChange={e => setAlertDate(e.target.value)}
+                    className="border-border bg-white text-xs h-9 text-foreground"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs font-bold text-neutral-600">Motivo do alerta</Label>
+                <Input
+                  value={alertNote}
+                  onChange={e => setAlertNote(e.target.value)}
+                  placeholder="Ex: Ligar para confirmar consulta"
                   className="border-border bg-white text-xs h-9 text-foreground"
                 />
               </div>
