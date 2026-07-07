@@ -37,9 +37,18 @@ export async function POST(request: Request) {
 
     console.log('[uazapi-webhook] Received payload:', JSON.stringify(body).substring(0, 1000))
 
-    // 1. Identify the matching whatsapp_config
-    let config: any = null
     const db = supabaseAdmin()
+
+    // Diagnostic logging to inspect real incoming payload from UazAPI
+    await db
+      .from('whatsapp_webhook_logs')
+      .insert({
+        payload: body,
+        received_at: new Date().toISOString()
+      })
+      .catch((err: any) => console.error('[uazapi-webhook] Diagnostic logging failed:', err))
+
+    let config: any = null
 
     if (accountIdParam) {
       const { data, error } = await db

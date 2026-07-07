@@ -146,7 +146,16 @@ export async function setUazapiWebhook(
       body: JSON.stringify({
         url: webhookUrl,
         enabled: true,
-        events: ['message', 'message_received', 'message_create', 'message_upsert', 'connection.update']
+        events: [
+          'messages.upsert',
+          'messages.update',
+          'connection.update',
+          'send.message',
+          'MESSAGES_UPSERT',
+          'MESSAGES_UPDATE',
+          'CONNECTION_UPDATE',
+          'SEND_MESSAGE'
+        ]
       }),
     });
 
