@@ -40,13 +40,15 @@ export async function POST(request: Request) {
     const db = supabaseAdmin()
 
     // Diagnostic logging to inspect real incoming payload from UazAPI
-    await db
+    const { error: logErr } = await db
       .from('whatsapp_webhook_logs')
       .insert({
         payload: body,
         received_at: new Date().toISOString()
       })
-      .catch((err: any) => console.error('[uazapi-webhook] Diagnostic logging failed:', err))
+    if (logErr) {
+      console.error('[uazapi-webhook] Diagnostic logging failed:', logErr)
+    }
 
     let config: any = null
 
