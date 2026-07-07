@@ -214,7 +214,7 @@ export default function LandingPage() {
       <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/80 backdrop-blur-md border-b border-[#E3E9F5]/80 shadow-xs" : "bg-transparent"}`}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <img src="/images/logo.png" className="h-7 w-7 object-contain rounded-xl" alt="LeadPluz Logo" />
+            <img src="/images/logo.png" className="h-7 w-7 object-contain rounded-2xl" alt="LeadPluz Logo" />
             <span className="text-lg font-black tracking-tight text-[#10182B] uppercase">LeadPluz</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
@@ -598,7 +598,7 @@ export default function LandingPage() {
       <footer className="bg-[#10182B] text-neutral-500 border-t border-white/5 py-8 px-6 text-xs">
         <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src="/images/logo.png" className="h-6 w-6 object-contain rounded-xl" alt="LeadPluz Logo" />
+            <img src="/images/logo.png" className="h-6 w-6 object-contain rounded-2xl" alt="LeadPluz Logo" />
             <span className="text-sm font-bold text-neutral-400 uppercase">LeadPluz</span>
           </div>
           <p>© 2026 LeadPluz. Todos os direitos reservados.</p>
