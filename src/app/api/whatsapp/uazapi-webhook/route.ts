@@ -105,9 +105,9 @@ export async function POST(request: Request) {
     const fromMe = msg.fromMe ?? dataObj.key?.fromMe ?? false
     const isGroup = msg.isGroup ?? dataObj.key?.remoteJid?.includes('@g.us') ?? false
 
-    // We only process inbound messages from customers
-    if (fromMe || isGroup) {
-      return NextResponse.json({ status: 'ignored', reason: fromMe ? 'from_me' : 'group_message' })
+    // We only process private chats (ignore group messages to avoid polluting CRM contacts/pipelines)
+    if (isGroup) {
+      return NextResponse.json({ status: 'ignored', reason: 'group_message' })
     }
 
     // Resolve phone number
@@ -198,10 +198,11 @@ export async function POST(request: Request) {
       .eq('sender_type', 'customer')
     const isFirstInboundMessage = (priorCustomerMsgCount ?? 0) === 0
 
-    // Insert message record into Database
+    // Insert message record into Database (saving as 'agent' for messages sent by Marcelle/team, or 'customer' for incoming)
     const { error: msgError } = await db.from('messages').insert({
       conversation_id: conversation.id,
-      sender_type: 'customer',
+      sender_type: fromMe ? 'agent' : 'customer',
+      sender_id: fromMe ? configOwnerUserId : null,
       content_type: contentType,
       content_text: contentText || null,
       media_url: msg.mediaUrl || msg.url || null,
@@ -215,13 +216,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
     }
 
-    // Update conversation list preview
+    // Update conversation list preview. For sent messages, reset unread count to 0.
     const { error: convError } = await db
       .from('conversations')
       .update({
         last_message_text: contentText || `[${contentType}]`,
         last_message_at: new Date().toISOString(),
-        unread_count: (conversation.unread_count || 0) + 1,
+        unread_count: fromMe ? 0 : (conversation.unread_count || 0) + 1,
         updated_at: new Date().toISOString(),
       })
       .eq('id', conversation.id)
@@ -230,51 +231,54 @@ export async function POST(request: Request) {
       console.error('[uazapi-webhook] Error updating conversation:', convError)
     }
 
-    // Flip broadcast status to replied if appropriate
-    await flagBroadcastReplyIfAny(accountId, contactRecord.id)
+    // Only run flows, automations, and AI analysis for customer inbound messages (ignore if fromMe === true)
+    if (!fromMe) {
+      // Flip broadcast status to replied if appropriate
+      await flagBroadcastReplyIfAny(accountId, contactRecord.id)
 
-    // Dispatch to Flow Runner
-    const flowResult = await dispatchInboundToFlows({
-      accountId,
-      userId: configOwnerUserId,
-      contactId: contactRecord.id,
-      conversationId: conversation.id,
-      message: {
-        kind: 'text',
-        text: contentText,
-        meta_message_id: messageId,
-      },
-      isFirstInboundMessage,
-    })
-    const flowConsumed = flowResult.consumed
-
-    // Dispatch to Automation Engine
-    const automationTriggers: ('new_contact_created' | 'first_inbound_message' | 'new_message_received' | 'keyword_match')[] = []
-    if (!flowConsumed) {
-      automationTriggers.push('new_message_received', 'keyword_match')
-    }
-    if (contactOutcome.wasCreated) automationTriggers.unshift('new_contact_created')
-    if (isFirstInboundMessage) automationTriggers.unshift('first_inbound_message')
-
-    for (const triggerType of automationTriggers) {
-      runAutomationsForTrigger({
+      // Dispatch to Flow Runner
+      const flowResult = await dispatchInboundToFlows({
         accountId,
-        triggerType,
+        userId: configOwnerUserId,
         contactId: contactRecord.id,
-        context: {
-          message_text: contentText,
-          conversation_id: conversation.id,
+        conversationId: conversation.id,
+        message: {
+          kind: 'text',
+          text: contentText,
+          meta_message_id: messageId,
         },
-      }).catch((err) => console.error('[uazapi-webhook] Automations dispatch failed:', err))
-    }
+        isFirstInboundMessage,
+      })
+      const flowConsumed = flowResult.consumed
 
-    // Trigger contextual AI Analysis asynchronously
-    analyseWhatsAppConversationWithAI(
-      conversation.id,
-      contactRecord.id,
-      accountId,
-      messageId
-    ).catch((err) => console.error('[uazapi-webhook] AI Analysis trigger failed:', err))
+      // Dispatch to Automation Engine
+      const automationTriggers: ('new_contact_created' | 'first_inbound_message' | 'new_message_received' | 'keyword_match')[] = []
+      if (!flowConsumed) {
+        automationTriggers.push('new_message_received', 'keyword_match')
+      }
+      if (contactOutcome.wasCreated) automationTriggers.unshift('new_contact_created')
+      if (isFirstInboundMessage) automationTriggers.unshift('first_inbound_message')
+
+      for (const triggerType of automationTriggers) {
+        runAutomationsForTrigger({
+          accountId,
+          triggerType,
+          contactId: contactRecord.id,
+          context: {
+            message_text: contentText,
+            conversation_id: conversation.id,
+          },
+        }).catch((err) => console.error('[uazapi-webhook] Automations dispatch failed:', err))
+      }
+
+      // Trigger contextual AI Analysis asynchronously
+      analyseWhatsAppConversationWithAI(
+        conversation.id,
+        contactRecord.id,
+        accountId,
+        messageId
+      ).catch((err) => console.error('[uazapi-webhook] AI Analysis trigger failed:', err))
+    }
 
     return NextResponse.json({ status: 'success', messageId })
   } catch (error) {
