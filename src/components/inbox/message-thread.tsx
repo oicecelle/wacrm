@@ -219,8 +219,36 @@ export function MessageThread({
     };
   }, []);
 
+  const [providerType, setProviderType] = useState<string>("meta");
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const supabase = createClient();
+    supabase
+      .from("profiles")
+      .select("account_id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data: profile }) => {
+        if (!profile?.account_id) return;
+        supabase
+          .from("whatsapp_config")
+          .select("provider_type")
+          .eq("account_id", profile.account_id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.provider_type) {
+              setProviderType(data.provider_type);
+            }
+          });
+      });
+  }, [user?.id]);
+
   // 24-hour session timer
   const sessionInfo = useMemo(() => {
+    if (providerType === "uazapi") {
+      return { expired: false, remaining: "" };
+    }
     if (!messages.length) return { expired: false, remaining: "" };
 
     // Find last customer message
