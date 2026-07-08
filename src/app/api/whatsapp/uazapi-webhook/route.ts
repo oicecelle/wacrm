@@ -156,7 +156,17 @@ export async function POST(request: Request) {
     }
 
     const messageId = msg.messageId || msg.key?.id || dataObj.key?.id || `uaz-in-${Date.now()}`
-    const mediaType = msg.mediaType || msg.type || dataObj.messageType || 'text'
+    let mediaType = msg.mediaType || msg.type || dataObj.messageType || 'text'
+    const msgTypeStr = String(msg.messageType || msg.type || dataObj.messageType || '').toLowerCase()
+    if (msgTypeStr.includes('audio') || msgTypeStr.includes('ptt')) {
+      mediaType = 'audio'
+    } else if (msgTypeStr.includes('image')) {
+      mediaType = 'image'
+    } else if (msgTypeStr.includes('video')) {
+      mediaType = 'video'
+    } else if (msgTypeStr.includes('document')) {
+      mediaType = 'document'
+    }
     
     let rawTextContent = ''
     if (typeof msg.text === 'string') {
@@ -499,15 +509,15 @@ async function findOrCreateConversation(
   contactId: string,
 ) {
   const db = supabaseAdmin()
-  const { data: existing, error: findError } = await db
+  const { data: existingList, error: findError } = await db
     .from('conversations')
     .select('*')
     .eq('account_id', accountId)
     .eq('contact_id', contactId)
-    .maybeSingle()
+    .order('created_at', { ascending: true })
 
-  if (!findError && existing) {
-    return existing
+  if (!findError && existingList && existingList.length > 0) {
+    return existingList[0]
   }
 
   const { data: newConv, error: createError } = await db
