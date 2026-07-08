@@ -6,6 +6,7 @@ import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { getEnv } from '@/lib/env'
 import { analyseWhatsAppConversationWithAI } from '@/lib/ai/webhook-analyser'
+import { getUazapiProfilePicture } from '@/lib/whatsapp/uazapi-api'
 
 // Lazy-initialized admin client to avoid build-time issues
 let _adminClient: any = null
@@ -166,7 +167,9 @@ export async function POST(request: Request) {
       accountId,
       configOwnerUserId,
       phone,
-      pushName
+      pushName,
+      config.uazapi_token,
+      config.uazapi_base_url
     )
     if (!contactOutcome) {
       return NextResponse.json({ error: 'Failed to find/create contact' }, { status: 500 })
@@ -319,19 +322,49 @@ async function findOrCreateContact(
   accountId: string,
   configOwnerUserId: string,
   phone: string,
-  name: string
+  name: string,
+  uazapiToken?: string | null,
+  uazapiBaseUrl?: string | null
 ): Promise<ContactOutcome | null> {
   const db = supabaseAdmin()
   const existingContact = await findExistingContact(db, accountId, phone)
 
   if (existingContact) {
+    const updateFields: any = {}
     if (name && name !== existingContact.name) {
+      updateFields.name = name
+    }
+
+    // Fetch profile picture if not already present
+    if (!existingContact.avatar_url && uazapiToken && uazapiBaseUrl) {
+      try {
+        const avatarUrl = await getUazapiProfilePicture(uazapiBaseUrl, uazapiToken, phone)
+        if (avatarUrl) {
+          updateFields.avatar_url = avatarUrl
+          existingContact.avatar_url = avatarUrl
+        }
+      } catch (err) {
+        console.error('[uazapi-webhook] Error fetching profile picture for existing contact:', err)
+      }
+    }
+
+    if (Object.keys(updateFields).length > 0) {
+      updateFields.updated_at = new Date().toISOString()
       await db
         .from('contacts')
-        .update({ name, updated_at: new Date().toISOString() })
+        .update(updateFields)
         .eq('id', existingContact.id)
     }
     return { contact: existingContact, wasCreated: false }
+  }
+
+  let avatarUrl: string | null = null
+  if (uazapiToken && uazapiBaseUrl) {
+    try {
+      avatarUrl = await getUazapiProfilePicture(uazapiBaseUrl, uazapiToken, phone)
+    } catch (err) {
+      console.error('[uazapi-webhook] Error fetching profile picture for new contact:', err)
+    }
   }
 
   const { data: newContact, error: createError } = await db
@@ -341,6 +374,7 @@ async function findOrCreateContact(
       user_id: configOwnerUserId,
       phone,
       name: name || phone,
+      avatar_url: avatarUrl || null
     })
     .select()
     .single()

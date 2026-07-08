@@ -183,3 +183,52 @@ export async function setUazapiWebhook(
 
   return false;
 }
+
+/**
+ * Fetches the WhatsApp profile picture for a contact from Uazapi.
+ */
+export async function getUazapiProfilePicture(
+  baseUrl: string,
+  token: string,
+  phone: string
+): Promise<string | null> {
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+  const headers = {
+    'token': token,
+    'apikey': token,
+    'Content-Type': 'application/json',
+  };
+
+  // Try standard format (raw digits)
+  try {
+    const res = await fetch(`${cleanUrl}/get/profilePicture?number=${encodeURIComponent(phone)}`, {
+      method: 'GET',
+      headers,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const url = data?.profilePicUrl || data?.url;
+      if (url && url.startsWith('http')) return url;
+    }
+  } catch (err) {
+    console.error('[getUazapiProfilePicture] failed standard number:', err);
+  }
+
+  // Try with JID format suffix
+  try {
+    const res = await fetch(`${cleanUrl}/get/profilePicture?number=${encodeURIComponent(phone + '@s.whatsapp.net')}`, {
+      method: 'GET',
+      headers,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const url = data?.profilePicUrl || data?.url;
+      if (url && url.startsWith('http')) return url;
+    }
+  } catch (err) {
+    console.error('[getUazapiProfilePicture] failed JID format:', err);
+  }
+
+  return null;
+}
+

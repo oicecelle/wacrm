@@ -58,9 +58,7 @@ interface PatientOption {
 interface StaffOption {
   id: string;
   name: string;
-  user_id?: string | null;
 }
-
 
 interface SmartPanelData {
   leadScore: number;
@@ -81,6 +79,8 @@ export function AppointmentModal({
 }: AppointmentModalProps) {
   const supabase = createClient();
   const { profile, accountId, user } = useAuth();
+  const clinicId = accountId;
+  const [originalStatus, setOriginalStatus] = useState<string>("");
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [staff, setStaff] = useState<StaffOption[]>([]);
   const [procedures, setProcedures] = useState<any[]>([]);
@@ -99,23 +99,6 @@ export function AppointmentModal({
   const [status, setStatus] = useState("provisional");
   const [notes, setNotes] = useState("");
   const [sendWa, setSendWa] = useState(true);
-
-  // Screenshot 4 layout states
-  const [apptType, setApptType] = useState<"agendamento" | "bloqueio" | "lembrete" | "evento">("agendamento");
-  const [procedureQty, setProcedureQty] = useState(1);
-  const [dateBlockCollapsed, setDateBlockCollapsed] = useState(false);
-  const [preAuthFormOpen, setPreAuthFormOpen] = useState(false);
-  const [financialTabOpen, setFinancialTabOpen] = useState(false);
-  const [recurrence, setRecurrence] = useState("none");
-  const [color, setColor] = useState("purple");
-  const [showNewPatientFormInline, setShowNewPatientFormInline] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [originalStatus, setOriginalStatus] = useState<string>("");
-
-  // Separate date/time states matching form input structure
-  const [dateVal, setDateVal] = useState("");
-  const [startHourVal, setStartHourVal] = useState("");
-  const [endHourVal, setEndHourVal] = useState("");
 
   // Loaders
   const [loading, setLoading] = useState(false);
@@ -200,11 +183,10 @@ export function AppointmentModal({
 
   // Load selection options (patients, staff, procedures, rooms)
   useEffect(() => {
-    if (!open || !accountId) return;
+    if (!open || !profile) return;
 
     const loadOptions = async () => {
       try {
-        const clinicId = accountId;
 
         // Fetch patients (include phone & email for search cards)
         const { data: ptsData } = await supabase
@@ -214,15 +196,14 @@ export function AppointmentModal({
           .order("name");
         setPatients(ptsData || []);
 
-        // Fetch staff (clinic_users) using id as primary key
+        // Fetch staff (clinic_users)
         const { data: stData } = await supabase
           .from("clinic_users")
-          .select("id, name, user_id")
+          .select("user_id, name")
           .eq("clinic_id", clinicId)
           .eq("is_active", true)
           .order("name");
-        const mappedStaff = (stData || []).map((s) => ({ id: s.id, name: s.name, user_id: s.user_id }));
-        setStaff(mappedStaff);
+        setStaff((stData || []).map((s) => ({ id: s.user_id, name: s.name })));
 
         // Fetch procedures
         const { data: procData } = await supabase
@@ -241,21 +222,13 @@ export function AppointmentModal({
           .eq("is_active", true)
           .order("name");
         setRooms(rmData || []);
-
-        // Pre-fill professional if creating a new appointment and user is staff
-        if (!appointmentId) {
-          const currentStaff = mappedStaff.find(s => s.user_id === user?.id);
-          if (currentStaff) {
-            setProfessionalId(currentStaff.id);
-          }
-        }
       } catch (err) {
         console.error("Error loading appointment options:", err);
       }
     };
 
     loadOptions();
-  }, [open, accountId, appointmentId, user]);
+  }, [open, profile]);
 
   // Load appointment details if editing
   useEffect(() => {
@@ -264,12 +237,10 @@ export function AppointmentModal({
     if (!appointmentId) {
       // Pre-fill fields for creation
       setPatientId("");
-      const currentStaff = staff.find(s => s.user_id === user?.id);
-      setProfessionalId(currentStaff?.id || "");
+      setProfessionalId(user?.id || "");
       setProcedureName("");
       setRoomId("");
       setStatus("provisional");
-      setOriginalStatus("");
       setNotes("");
       setSendWa(true);
       setActiveTab("details");
@@ -324,7 +295,6 @@ export function AppointmentModal({
         setStartTime(startLocal);
         setEndTime(endLocal);
         setStatus(appt.status || "provisional");
-        setOriginalStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
         setSendWa(true);
       } catch (err) {
@@ -336,17 +306,7 @@ export function AppointmentModal({
     };
 
     loadAppointment();
-  }, [open, appointmentId, defaultDate, user, staff]);
-
-  useEffect(() => {
-    if (startTime) {
-      setDateVal(startTime.slice(0, 10));
-      setStartHourVal(startTime.slice(11, 16));
-    }
-    if (endTime) {
-      setEndHourVal(endTime.slice(11, 16));
-    }
-  }, [startTime, endTime]);
+  }, [open, appointmentId, defaultDate, profile]);
 
   // Fetch all patient related data (EMR notes, history stats, documents, packages, evaluations, transactions)
   useEffect(() => {
@@ -568,7 +528,7 @@ export function AppointmentModal({
             const { data: prof } = await supabase
               .from("clinic_users")
               .select("name")
-              .eq("user_id", lastAppt.professional_id)
+              .eq("id", lastAppt.professional_id)
               .maybeSingle();
             if (prof) {
               lastProfessionalName = prof.name;
@@ -598,19 +558,13 @@ export function AppointmentModal({
   // Save/Update appointment details
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountId) return;
+    if (!profile) return;
 
     setSaving(true);
     setError(null);
 
-    if (!dateVal || !startHourVal || !endHourVal) {
-      setError("Por favor, preencha os campos de data e hora.");
-      setSaving(false);
-      return;
-    }
-
-    const startObj = new Date(`${dateVal}T${startHourVal}`);
-    const endObj = new Date(`${dateVal}T${endHourVal}`);
+    const startObj = new Date(startTime);
+    const endObj = new Date(endTime);
 
     if (endObj <= startObj) {
       setError("A hora de término deve ser após a hora de início.");
@@ -620,7 +574,6 @@ export function AppointmentModal({
 
     try {
       const clinicId = accountId;
-      const profileName = profile?.full_name || "Sistema";
 
       if (appointmentId) {
         // Update appointment
@@ -654,7 +607,7 @@ export function AppointmentModal({
           event_type: "appointment",
           title: `Agendamento atualizado para [${statusMap[status] || status}]`,
           payload: {
-            updated_by: profileName,
+            updated_by: (profile?.full_name || "Sistema"),
             start_time: startObj.toISOString(),
           },
         });
@@ -727,7 +680,7 @@ export function AppointmentModal({
           event_type: "appointment",
           title: `Nova consulta agendada para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
           payload: {
-            created_by: profileName,
+            created_by: (profile?.full_name || "Sistema"),
             status,
           },
         });
@@ -776,7 +729,7 @@ export function AppointmentModal({
           event_type: "whatsapp",
           title: "Confirmação de agendamento enviada automaticamente via WhatsApp",
           payload: {
-            sent_by: profileName,
+            sent_by: (profile?.full_name || "Sistema"),
             phone: selectedPatientInfo?.phone,
             message: `Olá! Seu agendamento foi realizado para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Status: ${statusName}.`,
           },
@@ -808,40 +761,6 @@ export function AppointmentModal({
         .eq("id", appointmentId)
         .single();
         
-      // Trigger cancel notification via API before deleting from DB
-      const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
-      const startObj = new Date(startTime);
-      const formattedDate = startObj.toLocaleDateString("pt-BR");
-      const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-      fetch("/api/whatsapp/trigger", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event_type: "agendamento_cancelado",
-          appointment_id: appointmentId,
-          patient_id: patientId,
-          metadata: {
-            paciente: selectedPatientInfo?.name || "",
-            phone: selectedPatientInfo?.phone || "",
-            data: formattedDate,
-            hora: formattedTime,
-            profissional: professionalName,
-            procedimento: procedureName,
-          },
-        }),
-      }).catch((err) => console.error("Error triggering cancellation notification:", err));
-
-      // Trigger Google Calendar sync
-      fetch("/api/integrations/google/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "delete",
-          appointmentId: appointmentId,
-        }),
-      }).catch((err) => console.error("Error syncing Google Calendar delete:", err));
-
       const { error: deleteErr } = await supabase
         .from("appointments")
         .delete()
@@ -849,13 +768,13 @@ export function AppointmentModal({
 
       if (deleteErr) throw deleteErr;
 
-      if (data?.patient_id && accountId) {
+      if (data?.patient_id && profile) {
         await supabase.from("patient_timeline").insert({
           patient_id: data.patient_id,
           event_type: "appointment",
           title: "Agendamento excluído da agenda",
           payload: {
-            deleted_by: profile?.full_name || "Sistema",
+            deleted_by: (profile?.full_name || "Sistema"),
           },
         });
       }
@@ -872,11 +791,10 @@ export function AppointmentModal({
 
   // Generate & send selected document
   const handleSendSelectedDocuments = async () => {
-    if (!patientId || !accountId || selectedDocs.length === 0) return;
+    if (!patientId || !profile || selectedDocs.length === 0) return;
 
     setSaving(true);
     try {
-      const profileName = profile?.full_name || "Sistema";
       for (const templateId of selectedDocs) {
         const template = docTemplates.find((t) => t.id === templateId);
         if (!template) continue;
@@ -886,7 +804,7 @@ export function AppointmentModal({
         const { data: newDoc, error: docErr } = await supabase
           .from("documents")
           .insert({
-            clinic_id: accountId,
+            clinic_id: clinicId,
             patient_id: patientId,
             title: template.name,
             type: template.type || "contrato",
@@ -908,7 +826,7 @@ export function AppointmentModal({
           title: `Documento [${template.name}] enviado via WhatsApp para assinatura`,
           payload: {
             template_id: template.id,
-            sent_by: profileName,
+            sent_by: (profile?.full_name || "Sistema"),
             public_token: generatedToken,
           },
         });
@@ -920,7 +838,7 @@ export function AppointmentModal({
           event_type: "whatsapp",
           title: `Link de assinatura enviado via WhatsApp`,
           payload: {
-            sent_by: profileName,
+            sent_by: (profile?.full_name || "Sistema"),
             phone: selectedPatientInfo?.phone,
             message: `Olá! Por favor, assine digitalmente o documento "${template.name}" acessando: ${portalUrl}`,
           },
@@ -955,7 +873,7 @@ export function AppointmentModal({
 
   // Generate Document with OpenAI
   const handleGenerateAIDoc = async () => {
-    if (!aiDocProcedure.trim() || !accountId) {
+    if (!aiDocProcedure.trim() || !profile) {
       alert("Por favor, preencha o nome do procedimento.");
       return;
     }
@@ -980,17 +898,16 @@ export function AppointmentModal({
 
   // Save AI Document
   const handleSaveAIDoc = async () => {
-    if (!aiGeneratedContent || !accountId || !patientId) return;
+    if (!aiGeneratedContent || !profile || !patientId) return;
     setIsSavingGeneratedDoc(true);
     try {
       const generatedToken = "doc_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const title = `${aiDocType.toUpperCase()} - ${aiDocProcedure}`;
-      const profileName = profile?.full_name || "Sistema";
 
       const { data: newDoc, error: docErr } = await supabase
         .from("documents")
         .insert({
-          clinic_id: accountId,
+          clinic_id: clinicId,
           patient_id: patientId,
           title: title,
           type: aiDocType,
@@ -1012,7 +929,7 @@ export function AppointmentModal({
         title: `Documento de IA [${title}] gerado e enviado para assinatura`,
         payload: {
           document_id: newDoc.id,
-          sent_by: profileName,
+          sent_by: (profile?.full_name || "Sistema"),
           public_token: generatedToken,
         },
       });
@@ -1024,7 +941,7 @@ export function AppointmentModal({
         event_type: "whatsapp",
         title: `Link de assinatura IA enviado via WhatsApp`,
         payload: {
-          sent_by: profileName,
+          sent_by: (profile?.full_name || "Sistema"),
           phone: selectedPatientInfo?.phone,
           message: `Olá! Criamos o seu documento personalizado de "${aiDocProcedure}". Por favor, revise e assine digitalmente aqui: ${portalUrl}`,
         },
@@ -1057,16 +974,16 @@ export function AppointmentModal({
   // Add EMR clinical evolution note
   const handleAddClinicalEvolution = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEvolContent.trim() || !patientId || !accountId) return;
+    if (!newEvolContent.trim() || !patientId || !profile) return;
 
     setEvolSaving(true);
     try {
       const { data: newEv, error: evErr } = await supabase
         .from("clinical_evolutions")
         .insert({
-          clinic_id: accountId,
+          clinic_id: clinicId,
           patient_id: patientId,
-          professional_id: user?.id || null,
+          professional_id: user?.id,
           content: newEvolContent.trim(),
           signed: evolSigned,
           shared: evolShared,
@@ -1076,14 +993,13 @@ export function AppointmentModal({
 
       if (evErr) throw evErr;
 
-
-
+      // Add to timeline
       await supabase.from("patient_timeline").insert({
         patient_id: patientId,
         event_type: "evolution_added",
         title: evolSigned ? "Nova evolução clínica assinada" : "Evolução adicionada como rascunho",
         payload: {
-          professional: profile?.full_name || "Sistema",
+          professional: (profile?.full_name || "Sistema"),
           signed: evolSigned,
         },
       });
@@ -1126,7 +1042,7 @@ export function AppointmentModal({
   // Save new Body Evaluation
   const handleSaveBodyEval = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientId || !accountId) return;
+    if (!patientId || !profile) return;
 
     const w = parseFloat(evalWeight);
     const h = parseFloat(evalHeight);
@@ -1137,7 +1053,7 @@ export function AppointmentModal({
       const { error: evalErr } = await supabase
         .from("body_evaluations")
         .insert({
-          clinic_id: accountId,
+          clinic_id: clinicId,
           patient_id: patientId,
           evaluation_date: evalDate,
           weight: w || null,
@@ -1167,7 +1083,7 @@ export function AppointmentModal({
           weight: w,
           fat_percentage: parseFloat(evalFatPercentage) || null,
           imc: calculatedImc,
-          created_by: profile?.full_name || "Sistema",
+          created_by: (profile?.full_name || "Sistema"),
         },
       });
 
@@ -1206,7 +1122,7 @@ export function AppointmentModal({
 
   const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountId) return;
+    if (!profile) return;
     if (!newPatientName.trim() || !newPatientPhone.trim()) {
       setNewPatientError("Nome e Telefone são campos obrigatórios.");
       return;
@@ -1222,7 +1138,7 @@ export function AppointmentModal({
       const { data: existing } = await supabase
         .from("patients")
         .select("id")
-        .eq("clinic_id", accountId)
+        .eq("clinic_id", clinicId)
         .eq("phone", cleanPhone)
         .maybeSingle();
 
@@ -1234,7 +1150,7 @@ export function AppointmentModal({
       const { data: newPatient, error: insertErr } = await supabase
         .from("patients")
         .insert({
-          clinic_id: accountId,
+          clinic_id: clinicId,
           name: newPatientName.trim(),
           phone: cleanPhone,
           email: newPatientEmail.trim() || null,
@@ -1254,7 +1170,7 @@ export function AppointmentModal({
           event_type: "lead_created",
           title: `Paciente cadastrado no CRM via formulário de agendamento`,
           payload: {
-            created_by: profile?.full_name || "Sistema",
+            created_by: (profile?.full_name || "Sistema"),
           },
         });
       }
@@ -1394,440 +1310,16 @@ export function AppointmentModal({
     );
   };
 
-  const renderFormContent = () => {
-    return (
-      <div className="space-y-5 text-left">
-        {/* Switcher Tabs at the top */}
-        <div className="bg-neutral-100 p-1 rounded-xl flex gap-1 text-xs font-bold">
-          {(["agendamento", "bloqueio", "lembrete", "evento"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setApptType(type)}
-              className={`flex-1 py-1.5 rounded-lg text-center transition-all capitalize cursor-pointer ${
-                apptType === type
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-extrabold"
-                  : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/30"
-              }`}
-            >
-              {type === "bloqueio" ? "Bloqueio de horário" : type}
-            </button>
-          ))}
-        </div>
-
-        {/* Section 1: Dados básicos */}
-        <div className="space-y-4 border border-neutral-100 rounded-xl p-4 bg-white shadow-xs">
-          <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-2 mb-1">
-            <UserIcon className="h-4 w-4 text-blue-600" />
-            <span className="font-bold text-xs text-neutral-800 uppercase tracking-wider">Dados Básicos</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {/* Patient Picker or Readonly */}
-            {appointmentId !== null ? (
-              <div className="space-y-1 text-left">
-                <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Paciente</Label>
-                <div className="h-10 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 flex items-center text-sm text-neutral-800 font-semibold shadow-xs">
-                  {selectedPatientInfo?.name || "Carregando..."}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1 text-left relative">
-                <div className="flex justify-between items-center">
-                  <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Paciente *</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewPatientForm(true);
-                      setNewPatientError(null);
-                    }}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 transition-all"
-                  >
-                    <UserPlusIcon className="h-3.5 w-3.5" /> + Novo Paciente
-                  </button>
-                </div>
-                {patientId ? (
-                  <div className="h-10 bg-blue-50/50 border border-blue-200 rounded-xl px-3.5 flex items-center justify-between text-sm text-blue-900 font-extrabold shadow-xs">
-                    <span>{patients.find(p => p.id === patientId)?.name || "Paciente Selecionado"}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPatientId("");
-                        setSearchQuery("");
-                      }}
-                      className="text-xs text-rose-600 font-bold hover:underline"
-                    >
-                      Alterar
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="relative">
-                      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                      <Input
-                        type="text"
-                        placeholder="Buscar por nome, email ou telefone..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setDropdownOpen(true);
-                        }}
-                        onFocus={() => setDropdownOpen(true)}
-                        className="rounded-xl border-neutral-200 pl-9 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    {dropdownOpen && searchQuery.trim() !== "" && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-neutral-100">
-                        {filteredPatients.length === 0 ? (
-                          <p className="text-xs text-neutral-400 italic p-3 text-center">Nenhum paciente encontrado.</p>
-                        ) : (
-                          filteredPatients.map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => {
-                                setPatientId(p.id);
-                                setDropdownOpen(false);
-                              }}
-                              className="w-full text-left p-2.5 hover:bg-blue-50/50 flex items-center justify-between text-xs transition-all"
-                            >
-                              <div>
-                                <p className="font-extrabold text-neutral-800">{p.name}</p>
-                                <p className="text-[10px] text-neutral-500">{p.phone || "Sem telefone"}</p>
-                              </div>
-                              <ChevronRightIcon className="h-3.5 w-3.5 text-neutral-400" />
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Professional Select */}
-            <div className="space-y-1 text-left">
-              <Label htmlFor="form-staff" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
-              <select
-                id="form-staff"
-                value={professionalId}
-                onChange={(e) => setProfessionalId(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                required
-                disabled={saving}
-              >
-                <option value="">Selecione o profissional...</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Select */}
-            <div className="space-y-1 text-left">
-              <Label htmlFor="form-status" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Status da Consulta</Label>
-              <select
-                id="form-status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                disabled={saving}
-              >
-                <option value="provisional">Provisório (Pendente)</option>
-                <option value="confirmed">Confirmado</option>
-                <option value="attended">Realizado</option>
-                <option value="cancelled">Cancelado</option>
-                <option value="no_show">Não compareceu</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Color Picker Row */}
-          <div className="space-y-1.5 text-left">
-            <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Cor da Etiqueta</Label>
-            <div className="flex gap-2">
-              {[
-                { name: "purple", class: "bg-purple-500" },
-                { name: "blue", class: "bg-blue-500" },
-                { name: "green", class: "bg-emerald-500" },
-                { name: "red", class: "bg-rose-500" },
-                { name: "yellow", class: "bg-amber-500" },
-              ].map((c) => (
-                <button
-                  key={c.name}
-                  type="button"
-                  onClick={() => setColor(c.name)}
-                  className={`h-6 w-6 rounded-full ${c.class} transition-transform ${
-                    color === c.name ? "ring-2 ring-offset-2 ring-neutral-900 scale-110" : "hover:scale-105"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Observations */}
-          <div className="space-y-1 text-left">
-            <Label htmlFor="form-notes" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Observações / Notas</Label>
-            <Textarea
-              id="form-notes"
-              placeholder="Notas adicionais sobre o agendamento..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              disabled={saving}
-              className="rounded-xl border-neutral-200 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Section 2: Procedimentos/Produtos */}
-        <div className="space-y-4 border border-neutral-100 rounded-xl p-4 bg-white shadow-xs">
-          <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-2 mb-1">
-            <PackageIcon className="h-4 w-4 text-blue-600" />
-            <span className="font-bold text-xs text-neutral-800 uppercase tracking-wider">Procedimentos / Produtos</span>
-          </div>
-
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 space-y-1 text-left">
-              <Label htmlFor="form-procedure" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Procedimento / Serviço</Label>
-              <select
-                id="form-procedure"
-                value={procedureName}
-                onChange={(e) => {
-                  setProcedureName(e.target.value);
-                  setAiDocProcedure(e.target.value);
-                }}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                disabled={saving}
-              >
-                <option value="">Selecione...</option>
-                {procedures.map((p) => (
-                  <option key={p.id} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="w-20 space-y-1 text-left">
-              <Label htmlFor="form-qty" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Qtd</Label>
-              <Input
-                id="form-qty"
-                type="number"
-                min={1}
-                value={procedureQty}
-                onChange={(e) => setProcedureQty(parseInt(e.target.value) || 1)}
-                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-center"
-              />
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setProcedureName("");
-                setProcedureQty(1);
-              }}
-              className="h-10 w-10 p-0 rounded-xl hover:bg-rose-50 hover:text-rose-600 border-neutral-200 shrink-0"
-            >
-              <Trash2Icon className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {}}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-all mt-1"
-          >
-            + Adicionar procedimento
-          </button>
-        </div>
-
-        {/* Section 3: Data */}
-        <div className="space-y-4 border border-neutral-100 rounded-xl p-4 bg-white shadow-xs">
-          <div className="flex justify-between items-center border-b border-neutral-100 pb-2 mb-1">
-            <div className="flex items-center gap-1.5">
-              <CalendarDaysIcon className="h-4 w-4 text-blue-600" />
-              <span className="font-bold text-xs text-neutral-800 uppercase tracking-wider">Data e Horário</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDateBlockCollapsed(!dateBlockCollapsed)}
-              className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600"
-            >
-              {dateBlockCollapsed ? "Expandir" : "Recolher"}
-            </button>
-          </div>
-
-          {!dateBlockCollapsed && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1 text-left">
-                  <Label htmlFor="form-date" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
-                  <Input
-                    id="form-date"
-                    type="date"
-                    value={dateVal}
-                    onChange={(e) => setDateVal(e.target.value)}
-                    required
-                    disabled={saving}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                  />
-                </div>
-                <div className="space-y-1 text-left">
-                  <Label htmlFor="form-start-hour" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
-                  <Input
-                    id="form-start-hour"
-                    type="time"
-                    value={startHourVal}
-                    onChange={(e) => setStartHourVal(e.target.value)}
-                    required
-                    disabled={saving}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                  />
-                </div>
-                <div className="space-y-1 text-left">
-                  <Label htmlFor="form-end-hour" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Fim *</Label>
-                  <Input
-                    id="form-end-hour"
-                    type="time"
-                    value={endHourVal}
-                    onChange={(e) => setEndHourVal(e.target.value)}
-                    required
-                    disabled={saving}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1 text-left">
-                <Label htmlFor="form-recurrence" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Recorrência</Label>
-                <select
-                  id="form-recurrence"
-                  value={recurrence}
-                  onChange={(e) => setRecurrence(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  disabled={saving}
-                >
-                  <option value="none">Não se repete</option>
-                  <option value="daily">Diário</option>
-                  <option value="weekly">Semanal</option>
-                  <option value="monthly">Mensal</option>
-                </select>
-              </div>
-
-              {/* Collapsible Warning Alert */}
-              <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3.5 flex items-start gap-2.5 text-left text-amber-800">
-                <BadgeAlertIcon className="h-4.5 w-4.5 shrink-0 mt-0.5 text-amber-600" />
-                <div className="space-y-0.5">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider block text-amber-700">Aviso de Notificação</span>
-                  <span className="text-xs block font-semibold text-amber-900 leading-normal">
-                    As notificações de Confirmação de agendamento (WhatsApp Business) e Lembrete de agendamento (WhatsApp Business) não serão enviadas pois o tempo de antecedência configurado é maior que o tempo disponível até o agendamento.
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Collapsible Accordions */}
-        <div className="space-y-2.5">
-          {/* Accordion 1: Formulário de pré-atendimento */}
-          <div className="border border-neutral-100 rounded-xl bg-white shadow-xs overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setPreAuthFormOpen(!preAuthFormOpen)}
-              className="w-full p-4 flex items-center justify-between text-left text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <FileTextIcon className="h-4 w-4 text-neutral-500" />
-                Formulário de Pré-atendimento
-              </span>
-              <ChevronRightIcon className={`h-4 w-4 text-neutral-400 transition-transform ${preAuthFormOpen ? "rotate-90" : ""}`} />
-            </button>
-            {preAuthFormOpen && (
-              <div className="p-4 border-t border-neutral-100 bg-neutral-50/20 text-left space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-neutral-700">Solicitar Ficha de Anamnese</p>
-                    <p className="text-[10px] text-neutral-500">Enviar automaticamente formulário de anamnese antes da consulta.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {}}
-                    className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-neutral-300 transition-colors"
-                  >
-                    <span className="inline-block h-4 w-4 translate-x-0.5 rounded-full bg-white shadow" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Accordion 2: Financeiro */}
-          <div className="border border-neutral-100 rounded-xl bg-white shadow-xs overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setFinancialTabOpen(!financialTabOpen)}
-              className="w-full p-4 flex items-center justify-between text-left text-xs font-bold text-neutral-800 hover:bg-neutral-50 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <DollarSignIcon className="h-4 w-4 text-neutral-500" />
-                Financeiro
-              </span>
-              <ChevronRightIcon className={`h-4 w-4 text-neutral-400 transition-transform ${financialTabOpen ? "rotate-90" : ""}`} />
-            </button>
-            {financialTabOpen && (
-              <div className="p-4 border-t border-neutral-100 bg-neutral-50/20 text-left space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Preço do Procedimento (R$)</Label>
-                    <Input type="number" placeholder="0.00" className="text-xs h-9 bg-white" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Forma de Pagamento</Label>
-                    <select className="w-full text-xs h-9 rounded-md border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500">
-                      <option value="pix">Pix</option>
-                      <option value="cartao">Cartão de Crédito/Débito</option>
-                      <option value="dinheiro">Dinheiro</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Status do Pagamento</Label>
-                    <select className="w-full text-xs h-9 rounded-md border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500">
-                      <option value="pending">Pendente</option>
-                      <option value="paid">Pago</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 ${
-        patientId !== "" 
-          ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" 
-          : showNewPatientForm 
-            ? "sm:max-w-md p-6 rounded-2xl" 
-            : "sm:max-w-xl max-h-[85vh] p-6 rounded-2xl"
+        patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"
       }`}>
         {loading ? (
           <div className="flex flex-1 items-center justify-center py-20 min-h-[300px]">
             <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
           </div>
-        ) : patientId === "" ? (
-          /* CREATING WORKFLOW: Patient Picker */
+        ) : !patientId ? (
           showNewPatientForm ? (
             /* Sub-view: Register New Patient */
             <div className="space-y-4 text-left">
@@ -1991,11 +1483,12 @@ export function AppointmentModal({
             </div>
           )
         ) : (
-          /* EDITING & CREATING COCKPIT WORKFLOW: Operational Cockpit Layout */
-          <div className="flex flex-col h-full overflow-hidden text-left">
+          /* Expanded Panel layout: Tabbed content + Smart panel */
+          <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
             <header className="bg-neutral-900 text-white p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-800">
               <div className="flex items-center gap-4">
+                {/* Photo/Avatar circle */}
                 <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-blue-400 text-white flex items-center justify-center text-lg font-black shadow-inner shrink-0">
                   {firstName.charAt(0).toUpperCase()}
                   {lastName.charAt(0).toUpperCase()}
@@ -2007,6 +1500,7 @@ export function AppointmentModal({
                       {firstName} <span className="font-medium text-neutral-300">{lastName}</span>
                     </h2>
                     
+                    {/* Documents Alert status badge */}
                     {pendingDocsCount > 0 ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[10px] text-rose-400 font-bold border border-rose-500/20">
                         <BadgeAlertIcon className="h-3 w-3" />
@@ -2027,6 +1521,7 @@ export function AppointmentModal({
                         target="_blank"
                         rel="noreferrer"
                         className="hover:text-emerald-400 transition-colors flex items-center gap-1 text-emerald-500"
+                        title="Iniciar conversa no WhatsApp"
                       >
                         <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
                           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.965C16.528 2.028 14.066 1.03 11.453 1.03c-5.442 0-9.866 4.372-9.87 9.802 0 1.698.455 3.355 1.32 4.822l-1.006 3.677 3.75-.977z"/>
@@ -2071,6 +1566,7 @@ export function AppointmentModal({
               </nav>
             </header>
 
+            {/* Split panel Content body */}
             <div className="flex-1 flex overflow-hidden min-h-0 bg-neutral-50/25">
               {/* Main Tab Area (Left - 65% width) */}
               <div className="flex-1 overflow-y-auto p-6 bg-white min-w-0">
@@ -2086,9 +1582,10 @@ export function AppointmentModal({
                   </div>
                 ) : (
                   <>
-                    {/* Tab: DETAILS */}
+                    {/* Tab: DETAILS (Forms) */}
                     {activeTab === "details" && (
                       <div className="space-y-4">
+                        {/* Active Packages Indicator Banner */}
                         {patientPackages.filter(p => p.status === 'active').length > 0 && (
                           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-left shadow-xs">
                             <p className="text-xs font-black text-blue-900 flex items-center gap-1.5 mb-2">
@@ -2109,15 +1606,177 @@ export function AppointmentModal({
                           </div>
                         )}
 
-                        <form id="appt-modal-form" onSubmit={handleSave}>
-                          {renderFormContent()}
+                        <form id="appt-modal-form" onSubmit={handleSave} className="space-y-4">
+                          {/* Professional selector */}
+                          <div className="space-y-1 text-left">
+                            <Label htmlFor="det-staff" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
+                            <select
+                              id="det-staff"
+                              value={professionalId}
+                              onChange={(e) => setProfessionalId(e.target.value)}
+                              className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              required
+                              disabled={saving}
+                            >
+                              <option value="">Selecione o profissional...</option>
+                              {staff.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Date and Times */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
+                              <Input
+                                id="det-start"
+                                type="datetime-local"
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
+                                required
+                                disabled={saving}
+                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Término *</Label>
+                              <Input
+                                id="det-end"
+                                type="datetime-local"
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
+                                required
+                                disabled={saving}
+                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Procedure and Room Selector */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-procedure" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Procedimento / Serviço</Label>
+                              <select
+                                id="det-procedure"
+                                value={procedureName}
+                                onChange={(e) => {
+                                  setProcedureName(e.target.value);
+                                  setAiDocProcedure(e.target.value);
+                                }}
+                                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                disabled={saving}
+                              >
+                                <option value="">Selecione...</option>
+                                {procedures.map((p) => (
+                                  <option key={p.id} value={p.name}>
+                                    {p.name}
+                                  </option>
+                                ))}
+                                {procedures.length === 0 && (
+                                  <>
+                                    <option value="Mentoria de Negócios">Mentoria de Negócios</option>
+                                    <option value="Consultoria Operacional">Consultoria Operacional</option>
+                                    <option value="Configuração de Funil CRM">Configuração de Funil CRM</option>
+                                    <option value="Integração WhatsApp API">Integração WhatsApp API</option>
+                                    <option value="Atendimento Avulso">Atendimento Avulso</option>
+                                  </>
+                                )}
+                              </select>
+                            </div>
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-room" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Sala / Mesa de Atendimento</Label>
+                              <select
+                                id="det-room"
+                                value={roomId}
+                                onChange={(e) => setRoomId(e.target.value)}
+                                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                disabled={saving}
+                              >
+                                <option value="">Selecione...</option>
+                                {rooms.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name}
+                                  </option>
+                                ))}
+                                {rooms.length === 0 && (
+                                  <>
+                                    <option value="Sala Principal">Sala Principal</option>
+                                    <option value="Sala de Reuniões">Sala de Reuniões</option>
+                                    <option value="Estação de Trabalho A">Estação de Trabalho A</option>
+                                  </>
+                                )}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Status selector */}
+                          <div className="space-y-1 text-left">
+                            <Label htmlFor="det-status" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Status da Consulta</Label>
+                            <select
+                              id="det-status"
+                              value={status}
+                              onChange={(e) => setStatus(e.target.value)}
+                              className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              disabled={saving}
+                            >
+                              <option value="provisional">Provisório (Pendente)</option>
+                              <option value="confirmed">Confirmado</option>
+                              <option value="attended">Realizado</option>
+                              <option value="cancelled">Cancelado</option>
+                              <option value="no_show">Não compareceu</option>
+                            </select>
+                          </div>
+
+                          {/* Notes */}
+                          <div className="space-y-1 text-left">
+                            <Label htmlFor="det-notes" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Observações</Label>
+                            <Textarea
+                              id="det-notes"
+                              placeholder="Detalhes adicionais da consulta..."
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              rows={3}
+                              disabled={saving}
+                              className="rounded-xl border-neutral-200 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            />
+                          </div>
+
+                          {/* Toggle to send auto notification message */}
+                          <div className="flex items-center justify-between rounded-xl border border-neutral-100 p-3.5 bg-neutral-50/50 mt-4">
+                            <div className="text-left">
+                              <p className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                Notificar paciente automaticamente no WhatsApp
+                              </p>
+                              <p className="text-[10px] text-neutral-500 mt-0.5">
+                                O paciente receberá uma mensagem com a data, hora e status da consulta assim que salvar o agendamento.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSendWa(!sendWa)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                                sendWa ? "bg-blue-600" : "bg-neutral-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-white shadow transition-transform ${
+                                  sendWa ? "translate-x-4" : ""
+                                }`}
+                              />
+                            </button>
+                          </div>
                         </form>
                       </div>
                     )}
 
-                    {/* Tab: HISTORY */}
+                    {/* Tab: HISTORY (Appointments timeline & statistics) */}
                     {activeTab === "history" && (
                       <div className="space-y-5 text-left">
+                        {/* Statistics Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
                           <div className="text-left">
                             <span className="text-[9px] text-neutral-400 font-extrabold uppercase block">Agendamentos</span>
@@ -2138,8 +1797,8 @@ export function AppointmentModal({
                         </div>
 
                         <div className="space-y-1 bg-neutral-50/50 p-3 rounded-lg border border-neutral-100 text-[10px] text-neutral-600 font-semibold">
-                          <p><span className="text-neutral-400 font-medium">Último profissional:</span> {historyStats.lastProf}</p>
-                          <p><span className="text-neutral-400 font-medium">Último serviço:</span> {historyStats.lastProc}</p>
+                          <p><span className="text-neutral-400 font-medium">Último profissional de atendimento:</span> {historyStats.lastProf}</p>
+                          <p><span className="text-neutral-400 font-medium">Último serviço realizado:</span> {historyStats.lastProc}</p>
                         </div>
 
                         <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider mb-2">Histórico de Consultas</h3>
@@ -2165,6 +1824,7 @@ export function AppointmentModal({
 
                               return (
                                 <div key={appt.id} className="relative space-y-1.5 pb-1">
+                                  {/* Point indicator */}
                                   <div className="absolute -left-[22px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-neutral-400 z-10" />
                                   <div className="flex items-center justify-between gap-4">
                                     <span className="text-xs font-bold text-neutral-800 capitalize">
@@ -2190,9 +1850,10 @@ export function AppointmentModal({
                       </div>
                     )}
 
-                    {/* Tab: DOCUMENTS */}
+                    {/* Tab: DOCUMENTS (Templates checklist & AI document generator) */}
                     {activeTab === "documents" && (
                       <div className="space-y-6 text-left">
+                        {/* Templates Checklist & Send */}
                         <div className="space-y-3 border border-neutral-200/80 rounded-xl p-4 bg-neutral-50/10 shadow-xs">
                           <h4 className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
                             <SendIcon className="h-3.5 w-3.5 text-blue-600" />
@@ -2231,6 +1892,7 @@ export function AppointmentModal({
                           </div>
                         </div>
 
+                        {/* AI Term and Contract Generator Section */}
                         <div className="border border-blue-100 rounded-xl p-4 bg-blue-50/20 space-y-4 shadow-sm/5">
                           <h4 className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5 uppercase tracking-wide">
                             <SparklesIcon className="h-4 w-4 text-blue-600 animate-pulse" />
@@ -2266,7 +1928,7 @@ export function AppointmentModal({
                             <Label className="text-[10px] font-bold text-neutral-500 uppercase">Riscos e Responsabilidades</Label>
                             <Input 
                               type="text"
-                              placeholder="Descreva risks específicos se houver..."
+                              placeholder="Descreva riscos específicos se houver..."
                               value={aiDocRisks}
                               onChange={(e) => setAiDocRisks(e.target.value)}
                               className="text-xs h-8 bg-white border-neutral-200"
@@ -2346,6 +2008,7 @@ export function AppointmentModal({
                           )}
                         </div>
 
+                        {/* List of Sent/Generated Documents */}
                         <div className="space-y-3">
                           <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Histórico de Documentos</h4>
                           {patientDocs.length === 0 ? (
@@ -2395,9 +2058,10 @@ export function AppointmentModal({
                       </div>
                     )}
 
-                    {/* Tab: FINANCIAL */}
+                    {/* Tab: FINANCIAL (Paid/Pending transactions & packages credit list) */}
                     {activeTab === "financial" && (
                       <div className="space-y-6 text-left">
+                        {/* Summary metrics card */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-left shadow-xs">
                             <span className="text-[9px] text-emerald-600 font-black uppercase block tracking-wider">Faturado / Recebido</span>
@@ -2413,6 +2077,7 @@ export function AppointmentModal({
                           </div>
                         </div>
 
+                        {/* List of Financial Transactions */}
                         <div className="space-y-3">
                           <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Lançamentos Financeiros</h4>
                           {patientTransactions.length === 0 ? (
@@ -2447,6 +2112,7 @@ export function AppointmentModal({
                           )}
                         </div>
 
+                        {/* Active Packages Credit list inside Financial */}
                         <div className="space-y-3 pt-2">
                           <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Crédito de Pacotes Contratados</h4>
                           {patientPackages.length === 0 ? (
@@ -2488,12 +2154,14 @@ export function AppointmentModal({
                       </div>
                     )}
 
-                    {/* Tab: PRONTUARIO */}
+                    {/* Tab: PRONTUARIO (Clinical note EMR, Body evaluations & interactive SVG charts) */}
                     {activeTab === "prontuario" && (
                       <div className="space-y-6 text-left">
+                        {/* Section: Clinical Evolution Logs */}
                         <div className="space-y-4">
                           <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Evoluções Clínicas do Paciente</h3>
                           
+                          {/* Create New Clinical note form */}
                           <form onSubmit={handleAddClinicalEvolution} className="bg-neutral-50/70 p-3.5 rounded-xl border border-neutral-100 space-y-3 text-left">
                             <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Registrar Nova Evolução Clínica / Notas</p>
                             <Textarea
@@ -2532,6 +2200,7 @@ export function AppointmentModal({
                             </div>
                           </form>
 
+                          {/* List of clinical notes */}
                           {clinicalEvolutions.length === 0 ? (
                             <p className="text-xs text-neutral-400 italic">Nenhuma anotação de prontuário clínico registrada.</p>
                           ) : (
@@ -2567,11 +2236,14 @@ export function AppointmentModal({
                           )}
                         </div>
 
+                        {/* Section: Body Evolution Line Chart & Form */}
                         <div className="space-y-4 border-t border-neutral-100 pt-5">
                           <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Acompanhamento Corporal (Bioimpedância)</h3>
                           
+                          {/* SVG Progression Line Chart */}
                           {renderSvgChart()}
 
+                          {/* Create New Evaluation Form */}
                           <form onSubmit={handleSaveBodyEval} className="bg-neutral-50/70 p-4 rounded-xl border border-neutral-100 space-y-4">
                             <p className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider block">Registrar Novas Medidas</p>
                             
@@ -2749,6 +2421,7 @@ export function AppointmentModal({
                   </div>
                 ) : smartPanelData ? (
                   <div className="space-y-5">
+                    {/* Buying Score */}
                     <div className="space-y-2 text-left">
                       <div className="flex justify-between text-xs text-neutral-500 font-bold">
                         <span>Score de Compra:</span>
@@ -2760,6 +2433,7 @@ export function AppointmentModal({
                       <p className="text-[9px] text-neutral-400 font-bold capitalize mt-0.5">Estágio CRM: {smartPanelData.stage}</p>
                     </div>
 
+                    {/* Active tags */}
                     <div className="space-y-2 text-left">
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
                         <TagIcon className="h-3.5 w-3.5 text-blue-500" /> Tags Ativas
@@ -2777,6 +2451,7 @@ export function AppointmentModal({
                       )}
                     </div>
 
+                    {/* Remaining package sessions alert summary */}
                     <div className="bg-white p-3 rounded-xl border border-neutral-200/70 space-y-1 text-left shadow-xs">
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
                         <UserCheckIcon className="h-3.5 w-3.5 text-blue-500" /> Sessões em Aberto
@@ -2786,6 +2461,7 @@ export function AppointmentModal({
                       </p>
                     </div>
 
+                    {/* Pending Transactions alert panel */}
                     <div className={`p-3.5 rounded-xl border flex items-start gap-2 text-left ${
                       smartPanelData.pendingTransactionsTotal > 0 
                         ? "bg-rose-500/5 border-rose-500/20 text-rose-700" 
@@ -2803,6 +2479,7 @@ export function AppointmentModal({
                       </div>
                     </div>
 
+                    {/* Last Appointment info */}
                     <div className="space-y-2 text-left">
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
                         <CalendarDaysIcon className="h-3.5 w-3.5 text-blue-500" /> Último Atendimento
@@ -2825,6 +2502,7 @@ export function AppointmentModal({
               </aside>
             </div>
 
+            {/* Footer buttons row */}
             <footer className="border-t border-neutral-200 p-4 bg-white shrink-0 flex items-center justify-between">
               <div>
                 {appointmentId && (
