@@ -84,6 +84,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Config not found' }, { status: 404 })
     }
 
+    // Validate if the message belongs to this config/instance
+    const payloadToken = body.uazapiToken || body.token || body.apikey
+    const payloadOwner = body.owner || (body.chat && body.chat.owner)
+    
+    // Normalize phone numbers for comparison
+    const normalizedConfigPhone = config.phone_number_id ? config.phone_number_id.replace(/\D/g, '') : null
+    const normalizedPayloadOwner = payloadOwner ? String(payloadOwner).replace(/\D/g, '') : null
+
+    let isMatch = false
+    if (payloadToken && config.uazapi_token && payloadToken === config.uazapi_token) {
+      isMatch = true
+    } else if (normalizedPayloadOwner && normalizedConfigPhone && normalizedPayloadOwner === normalizedConfigPhone) {
+      isMatch = true
+    }
+
+    if (!isMatch && (payloadToken || normalizedPayloadOwner)) {
+      console.log(`[uazapi-webhook] Ignored message from other instance. configToken=${config.uazapi_token} payloadToken=${payloadToken} configPhone=${normalizedConfigPhone} payloadOwner=${normalizedPayloadOwner}`)
+      return NextResponse.json({ status: 'ignored', reason: 'instance mismatch' })
+    }
+
+
     // 2. Handle connection status updates
     const dataObj = body.data || body || {}
     const eventType = body.event || body.type
