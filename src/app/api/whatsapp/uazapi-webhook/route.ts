@@ -234,6 +234,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to find/create conversation' }, { status: 500 })
     }
 
+    // Deduplicate: check if a message with the same messageId already exists
+    const { data: existingMsg } = await db
+      .from('messages')
+      .select('id')
+      .eq('message_id', messageId)
+      .maybeSingle()
+
+    if (existingMsg) {
+      console.log(`[uazapi-webhook] Message with ID ${messageId} already exists in DB. Skipping duplicate insert.`)
+      return NextResponse.json({ status: 'ignored', reason: 'duplicate_message' })
+    }
+
     // Handle reactions if it's a reaction message
     if (mediaType === 'reaction' || msg.messageType === 'ReactionMessage') {
       const emoji = msg.reaction?.emoji || msg.emoji || ''

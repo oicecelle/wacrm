@@ -6,6 +6,7 @@ import {
 } from './meta-api';
 import {
   sendUazapiTextMessage,
+  sendUazapiMediaMessage,
 } from './uazapi-api';
 import { decrypt } from './encryption';
 import type { MessageTemplate } from '@/types';
@@ -98,15 +99,19 @@ export async function dispatchSendMessage(args: DispatchSendArgs): Promise<Dispa
       return res;
     }
 
-    // Media fallback for Uazapi: Since Uazapi sendText or similar is text-only,
-    // if a media file is sent, we can append the public URL to the caption/text.
-    // Uazapi supports media sending via other endpoints, but appending the URL
-    // ensures immediate delivery of documents, images, and audio.
-    const mediaText = content_text
-      ? `${content_text}\n\nLink: ${media_url}`
-      : `Enviou um arquivo: ${filename || 'arquivo'}\nLink: ${media_url}`;
+    if (!media_url) {
+      return { success: false, error: 'Media URL is required' };
+    }
 
-    const res = await sendUazapiTextMessage(baseUrl, token, to, mediaText);
+    const res = await sendUazapiMediaMessage(
+      baseUrl,
+      token,
+      to,
+      media_url,
+      messageType,
+      content_text,
+      filename
+    );
     return res;
   }
 

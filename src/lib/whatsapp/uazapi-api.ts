@@ -232,3 +232,75 @@ export async function getUazapiProfilePicture(
   return null;
 }
 
+/**
+ * Sends a WhatsApp media message (image, video, document, audio) using Uazapi.
+ */
+export async function sendUazapiMediaMessage(
+  baseUrl: string,
+  token: string,
+  to: string,
+  mediaUrl: string,
+  type: string,
+  caption?: string | null,
+  filename?: string | null
+): Promise<UazapiSendResult> {
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+  const headers = {
+    'token': token,
+    'apikey': token,
+    'Content-Type': 'application/json',
+  };
+
+  const formattedNumber = formatPhoneForUazapi(to);
+  
+  // Normalize type: 'document' instead of 'documentMessage'
+  let normalizedType = type;
+  if (type === 'documentMessage') normalizedType = 'document';
+
+  const payload: any = {
+    number: formattedNumber,
+    type: normalizedType,
+    file: mediaUrl,
+  };
+
+  if (caption) {
+    payload.caption = caption;
+  }
+  if (filename) {
+    payload.fileName = filename;
+  }
+
+  try {
+    const res = await fetch(`${cleanUrl}/send/media`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    const textResponse = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(textResponse);
+    } catch {
+      // non-JSON response
+    }
+
+    if (res.ok) {
+      return {
+        success: true,
+        messageId: data?.messageId || data?.id || data?.messages?.[0]?.id || `uaz-${Date.now()}`,
+      };
+    } else {
+      return {
+        success: false,
+        error: data?.message || data?.error || textResponse || `HTTP ${res.status}`,
+      };
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Unknown network error',
+    };
+  }
+}
+
