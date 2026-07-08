@@ -158,8 +158,20 @@ export async function POST(request: Request) {
     const messageId = msg.messageId || msg.key?.id || dataObj.key?.id || `uaz-in-${Date.now()}`
     const mediaType = msg.mediaType || msg.type || dataObj.messageType || 'text'
     
-    // Determine content text and content type
-    let contentText = (msg.text || msg.content || dataObj.message?.conversation || dataObj.message?.extendedTextMessage?.text || '').trim()
+    let rawTextContent = ''
+    if (typeof msg.text === 'string') {
+      rawTextContent = msg.text
+    } else if (typeof msg.content === 'string') {
+      rawTextContent = msg.content
+    } else if (msg.content && typeof msg.content === 'object' && typeof msg.content.text === 'string') {
+      rawTextContent = msg.content.text
+    } else if (dataObj.message && typeof dataObj.message.conversation === 'string') {
+      rawTextContent = dataObj.message.conversation
+    } else if (dataObj.message?.extendedTextMessage && typeof dataObj.message.extendedTextMessage.text === 'string') {
+      rawTextContent = dataObj.message.extendedTextMessage.text
+    }
+
+    let contentText = rawTextContent.trim()
     if (isGroup && !fromMe) {
       const senderName = body.sender?.name || dataObj.sender?.name || dataObj.pushName || 'Membro'
       contentText = `[${senderName}]: ${contentText}`
@@ -240,6 +252,62 @@ export async function POST(request: Request) {
       .eq('sender_type', 'customer')
     const isFirstInboundMessage = (priorCustomerMsgCount ?? 0) === 0
 
+    // Download and upload media to Supabase storage if it is a media message
+    let mediaUrl: string | null = null
+    const MEDIA_KINDS = ['image', 'video', 'document', 'audio']
+    if (MEDIA_KINDS.includes(mediaType) && config.uazapi_token) {
+      try {
+        const uazBase = config.uazapi_base_url || 'https://customix.uazapi.com'
+        const res = await fetch(`${uazBase}/downloadMediaMessage`, {
+          method: 'POST',
+          headers: {
+            'token': config.uazapi_token,
+            'apikey': config.uazapi_token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id: messageId })
+        })
+        
+        if (res.ok) {
+          const buffer = await res.arrayBuffer()
+          const arrayBuffer = new Uint8Array(buffer)
+          
+          // Determine extension from mimetype
+          const mimeType = msg.content?.mimetype || msg.mimetype || 'application/octet-stream'
+          let ext = 'bin'
+          if (mimeType.includes('ogg')) ext = 'ogg'
+          else if (mimeType.includes('aac')) ext = 'aac'
+          else if (mimeType.includes('mp4')) ext = 'mp4'
+          else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg'
+          else if (mimeType.includes('png')) ext = 'png'
+          else if (mimeType.includes('pdf')) ext = 'pdf'
+          else {
+            const parts = mimeType.split('/')
+            if (parts[1]) ext = parts[1].split(';')[0]
+          }
+          
+          const path = `account-${accountId}/${Date.now()}-${messageId}.${ext}`
+          const { error: uploadErr } = await db.storage.from('chat-media').upload(path, arrayBuffer, {
+            contentType: mimeType,
+            cacheControl: '3600',
+            upsert: true
+          })
+          
+          if (!uploadErr) {
+            const { data: urlData } = db.storage.from('chat-media').getPublicUrl(path)
+            mediaUrl = urlData?.publicUrl || null
+            console.log(`[uazapi-webhook] Successfully downloaded and stored incoming media. publicUrl=${mediaUrl}`)
+          } else {
+            console.error('[uazapi-webhook] Failed to upload downloaded media to storage:', uploadErr.message)
+          }
+        } else {
+          console.warn(`[uazapi-webhook] UazAPI downloadMediaMessage returned status ${res.status} for msg ${messageId}`)
+        }
+      } catch (err: any) {
+        console.error('[uazapi-webhook] Error downloading/uploading media:', err.message)
+      }
+    }
+
     // Insert message record into Database (saving as 'agent' for messages sent by Marcelle/team, or 'customer' for incoming)
     const { error: msgError } = await db.from('messages').insert({
       conversation_id: conversation.id,
@@ -247,7 +315,7 @@ export async function POST(request: Request) {
       sender_id: fromMe ? configOwnerUserId : null,
       content_type: contentType,
       content_text: contentText || null,
-      media_url: msg.mediaUrl || msg.url || null,
+      media_url: mediaUrl || msg.mediaUrl || msg.url || null,
       message_id: messageId,
       status: 'delivered',
       created_at: new Date().toISOString(),
