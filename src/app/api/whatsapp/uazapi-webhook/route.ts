@@ -206,13 +206,15 @@ export async function POST(request: Request) {
     const configOwnerUserId = config.user_id
 
     // Resolve or create contact
+    const payloadAvatarUrl = body.chat?.imagePreview || body.chat?.image || null
     const contactOutcome = await findOrCreateContact(
       accountId,
       configOwnerUserId,
       phone,
       pushName,
       config.uazapi_token,
-      config.uazapi_base_url
+      config.uazapi_base_url,
+      payloadAvatarUrl
     )
     if (!contactOutcome) {
       return NextResponse.json({ error: 'Failed to find/create contact' }, { status: 500 })
@@ -435,7 +437,8 @@ async function findOrCreateContact(
   phone: string,
   name: string,
   uazapiToken?: string | null,
-  uazapiBaseUrl?: string | null
+  uazapiBaseUrl?: string | null,
+  avatarUrlFromPayload?: string | null
 ): Promise<ContactOutcome | null> {
   const db = supabaseAdmin()
   const existingContact = await findExistingContact(db, accountId, phone)
@@ -447,16 +450,18 @@ async function findOrCreateContact(
     }
 
     // Fetch profile picture if not already present
-    if (!existingContact.avatar_url && uazapiToken && uazapiBaseUrl) {
+    let avatarUrl = avatarUrlFromPayload || null
+    if (!avatarUrl && !existingContact.avatar_url && uazapiToken && uazapiBaseUrl) {
       try {
-        const avatarUrl = await getUazapiProfilePicture(uazapiBaseUrl, uazapiToken, phone)
-        if (avatarUrl) {
-          updateFields.avatar_url = avatarUrl
-          existingContact.avatar_url = avatarUrl
-        }
+        avatarUrl = await getUazapiProfilePicture(uazapiBaseUrl, uazapiToken, phone)
       } catch (err) {
         console.error('[uazapi-webhook] Error fetching profile picture for existing contact:', err)
       }
+    }
+
+    if (avatarUrl && existingContact.avatar_url !== avatarUrl) {
+      updateFields.avatar_url = avatarUrl
+      existingContact.avatar_url = avatarUrl
     }
 
     if (Object.keys(updateFields).length > 0) {
@@ -469,8 +474,8 @@ async function findOrCreateContact(
     return { contact: existingContact, wasCreated: false }
   }
 
-  let avatarUrl: string | null = null
-  if (uazapiToken && uazapiBaseUrl) {
+  let avatarUrl = avatarUrlFromPayload || null
+  if (!avatarUrl && uazapiToken && uazapiBaseUrl) {
     try {
       avatarUrl = await getUazapiProfilePicture(uazapiBaseUrl, uazapiToken, phone)
     } catch (err) {

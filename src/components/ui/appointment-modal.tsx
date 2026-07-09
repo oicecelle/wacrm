@@ -80,6 +80,7 @@ export function AppointmentModal({
   const supabase = createClient();
   const { profile, accountId, user } = useAuth();
   const clinicId = accountId;
+  const profileName = profile?.full_name || "Sistema";
   const [originalStatus, setOriginalStatus] = useState<string>("");
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [staff, setStaff] = useState<StaffOption[]>([]);
@@ -187,6 +188,7 @@ export function AppointmentModal({
 
     const loadOptions = async () => {
       try {
+        // clinicId is scoped globally in the component
 
         // Fetch patients (include phone & email for search cards)
         const { data: ptsData } = await supabase
@@ -574,6 +576,7 @@ export function AppointmentModal({
 
     try {
       const clinicId = accountId;
+      const profileName = profile?.full_name || "Sistema";
 
       if (appointmentId) {
         // Update appointment
@@ -607,7 +610,7 @@ export function AppointmentModal({
           event_type: "appointment",
           title: `Agendamento atualizado para [${statusMap[status] || status}]`,
           payload: {
-            updated_by: (profile?.full_name || "Sistema"),
+            updated_by: profileName,
             start_time: startObj.toISOString(),
           },
         });
@@ -680,7 +683,7 @@ export function AppointmentModal({
           event_type: "appointment",
           title: `Nova consulta agendada para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
           payload: {
-            created_by: (profile?.full_name || "Sistema"),
+            created_by: profileName,
             status,
           },
         });
@@ -729,7 +732,7 @@ export function AppointmentModal({
           event_type: "whatsapp",
           title: "Confirmação de agendamento enviada automaticamente via WhatsApp",
           payload: {
-            sent_by: (profile?.full_name || "Sistema"),
+            sent_by: profileName,
             phone: selectedPatientInfo?.phone,
             message: `Olá! Seu agendamento foi realizado para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Status: ${statusName}.`,
           },
@@ -774,7 +777,7 @@ export function AppointmentModal({
           event_type: "appointment",
           title: "Agendamento excluído da agenda",
           payload: {
-            deleted_by: (profile?.full_name || "Sistema"),
+            deleted_by: profileName,
           },
         });
       }
@@ -826,7 +829,7 @@ export function AppointmentModal({
           title: `Documento [${template.name}] enviado via WhatsApp para assinatura`,
           payload: {
             template_id: template.id,
-            sent_by: (profile?.full_name || "Sistema"),
+            sent_by: profileName,
             public_token: generatedToken,
           },
         });
@@ -838,7 +841,7 @@ export function AppointmentModal({
           event_type: "whatsapp",
           title: `Link de assinatura enviado via WhatsApp`,
           payload: {
-            sent_by: (profile?.full_name || "Sistema"),
+            sent_by: profileName,
             phone: selectedPatientInfo?.phone,
             message: `Olá! Por favor, assine digitalmente o documento "${template.name}" acessando: ${portalUrl}`,
           },
@@ -929,7 +932,7 @@ export function AppointmentModal({
         title: `Documento de IA [${title}] gerado e enviado para assinatura`,
         payload: {
           document_id: newDoc.id,
-          sent_by: (profile?.full_name || "Sistema"),
+          sent_by: profileName,
           public_token: generatedToken,
         },
       });
@@ -941,7 +944,7 @@ export function AppointmentModal({
         event_type: "whatsapp",
         title: `Link de assinatura IA enviado via WhatsApp`,
         payload: {
-          sent_by: (profile?.full_name || "Sistema"),
+          sent_by: profileName,
           phone: selectedPatientInfo?.phone,
           message: `Olá! Criamos o seu documento personalizado de "${aiDocProcedure}". Por favor, revise e assine digitalmente aqui: ${portalUrl}`,
         },
@@ -999,7 +1002,7 @@ export function AppointmentModal({
         event_type: "evolution_added",
         title: evolSigned ? "Nova evolução clínica assinada" : "Evolução adicionada como rascunho",
         payload: {
-          professional: (profile?.full_name || "Sistema"),
+          professional: profileName,
           signed: evolSigned,
         },
       });
@@ -1083,7 +1086,7 @@ export function AppointmentModal({
           weight: w,
           fat_percentage: parseFloat(evalFatPercentage) || null,
           imc: calculatedImc,
-          created_by: (profile?.full_name || "Sistema"),
+          created_by: profileName,
         },
       });
 
@@ -1170,7 +1173,7 @@ export function AppointmentModal({
           event_type: "lead_created",
           title: `Paciente cadastrado no CRM via formulário de agendamento`,
           payload: {
-            created_by: (profile?.full_name || "Sistema"),
+            created_by: profileName,
           },
         });
       }

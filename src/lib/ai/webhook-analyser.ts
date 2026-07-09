@@ -8,7 +8,7 @@ function supabaseAdmin() {
   if (!_adminClient) {
     _adminClient = createClient(
       getEnv("NEXT_PUBLIC_SUPABASE_URL", "https://scrhexfcbtdyubehbzml.supabase.co"),
-      getEnv("SUPABASE_SERVICE_ROLE_KEY", "")
+      getEnv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjcmhleGZjYnRkeXViZWhiem1sIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg4NTQ1NywiZXhwIjoyMDg5NDYxNDU3fQ.YWlajoXWep2Gj4Zst0O85G9mwFaO-o8aFuGmcpQnxKk")
     );
   }
   return _adminClient;
@@ -20,12 +20,6 @@ export async function analyseWhatsAppConversationWithAI(
   accountId: string,
   triggerMessageId: string
 ) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    console.warn("[AI Analyser] OPENAI_API_KEY not configured.");
-    return;
-  }
-
   const db = supabaseAdmin();
 
   try {
@@ -41,7 +35,143 @@ export async function analyseWhatsAppConversationWithAI(
       return;
     }
 
-    // 2. Fetch last 10 messages of the conversation for context
+    // 2. Fetch the contact's deal to see CRM state
+    const { data: deal } = await db
+      .from("deals")
+      .select("*")
+      .eq("contact_id", contactId)
+      .maybeSingle();
+
+    let activeDeal = deal;
+    if (!activeDeal) {
+      console.log(`[AI Analyser] No deal found for contact ${contactId}. Creating a default deal...`);
+      // Fetch default pipeline
+      const { data: pipelines, error: pipeErr } = await db
+        .from("pipelines")
+        .select("id")
+        .eq("account_id", accountId)
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      let pipelineId = "";
+      let stageId = "";
+      let stageName = "Novo Lead";
+
+      if (!pipeErr && pipelines && pipelines.length > 0) {
+        pipelineId = pipelines[0].id;
+      } else {
+        // Seed default pipeline for this account
+        console.log(`[AI Analyser] Seeding default pipeline for account ${accountId}...`);
+        const { data: newPipe, error: newPipeErr } = await db
+          .from("pipelines")
+          .insert({
+            user_id: contact.user_id,
+            account_id: accountId,
+            name: "Funil de Vendas"
+          })
+          .select()
+          .single();
+
+        if (!newPipeErr && newPipe) {
+          pipelineId = newPipe.id;
+          
+          const defaultStages = [
+            { name: "Novo Lead", color: "#3b82f6", position: 0 },
+            { name: "Qualificado", color: "#eab308", position: 1 },
+            { name: "Proposta Enviada", color: "#f97316", position: 2 },
+            { name: "Negociação", color: "#8b5cf6", position: 3 },
+            { name: "Ganha", color: "#22c55e", position: 4 },
+          ];
+
+          const stagesPayload = defaultStages.map((s) => ({
+            pipeline_id: pipelineId,
+            name: s.name,
+            color: s.color,
+            position: s.position,
+          }));
+
+          const { data: seededStages, error: seedStagesErr } = await db
+            .from("pipeline_stages")
+            .insert(stagesPayload)
+            .select();
+
+          if (!seedStagesErr && seededStages && seededStages.length > 0) {
+            const sortedStages = [...seededStages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+            stageId = sortedStages[0].id;
+            stageName = sortedStages[0].name;
+          } else {
+            console.error("[AI Analyser] Failed to seed pipeline stages:", seedStagesErr);
+          }
+        } else {
+          console.error("[AI Analyser] Failed to seed default pipeline:", newPipeErr);
+        }
+      }
+
+      if (pipelineId) {
+        if (!stageId) {
+          // Fetch first stage of the pipeline
+          const { data: stages, error: stageErr } = await db
+            .from("pipeline_stages")
+            .select("id, name")
+            .eq("pipeline_id", pipelineId)
+            .order("position", { ascending: true })
+            .limit(1);
+
+          if (!stageErr && stages && stages.length > 0) {
+            stageId = stages[0].id;
+            stageName = stages[0].name;
+          } else {
+            console.error("[AI Analyser] Failed to fetch pipeline stages:", stageErr);
+          }
+        }
+
+        if (stageId) {
+          // Insert default deal
+          const { data: newDeal, error: insertErr } = await db
+            .from("deals")
+            .insert({
+              user_id: contact.user_id,
+              account_id: accountId,
+              pipeline_id: pipelineId,
+              stage_id: stageId,
+              contact_id: contactId,
+              conversation_id: conversationId,
+              title: contact.name || contact.phone || "Novo Lead",
+              value: 0,
+              status: "open",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (!insertErr && newDeal) {
+            console.log(`[AI Analyser] Created default deal:`, newDeal.id);
+            activeDeal = newDeal;
+            
+            // Insert timeline event
+            await db.from("contact_timeline").insert({
+              account_id: accountId,
+              contact_id: contactId,
+              event_type: "deal_stage_change",
+              title: "Lead criado automaticamente via WhatsApp",
+              description: `Lead adicionado ao Funil de Vendas na etapa ${stageName}.`,
+              metadata: { by: "system", deal_id: newDeal.id, trigger_message_id: triggerMessageId }
+            });
+          } else {
+            console.error("[AI Analyser] Failed to insert default deal:", insertErr);
+          }
+        }
+      }
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.warn("[AI Analyser] OPENAI_API_KEY not configured. Deal created but skipping AI semantic updates.");
+      return;
+    }
+
+    // 3. Fetch last 10 messages of the conversation for context
     const { data: messages } = await db
       .from("messages")
       .select("sender_type, content_text, created_at")
@@ -54,20 +184,13 @@ export async function analyseWhatsAppConversationWithAI(
     // Order chronological
     const chronMessages = [...messages].reverse();
 
-    // 3. Fetch upcoming appointments
+    // 4. Fetch upcoming appointments
     const { data: upcomingAppts } = await db
       .from("appointments")
       .select("id, start_time, end_time, status, type")
       .eq("patient_id", contactId)
       .gte("start_time", new Date().toISOString())
       .order("start_time", { ascending: true });
-
-    // 4. Fetch the contact's deal to see CRM state
-    const { data: deal } = await db
-      .from("deals")
-      .select("*")
-      .eq("contact_id", contactId)
-      .maybeSingle();
 
     // Prepare context for prompt
     const nowStr = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
@@ -87,9 +210,9 @@ AGENDAMENTOS FUTUROS ENCONTRADOS:
 ${JSON.stringify(upcomingAppts || [], null, 2)}
 
 STATUS ATUAL DO NEGÓCIO (CRM):
-- Interesse: ${deal?.interest || "Não informado"}
-- Temperatura: ${deal?.temperature || "Não informado"}
-- Objeção: ${deal?.main_objection || "Não informado"}
+- Interesse: ${activeDeal?.interest || "Não informado"}
+- Temperatura: ${activeDeal?.temperature || "Não informado"}
+- Objeção: ${activeDeal?.main_objection || "Não informado"}
 
 HISTÓRICO DA CONVERSA (Últimas mensagens):
 ${chronMessages
@@ -271,27 +394,27 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
     // 5.5 Update Deal CRM Fields
     const ud = result.update_deal;
     if (ud && (ud.temperature || ud.interest || ud.score !== null || ud.main_objection || ud.next_action)) {
-      if (deal) {
+      if (activeDeal) {
         const updateData: any = {};
         const descList: string[] = [];
 
-        if (ud.temperature && ud.temperature !== deal.temperature) {
+        if (ud.temperature && ud.temperature !== activeDeal.temperature) {
           updateData.temperature = ud.temperature;
           descList.push(`Temperatura atualizada para "${ud.temperature}"`);
         }
-        if (ud.interest && ud.interest !== deal.interest) {
+        if (ud.interest && ud.interest !== activeDeal.interest) {
           updateData.interest = ud.interest;
           descList.push(`Interesse atualizado para "${ud.interest}"`);
         }
-        if (ud.score !== null && ud.score !== undefined && ud.score !== deal.score) {
+        if (ud.score !== null && ud.score !== undefined && ud.score !== activeDeal.score) {
           updateData.score = ud.score;
           descList.push(`Pontuação de interesse atualizada para ${ud.score}%`);
         }
-        if (ud.main_objection && ud.main_objection !== deal.main_objection) {
+        if (ud.main_objection && ud.main_objection !== activeDeal.main_objection) {
           updateData.main_objection = ud.main_objection;
           descList.push(`Objeção principal identificada: "${ud.main_objection}"`);
         }
-        if (ud.next_action && ud.next_action !== deal.next_action) {
+        if (ud.next_action && ud.next_action !== activeDeal.next_action) {
           updateData.next_action = ud.next_action;
           descList.push(`Ação recomendada pela IA: "${ud.next_action}"`);
         }
@@ -301,7 +424,7 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
         }
 
         if (Object.keys(updateData).length > 0) {
-          await db.from("deals").update(updateData).eq("id", deal.id);
+          await db.from("deals").update(updateData).eq("id", activeDeal.id);
 
           // Audit log
           await db.from("contact_timeline").insert({
@@ -310,7 +433,7 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
             event_type: "deal_stage_change",
             title: "Métricas comerciais do CRM atualizadas pela IA",
             description: descList.join(", "),
-            metadata: { by: "AI", deal_id: deal.id, trigger_message_id: triggerMessageId },
+            metadata: { by: "AI", deal_id: activeDeal.id, trigger_message_id: triggerMessageId },
           });
         }
       }
