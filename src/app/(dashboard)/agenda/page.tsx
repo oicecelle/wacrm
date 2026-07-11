@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AppointmentModal } from "@/components/ui/appointment-modal";
 import { AppointmentDetailModal } from "@/components/agenda/appointment-detail-modal";
 import { QuoteModal } from "@/components/quotes/quote-modal";
+import { WaitlistDrawer } from "@/components/ui/waitlist-drawer";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -88,6 +89,12 @@ export default function AgendaPage() {
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
   const [modalDefaultType, setModalDefaultType] = useState<"consulta" | "evento" | "bloqueio">("consulta");
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
+
+  // Waitlist States
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [modalDefaultPatientId, setModalDefaultPatientId] = useState("");
+  const [modalDefaultProfessionalId, setModalDefaultProfessionalId] = useState("");
+  const [modalDefaultProcedureName, setModalDefaultProcedureName] = useState("");
 
   // Detail Modal (Prontuário / Evolução / Financeiro / Pacotes)
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -486,12 +493,18 @@ export default function AgendaPage() {
   const handleAddAppointment = (dayStr: string) => {
     setSelectedApptId(null);
     setModalDefaultDate(dayStr);
+    setModalDefaultPatientId("");
+    setModalDefaultProfessionalId("");
+    setModalDefaultProcedureName("");
     setModalOpen(true);
   };
 
   const handleEditAppointment = (apptId: string) => {
     setSelectedApptId(apptId);
     setModalDefaultDate(undefined);
+    setModalDefaultPatientId("");
+    setModalDefaultProfessionalId("");
+    setModalDefaultProcedureName("");
     setModalOpen(true);
   };
 
@@ -941,7 +954,7 @@ export default function AgendaPage() {
                 variant="outline"
                 size="sm"
                 className="h-8 text-neutral-700 font-semibold flex items-center gap-1.5 bg-white border-neutral-200"
-                onClick={() => alert("Lista de espera carregando...")}
+                onClick={() => setWaitlistOpen(true)}
               >
                 <ClipboardList className="h-4 w-4 text-neutral-500" />
                 Lista de espera
@@ -1218,7 +1231,25 @@ export default function AgendaPage() {
         appointmentId={selectedApptId}
         defaultDate={modalDefaultDate}
         defaultType={modalDefaultType}
+        defaultPatientId={modalDefaultPatientId}
+        defaultProfessionalId={modalDefaultProfessionalId}
+        defaultProcedureName={modalDefaultProcedureName}
         onSave={fetchAppointments}
+      />
+
+      {/* Waitlist Drawer overlay */}
+      <WaitlistDrawer
+        open={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+        onSchedule={(ptId, profId, procName) => {
+          setSelectedApptId(null);
+          setModalDefaultDate(new Date().toISOString().split("T")[0]); // Default to today
+          setModalDefaultType("consulta");
+          setModalDefaultPatientId(ptId);
+          setModalDefaultProfessionalId(profId);
+          setModalDefaultProcedureName(procName);
+          setModalOpen(true);
+        }}
       />
 
       {/* Appointment Details Popover overlay */}
