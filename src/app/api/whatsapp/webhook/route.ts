@@ -925,6 +925,42 @@ async function findOrCreateContact(
         .update({ name, updated_at: new Date().toISOString() })
         .eq('id', existingContact.id)
     }
+
+    // Ensure patient exists in patients table and push name is saved
+    try {
+      const { data: existingPatient } = await supabaseAdmin()
+        .from('patients')
+        .select('id')
+        .eq('clinic_id', accountId)
+        .eq('phone', phone)
+        .maybeSingle()
+
+      if (!existingPatient) {
+        await supabaseAdmin()
+          .from('patients')
+          .insert({
+            id: existingContact.id,
+            clinic_id: accountId,
+            name: existingContact.name || name || phone,
+            phone: phone,
+            lead_score: 50,
+            tags: ['lead-whatsapp'],
+            stage: 'novo'
+          })
+      }
+
+      if (name) {
+        await supabaseAdmin()
+          .from('contact_whatsapp_names')
+          .upsert({
+            contact_id: existingContact.id,
+            whatsapp_name: name
+          }, { onConflict: 'contact_id' })
+      }
+    } catch (err) {
+      console.error('Error syncing patient/pushName for existing contact in official webhook:', err)
+    }
+
     return { contact: existingContact, wasCreated: false }
   }
 
@@ -954,6 +990,32 @@ async function findOrCreateContact(
     }
     console.error('Error creating contact:', createError)
     return null
+  }
+
+  // Ensure patient exists in patients table and push name is saved for new contact
+  try {
+    await supabaseAdmin()
+      .from('patients')
+      .insert({
+        id: newContact.id,
+        clinic_id: accountId,
+        name: newContact.name || name || phone,
+        phone: phone,
+        lead_score: 50,
+        tags: ['lead-whatsapp'],
+        stage: 'novo'
+      })
+
+    if (name) {
+      await supabaseAdmin()
+        .from('contact_whatsapp_names')
+        .upsert({
+          contact_id: newContact.id,
+          whatsapp_name: name
+        }, { onConflict: 'contact_id' })
+    }
+  } catch (err) {
+    console.error('Error syncing patient/pushName for new contact in official webhook:', err)
   }
 
   return { contact: newContact, wasCreated: true }

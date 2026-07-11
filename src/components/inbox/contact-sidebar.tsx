@@ -15,6 +15,7 @@ import {
   DollarSign,
   StickyNote,
   Plus,
+  Edit3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,13 +34,19 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
 
+  // States for contact name editing and WhatsApp original name
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [whatsappName, setWhatsappName] = useState<string | null>(null);
+  const [savingName, setSavingName] = useState(false);
+
   const fetchContactData = useCallback(async () => {
     if (!contact) return;
 
     const supabase = createClient();
 
-    // Fetch deals, notes, and tags in parallel
-    const [dealsRes, notesRes, tagsRes] = await Promise.all([
+    // Fetch deals, notes, tags, and WhatsApp push name in parallel
+    const [dealsRes, notesRes, tagsRes, waNameRes] = await Promise.all([
       supabase
         .from("deals")
         .select("*, stage:pipeline_stages(*)")
@@ -54,6 +61,11 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
         .from("contact_tags")
         .select("id, tag_id, tags(*)")
         .eq("contact_id", contact.id),
+      supabase
+        .from("contact_whatsapp_names")
+        .select("whatsapp_name")
+        .eq("contact_id", contact.id)
+        .maybeSingle()
     ]);
 
     if (dealsRes.data) setDeals(dealsRes.data);
@@ -67,6 +79,11 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
         }));
       setTags(mapped);
     }
+    if (waNameRes.data) {
+      setWhatsappName(waNameRes.data.whatsapp_name);
+    } else {
+      setWhatsappName(null);
+    }
   }, [contact]);
 
   // Load on contact change. setContactData/setTags run inside async
@@ -74,7 +91,9 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContactData();
-  }, [fetchContactData]);
+    setIsEditingName(false);
+    setEditedName(contact?.name || "");
+  }, [contact, fetchContactData]);
 
   const handleCopyPhone = useCallback(async () => {
     if (!contact?.phone) return;
@@ -115,6 +134,45 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
     setAddingNote(false);
   }, [contact, newNote, accountId]);
 
+  const handleSaveName = useCallback(async () => {
+    if (!contact || !editedName.trim() || savingName) return;
+    setSavingName(true);
+    const supabase = createClient();
+    try {
+      const newName = editedName.trim();
+      
+      // Update contacts table
+      const { error: err1 } = await supabase
+        .from("contacts")
+        .update({ name: newName })
+        .eq("id", contact.id);
+      if (err1) throw err1;
+
+      // Try to update patients table too (if exists)
+      await supabase
+        .from("patients")
+        .update({ name: newName })
+        .eq("id", contact.id);
+
+      // Update local contact object so it renders immediately
+      contact.name = newName;
+
+      // Dispatch custom event to notify parent components in real time
+      window.dispatchEvent(
+        new CustomEvent("contact-name-updated", {
+          detail: { id: contact.id, name: newName }
+        })
+      );
+
+      setIsEditingName(false);
+    } catch (err) {
+      console.error("Error saving contact name:", err);
+      alert("Erro ao salvar o nome.");
+    } finally {
+      setSavingName(false);
+    }
+  }, [contact, editedName, savingName]);
+
   if (!contact) {
     return (
       <div className="flex h-full w-70 items-center justify-center border-l border-border bg-card">
@@ -143,9 +201,50 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                 initials
               )}
             </div>
-            <h3 className="mt-3 text-sm font-semibold text-foreground">
-              {displayName}
-            </h3>
+            {isEditingName ? (
+              <div className="mt-2 flex items-center gap-1.5 justify-center">
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="w-44 rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground outline-none focus:border-primary/50"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveName();
+                    if (e.key === "Escape") {
+                      setEditedName(contact.name || "");
+                      setIsEditingName(false);
+                    }
+                  }}
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  className="h-7 w-7 bg-primary px-0 hover:bg-primary/90 rounded-md"
+                  onClick={handleSaveName}
+                  disabled={savingName || !editedName.trim()}
+                >
+                  <Check className="h-3.5 w-3.5 text-white" />
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3 flex items-center gap-1.5 justify-center group">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {displayName}
+                </h3>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
+                  title="Editar nome"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {whatsappName && (
+              <p className="mt-1 text-[10px] text-muted-foreground font-semibold">
+                WhatsApp: <span className="italic">{whatsappName}</span>
+              </p>
+            )}
             {contact.company && (
               <p className="text-xs text-muted-foreground">{contact.company}</p>
             )}

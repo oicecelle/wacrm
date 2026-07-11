@@ -101,6 +101,38 @@ export default function SelecionarClinicaPage() {
 
       setClinics(clinicList);
 
+      if (clinicList.length === 1) {
+        const targetId = clinicList[0].id;
+        setSelectedId(targetId);
+        setSwitching(true);
+
+        let targetRole: "owner" | "admin" | "agent" | "viewer" = "agent";
+        const acc = accounts?.find((a) => a.id === targetId);
+        if (acc?.owner_user_id === userId) {
+          targetRole = "owner";
+        } else {
+          const m = memberships?.find((m) => m.clinic_id === targetId);
+          if (m) {
+            const rm: Record<string, "admin" | "agent" | "viewer"> = {
+              admin: "admin",
+              professional: "agent",
+              receptionist: "agent",
+              marketing: "agent",
+            };
+            targetRole = rm[m.role] || "agent";
+          }
+        }
+
+        await supabase
+          .from("profiles")
+          .update({ account_id: targetId, account_role: targetRole })
+          .eq("user_id", userId);
+
+        sessionStorage.setItem("clinic_auto_switched", "true");
+        router.push("/agenda");
+        return;
+      }
+
       // Auto-select: default > current > first
       const storedDefault = localStorage.getItem("default_clinic_id");
       if (storedDefault && clinicList.find((c) => c.id === storedDefault)) {

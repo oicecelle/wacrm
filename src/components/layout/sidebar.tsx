@@ -235,8 +235,20 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
           </button>
         </div>
 
+        {/* Clinic info banner */}
+        {!isCollapsed && account?.name && (
+          <div className="mx-4 mt-3 rounded-xl bg-blue-500/5 p-3 border border-blue-500/10 shrink-0">
+            <div className="text-[10px] font-black text-blue-500 uppercase tracking-wider">Clínica Ativa</div>
+            <div className="text-xs font-bold text-foreground truncate mt-0.5" title={account.name}>{account.name}</div>
+            <div className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] text-blue-600 font-bold">
+              <Crown className="h-3 w-3 text-blue-500 shrink-0" />
+              Licença Ativa
+            </div>
+          </div>
+        )}
+
         {/* Main Navigation (Sleek layout with smaller font size) */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto px-4 py-2 scrollbar-thin">
           <ul className="flex flex-col gap-0.5">
             {menuItems.map((item, idx) => {
               // Handle submenu structure
@@ -250,7 +262,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                       type="button"
                       onClick={() => setMarketingExpanded(!marketingExpanded)}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors w-full text-left",
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors w-full text-left",
                         hasActiveSub
                           ? "bg-blue-600/10 text-blue-600"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -274,7 +286,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                               <Link
                                 href={sub.href}
                                 className={cn(
-                                  "flex items-center gap-2 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors",
+                                  "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
                                   isSubActive
                                     ? "bg-blue-600/10 text-blue-600"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -305,7 +317,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                   <Link
                     href={item.href || "#"}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors relative",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors relative",
                       isActive
                         ? "bg-blue-600/10 text-blue-600"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"

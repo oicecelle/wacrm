@@ -61,6 +61,37 @@ export default function InboxPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleContactNameUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string; name: string }>;
+      const { id, name } = customEvent.detail;
+      
+      setActiveContact((prev) => {
+        if (prev && prev.id === id) {
+          return { ...prev, name };
+        }
+        return prev;
+      });
+
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.contact && c.contact.id === id) {
+            return {
+              ...c,
+              contact: { ...c.contact, name },
+            };
+          }
+          return c;
+        })
+      );
+    };
+
+    window.addEventListener("contact-name-updated", handleContactNameUpdated);
+    return () => {
+      window.removeEventListener("contact-name-updated", handleContactNameUpdated);
+    };
+  }, []);
+
   const handleToggleContactPanel = useCallback(() => {
     setContactPanelOpen((prev) => {
       const next = !prev;

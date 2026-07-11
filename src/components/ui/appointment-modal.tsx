@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -36,15 +36,20 @@ import {
   TrendingUpIcon,
   SearchIcon,
   UserPlusIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ChevronDownIcon,
+  PlusIcon
 } from "lucide-react";
 import { generateAIDocument } from "@/app/actions/ai-actions";
+import { cn } from "@/lib/utils";
+import { QuoteModal } from "@/components/quotes/quote-modal";
 
 interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointmentId: string | null; // Null if creating a new one
   defaultDate?: string; // ISO date string if creating on a specific day
+  defaultType?: "consulta" | "evento" | "bloqueio";
   onSave: () => void;
 }
 
@@ -75,6 +80,7 @@ export function AppointmentModal({
   onOpenChange,
   appointmentId,
   defaultDate,
+  defaultType = "consulta",
   onSave,
 }: AppointmentModalProps) {
   const supabase = createClient();
@@ -86,6 +92,17 @@ export function AppointmentModal({
   const [staff, setStaff] = useState<StaffOption[]>([]);
   const [procedures, setProcedures] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
+
+  // Appointment Type / Mode (Consulta, Evento, Bloqueio)
+  const [apptType, setApptType] = useState<"consulta" | "evento" | "bloqueio">("consulta");
+  
+  // Custom professional select dropdown state
+  const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
+
+  // Quotes (Orçamentos) states inside Financial tab
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [loadingQuotes, setLoadingQuotes] = useState(false);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
   // Search queries
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,6 +116,23 @@ export function AppointmentModal({
   const [endTime, setEndTime] = useState("");
   const [status, setStatus] = useState("provisional");
   const [notes, setNotes] = useState("");
+
+  const fetchQuotes = useCallback(async () => {
+    if (!patientId) return;
+    setLoadingQuotes(true);
+    try {
+      const { data } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("contact_id", patientId)
+        .order("created_at", { ascending: false });
+      setQuotes(data || []);
+    } catch (err) {
+      console.error("Error loading quotes:", err);
+    } finally {
+      setLoadingQuotes(false);
+    }
+  }, [patientId, supabase]);
   const [sendWa, setSendWa] = useState(true);
 
   // Loaders
@@ -253,6 +287,14 @@ export function AppointmentModal({
       setNewPatientError(null);
       setSearchQuery("");
 
+      const currentType = defaultType || "consulta";
+      setApptType(currentType);
+      if (currentType === "evento") {
+        setProcedureName("Evento");
+      } else if (currentType === "bloqueio") {
+        setProcedureName("Bloqueio de Agenda");
+      }
+
       if (defaultDate) {
         setStartTime(`${defaultDate}T09:00`);
         setEndTime(`${defaultDate}T10:00`);
@@ -299,6 +341,11 @@ export function AppointmentModal({
         setStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
         setSendWa(true);
+
+        const loadedType = appt.type === "Evento" || appt.type === "evento"
+          ? "evento"
+          : (appt.type === "Bloqueio de Agenda" || appt.type === "bloqueio" ? "bloqueio" : "consulta");
+        setApptType(loadedType);
       } catch (err) {
         console.error("Error loading appointment details:", err);
         setError("Erro ao carregar detalhes do agendamento.");
@@ -321,6 +368,7 @@ export function AppointmentModal({
       setClinicalEvolutions([]);
       setBodyEvaluations([]);
       setPatientTransactions([]);
+      setQuotes([]);
       return;
     }
 
@@ -469,6 +517,14 @@ export function AppointmentModal({
           .order("created_at", { ascending: false });
         setPatientTransactions(txList || []);
 
+        // 8. Quotes (Orçamentos)
+        const { data: quotesList } = await supabase
+          .from("quotes")
+          .select("*")
+          .eq("contact_id", patientId)
+          .order("created_at", { ascending: false });
+        setQuotes(quotesList || []);
+
       } catch (err) {
         console.error("Error loading patient sub-details:", err);
       } finally {
@@ -583,7 +639,7 @@ export function AppointmentModal({
         const { error: updateErr } = await supabase
           .from("appointments")
           .update({
-            patient_id: patientId,
+            patient_id: patientId || null,
             professional_id: professionalId || null,
             start_time: startObj.toISOString(),
             end_time: endObj.toISOString(),
@@ -596,56 +652,58 @@ export function AppointmentModal({
 
         if (updateErr) throw updateErr;
 
-        // Log timeline
-        const statusMap: Record<string, string> = {
-          provisional: "Provisório",
-          confirmed: "Confirmado",
-          attended: "Realizado",
-          cancelled: "Cancelado",
-          no_show: "Não compareceu",
-        };
-        
-        await supabase.from("patient_timeline").insert({
-          patient_id: patientId,
-          event_type: "appointment",
-          title: `Agendamento atualizado para [${statusMap[status] || status}]`,
-          payload: {
-            updated_by: profileName,
-            start_time: startObj.toISOString(),
-          },
-        });
+        if (patientId) {
+          // Log timeline
+          const statusMap: Record<string, string> = {
+            provisional: "Provisório",
+            confirmed: "Confirmado",
+            attended: "Realizado",
+            cancelled: "Cancelado",
+            no_show: "Não compareceu",
+          };
 
-        // Trigger notifications via API
-        const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
-        const formattedDate = startObj.toLocaleDateString("pt-BR");
-        const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-        let eventType = "agendamento_alterado";
-        if (status !== originalStatus) {
-          if (status === "confirmed") {
-            eventType = "agendamento_confirmado";
-          } else if (status === "cancelled") {
-            eventType = "agendamento_cancelado";
-          }
-        }
-
-        fetch("/api/whatsapp/trigger", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_type: eventType,
-            appointment_id: appointmentId,
+          await supabase.from("patient_timeline").insert({
             patient_id: patientId,
-            metadata: {
-              paciente: selectedPatientInfo?.name || "",
-              phone: selectedPatientInfo?.phone || "",
-              data: formattedDate,
-              hora: formattedTime,
-              profissional: professionalName,
-              procedimento: procedureName,
+            event_type: "appointment",
+            title: `Agendamento atualizado para [${statusMap[status] || status}]`,
+            payload: {
+              updated_by: profileName,
+              start_time: startObj.toISOString(),
             },
-          }),
-        }).catch((err) => console.error("Error triggering appointment update/status:", err));
+          });
+
+          // Trigger notifications via API
+          const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
+          const formattedDate = startObj.toLocaleDateString("pt-BR");
+          const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+          let eventType = "agendamento_alterado";
+          if (status !== originalStatus) {
+            if (status === "confirmed") {
+              eventType = "agendamento_confirmado";
+            } else if (status === "cancelled") {
+              eventType = "agendamento_cancelado";
+            }
+          }
+
+          fetch("/api/whatsapp/trigger", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event_type: eventType,
+              appointment_id: appointmentId,
+              patient_id: patientId,
+              metadata: {
+                paciente: selectedPatientInfo?.name || "",
+                phone: selectedPatientInfo?.phone || "",
+                data: formattedDate,
+                hora: formattedTime,
+                profissional: professionalName,
+                procedimento: procedureName,
+              },
+            }),
+          }).catch((err) => console.error("Error triggering appointment update/status:", err));
+        }
 
         // Trigger Google Calendar sync
         fetch("/api/integrations/google/sync", {
@@ -663,7 +721,7 @@ export function AppointmentModal({
           .from("appointments")
           .insert({
             clinic_id: clinicId,
-            patient_id: patientId,
+            patient_id: patientId || null,
             professional_id: professionalId || null,
             start_time: startObj.toISOString(),
             end_time: endObj.toISOString(),
@@ -677,42 +735,46 @@ export function AppointmentModal({
 
         if (createErr) throw createErr;
 
-        // Log timeline
-        await supabase.from("patient_timeline").insert({
-          patient_id: patientId,
-          event_type: "appointment",
-          title: `Nova consulta agendada para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
-          payload: {
-            created_by: profileName,
-            status,
-          },
-        });
+        if (patientId) {
+          // Log timeline
+          await supabase.from("patient_timeline").insert({
+            patient_id: patientId,
+            event_type: "appointment",
+            title: `Nova consulta agendada para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+            payload: {
+              created_by: profileName,
+              status,
+            },
+          });
 
-        // Trigger created notification via API
+          // Trigger created notification via API
+          if (newAppt?.id) {
+            const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
+            const formattedDate = startObj.toLocaleDateString("pt-BR");
+            const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+            fetch("/api/whatsapp/trigger", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                event_type: "agendamento_criado",
+                appointment_id: newAppt.id,
+                patient_id: patientId,
+                metadata: {
+                  paciente: selectedPatientInfo?.name || "",
+                  phone: selectedPatientInfo?.phone || "",
+                  data: formattedDate,
+                  hora: formattedTime,
+                  profissional: professionalName,
+                  procedimento: procedureName,
+                },
+              }),
+            }).catch((err) => console.error("Error triggering appointment_created:", err));
+          }
+        }
+
+        // Trigger Google Calendar sync
         if (newAppt?.id) {
-          const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
-          const formattedDate = startObj.toLocaleDateString("pt-BR");
-          const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-          fetch("/api/whatsapp/trigger", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              event_type: "agendamento_criado",
-              appointment_id: newAppt.id,
-              patient_id: patientId,
-              metadata: {
-                paciente: selectedPatientInfo?.name || "",
-                phone: selectedPatientInfo?.phone || "",
-                data: formattedDate,
-                hora: formattedTime,
-                profissional: professionalName,
-                procedimento: procedureName,
-              },
-            }),
-          }).catch((err) => console.error("Error triggering appointment_created:", err));
-
-          // Trigger Google Calendar sync
           fetch("/api/integrations/google/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -725,7 +787,7 @@ export function AppointmentModal({
       }
 
       // Send WhatsApp message if checked
-      if (sendWa) {
+      if (sendWa && patientId) {
         const statusName = status === "confirmed" ? "Confirmado" : "Pendente";
         await supabase.from("patient_timeline").insert({
           patient_id: patientId,
@@ -1313,14 +1375,172 @@ export function AppointmentModal({
     );
   };
 
+  const getInitials = (nameStr: string) => {
+    const parts = nameStr.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return nameStr.slice(0, 2).toUpperCase();
+  };
+
+  const renderStaffSelector = () => {
+    const selectedStaffObj = staff.find((s) => s.id === professionalId);
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsStaffDropdownOpen(!isStaffDropdownOpen)}
+          className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-10"
+          disabled={saving}
+        >
+          {selectedStaffObj ? (
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[10px] font-black text-blue-700 uppercase shrink-0">
+                {getInitials(selectedStaffObj.name)}
+              </div>
+              <span className="font-semibold text-neutral-800 text-xs">{selectedStaffObj.name}</span>
+            </div>
+          ) : (
+            <span className="text-neutral-400 font-semibold text-xs">Selecione o profissional...</span>
+          )}
+          <ChevronDownIcon className="h-4 w-4 text-neutral-400" />
+        </button>
+
+        {isStaffDropdownOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsStaffDropdownOpen(false)} />
+            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 max-h-52 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl divide-y divide-neutral-50">
+              {staff.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setProfessionalId(s.id);
+                    setIsStaffDropdownOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-neutral-50 transition-colors",
+                    professionalId === s.id && "bg-blue-50/50 text-blue-600"
+                  )}
+                >
+                  <div className="h-6 w-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[10px] font-black text-blue-700 uppercase shrink-0">
+                    {getInitials(s.name)}
+                  </div>
+                  <span className="flex-1 truncate">{s.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 ${
-        patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"
-      }`}>
+      <DialogContent className={cn(
+        "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0",
+        (apptType === "evento" || apptType === "bloqueio") 
+          ? "sm:max-w-md p-6 rounded-2xl"
+          : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl")
+      )}>
         {loading ? (
           <div className="flex flex-1 items-center justify-center py-20 min-h-[300px]">
             <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        ) : (apptType === "evento" || apptType === "bloqueio") ? (
+          /* Simplified modal layout for blocks and events */
+          <div className="space-y-4 text-left">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-neutral-900">
+                {apptType === "evento" ? "Criar Novo Evento" : "Criar Bloqueio de Agenda"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-neutral-500">
+                Preencha os detalhes do horário reservado na agenda.
+              </DialogDescription>
+            </DialogHeader>
+
+            {error && (
+              <Alert variant="destructive" className="py-2">
+                <AlertDescription className="text-xs">{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <form id="appt-modal-form" onSubmit={handleSave} className="space-y-4 text-left pt-2">
+              {/* Title */}
+              <div className="space-y-1">
+                <Label htmlFor="evt-title" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">
+                  {apptType === "evento" ? "Título do Evento *" : "Motivo do Bloqueio *"}
+                </Label>
+                <Input
+                  id="evt-title"
+                  type="text"
+                  required
+                  value={procedureName}
+                  onChange={(e) => setProcedureName(e.target.value)}
+                  placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
+                  className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                />
+              </div>
+
+              {/* Professional Custom Selector */}
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
+                {renderStaffSelector()}
+              </div>
+
+              {/* Times */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="evt-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
+                  <Input
+                    id="evt-start"
+                    type="datetime-local"
+                    required
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="evt-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Término *</Label>
+                  <Input
+                    id="evt-end"
+                    type="datetime-local"
+                    required
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1">
+                <Label htmlFor="evt-notes" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Observações</Label>
+                <Textarea
+                  id="evt-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Notas ou observações sobre este período..."
+                  className="rounded-xl border-neutral-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  rows={3}
+                />
+              </div>
+
+              <DialogFooter className="flex justify-end gap-2 pt-4">
+                <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>
+                  Cancelar
+                </DialogClose>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 font-bold rounded-lg px-4"
+                >
+                  {saving ? <Loader2Icon className="h-4 w-4 animate-spin mr-2" /> : "Salvar na Agenda"}
+                </Button>
+              </DialogFooter>
+            </form>
           </div>
         ) : !patientId ? (
           showNewPatientForm ? (
@@ -1489,7 +1709,7 @@ export function AppointmentModal({
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-neutral-900 text-white p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-800">
+            <header className="bg-[#0B1528] text-white p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-blue-900/40">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
                 <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-blue-400 text-white flex items-center justify-center text-lg font-black shadow-inner shrink-0">
@@ -1612,22 +1832,8 @@ export function AppointmentModal({
                         <form id="appt-modal-form" onSubmit={handleSave} className="space-y-4">
                           {/* Professional selector */}
                           <div className="space-y-1 text-left">
-                            <Label htmlFor="det-staff" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
-                            <select
-                              id="det-staff"
-                              value={professionalId}
-                              onChange={(e) => setProfessionalId(e.target.value)}
-                              className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                              required
-                              disabled={saving}
-                            >
-                              <option value="">Selecione o profissional...</option>
-                              {staff.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                            </select>
+                            <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
+                            {renderStaffSelector()}
                           </div>
 
                           {/* Date and Times */}
@@ -2115,8 +2321,83 @@ export function AppointmentModal({
                           )}
                         </div>
 
+                        {/* Quotes / Orçamentos Section */}
+                        <div className="space-y-4 pt-4 border-t border-neutral-100">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Orçamentos Enviados</h4>
+                            <Button
+                              type="button"
+                              onClick={() => setQuoteModalOpen(true)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 gap-1 rounded-lg"
+                            >
+                              <PlusIcon className="h-3 w-3" />
+                              Novo Orçamento
+                            </Button>
+                          </div>
+
+                          {/* Quotes stats row */}
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="bg-neutral-50 border border-neutral-200/50 rounded-xl p-2.5 text-center shadow-xs">
+                              <span className="text-[8px] text-neutral-500 font-extrabold uppercase block tracking-wider">Total</span>
+                              <span className="text-sm font-black text-neutral-700">{quotes.length}</span>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-100/50 rounded-xl p-2.5 text-center shadow-xs">
+                              <span className="text-[8px] text-blue-600 font-extrabold uppercase block tracking-wider">Enviados</span>
+                              <span className="text-sm font-black text-blue-700">
+                                {quotes.filter(q => q.status === 'sent').length}
+                              </span>
+                            </div>
+                            <div className="bg-emerald-50 border border-emerald-100/50 rounded-xl p-2.5 text-center shadow-xs">
+                              <span className="text-[8px] text-emerald-600 font-extrabold uppercase block tracking-wider">Aprovados</span>
+                              <span className="text-sm font-black text-emerald-700">
+                                {quotes.filter(q => q.status === 'accepted' || q.status === 'approved').length}
+                              </span>
+                            </div>
+                          </div>
+
+                          {loadingQuotes ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2Icon className="h-4 w-4 animate-spin text-blue-600" />
+                            </div>
+                          ) : quotes.length === 0 ? (
+                            <p className="text-xs text-neutral-400 italic">Nenhum orçamento gerado para este paciente.</p>
+                          ) : (
+                            <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
+                              {quotes.map((q) => {
+                                const isSent = q.status === "sent";
+                                const isAccepted = q.status === "accepted" || q.status === "approved";
+                                return (
+                                  <div key={q.id} className="flex items-center justify-between p-3 bg-white text-xs gap-4">
+                                    <div className="text-left min-w-0">
+                                      <p className="font-extrabold text-neutral-800 truncate">
+                                        Orçamento #{q.id.substring(0, 6).toUpperCase()}
+                                      </p>
+                                      {q.special_condition && (
+                                        <p className="text-[9px] text-neutral-500 italic truncate">{q.special_condition}</p>
+                                      )}
+                                      <p className="text-[8px] text-neutral-400 font-medium">
+                                        Gerado em: {new Date(q.created_at || q.sent_at).toLocaleDateString("pt-BR")}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                      <span className="font-extrabold text-neutral-700">
+                                        R$ {Number(q.total_value || 0).toFixed(2)}
+                                      </span>
+                                      <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                        isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-blue-50 text-blue-700 border border-blue-100/50" : "bg-neutral-100 text-neutral-500"
+                                      }`}>
+                                        {isAccepted ? "Aprovado" : isSent ? "Enviado" : "Rascunho"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
                         {/* Active Packages Credit list inside Financial */}
-                        <div className="space-y-3 pt-2">
+                        <div className="space-y-3 pt-4 border-t border-neutral-100">
                           <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Crédito de Pacotes Contratados</h4>
                           {patientPackages.length === 0 ? (
                             <p className="text-xs text-neutral-400 italic">Nenhum pacote contratado no momento.</p>
@@ -2547,6 +2828,21 @@ export function AppointmentModal({
           </div>
         )}
       </DialogContent>
+
+      {/* QuoteCreator Modal Overlay inside Appointment details financial */}
+      <QuoteModal
+        open={quoteModalOpen}
+        onClose={() => {
+          setQuoteModalOpen(false);
+          fetchQuotes();
+        }}
+        contactId={patientId}
+        contactName={selectedPatientInfo ? selectedPatientInfo.name : ""}
+        contactPhone={selectedPatientInfo ? selectedPatientInfo.phone : ""}
+        onQuoteCreated={() => {
+          fetchQuotes();
+        }}
+      />
     </Dialog>
   );
 }

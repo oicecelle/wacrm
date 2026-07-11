@@ -86,6 +86,8 @@ export default function AgendaPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
+  const [modalDefaultType, setModalDefaultType] = useState<"consulta" | "evento" | "bloqueio">("consulta");
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   // Detail Modal (Prontuário / Evolução / Financeiro / Pacotes)
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -257,22 +259,31 @@ export default function AgendaPage() {
     }
   }, [accountId, supabase]);
 
+  // State for mini calendar expansion
+  const [isMiniCalendarExpanded, setIsMiniCalendarExpanded] = useState(false);
+
+  // Sync pickerMonth and pickerYear when selectedDate changes to load month data automatically
+  useEffect(() => {
+    setPickerMonth(selectedDate.getMonth());
+    setPickerYear(selectedDate.getFullYear());
+  }, [selectedDate]);
+
   const fetchAppointments = useCallback(async () => {
     if (!accountId) return;
     setLoading(true);
 
     try {
-      // Derive week range from selectedDate inside the callback to avoid
-      // the infinite loop caused by weekDates being a new array reference on every render.
-      const d = new Date(selectedDate);
-      const dayOfWeek = d.getDay();
-      const sunday = new Date(d);
-      sunday.setDate(d.getDate() - dayOfWeek);
-      const saturday = new Date(sunday);
-      saturday.setDate(sunday.getDate() + 6);
+      // Calculate visible cells range of pickerMonth for mini-calendar dots
+      const startPickerMonth = new Date(pickerYear, pickerMonth, 1);
+      const dayOfWeek = startPickerMonth.getDay();
+      const firstCellDate = new Date(startPickerMonth);
+      firstCellDate.setDate(startPickerMonth.getDate() - dayOfWeek);
+      
+      const lastCellDate = new Date(firstCellDate);
+      lastCellDate.setDate(firstCellDate.getDate() + 41); // 42 cells total (6 weeks)
 
-      const startOfWeekIso = new Date(sunday.setHours(0, 0, 0, 0)).toISOString();
-      const endOfWeekIso = new Date(saturday.setHours(23, 59, 59, 999)).toISOString();
+      const startIso = new Date(firstCellDate.setHours(0, 0, 0, 0)).toISOString();
+      const endIso = new Date(lastCellDate.setHours(23, 59, 59, 999)).toISOString();
 
       const { data, error } = await supabase
         .from("appointments")
@@ -293,8 +304,8 @@ export default function AgendaPage() {
           )
         `)
         .eq("clinic_id", accountId)
-        .gte("start_time", startOfWeekIso)
-        .lte("start_time", endOfWeekIso)
+        .gte("start_time", startIso)
+        .lte("start_time", endIso)
         .order("start_time", { ascending: true });
 
       if (error) throw error;
@@ -304,8 +315,7 @@ export default function AgendaPage() {
     } finally {
       setLoading(false);
     }
-  // selectedDate (not weekDates) is the stable dependency — weekDates is derived from it
-  }, [accountId, supabase, selectedDate]);
+  }, [accountId, supabase, pickerMonth, pickerYear]);
 
   const [birthdays, setBirthdays] = useState<Record<string, string[]>>({});
 
@@ -448,9 +458,23 @@ export default function AgendaPage() {
     setFilterRoom("Todos");
   };
 
+  // Get appointments for the visible range of displayedDates (week/day) for sidebar statistics
+  const visiblePeriodAppointments = useMemo(() => {
+    return appointments.filter((appt) => {
+      const startLocal = new Date(appt.start_time);
+      return displayedDates.some((d) => d.toDateString() === startLocal.toDateString());
+    });
+  }, [appointments, displayedDates]);
+
   // Client side filtering
   const filteredAppointments = appointments.filter((appt) => {
-    if (filterStatus !== "Todos" && appt.status !== filterStatus) return false;
+    if (filterStatus !== "Todos") {
+      if (filterStatus === "cancelled") {
+        if (appt.status !== "cancelled" && appt.status !== "no_show") return false;
+      } else {
+        if (appt.status !== filterStatus) return false;
+      }
+    }
     if (filterProfessional !== "Todos" && appt.professional_id !== filterProfessional) return false;
     if (filterPatient !== "Todos" && appt.patient_id !== filterPatient) return false;
     if (filterRoom !== "Todos" && appt.room_id !== filterRoom) return false;
@@ -675,10 +699,18 @@ export default function AgendaPage() {
           {/* Mini Month Picker */}
           <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold text-neutral-800 capitalize">
-                {monthNames[pickerMonth].toLowerCase()} de {pickerYear}
-              </span>
-              <div className="flex gap-0.5">
+              <button
+                type="button"
+                onClick={() => setIsMiniCalendarExpanded(!isMiniCalendarExpanded)}
+                className="flex items-center gap-1.5 text-sm font-bold text-neutral-800 hover:text-blue-600 transition-colors capitalize"
+                title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
+              >
+                <span>{monthNames[pickerMonth].toLowerCase()} de {pickerYear}</span>
+                <span className="text-[9px] font-extrabold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
+                  {isMiniCalendarExpanded ? "Mês" : "Semana"}
+                </span>
+              </button>
+              <div className="flex items-center gap-0.5">
                 <button
                   onClick={handlePickerPrevMonth}
                   className="p-1 hover:bg-neutral-100 rounded text-neutral-600 transition-colors"
@@ -703,10 +735,16 @@ export default function AgendaPage() {
 
             {/* Mini Calendar cells */}
             <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {miniCalendarCells.map((cellDate, cellIdx) => {
+              {(isMiniCalendarExpanded ? miniCalendarCells : weekDates).map((cellDate, cellIdx) => {
                 const isSelected = cellDate.toDateString() === selectedDate.toDateString();
                 const isToday = cellDate.toDateString() === new Date().toDateString();
                 const isCurrentMonth = cellDate.getMonth() === pickerMonth;
+
+                // Check if date has appointments to display indicator dot
+                const hasAppt = appointments.some((appt) => {
+                  const startLocal = new Date(appt.start_time);
+                  return startLocal.toDateString() === cellDate.toDateString();
+                });
 
                 return (
                   <button
@@ -716,7 +754,7 @@ export default function AgendaPage() {
                       setPickerMonth(cellDate.getMonth());
                       setPickerYear(cellDate.getFullYear());
                     }}
-                    className={`h-7 w-7 rounded-full flex items-center justify-center transition-all ${
+                    className={`h-8 w-8 rounded-full flex flex-col items-center justify-center relative transition-all ${
                       isSelected
                         ? "bg-blue-600 text-white font-bold shadow-xs"
                         : isToday
@@ -726,126 +764,132 @@ export default function AgendaPage() {
                         : "text-neutral-300 dark:text-neutral-600 hover:bg-neutral-50"
                     }`}
                   >
-                    {cellDate.getDate()}
+                    <span className="text-[10px]">{cellDate.getDate()}</span>
+                    {hasAppt && (
+                      <span className={`absolute bottom-1 h-1 w-1 rounded-full ${
+                        isSelected ? "bg-white" : "bg-blue-600"
+                      }`} />
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Collapsible Dropdown Filters */}
-          <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
-              <span className="text-xs font-extrabold text-neutral-800 tracking-wider uppercase">Filtros</span>
+          {/* Status Statistics Filters */}
+          <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs space-y-3.5">
+            <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100">
+              <span className="text-xs font-extrabold text-neutral-800 tracking-wider uppercase">Filtros por Status</span>
+              {filterStatus !== "Todos" && (
+                <button
+                  onClick={() => setFilterStatus("Todos")}
+                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {/* Total Item */}
               <button
-                onClick={handleClearFilters}
-                className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-0.5"
-                title="Limpar todos os filtros"
+                type="button"
+                onClick={() => setFilterStatus("Todos")}
+                className={cn(
+                  "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
+                  filterStatus === "Todos"
+                    ? "bg-blue-50/70 border-blue-200 text-blue-800 font-bold"
+                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                )}
               >
-                <FilterXIcon className="h-3 w-3" />
-                Limpar filtros
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                  <span>Todos os agendamentos</span>
+                </div>
+                <span className="text-[10px] bg-neutral-100 px-2 py-0.5 rounded-md text-neutral-600 font-extrabold">
+                  {visiblePeriodAppointments.length}
+                </span>
               </button>
-            </div>
 
-            {/* Status Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              >
-                <option value="Todos">Todos os Status</option>
-                <option value="provisional">Pendente (Provisório)</option>
-                <option value="confirmed">Confirmado</option>
-                <option value="attended">Realizado</option>
-                <option value="cancelled">Cancelado</option>
-                <option value="no_show">Não compareceu</option>
-              </select>
-            </div>
-
-            {/* Professional Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Profissional</label>
-              <select
-                value={filterProfessional}
-                onChange={(e) => setFilterProfessional(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              >
-                <option value="Todos">Todos os Profissionais</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Patient Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Paciente</label>
-              <select
-                value={filterPatient}
-                onChange={(e) => setFilterPatient(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              >
-                <option value="Todos">Todos os Pacientes</option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Procedure Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Procedimento</label>
-              <select
-                value={filterProcedure}
-                onChange={(e) => setFilterProcedure(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              >
-                <option value="Todos">Todos os Procedimentos</option>
-                {procedures.map((pr) => (
-                  <option key={pr.id} value={pr.name}>
-                    {pr.name}
-                  </option>
-                ))}
-                {procedures.length === 0 && (
-                  <>
-                    <option value="Drenagem Linfática">Drenagem Linfática</option>
-                    <option value="Botox">Botox</option>
-                    <option value="Limpeza de Pele">Limpeza de Pele</option>
-                    <option value="Preenchimento Labial">Preenchimento Labial</option>
-                    <option value="Miracle Touch">Miracle Touch</option>
-                  </>
+              {/* Confirmed Item */}
+              <button
+                type="button"
+                onClick={() => setFilterStatus("confirmed")}
+                className={cn(
+                  "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
+                  filterStatus === "confirmed"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800 font-bold"
+                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
                 )}
-              </select>
-            </div>
-
-            {/* Room Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">Sala de atendimento</label>
-              <select
-                value={filterRoom}
-                onChange={(e) => setFilterRoom(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
-                <option value="Todos">Todas as Salas</option>
-                {rooms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-                {rooms.length === 0 && (
-                  <>
-                    <option value="Sala 1">Sala 1</option>
-                    <option value="Sala 2">Sala 2</option>
-                    <option value="Sala VIP">Sala VIP</option>
-                  </>
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                  <span>Confirmados</span>
+                </div>
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100/50 px-2 py-0.5 rounded-md font-extrabold">
+                  {visiblePeriodAppointments.filter(a => a.status === 'confirmed').length}
+                </span>
+              </button>
+
+              {/* Pending (Provisional) Item */}
+              <button
+                type="button"
+                onClick={() => setFilterStatus("provisional")}
+                className={cn(
+                  "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
+                  filterStatus === "provisional"
+                    ? "bg-amber-50 border-amber-200 text-amber-800 font-bold"
+                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
                 )}
-              </select>
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <span>Pendentes</span>
+                </div>
+                <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100/50 px-2 py-0.5 rounded-md font-extrabold">
+                  {visiblePeriodAppointments.filter(a => a.status === 'provisional').length}
+                </span>
+              </button>
+
+              {/* Attended (Realizados) Item */}
+              <button
+                type="button"
+                onClick={() => setFilterStatus("attended")}
+                className={cn(
+                  "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
+                  filterStatus === "attended"
+                    ? "bg-purple-50 border-purple-200 text-purple-800 font-bold"
+                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-purple-600" />
+                  <span>Realizados</span>
+                </div>
+                <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-100/50 px-2 py-0.5 rounded-md font-extrabold">
+                  {visiblePeriodAppointments.filter(a => a.status === 'attended').length}
+                </span>
+              </button>
+
+              {/* Cancelled / Faltou Item */}
+              <button
+                type="button"
+                onClick={() => setFilterStatus("cancelled")}
+                className={cn(
+                  "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
+                  filterStatus === "cancelled"
+                    ? "bg-rose-50 border-rose-200 text-rose-800 font-bold"
+                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-600" />
+                  <span>Cancelados / Faltas</span>
+                </div>
+                <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-100/50 px-2 py-0.5 rounded-md font-extrabold">
+                  {visiblePeriodAppointments.filter(a => a.status === 'cancelled' || a.status === 'no_show').length}
+                </span>
+              </button>
             </div>
           </div>
         </aside>
@@ -1106,14 +1150,61 @@ export default function AgendaPage() {
       </div>
 
       {/* Floating Action Buttons bottom-right */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
-        {/* Plus Appointment FAB */}
+      <div className="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-50">
+        {/* Popover Menu above the FAB */}
+        {isFabMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFabMenuOpen(false)} />
+            <div className="bg-white border border-neutral-200 shadow-2xl rounded-2xl p-2 z-50 w-52 flex flex-col gap-1 text-left animate-in fade-in slide-in-from-bottom-5 duration-150">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalDefaultType("consulta");
+                  const dateStr = selectedDate.toISOString().slice(0, 10);
+                  handleAddAppointment(dateStr);
+                  setIsFabMenuOpen(false);
+                }}
+                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <PlusIcon className="h-4 w-4 text-blue-600" />
+                <span>Marcar Consulta (Lead)</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setModalDefaultType("evento");
+                  const dateStr = selectedDate.toISOString().slice(0, 10);
+                  handleAddAppointment(dateStr);
+                  setIsFabMenuOpen(false);
+                }}
+                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <SparklesIcon className="h-4 w-4 text-indigo-500" />
+                <span>Criar Evento</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setModalDefaultType("bloqueio");
+                  const dateStr = selectedDate.toISOString().slice(0, 10);
+                  handleAddAppointment(dateStr);
+                  setIsFabMenuOpen(false);
+                }}
+                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <ClockIcon className="h-4 w-4 text-amber-500" />
+                <span>Bloqueio de Agenda</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Plus FAB Button */}
         <button
-          onClick={() => {
-            const dateStr = selectedDate.toISOString().slice(0, 10);
-            handleAddAppointment(dateStr);
-          }}
-          className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all"
+          onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
+          className={`h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all transform duration-200 ${isFabMenuOpen ? 'rotate-45 bg-neutral-800' : ''}`}
           title="Novo Agendamento"
         >
           <PlusIcon className="h-6 w-6" />
@@ -1126,6 +1217,7 @@ export default function AgendaPage() {
         onOpenChange={setModalOpen}
         appointmentId={selectedApptId}
         defaultDate={modalDefaultDate}
+        defaultType={modalDefaultType}
         onSave={fetchAppointments}
       />
 
