@@ -12,6 +12,7 @@ import {
   ChevronRightIcon,
   StarIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ClinicOption {
   id: string;
@@ -239,30 +240,25 @@ export default function SelecionarClinicaPage() {
   };
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center p-4"
-      style={{
-        background: "linear-gradient(135deg, #0f0f1c 0%, #0a0a14 100%)",
-      }}
-    >
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50">
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Logo className="h-10 w-10 shrink-0" />
-            <span className="text-xl tracking-tight text-white">
+            <span className="text-xl tracking-tight text-slate-900">
               <span className="font-medium text-[#2585fc]">LEAD</span>{" "}
               <span className="font-extrabold text-[#003bbd]">PLUZ</span>
             </span>
           </div>
           {loading ? (
-            <p className="text-sm text-neutral-400">Carregando suas clínicas...</p>
+            <p className="text-sm text-slate-400">Carregando suas clínicas...</p>
           ) : (
             <>
-              <h1 className="text-lg font-black text-white">
+              <h1 className="text-lg font-black text-slate-900">
                 Olá, {userName.split(" ")[0]}! 👋
               </h1>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-slate-500 font-semibold">
                 Selecione a clínica que deseja acessar
               </p>
             </>
@@ -270,21 +266,15 @@ export default function SelecionarClinicaPage() {
         </div>
 
         {/* Clinic cards */}
-        <div
-          className="rounded-2xl p-2 space-y-1"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
+        <div className="rounded-2xl p-2 space-y-1 bg-white border border-slate-200 shadow-sm">
           {loading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2Icon className="h-6 w-6 animate-spin text-indigo-400" />
+              <Loader2Icon className="h-6 w-6 animate-spin text-blue-600" />
             </div>
           ) : clinics.length === 0 ? (
             <div className="text-center py-8">
-              <BuildingIcon className="h-8 w-8 mx-auto mb-2 text-neutral-600" />
-              <p className="text-xs text-neutral-500 italic">
+              <BuildingIcon className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-xs text-slate-400 italic font-semibold">
                 Nenhuma clínica vinculada. Contate o administrador.
               </p>
             </div>
@@ -298,24 +288,21 @@ export default function SelecionarClinicaPage() {
                   key={clinic.id}
                   type="button"
                   onClick={() => setSelectedId(clinic.id)}
-                  className="w-full text-left rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all"
-                  style={{
-                    background: isSelected
-                      ? "rgba(37,133,252,0.15)"
-                      : "rgba(255,255,255,0.03)",
-                    border: isSelected
-                      ? "1px solid rgba(37,133,252,0.45)"
-                      : "1px solid rgba(255,255,255,0.05)",
-                  }}
+                  className={cn(
+                    "group w-full text-left rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all border",
+                    isSelected
+                      ? "bg-blue-50/70 border-blue-200/80 text-blue-900"
+                      : "bg-slate-50/40 border-slate-100/50 hover:bg-slate-50 hover:border-slate-200 text-slate-700"
+                  )}
                 >
                   {/* Clinic avatar */}
                   <div
-                    className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-base font-black text-white"
-                    style={{
-                      background: isSelected
-                        ? "linear-gradient(135deg, #2585fc, #003bbd)"
-                        : "rgba(255,255,255,0.08)",
-                    }}
+                    className={cn(
+                      "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-base font-black text-white",
+                      isSelected
+                        ? "bg-gradient-to-br from-blue-500 to-indigo-600"
+                        : "bg-slate-200 text-slate-600"
+                    )}
                   >
                     {clinic.name.charAt(0).toUpperCase()}
                   </div>
@@ -323,11 +310,11 @@ export default function SelecionarClinicaPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-black text-white truncate">
+                      <p className="text-xs font-black text-slate-800 truncate">
                         {clinic.name}
                       </p>
                       {isDefault && (
-                        <StarIcon className="h-3 w-3 text-amber-400 shrink-0 fill-amber-400" />
+                        <StarIcon className="h-3 w-3 text-amber-500 shrink-0 fill-amber-500" />
                       )}
                     </div>
                     <span
@@ -346,27 +333,24 @@ export default function SelecionarClinicaPage() {
                         e.stopPropagation();
                         handleSetDefault(clinic.id);
                       }}
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md flex items-center justify-center transition-all hover:bg-white/10"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md flex items-center justify-center transition-all hover:bg-slate-100"
                       style={{ opacity: isDefault ? 1 : undefined }}
                     >
                       <StarIcon
                         className={`h-3.5 w-3.5 transition-colors ${
                           isDefault
-                            ? "text-amber-400 fill-amber-400"
-                            : "text-neutral-600"
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-slate-400"
                         }`}
                       />
                     </button>
                     <div
-                      className="h-5 w-5 rounded-full flex items-center justify-center transition-all"
-                      style={{
-                        background: isSelected
-                          ? "#2585fc"
-                          : "rgba(255,255,255,0.07)",
-                        border: isSelected
-                          ? "none"
-                          : "1px solid rgba(255,255,255,0.15)",
-                      }}
+                      className={cn(
+                        "h-5 w-5 rounded-full flex items-center justify-center transition-all border",
+                        isSelected
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : "bg-slate-100 border-slate-200 text-transparent"
+                      )}
                     >
                       {isSelected && <CheckIcon className="h-3 w-3 text-white stroke-[3]" />}
                     </div>
@@ -378,7 +362,7 @@ export default function SelecionarClinicaPage() {
         </div>
 
         {/* Default hint */}
-        <p className="text-[10px] text-neutral-600 text-center font-semibold">
+        <p className="text-[10px] text-slate-400 text-center font-semibold">
           ⭐ Clique na estrela para definir uma clínica como padrão na próxima entrada
         </p>
 
@@ -387,11 +371,7 @@ export default function SelecionarClinicaPage() {
           type="button"
           onClick={handleAccess}
           disabled={!selectedId || switching || loading}
-          className="w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-lg"
-          style={{
-            background: "linear-gradient(135deg, #2585fc, #003bbd)",
-            color: "white",
-          }}
+          className="w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-md shadow-blue-500/10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95 active:scale-95"
         >
           {switching ? (
             <>
@@ -410,7 +390,7 @@ export default function SelecionarClinicaPage() {
         <button
           type="button"
           onClick={handleSignOut}
-          className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-300 transition-colors py-1"
+          className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors py-1"
         >
           <LogOutIcon className="h-3.5 w-3.5" />
           Sair da conta

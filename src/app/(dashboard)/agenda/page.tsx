@@ -977,7 +977,7 @@ export default function AgendaPage() {
                 className="h-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:opacity-90 active:scale-95 transition-all text-xs px-3.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-blue-500/10"
               >
                 <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-blue-100" />
-                Pedir ao Copiloto
+                Pedir à LIA
               </button>
 
               <Button

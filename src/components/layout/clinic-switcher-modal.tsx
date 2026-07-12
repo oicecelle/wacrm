@@ -36,6 +36,25 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
   const [switching, setSwitching] = useState(false);
   const [setAsDefault, setSetAsDefault] = useState(false);
 
+  const [modalUserName, setModalUserName] = useState<string>("Usuário");
+
+  useEffect(() => {
+    if (!open || !user) return;
+    setModalUserName(profile?.full_name || user.email || "Usuário");
+
+    const directSupabase = createClient();
+    directSupabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.full_name) {
+          setModalUserName(data.full_name);
+        }
+      });
+  }, [open, user, profile]);
+
   useEffect(() => {
     if (!open || !user || !profile) return;
 
@@ -158,7 +177,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
             </span>
           </div>
           <DialogTitle className="text-lg font-black text-neutral-900 leading-tight">
-            Bem vindo, {profile?.full_name || "Usuário"}!
+            Bem-vindo, {modalUserName}!
           </DialogTitle>
           <DialogDescription className="text-xs text-neutral-500 font-semibold">
             Qual a clínica que você deseja acessar agora?

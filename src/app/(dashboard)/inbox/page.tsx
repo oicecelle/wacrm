@@ -568,6 +568,37 @@ export default function InboxPage() {
     [activeConversation]
   );
 
+  const handlePinToggle = useCallback(
+    async (conversationId: string, currentPinned: boolean) => {
+      const nextPinned = !currentPinned;
+      // Optimistic update
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, is_pinned: nextPinned } : c))
+      );
+      if (activeConversation?.id === conversationId) {
+        setActiveConversation((prev) => (prev ? { ...prev, is_pinned: nextPinned } : prev));
+      }
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update({ is_pinned: nextPinned })
+        .eq("id", conversationId);
+
+      if (error) {
+        // Revert on error
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversationId ? { ...c, is_pinned: currentPinned } : c))
+        );
+        if (activeConversation?.id === conversationId) {
+          setActiveConversation((prev) => (prev ? { ...prev, is_pinned: currentPinned } : prev));
+        }
+        console.error("Failed to pin conversation:", error);
+      }
+    },
+    [activeConversation]
+  );
+
   // On mobile (<lg) we show a SINGLE pane — either the list or the
   // thread — rather than cramming both side-by-side. Selecting a
   // conversation slides the thread in; the thread's back button pops
@@ -604,6 +635,7 @@ export default function InboxPage() {
             conversations={conversations}
             onConversationsLoaded={handleConversationsLoaded}
             resyncToken={resyncToken}
+            onPinToggle={handlePinToggle}
           />
         </div>
 

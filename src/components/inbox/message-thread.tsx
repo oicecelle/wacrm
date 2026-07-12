@@ -195,6 +195,33 @@ export function MessageThread({
     }, 700);
   }, [isRefreshing, onRefresh]);
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
+  const [whatsappName, setWhatsappName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!contact?.id) {
+      setWhatsappName(null);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("contact_whatsapp_names")
+      .select("whatsapp_name")
+      .eq("contact_id", contact.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (!error && data) {
+          setWhatsappName(data.whatsapp_name);
+        } else {
+          setWhatsappName(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contact?.id]);
 
   // Profiles are bounded by RLS to rows the current user is allowed to
   // see — today that's just the current user, but the dropdown keeps the
@@ -866,7 +893,19 @@ export function MessageThread({
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+            <h2 className="truncate text-sm font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+              <span>{displayName}</span>
+              {contact?.is_group && (
+                <span className="text-xs text-muted-foreground/75 font-normal shrink-0">
+                  (grupo)
+                </span>
+              )}
+              {whatsappName && whatsappName !== displayName && (
+                <span className="text-[10px] text-muted-foreground/60 font-normal italic shrink-0">
+                  ({whatsappName})
+                </span>
+              )}
+            </h2>
             <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
           </div>
           {/* Session timer badge — hidden on the narrowest phones so

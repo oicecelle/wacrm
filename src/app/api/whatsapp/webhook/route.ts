@@ -1051,6 +1051,17 @@ async function findOrCreateConversation(
     .single()
 
   if (createError) {
+    if (createError.code === '23505') {
+      const { data: retry } = await supabaseAdmin()
+        .from('conversations')
+        .select('*')
+        .eq('account_id', accountId)
+        .eq('contact_id', contactId)
+        .maybeSingle()
+      if (retry) {
+        return retry
+      }
+    }
     console.error('Error creating conversation:', createError)
     return null
   }

@@ -98,6 +98,7 @@ export interface Contact {
   email?: string;
   company?: string;
   avatar_url?: string;
+  is_group?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -155,6 +156,8 @@ export interface Conversation {
   unread_count: number;
   created_at: string;
   updated_at: string;
+  is_pinned?: boolean;
+  last_message_from_me?: boolean;
   contact?: Contact;
 }
 

@@ -155,7 +155,7 @@ export async function POST(request: Request) {
       pushName = dataObj.chat?.wa_name || dataObj.chat?.name || body.sender?.name || dataObj.pushName || ''
     }
 
-    const messageId = msg.messageId || msg.key?.id || dataObj.key?.id || `uaz-in-${Date.now()}`
+    const messageId = msg.messageid || msg.messageId || msg.id || msg.key?.id || dataObj.key?.id || dataObj.messageid || dataObj.messageId || dataObj.id || `uaz-in-${Date.now()}`
     let mediaType = msg.mediaType || msg.type || dataObj.messageType || 'text'
     const msgTypeStr = String(msg.messageType || msg.type || dataObj.messageType || '').toLowerCase()
     if (msgTypeStr.includes('audio') || msgTypeStr.includes('ptt')) {
@@ -214,7 +214,8 @@ export async function POST(request: Request) {
       pushName,
       config.uazapi_token,
       config.uazapi_base_url,
-      payloadAvatarUrl
+      payloadAvatarUrl,
+      isGroup
     )
     if (!contactOutcome) {
       return NextResponse.json({ error: 'Failed to find/create contact' }, { status: 500 })
@@ -438,7 +439,8 @@ async function findOrCreateContact(
   name: string,
   uazapiToken?: string | null,
   uazapiBaseUrl?: string | null,
-  avatarUrlFromPayload?: string | null
+  avatarUrlFromPayload?: string | null,
+  isGroup?: boolean
 ): Promise<ContactOutcome | null> {
   const db = supabaseAdmin()
   const existingContact = await findExistingContact(db, accountId, phone)
@@ -447,6 +449,9 @@ async function findOrCreateContact(
     const updateFields: any = {}
     if (name && name !== existingContact.name) {
       updateFields.name = name
+    }
+    if (isGroup && !existingContact.is_group) {
+      updateFields.is_group = true
     }
 
     // Fetch profile picture if not already present
@@ -526,7 +531,8 @@ async function findOrCreateContact(
       user_id: configOwnerUserId,
       phone,
       name: name || phone,
-      avatar_url: avatarUrl || null
+      avatar_url: avatarUrl || null,
+      is_group: isGroup || false
     })
     .select()
     .single()
@@ -598,6 +604,16 @@ async function findOrCreateConversation(
     .single()
 
   if (createError) {
+    if (createError.code === '23505') {
+      const { data: retryList } = await db
+        .from('conversations')
+        .select('*')
+        .eq('account_id', accountId)
+        .eq('contact_id', contactId)
+      if (retryList && retryList.length > 0) {
+        return retryList[0]
+      }
+    }
     console.error('[uazapi-webhook] Error creating conversation:', createError)
     return null
   }

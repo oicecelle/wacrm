@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus } from "@/types";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, Pin, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,12 +28,13 @@ interface ConversationListProps {
    * or the tab was throttled. Optional so existing callers keep working.
    */
   resyncToken?: number;
+  onPinToggle?: (conversationId: string, currentPinned: boolean) => void;
 }
 
 const STATUS_COLORS: Record<ConversationStatus, string> = {
-  open: "bg-primary",
+  open: "hidden",
   pending: "bg-amber-500",
-  closed: "bg-muted-foreground",
+  closed: "hidden",
 };
 
 type InboxFilter = ConversationStatus | "all" | "unread";
@@ -52,6 +53,7 @@ export function ConversationList({
   conversations,
   onConversationsLoaded,
   resyncToken = 0,
+  onPinToggle,
 }: ConversationListProps) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
@@ -82,7 +84,8 @@ export function ConversationList({
       const { data, error } = await supabase
         .from("conversations")
         .select("*, contact:contacts(*)")
-        .order("last_message_at", { ascending: false });
+        .order("is_pinned", { ascending: false })
+        .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (cancelled) return;
 
@@ -129,7 +132,16 @@ export function ConversationList({
       });
     }
 
-    return result;
+    return [...result].sort((a, b) => {
+      const aPinned = a.is_pinned ? 1 : 0;
+      const bPinned = b.is_pinned ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned;
+      }
+      const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return bTime - aTime;
+    });
   }, [conversations, filter, search]);
 
   const handleSearchChange = useCallback(
@@ -215,6 +227,7 @@ export function ConversationList({
                 conversation={conv}
                 isActive={conv.id === activeConversationId}
                 onSelect={handleSelect}
+                onPinToggle={onPinToggle}
               />
             ))}
           </div>
@@ -228,12 +241,14 @@ interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
+  onPinToggle?: (conversationId: string, currentPinned: boolean) => void;
 }
 
 function ConversationItem({
   conversation,
   isActive,
   onSelect,
+  onPinToggle,
 }: ConversationItemProps) {
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || "Desconhecido";
@@ -250,10 +265,10 @@ function ConversationItem({
     : "";
 
   return (
-    <button
+    <div
       onClick={handleClick}
       className={cn(
-        "flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50",
+        "group/item flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50 cursor-pointer",
         isActive && "border-l-2 border-primary bg-muted/70"
       )}
     >
@@ -273,15 +288,45 @@ function ConversationItem({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
+          <span className="truncate text-sm font-medium text-foreground flex items-center gap-1.5">
             {displayName}
+            {contact?.is_group && (
+              <span className="text-[10px] text-muted-foreground/70 font-normal shrink-0">
+                (grupo)
+              </span>
+            )}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onPinToggle && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPinToggle(conversation.id, !!conversation.is_pinned);
+                }}
+                className={cn(
+                  "p-0.5 rounded hover:bg-muted-foreground/10 transition-opacity",
+                  conversation.is_pinned
+                    ? "opacity-100 text-primary"
+                    : "opacity-0 group-hover/item:opacity-100 text-muted-foreground"
+                )}
+                title={conversation.is_pinned ? "Desafixar conversa" : "Fixar conversa"}
+              >
+                <Pin className={cn("h-3 w-3", conversation.is_pinned && "fill-primary")} />
+              </button>
+            )}
+            <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
+          </div>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="truncate text-xs text-muted-foreground">
-            {conversation.last_message_text || "Nenhuma mensagem ainda"}
-          </p>
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            {conversation.last_message_from_me && (
+              <CheckCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+            )}
+            <p className="truncate text-xs text-muted-foreground">
+              {conversation.last_message_text || "Nenhuma mensagem ainda"}
+            </p>
+          </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
               <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
@@ -298,6 +343,6 @@ function ConversationItem({
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
