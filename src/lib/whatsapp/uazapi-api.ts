@@ -42,16 +42,29 @@ export async function getUazapiStatus(
       if (res.ok) {
         const data = await res.json();
         // Handle various response schemas from Uazapi status
+        // Schema 1: flat { connected, status, state, connectionState }
+        // Schema 2: customix { info, status: { checked_instance: { connection_status }, server_status } }
+        const checkedInstance = data?.status?.checked_instance;
         const isConnected =
           data?.connected === true ||
           data?.status === 'connected' ||
           data?.state === 'connected' ||
           data?.connectionState === 'connected' ||
-          data?.instance?.state === 'connected';
+          data?.instance?.state === 'connected' ||
+          checkedInstance?.connection_status === 'connected' ||
+          checkedInstance?.is_healthy === true ||
+          data?.status?.server_status === 'running';
+
+        const state =
+          checkedInstance?.connection_status ||
+          data?.state ||
+          (typeof data?.status === 'string' ? data.status : null) ||
+          data?.connectionState ||
+          (isConnected ? 'connected' : 'disconnected');
 
         return {
           connected: isConnected,
-          state: data?.state || data?.status || data?.connectionState || (isConnected ? 'connected' : 'disconnected'),
+          state,
           raw: data,
         };
       }
@@ -66,6 +79,7 @@ export async function getUazapiStatus(
     raw: lastError ? { error: lastError.message } : null,
   };
 }
+
 
 /**
  * Sends a WhatsApp text message using Uazapi.

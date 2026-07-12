@@ -682,7 +682,7 @@ export function AppointmentModal({
             },
           });
 
-          // Trigger notifications via API
+          // Trigger notifications via API (only if toggle is enabled)
           const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
           const formattedDate = startObj.toLocaleDateString("pt-BR");
           const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -696,23 +696,25 @@ export function AppointmentModal({
             }
           }
 
-          fetch("/api/whatsapp/trigger", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              event_type: eventType,
-              appointment_id: appointmentId,
-              patient_id: patientId,
-              metadata: {
-                paciente: selectedPatientInfo?.name || "",
-                phone: selectedPatientInfo?.phone || "",
-                data: formattedDate,
-                hora: formattedTime,
-                profissional: professionalName,
-                procedimento: procedureName,
-              },
-            }),
-          }).catch((err) => console.error("Error triggering appointment update/status:", err));
+          if (sendWa) {
+            fetch("/api/whatsapp/trigger", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                event_type: eventType,
+                appointment_id: appointmentId,
+                patient_id: patientId,
+                metadata: {
+                  paciente: selectedPatientInfo?.name || "",
+                  phone: selectedPatientInfo?.phone || "",
+                  data: formattedDate,
+                  hora: formattedTime,
+                  profissional: professionalName,
+                  procedimento: procedureName,
+                },
+              }),
+            }).catch((err) => console.error("Error triggering appointment update/status:", err));
+          }
         }
 
         // Trigger Google Calendar sync
@@ -758,8 +760,8 @@ export function AppointmentModal({
             },
           });
 
-          // Trigger created notification via API
-          if (newAppt?.id) {
+          // Trigger created notification via API (only if toggle is enabled)
+          if (newAppt?.id && sendWa) {
             const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
             const formattedDate = startObj.toLocaleDateString("pt-BR");
             const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -797,20 +799,7 @@ export function AppointmentModal({
         }
       }
 
-      // Send WhatsApp message if checked
-      if (sendWa && patientId) {
-        const statusName = status === "confirmed" ? "Confirmado" : "Pendente";
-        await supabase.from("patient_timeline").insert({
-          patient_id: patientId,
-          event_type: "whatsapp",
-          title: "Confirmação de agendamento enviada automaticamente via WhatsApp",
-          payload: {
-            sent_by: profileName,
-            phone: selectedPatientInfo?.phone,
-            message: `Olá! Seu agendamento foi realizado para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Status: ${statusName}.`,
-          },
-        });
-      }
+      // WhatsApp trigger is already handled above (respects sendWa toggle)
 
       onSave();
       onOpenChange(false);
