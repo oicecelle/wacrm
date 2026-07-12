@@ -229,6 +229,11 @@ html[data-theme="rose"] {
   }
 
   /* Custom Sleek Scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--primary) 25%, transparent) transparent;
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -237,11 +242,11 @@ html[data-theme="rose"] {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(96, 165, 250, 0.25);
+    background-color: color-mix(in srgb, var(--primary) 25%, transparent);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(96, 165, 250, 0.45);
+    background-color: color-mix(in srgb, var(--primary) 45%, transparent);
   }
 
   /* Custom Sleek Select Tags */
