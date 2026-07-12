@@ -101,7 +101,7 @@ export default function DocumentSigningPortalPage() {
     canvas.height = rect.height * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    ctx.strokeStyle = "#4f46e5";
+    ctx.strokeStyle = "#2563eb";
     ctx.lineWidth = 3.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -223,8 +223,8 @@ export default function DocumentSigningPortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4">
-        <Loader2Icon className="h-10 w-10 animate-spin text-indigo-400 mb-3" />
+      <div className="min-h-screen bg-[#070c19] text-white flex flex-col items-center justify-center p-4">
+        <Loader2Icon className="h-10 w-10 animate-spin text-blue-500 mb-3" />
         <p className="text-sm text-neutral-400 font-semibold uppercase tracking-wider">
           Verificando Link de Assinatura...
         </p>
@@ -234,14 +234,14 @@ export default function DocumentSigningPortalPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4 text-center">
+      <div className="min-h-screen bg-[#070c19] text-white flex flex-col items-center justify-center p-4 text-center">
         <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-8 space-y-4 shadow-2xl">
           <ShieldCheckIcon className="h-12 w-12 text-rose-500 mx-auto" />
           <h2 className="text-lg font-black text-white">Falha na Verificação</h2>
           <p className="text-xs text-neutral-400 leading-relaxed">{error}</p>
           <button
             onClick={() => router.push("/")}
-            className="w-full h-10 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
+            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
           >
             Ir para a Página Inicial
           </button>
@@ -260,7 +260,7 @@ export default function DocumentSigningPortalPage() {
   return (
     <div
       className="min-h-screen text-white flex flex-col font-sans"
-      style={{ background: "linear-gradient(135deg, #0f0f1a 0%, #0a0a12 100%)" }}
+      style={{ background: "radial-gradient(circle at top, #0d1b3e 0%, #070c19 100%)" }}
     >
       {/* Header */}
       <header
@@ -269,7 +269,7 @@ export default function DocumentSigningPortalPage() {
       >
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-sm font-black text-white shadow-lg">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-sm font-black text-white shadow-lg">
               {clinic?.name?.charAt(0)?.toUpperCase() || "C"}
             </div>
             <div>
@@ -336,7 +336,7 @@ export default function DocumentSigningPortalPage() {
             >
               <span
                 className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block"
-                style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#a5b4fc" }}
+                style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#93c5fd" }}
               >
                 {document.type?.toUpperCase() || "CONTRATO"}
               </span>
@@ -363,7 +363,7 @@ export default function DocumentSigningPortalPage() {
                 className="px-4 py-2.5 flex items-center gap-2 text-[10px] text-neutral-400 font-bold uppercase tracking-wider select-none border-b"
                 style={{ background: "rgba(0,0,0,0.3)", borderColor: "rgba(255,255,255,0.06)" }}
               >
-                <ShieldCheckIcon className="h-4 w-4 text-indigo-400" />
+                <ShieldCheckIcon className="h-4 w-4 text-blue-400" />
                 Conteúdo do Documento para Revisão
               </div>
               <div className="p-6 overflow-y-auto max-h-[360px] leading-relaxed text-xs text-neutral-300 font-sans space-y-4 whitespace-pre-wrap select-none text-justify">
@@ -380,7 +380,7 @@ export default function DocumentSigningPortalPage() {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                  <PenToolIcon className="h-4 w-4 text-indigo-400" />
+                  <PenToolIcon className="h-4 w-4 text-blue-400" />
                   Assinatura Digital do Cliente
                 </h3>
                 {isSigned ? (
@@ -444,7 +444,7 @@ export default function DocumentSigningPortalPage() {
                     onClick={handleSignDocument}
                     disabled={submitting}
                     className="w-full h-11 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-60"
-                    style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", color: "white" }}
+                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "white" }}
                   >
                     {submitting ? (
                       <>
