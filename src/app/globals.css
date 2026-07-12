@@ -259,4 +259,14 @@ html[data-theme="rose"] {
     padding-right: 2.5rem;
     border-radius: 0.75rem !important;
   }
+
+  /* Force rounded corners on all Select / Popover / Dropdown Menu contents and portals */
+  [data-radix-select-content],
+  [data-radix-menu-content],
+  [data-radix-popper-content-wrapper] > div,
+  .select-content,
+  .dropdown-menu-content,
+  .popover-content {
+    border-radius: 0.75rem !important;
+  }
 }
