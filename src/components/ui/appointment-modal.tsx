@@ -122,6 +122,7 @@ export function AppointmentModal({
   const [endTime, setEndTime] = useState("");
   const [status, setStatus] = useState("provisional");
   const [notes, setNotes] = useState("");
+  const [appointmentColor, setAppointmentColor] = useState<string | null>(null);
 
   const fetchQuotes = useCallback(async () => {
     if (!patientId) return;
@@ -362,6 +363,7 @@ export function AppointmentModal({
         setEndTime(endLocal);
         setStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
+        setAppointmentColor(appt.color || null);
         setSendWa(true);
 
         const loadedType = appt.type === "Evento" || appt.type === "evento"
@@ -654,6 +656,7 @@ export function AppointmentModal({
             notes,
             type: procedureName || null,
             room_id: roomId || null,
+            color: appointmentColor || null,
           })
           .eq("id", appointmentId);
 
@@ -736,6 +739,7 @@ export function AppointmentModal({
             notes,
             type: procedureName || null,
             room_id: roomId || null,
+            color: appointmentColor || null,
           })
           .select("id")
           .single();
@@ -1455,7 +1459,7 @@ export function AppointmentModal({
           <div className="flex flex-1 items-center justify-center py-20 min-h-[300px]">
             <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
           </div>
-        ) : (apptType === "evento" || apptType === "bloqueio") ? (
+        ) : (appointmentId && (apptType === "evento" || apptType === "bloqueio")) ? (
           /* Simplified modal layout for blocks and events */
           <div className="space-y-4 text-left">
             <DialogHeader>
@@ -1535,7 +1539,47 @@ export function AppointmentModal({
                 />
               </div>
 
-              <DialogFooter className="flex justify-end gap-2 pt-4">
+              {/* Color Picker */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider">Cor na Agenda</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { color: "#3ba2e8", label: "Azul" },
+                    { color: "#4caf50", label: "Verde" },
+                    { color: "#e05b5c", label: "Vermelho" },
+                    { color: "#dfab01", label: "Amarelo" },
+                    { color: "#8b5cf6", label: "Violeta" },
+                    { color: "#f97316", label: "Laranja" },
+                    { color: "#ec4899", label: "Rosa" },
+                    { color: "#14b8a6", label: "Teal" },
+                    { color: "#6b7280", label: "Cinza" },
+                    { color: "#0f172a", label: "Preto" },
+                  ].map(({ color, label }) => (
+                    <button
+                      key={color}
+                      type="button"
+                      title={label}
+                      onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
+                      className={`h-7 w-7 rounded-full transition-all border-2 ${
+                        appointmentColor === color
+                          ? "border-blue-600 scale-110 shadow-md"
+                          : "border-transparent hover:scale-105 hover:border-neutral-300"
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all overflow-hidden relative">
+                    <input
+                      type="color"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setAppointmentColor(e.target.value)}
+                    />
+                    <span className="text-[10px] text-neutral-400 select-none">+</span>
+                  </label>
+                </div>
+              </div>
+
+              <DialogFooter className="flex justify-end gap-2 pt-2">
                 <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>
                   Cancelar
                 </DialogClose>
@@ -1643,73 +1687,215 @@ export function AppointmentModal({
             <div className="space-y-4 text-left">
               <DialogHeader>
                 <DialogTitle className="text-xl font-black text-neutral-900">Novo Agendamento</DialogTitle>
-                <DialogDescription className="text-sm text-neutral-500">
-                  Busque um contato cadastrado no WhatsApp/CRM para abrir o operacional cockpit.
-                </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-3 py-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="search-pt" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Pesquisar Paciente</Label>
+              {/* Type Tabs */}
+              <div className="flex rounded-xl border border-neutral-200 bg-neutral-50 p-1 gap-1">
+                {([
+                  { key: "consulta", label: "Agendamento", emoji: "📅" },
+                  { key: "evento",   label: "Evento",       emoji: "🎯" },
+                  { key: "bloqueio", label: "Bloqueio",     emoji: "🚫" },
+                ] as const).map((tab) => (
                   <button
+                    key={tab.key}
                     type="button"
                     onClick={() => {
-                      setShowNewPatientForm(true);
-                      setNewPatientError(null);
+                      setApptType(tab.key);
+                      setAppointmentColor(null);
                     }}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 transition-all"
+                    className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
+                      apptType === tab.key
+                        ? "bg-white shadow-sm text-blue-700 border border-blue-100"
+                        : "text-neutral-500 hover:text-neutral-800"
+                    }`}
                   >
-                    <UserPlusIcon className="h-3.5 w-3.5" /> + Cadastrar Novo
+                    <span className="mr-1">{tab.emoji}</span>{tab.label}
                   </button>
-                </div>
-                
-                <div className="relative">
-                  <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                  <Input
-                    id="search-pt"
-                    type="text"
-                    placeholder="Digite nome, e-mail ou telefone..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="rounded-xl border-neutral-200 pl-10 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="max-h-[280px] overflow-y-auto divide-y divide-neutral-100 border border-neutral-100 rounded-xl bg-neutral-50/50 shadow-inner mt-2">
-                  {filteredPatients.length === 0 ? (
-                    <p className="text-xs text-neutral-400 italic p-6 text-center">Nenhum paciente cadastrado encontrado.</p>
-                  ) : (
-                    filteredPatients.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setPatientId(p.id)}
-                        className="w-full text-left p-3 hover:bg-blue-50/50 flex items-center justify-between gap-3 transition-all"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black shrink-0">
-                            {p.name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-extrabold text-neutral-800 truncate">{p.name}</p>
-                            <p className="text-[10px] text-neutral-500 truncate">
-                              {p.phone ? p.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) $3-$4") : "Sem Telefone"} 
-                              {p.email ? ` • ${p.email}` : ""}
-                            </p>
-                          </div>
-                        </div>
-                        <ChevronRightIcon className="h-4 w-4 text-neutral-400 shrink-0" />
-                      </button>
-                    ))
-                  )}
-                </div>
+                ))}
               </div>
 
-              <DialogFooter className="flex justify-end pt-2">
-                <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>
-                  Cancelar
-                </DialogClose>
-              </DialogFooter>
+              {/* Color Picker */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider">Cor na Agenda</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { color: "#3ba2e8", label: "Azul" },
+                    { color: "#4caf50", label: "Verde" },
+                    { color: "#e05b5c", label: "Vermelho" },
+                    { color: "#dfab01", label: "Amarelo" },
+                    { color: "#8b5cf6", label: "Violeta" },
+                    { color: "#f97316", label: "Laranja" },
+                    { color: "#ec4899", label: "Rosa" },
+                    { color: "#14b8a6", label: "Teal" },
+                    { color: "#6b7280", label: "Cinza" },
+                    { color: "#0f172a", label: "Preto" },
+                  ].map(({ color, label }) => (
+                    <button
+                      key={color}
+                      type="button"
+                      title={label}
+                      onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
+                      className={`h-7 w-7 rounded-full transition-all border-2 ${
+                        appointmentColor === color
+                          ? "border-blue-600 scale-110 shadow-md"
+                          : "border-transparent hover:scale-105 hover:border-neutral-300"
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  {/* Custom color input */}
+                  <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all overflow-hidden relative">
+                    <input
+                      type="color"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setAppointmentColor(e.target.value)}
+                    />
+                    <span className="text-[10px] text-neutral-400 select-none">+</span>
+                  </label>
+                </div>
+                {appointmentColor && (
+                  <p className="text-[10px] text-neutral-400 flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
+                    Cor selecionada: <span className="font-mono">{appointmentColor}</span>
+                    <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 ml-1 font-black">✕</button>
+                  </p>
+                )}
+              </div>
+
+              {/* For Evento/Bloqueio: show quick form inline */}
+              {(apptType === "evento" || apptType === "bloqueio") ? (
+                <form id="appt-modal-form" onSubmit={handleSave} className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="quick-title" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">
+                      {apptType === "evento" ? "Título do Evento *" : "Motivo do Bloqueio *"}
+                    </Label>
+                    <Input
+                      id="quick-title"
+                      type="text"
+                      required
+                      value={procedureName}
+                      onChange={(e) => setProcedureName(e.target.value)}
+                      placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
+                      className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
+                    {renderStaffSelector()}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="quick-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
+                      <Input
+                        id="quick-start"
+                        type="datetime-local"
+                        required
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="quick-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Término *</Label>
+                      <Input
+                        id="quick-end"
+                        type="datetime-local"
+                        required
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="quick-notes" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Observações</Label>
+                    <Textarea
+                      id="quick-notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Notas sobre este horário..."
+                      className="rounded-xl border-neutral-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      rows={2}
+                    />
+                  </div>
+                  {error && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertDescription className="text-xs">{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  <DialogFooter className="flex justify-end gap-2 pt-2">
+                    <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>Cancelar</DialogClose>
+                    <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 font-bold rounded-lg px-4">
+                      {saving ? <Loader2Icon className="h-4 w-4 animate-spin mr-2" /> : null}
+                      {saving ? "Salvando..." : (apptType === "evento" ? "Criar Evento" : "Bloquear Horário")}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              ) : (
+                /* Consulta: show patient search */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="search-pt" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Pesquisar Paciente</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewPatientForm(true);
+                        setNewPatientError(null);
+                      }}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 transition-all"
+                    >
+                      <UserPlusIcon className="h-3.5 w-3.5" /> + Cadastrar Novo
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                    <Input
+                      id="search-pt"
+                      type="text"
+                      placeholder="Digite nome, e-mail ou telefone..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="rounded-xl border-neutral-200 pl-10 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="max-h-[240px] overflow-y-auto divide-y divide-neutral-100 border border-neutral-100 rounded-xl bg-neutral-50/50 shadow-inner">
+                    {filteredPatients.length === 0 ? (
+                      <p className="text-xs text-neutral-400 italic p-6 text-center">Nenhum paciente cadastrado encontrado.</p>
+                    ) : (
+                      filteredPatients.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setPatientId(p.id)}
+                          className="w-full text-left p-3 hover:bg-blue-50/50 flex items-center justify-between gap-3 transition-all"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black shrink-0">
+                              {p.name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-extrabold text-neutral-800 truncate">{p.name}</p>
+                              <p className="text-[10px] text-neutral-500 truncate">
+                                {p.phone ? p.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) $3-$4") : "Sem Telefone"}
+                                {p.email ? ` • ${p.email}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronRightIcon className="h-4 w-4 text-neutral-400 shrink-0" />
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <DialogFooter className="flex justify-end pt-2">
+                    <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>
+                      Cancelar
+                    </DialogClose>
+                  </DialogFooter>
+                </div>
+              )}
             </div>
           )
         ) : (
