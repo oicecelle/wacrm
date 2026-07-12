@@ -2146,6 +2146,54 @@ export function AppointmentModal({
                             />
                           </div>
 
+                          {/* Color Picker */}
+                          <div className="space-y-2 text-left">
+                            <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Cor do Agendamento</Label>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {[
+                                { color: "#3ba2e8", label: "Azul" },
+                                { color: "#4caf50", label: "Verde" },
+                                { color: "#e05b5c", label: "Vermelho" },
+                                { color: "#dfab01", label: "Amarelo" },
+                                { color: "#8b5cf6", label: "Violeta" },
+                                { color: "#f97316", label: "Laranja" },
+                                { color: "#ec4899", label: "Rosa" },
+                                { color: "#14b8a6", label: "Teal" },
+                                { color: "#6b7280", label: "Cinza" },
+                                { color: "#0f172a", label: "Preto" },
+                              ].map(({ color, label }) => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  title={label}
+                                  onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
+                                  className={`h-6 w-6 rounded-full border-2 transition-all hover:scale-110 ${
+                                    appointmentColor === color
+                                      ? "border-neutral-900 scale-110 shadow-md"
+                                      : "border-transparent"
+                                  }`}
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                              {/* Custom color input */}
+                              <input
+                                type="color"
+                                title="Cor personalizada"
+                                value={appointmentColor || "#3ba2e8"}
+                                onChange={(e) => setAppointmentColor(e.target.value)}
+                                className="h-6 w-6 rounded-full cursor-pointer border border-neutral-200 p-0 overflow-hidden"
+                                style={{ padding: 0 }}
+                              />
+                            </div>
+                            {appointmentColor && (
+                              <p className="text-[10px] text-neutral-500 flex items-center gap-1.5">
+                                <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
+                                Cor selecionada: <span className="font-mono">{appointmentColor}</span>
+                                <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 underline ml-1">Remover</button>
+                              </p>
+                            )}
+                          </div>
+
                           {/* Toggle to send auto notification message */}
                           <div className="flex items-center justify-between rounded-xl border border-neutral-100 p-3.5 bg-neutral-50/50 mt-4">
                             <div className="text-left">
