@@ -79,7 +79,23 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
         .select("id, name, phone")
         .eq("clinic_id", accountId)
         .order("name");
-      setPatients(pts || []);
+
+      // Fetch contacts to fallback/merge
+      const { data: cts } = await supabase
+        .from("contacts")
+        .select("id, name, phone")
+        .eq("account_id", accountId)
+        .order("name");
+
+      const mergedMap = new Map();
+      (pts || []).forEach(p => mergedMap.set(p.id, p));
+      (cts || []).forEach(c => {
+        if (c.name && !mergedMap.has(c.id)) {
+          mergedMap.set(c.id, { id: c.id, name: c.name, phone: c.phone });
+        }
+      });
+      const mergedList = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+      setPatients(mergedList);
 
       // Fetch staff
       const { data: st } = await supabase

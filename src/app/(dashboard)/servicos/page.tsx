@@ -137,6 +137,7 @@ export default function ServicosPage() {
   const [procDuration, setProcDuration] = useState("60");
   const [procDescription, setProcDescription] = useState("");
   const [procAtivo, setProcAtivo] = useState(true);
+  const [commissions, setCommissions] = useState<Record<string, { type: "percentage" | "fixed"; value: string }>>({});
 
   /* ─── Room form state ─── */
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -189,10 +190,11 @@ export default function ServicosPage() {
     setProcName(""); setProcCategory(""); setProcColor("#3b82f6");
     setProcValue(""); setProcDuration("60"); setProcDescription("");
     setProcAtivo(true);
+    setCommissions({});
     setIsProcModalOpen(true);
   };
 
-  const handleOpenEditProc = (p: Procedure) => {
+  const handleOpenEditProc = async (p: Procedure) => {
     setEditingProc(p);
     setProcName(p.name);
     setProcCategory(p.category || "");
@@ -201,7 +203,24 @@ export default function ServicosPage() {
     setProcDuration((p.duration_minutes || p.tempo_reserva_minutos || 60).toString());
     setProcDescription(p.description || "");
     setProcAtivo(p.is_active !== false && p.ativo !== false);
+    setCommissions({});
     setIsProcModalOpen(true);
+
+    try {
+      const { data } = await supabase
+        .from("procedure_commissions")
+        .select("*")
+        .eq("procedure_id", p.id);
+      if (data) {
+        const mapping: any = {};
+        data.forEach((c: any) => {
+          mapping[c.clinic_user_id] = { type: c.commission_type, value: c.commission_value.toString() };
+        });
+        setCommissions(mapping);
+      }
+    } catch (err) {
+      console.error("Error loading commissions:", err);
+    }
   };
 
   const handleSaveProcedure = async (e: React.FormEvent) => {
@@ -221,15 +240,37 @@ export default function ServicosPage() {
         duration_minutes: d, tempo_reserva_minutos: d,
         is_active: procAtivo, ativo: procAtivo,
       };
+      let procId = editingProc?.id;
       if (editingProc) {
         const { error: err } = await supabase.from("procedures").update(payload).eq("id", editingProc.id);
         if (err) throw err;
         toast.success("Procedimento atualizado!");
       } else {
-        const { error: err } = await supabase.from("procedures").insert(payload);
+        const { data: newProc, error: err } = await supabase.from("procedures").insert(payload).select("id").single();
         if (err) throw err;
+        procId = newProc.id;
         toast.success("Procedimento cadastrado!");
       }
+
+      if (procId) {
+        const commissionInserts = Object.keys(commissions).map((memberId) => {
+          const c = commissions[memberId];
+          return {
+            procedure_id: procId,
+            clinic_user_id: memberId,
+            commission_type: c.type,
+            commission_value: parseFloat(c.value.replace(",", ".")) || 0,
+            is_active: true
+          };
+        }).filter(c => c.commission_value > 0);
+
+        await supabase.from("procedure_commissions").delete().eq("procedure_id", procId);
+        if (commissionInserts.length > 0) {
+          const { error: commErr } = await supabase.from("procedure_commissions").insert(commissionInserts);
+          if (commErr) throw commErr;
+        }
+      }
+
       setIsProcModalOpen(false);
       await loadData();
     } catch (err: unknown) {
@@ -703,6 +744,54 @@ export default function ServicosPage() {
                   <p className="text-[10px] text-neutral-500">Inativos não aparecem em novos agendamentos.</p>
                 </div>
                 <Toggle checked={procAtivo} onChange={() => setProcAtivo(!procAtivo)} />
+              </div>
+
+              {/* Commissions per professional */}
+              <div className="space-y-3 pt-2 border-t border-neutral-100">
+                <Label className="text-xs font-bold text-neutral-600 flex items-center gap-1">
+                  <UsersIcon className="h-3.5 w-3.5" /> Comissões por Profissional
+                </Label>
+                <p className="text-[10px] text-neutral-400">Configure a comissão (%) ou valor fixo (R$) para cada membro ativo da clínica.</p>
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                  {teamMembers.map((member) => {
+                    const comm = commissions[member.id] || { type: "percentage", value: "0" };
+                    return (
+                      <div key={member.id} className="flex items-center justify-between gap-3 text-xs p-2 rounded-lg border bg-neutral-50/50">
+                        <span className="font-semibold text-neutral-700 truncate">{member.name}</span>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={comm.type}
+                            onChange={(e) => {
+                              setCommissions({
+                                ...commissions,
+                                [member.id]: { ...comm, type: e.target.value as "percentage" | "fixed" }
+                              });
+                            }}
+                            className="h-8 text-xs rounded border border-neutral-200 bg-white px-1.5 focus:outline-none"
+                          >
+                            <option value="percentage">% Percentual</option>
+                            <option value="fixed">R$ Fixo</option>
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="0"
+                            value={comm.value}
+                            onChange={(e) => {
+                              setCommissions({
+                                ...commissions,
+                                [member.id]: { ...comm, value: e.target.value }
+                              });
+                            }}
+                            className="h-8 w-16 text-center text-xs rounded border border-neutral-200 bg-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {teamMembers.length === 0 && (
+                    <p className="text-xs text-neutral-400 italic">Nenhum profissional cadastrado na equipe.</p>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -17,6 +17,7 @@ import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel'
 import { DealsSettings } from '@/components/settings/deals-settings';
 import { MembersTab } from '@/components/settings/members-tab';
 import { GoogleCalendarPanel } from '@/components/settings/google-calendar-panel';
+import { RemindersPanel } from '@/components/settings/reminders-panel';
 import {
   resolveSection,
   type SettingsSection,
@@ -63,6 +64,7 @@ export default function SettingsPage() {
     deals: <DealsSettings />,
     members: <MembersTab />,
     google: <GoogleCalendarPanel />,
+    reminders: <RemindersPanel />,
   };
 
   return (

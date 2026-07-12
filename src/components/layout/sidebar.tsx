@@ -263,7 +263,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                       onClick={() => setMarketingExpanded(!marketingExpanded)}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors w-full text-left",
-                        isCollapsed && "justify-center px-0",
+                        isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : "",
                         hasActiveSub
                           ? "bg-blue-600/10 text-blue-600"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -319,7 +319,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                     href={item.href || "#"}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors relative",
-                      isCollapsed && "justify-center px-0",
+                      isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : "",
                       isActive
                         ? "bg-blue-600/10 text-blue-600"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -366,7 +366,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                     href={item.href}
                     className={cn(
                       "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors",
-                      isCollapsed && "justify-center px-0",
+                      isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : "",
                       isActive
                         ? "bg-blue-600/10 text-blue-600"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -409,7 +409,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
               "flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:outline-none",
-              isCollapsed && "justify-center"
+              isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : ""
             )}>
               <Avatar className="size-7 shrink-0">
                 {profile?.avatar_url ? (

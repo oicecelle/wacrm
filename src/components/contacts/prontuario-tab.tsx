@@ -13,6 +13,9 @@ import {
   PaperclipIcon,
   CameraIcon,
   ChevronDownIcon,
+  SendIcon,
+  CheckCircle2Icon,
+  ClockIcon
 } from "lucide-react";
 
 interface PatientRecord {
@@ -23,6 +26,9 @@ interface PatientRecord {
   file_url: string | null;
   file_name: string | null;
   created_at: string;
+  patient_acknowledged?: boolean;
+  acknowledged_at?: string | null;
+  ciente_sent_at?: string | null;
 }
 
 interface ProntuarioTabProps {
@@ -68,8 +74,29 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [requestingCienteId, setRequestingCienteId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleRequestCiente = async (recordId: string) => {
+    setRequestingCienteId(recordId);
+    try {
+      const res = await fetch('/api/whatsapp/send-ciente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ record_id: recordId, patient_id: patientId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar solicitação');
+      alert('Solicitação de ciente enviada com sucesso ao WhatsApp!');
+      await loadRecords();
+    } catch (err: any) {
+      console.error(err);
+      alert('Erro ao solicitar ciência: ' + err.message);
+    } finally {
+      setRequestingCienteId(null);
+    }
+  };
 
   const loadRecords = useCallback(async () => {
     setLoading(true);
@@ -359,6 +386,20 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleRequestCiente(rec.id)}
+                      disabled={requestingCienteId !== null || rec.patient_acknowledged}
+                      title="Solicitar Ciência via WhatsApp"
+                      className="h-7 px-2 rounded-lg flex items-center justify-center text-xs font-bold text-indigo-400 hover:text-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ background: "rgba(255,255,255,0.05)" }}
+                    >
+                      {requestingCienteId === rec.id ? (
+                        <Loader2Icon className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <SendIcon className="h-3 w-3 mr-1" />
+                      )}
+                      Pedir Ciente
+                    </button>
                     {rec.file_url && (
                       <a
                         href={rec.file_url}
@@ -378,6 +419,19 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
                       <TrashIcon className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                </div>
+
+                {/* Science Status Badges */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {rec.patient_acknowledged ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                      <CheckCircle2Icon className="h-3 w-3" /> Ciente Confirmado
+                    </span>
+                  ) : rec.ciente_sent_at ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                      <ClockIcon className="h-3 w-3 animate-pulse" /> Aguardando Ciente
+                    </span>
+                  ) : null}
                 </div>
 
                 {rec.type === "image" && rec.file_url && (

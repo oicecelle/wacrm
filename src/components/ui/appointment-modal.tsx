@@ -236,7 +236,23 @@ export function AppointmentModal({
           .select("id, name, phone, email")
           .eq("clinic_id", clinicId)
           .order("name");
-        setPatients(ptsData || []);
+
+        // Fetch contacts to fallback/merge
+        const { data: ctsData } = await supabase
+          .from("contacts")
+          .select("id, name, phone, email")
+          .eq("account_id", clinicId)
+          .order("name");
+
+        const mergedMap = new Map();
+        (ptsData || []).forEach(p => mergedMap.set(p.id, p));
+        (ctsData || []).forEach(c => {
+          if (c.name && !mergedMap.has(c.id)) {
+            mergedMap.set(c.id, { id: c.id, name: c.name, phone: c.phone, email: c.email });
+          }
+        });
+        const mergedList = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        setPatients(mergedList);
 
         // Fetch staff (clinic_users)
         const { data: stData } = await supabase
@@ -435,34 +451,19 @@ export function AppointmentModal({
         });
 
         // 3. Packages
-        const { data: pkgs } = await supabase
-          .from("packages")
-          .select("*")
-          .eq("patient_id", patientId);
-
         const { data: ptPkgs } = await supabase
           .from("patient_packages")
           .select("*")
-          .eq("patient_id", patientId);
+          .eq("contact_id", patientId);
 
-        const mergedPkgs = [
-          ...(pkgs || []).map((p) => ({
-            id: p.id,
-            name: p.procedure_name,
-            total: p.total_sessions,
-            used: p.total_sessions - p.remaining_sessions,
-            status: p.status,
-            expires: p.expires_at,
-          })),
-          ...(ptPkgs || []).map((p) => ({
-            id: p.id,
-            name: p.package_name || "Pacote Geral",
-            total: p.sessions_total,
-            used: p.sessions_used,
-            status: p.status,
-            expires: p.expires_at,
-          })),
-        ];
+        const mergedPkgs = (ptPkgs || []).map((p) => ({
+          id: p.id,
+          name: p.package_name || "Pacote Geral",
+          total: p.sessions_total,
+          used: p.sessions_used,
+          status: p.status,
+          expires: p.expires_at,
+        }));
         setPatientPackages(mergedPkgs);
 
         // 4. Documents & Templates

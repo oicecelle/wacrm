@@ -261,6 +261,10 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
     "paid": true se o paciente confirmou ou enviou comprovante de pagamento de um sinal de agendamento, caso contrário false,
     "value": número correspondente ao valor pago de sinal (ex: 50.00 ou 100.00), caso contrário null,
     "notes": "Qualquer detalhe ou observação sobre o pagamento, caso contrário null"
+  },
+  "acknowledge_record": {
+    "requested": true se o paciente confirmou verbalmente estar ciente do atendimento ou documento enviado (ex: respondeu 'Ciente', 'De acordo', 'Tudo certo', etc.), caso contrário false,
+    "record_id": "UUID do registro se puder ser deduzido das mensagens, caso contrário null"
   }
 }`;
 
@@ -375,7 +379,7 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
     if (cn && cn.requested && cn.appointment_id) {
       const { error: cancelErr } = await db
         .from("appointments")
-        .update({ status: "provisional" }) // ou marcar cancelado se status existe, ou deletar. Provisional serve como cancelado/remover se filtrado
+        .update({ status: "cancelled" })
         .eq("id", cn.appointment_id);
 
       if (!cancelErr) {
@@ -384,8 +388,8 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
           account_id: accountId,
           contact_id: contactId,
           event_type: "appointment_cancelled",
-          title: "Agendamento desmarcado via WhatsApp",
-          description: "O agendamento futuro foi removido/desmarcado por solicitação do paciente.",
+          title: "Cancelado via WhatsApp",
+          description: "O agendamento futuro foi cancelado por solicitação do paciente via conversa de WhatsApp.",
           metadata: { by: "AI", appointment_id: cn.appointment_id, trigger_message_id: triggerMessageId },
         });
       }
@@ -469,6 +473,47 @@ Responda APENAS com um objeto JSON válido correspondente ao seguinte esquema:
           description: `Valor de sinal de R$ ${val.toFixed(2)} registrado e compensado no caixa da clínica.`,
           metadata: { by: "AI", transaction_id: newTx.id, trigger_message_id: triggerMessageId },
         });
+      }
+    }
+
+    // 5.7 Patient Acknowledgment (Ciente)
+    const ar = result.acknowledge_record;
+    if (ar && ar.requested) {
+      // Fetch latest patient record that was sent for ciente but not yet acknowledged
+      const { data: latestRec } = await db
+        .from("patient_records")
+        .select("id")
+        .eq("patient_id", contactId)
+        .not("ciente_sent_at", "is", null)
+        .eq("patient_acknowledged", false)
+        .order("ciente_sent_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const recId = ar.record_id || (latestRec ? latestRec.id : null);
+
+      if (recId) {
+        console.log(`[AI Analyser] Acknowledging patient record: ${recId}`);
+        const { error: ackErr } = await db
+          .from("patient_records")
+          .update({
+            patient_acknowledged: true,
+            acknowledged_at: new Date().toISOString()
+          })
+          .eq("id", recId);
+
+        if (!ackErr) {
+          await db.from("contact_timeline").insert({
+            account_id: accountId,
+            contact_id: contactId,
+            event_type: "payment",
+            title: "Ciência confirmada pelo paciente",
+            description: `O paciente respondeu confirmando ciente do atendimento realizado.`,
+            metadata: { by: "AI", record_id: recId, trigger_message_id: triggerMessageId }
+          });
+        } else {
+          console.error("[AI Analyser] Error acknowledging record:", ackErr);
+        }
       }
     }
   } catch (err) {

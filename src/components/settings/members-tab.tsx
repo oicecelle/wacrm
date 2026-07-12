@@ -31,7 +31,90 @@ import {
   Plus,
   Trash2,
   UsersRound,
+  Shield,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+
+const MODULES_LABELS: Record<string, string> = {
+  agenda: "Agenda & Consultas",
+  inbox: "WhatsApp Inbox",
+  crm: "CRM & Funil de Vendas",
+  financeiro: "Financeiro & Caixa",
+  documentos: "Gerador de Termos & Documentos",
+  relatorios: "Relatórios & Estatísticas",
+  equipe: "Gestão da Equipe",
+  settings: "Configurações Globais",
+  marketing: "Disparos de Mensagens & Marketing"
+};
+
+const PERMISSION_PRESETS: Record<string, Record<string, { view: boolean; edit: boolean }>> = {
+  admin: {
+    agenda: { view: true, edit: true },
+    inbox: { view: true, edit: true },
+    crm: { view: true, edit: true },
+    financeiro: { view: true, edit: true },
+    documentos: { view: true, edit: true },
+    relatorios: { view: true, edit: true },
+    equipe: { view: true, edit: true },
+    settings: { view: true, edit: true },
+    marketing: { view: true, edit: true }
+  },
+  secretaria: {
+    agenda: { view: true, edit: true },
+    inbox: { view: true, edit: true },
+    crm: { view: true, edit: false },
+    financeiro: { view: false, edit: false },
+    documentos: { view: true, edit: true },
+    relatorios: { view: false, edit: false },
+    equipe: { view: false, edit: false },
+    settings: { view: false, edit: false },
+    marketing: { view: false, edit: false }
+  },
+  comercial: {
+    agenda: { view: true, edit: false },
+    inbox: { view: true, edit: true },
+    crm: { view: true, edit: true },
+    financeiro: { view: true, edit: false },
+    documentos: { view: true, edit: false },
+    relatorios: { view: true, edit: false },
+    equipe: { view: false, edit: false },
+    settings: { view: false, edit: false },
+    marketing: { view: true, edit: true }
+  },
+  profissional: {
+    agenda: { view: true, edit: true },
+    inbox: { view: true, edit: false },
+    crm: { view: true, edit: false },
+    financeiro: { view: false, edit: false },
+    documentos: { view: true, edit: true },
+    relatorios: { view: false, edit: false },
+    equipe: { view: false, edit: false },
+    settings: { view: false, edit: false },
+    marketing: { view: false, edit: false }
+  },
+  marketing: {
+    agenda: { view: false, edit: false },
+    inbox: { view: false, edit: false },
+    crm: { view: true, edit: false },
+    financeiro: { view: false, edit: false },
+    documentos: { view: false, edit: false },
+    relatorios: { view: true, edit: false },
+    equipe: { view: false, edit: false },
+    settings: { view: false, edit: false },
+    marketing: { view: true, edit: true }
+  },
+  financeiro: {
+    agenda: { view: true, edit: false },
+    inbox: { view: false, edit: false },
+    crm: { view: true, edit: false },
+    financeiro: { view: true, edit: true },
+    documentos: { view: true, edit: false },
+    relatorios: { view: true, edit: true },
+    equipe: { view: false, edit: false },
+    settings: { view: false, edit: false },
+    marketing: { view: false, edit: false }
+  }
+};
 
 import {
   Avatar,
@@ -125,7 +208,8 @@ function fmtExpiresIn(iso: string): string {
 }
 
 export function MembersTab() {
-  const { user, canManageMembers } = useAuth();
+  const supabase = createClient();
+  const { user, canManageMembers, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -134,6 +218,9 @@ export function MembersTab() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
+  const [editingPermissionsMember, setEditingPermissionsMember] = useState<Member | null>(null);
+  const [memberPermissions, setMemberPermissions] = useState<Record<string, { view: boolean; edit: boolean }>>({});
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
@@ -249,6 +336,46 @@ export function MembersTab() {
       toast.error('Could not reach the server');
     } finally {
       setPendingMemberAction(null);
+    }
+  }
+
+  async function handleOpenPermissions(member: Member) {
+    setEditingPermissionsMember(member);
+    setMemberPermissions({});
+    try {
+      const { data, error } = await supabase
+        .from('clinic_users')
+        .select('permissions_json')
+        .eq('user_id', member.user_id)
+        .eq('clinic_id', accountId)
+        .maybeSingle();
+
+      if (!error && data && data.permissions_json) {
+        setMemberPermissions(data.permissions_json);
+      }
+    } catch (err) {
+      console.error('Error fetching permissions:', err);
+    }
+  }
+
+  async function handleSavePermissions() {
+    if (!editingPermissionsMember || !user) return;
+    setSavingPermissions(true);
+    try {
+      const { error } = await supabase
+        .from('clinic_users')
+        .update({ permissions_json: memberPermissions })
+        .eq('user_id', editingPermissionsMember.user_id)
+        .eq('clinic_id', accountId);
+
+      if (error) throw error;
+      toast.success('Permissões atualizadas com sucesso!');
+      setEditingPermissionsMember(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao salvar permissões: ' + err.message);
+    } finally {
+      setSavingPermissions(false);
     }
   }
 
@@ -453,15 +580,27 @@ export function MembersTab() {
                         state with a darker shade on hover so the
                         affordance reads at-a-glance. */}
                     {canManageMembers && !isOwnerRow && !isSelf && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRemovingMember(member)}
-                        disabled={isBusy}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenPermissions(member)}
+                          disabled={isBusy}
+                          className="border-blue-500/40 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:border-blue-500/60 hover:text-blue-200"
+                          title="Editar Permissões"
+                        >
+                          <Shield className="size-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setRemovingMember(member)}
+                          disabled={isBusy}
+                          className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </li>
@@ -610,6 +749,93 @@ export function MembersTab() {
               ) : (
                 'Remove member'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permissions Dialog */}
+      <Dialog open={editingPermissionsMember !== null} onOpenChange={(open) => { if (!open) setEditingPermissionsMember(null); }}>
+        <DialogContent className="max-w-md bg-card border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle>Editar Permissões</DialogTitle>
+            <DialogDescription>
+              Ajuste as permissões de acesso do membro {editingPermissionsMember?.full_name || 'deste usuário'}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Preset Selector */}
+          <div className="space-y-2 py-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Perfil Pré-definido</label>
+            <Select onValueChange={(presetKey) => {
+              const preset = PERMISSION_PRESETS[presetKey as keyof typeof PERMISSION_PRESETS];
+              if (preset) setMemberPermissions(preset);
+            }}>
+              <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                <SelectValue placeholder="Selecione um perfil..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Administrador (Total)</SelectItem>
+                <SelectItem value="secretaria">Secretária</SelectItem>
+                <SelectItem value="comercial">Comercial / Vendas</SelectItem>
+                <SelectItem value="profissional">Profissional de Saúde/Estética</SelectItem>
+                <SelectItem value="marketing">Marketing</SelectItem>
+                <SelectItem value="financeiro">Financeiro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Granular Modules Grid */}
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 py-1">
+            {Object.keys(MODULES_LABELS).map((module) => {
+              const label = MODULES_LABELS[module];
+              const perm = memberPermissions[module] || { view: false, edit: false };
+              return (
+                <div key={module} className="flex items-center justify-between p-2 rounded-lg border bg-neutral-900/30 gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-foreground capitalize">{label}</p>
+                  </div>
+                  <div className="flex gap-4 shrink-0">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={perm.view}
+                        onChange={(e) => {
+                          setMemberPermissions({
+                            ...memberPermissions,
+                            [module]: { ...perm, view: e.target.checked }
+                          });
+                        }}
+                        className="rounded border-border bg-muted text-blue-500 focus:ring-0"
+                      />
+                      Ver
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={perm.edit}
+                        disabled={module === 'relatorios'}
+                        onChange={(e) => {
+                          setMemberPermissions({
+                            ...memberPermissions,
+                            [module]: { ...perm, edit: e.target.checked }
+                          });
+                        }}
+                        className="rounded border-border bg-muted text-blue-500 focus:ring-0 disabled:opacity-30"
+                      />
+                      Editar
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setEditingPermissionsMember(null)}>Cancelar</Button>
+            <Button onClick={handleSavePermissions} disabled={savingPermissions}>
+              {savingPermissions ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Salvar Permissões
             </Button>
           </DialogFooter>
         </DialogContent>

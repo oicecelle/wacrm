@@ -10,6 +10,7 @@ import {
   UsersRound,
   Calendar,
   CreditCard,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -33,6 +34,7 @@ export const SETTINGS_SECTIONS = [
   'deals',
   'members',
   'google',
+  'reminders',
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
@@ -59,6 +61,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
   google: { id: 'google', label: 'Google Agenda', icon: Calendar, group: 'workspace' },
+  reminders: { id: 'reminders', label: 'Lembretes de Consulta', icon: Bell, group: 'workspace' },
 };
 
 export const RAIL_GROUPS: { label: string | null; group: SectionMeta['group'] }[] = [
