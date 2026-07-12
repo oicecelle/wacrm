@@ -52,6 +52,7 @@ interface FilterOption {
   name: string;
   valor?: number;
   avatar_url?: string | null;
+  color?: string | null;
 }
 
 export default function AgendaPage() {
@@ -244,14 +245,14 @@ export default function AgendaPage() {
         avatar_url: s.user_id ? (staffAvatarsMap[s.user_id] || null) : null
       })));
 
-      // 3. Fetch Procedures (with valor)
+      // 3. Fetch Procedures (with valor and color)
       const { data: procs } = await supabase
         .from("procedures")
-        .select("id, name, valor")
+        .select("id, name, valor, color")
         .eq("clinic_id", clinicId)
         .eq("ativo", true)
         .order("name");
-      setProcedures((procs || []).map(p => ({ id: p.id, name: p.name, valor: p.valor })));
+      setProcedures((procs || []).map(p => ({ id: p.id, name: p.name, valor: p.valor, color: p.color })));
 
       // 4. Fetch Rooms
       const { data: rms } = await supabase
@@ -519,41 +520,45 @@ export default function AgendaPage() {
     timeSlots.push(`${String(h).padStart(2, "0")}:30`);
   }
 
-  // Card status classes map
-  const getCardStatusStyles = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return {
-          border: "border-l-4 border-l-[#4caf50] border-neutral-200/80",
-          bg: "bg-[#edf6ed] text-[#1c4d24] hover:bg-[#e2f0e2]",
-          dot: "bg-[#4caf50]",
-        };
-      case "attended":
-        return {
-          border: "border-l-4 border-l-[#787774] border-neutral-200/80",
-          bg: "bg-[#f1f1ef] text-[#37352f] hover:bg-[#e8e8e6]",
-          dot: "bg-[#787774]",
-        };
-      case "cancelled":
-        return {
-          border: "border-l-4 border-l-[#e05b5c] border-neutral-200/80 line-through text-[#6e1e1e]/80",
-          bg: "bg-[#fdebeb] text-[#6e1e1e] hover:bg-[#fbdad9]",
-          dot: "bg-[#e05b5c]",
-        };
-      case "no_show":
-        return {
-          border: "border-l-4 border-l-[#dfab01] border-neutral-200/80",
-          bg: "bg-[#fbf3db] text-[#5c3e09] hover:bg-[#f6e9c3]",
-          dot: "bg-[#dfab01]",
-        };
-      case "provisional":
-      default:
-        return {
-          border: "border-l-4 border-l-[#3ba2e8] border-neutral-200/80",
-          bg: "bg-[#e8f4fc] text-[#09456b] hover:bg-[#d4e9f7]",
-          dot: "bg-[#3ba2e8]",
-        };
+  // Card status classes map (now dynamically styled by service color)
+  const getCardStatusStyles = (status: string, type?: string | null) => {
+    let baseColor = "#3ba2e8"; // Default blue
+    
+    if (type === "bloqueio" || status === "bloqueio") {
+      baseColor = "#6b7280"; // Grey for blocked hours
+    } else if (type === "evento" || status === "evento") {
+      baseColor = "#8b5cf6"; // Violet for events
+    } else if (type) {
+      const apptProc = procedures.find(p => p.name === type);
+      if (apptProc?.color) {
+        baseColor = apptProc.color;
+      }
+    } else {
+      switch (status) {
+        case "confirmed": baseColor = "#4caf50"; break;
+        case "attended": baseColor = "#787774"; break;
+        case "cancelled": baseColor = "#e05b5c"; break;
+        case "no_show": baseColor = "#dfab01"; break;
+        default: baseColor = "#3ba2e8";
+      }
     }
+
+    const isCancelled = status === "cancelled";
+
+    return {
+      borderClass: "border-l-4",
+      bgStyle: {
+        backgroundColor: `color-mix(in srgb, ${baseColor} 8%, var(--card, #ffffff))`,
+        color: `color-mix(in srgb, ${baseColor} 80%, var(--foreground, #1f2937))`,
+        textDecoration: isCancelled ? "line-through" : "none",
+        borderLeftColor: baseColor,
+        borderColor: `color-mix(in srgb, ${baseColor} 20%, var(--border, #e5e7eb))`
+      },
+      dotStyle: {
+        backgroundColor: baseColor
+      },
+      dotColor: baseColor
+    };
   };
 
   return (
@@ -664,17 +669,23 @@ export default function AgendaPage() {
               const end = new Date(appt.end_time);
               const timeStr = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")} - ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
               const dayStr = start.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-              const styles = getCardStatusStyles(appt.status);
+              const styles = getCardStatusStyles(appt.status, appt.type);
 
               return (
                 <div
                   key={appt.id}
                   onClick={() => handleEditAppointment(appt.id)}
-                  className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between gap-4"
+                  onMouseEnter={(e) => handleApptMouseEnter(appt, e)}
+                  onMouseLeave={handleApptMouseLeave}
+                  style={styles.bgStyle}
+                  className="rounded-2xl border p-4 shadow-xs transition-all cursor-pointer flex items-center justify-between gap-4 border-l-4"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {/* Patient avatar */}
-                    <div className="h-10 w-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-xs font-black text-blue-700 shrink-0 overflow-hidden">
+                    <div 
+                      style={{ color: styles.dotColor, backgroundColor: `color-mix(in srgb, ${styles.dotColor} 12%, transparent)`, borderColor: `color-mix(in srgb, ${styles.dotColor} 25%, transparent)` }}
+                      className="h-10 w-10 rounded-full border flex items-center justify-center text-xs font-black shrink-0 overflow-hidden"
+                    >
                       {appt.patients?.avatar_url ? (
                         <img src={appt.patients.avatar_url} alt={appt.patients.name} className="size-full object-cover" />
                       ) : (
@@ -683,21 +694,37 @@ export default function AgendaPage() {
                     </div>
                     
                     <div className="min-w-0 text-left space-y-0.5">
-                      <p className="text-xs font-extrabold text-neutral-800 truncate">
-                        {appt.patients?.name || "Sem Nome"}
-                      </p>
-                      <p className="text-[10px] text-neutral-500 font-semibold truncate">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-extrabold truncate">
+                          {appt.patients?.name || "Sem Nome"}
+                        </p>
+                        <span 
+                          className="text-[8px] px-1.5 py-0.2 rounded-md font-black uppercase tracking-wider shrink-0"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${styles.dotColor} 12%, transparent)`,
+                            color: styles.dotColor,
+                            border: `1px solid color-mix(in srgb, ${styles.dotColor} 25%, transparent)`
+                          }}
+                        >
+                          {(() => {
+                            switch (appt.status) {
+                              case "confirmed": return "Confirmado";
+                              case "attended": return "Realizado";
+                              case "cancelled": return "Cancelado";
+                              case "no_show": return "Falta";
+                              default: return "Pendente";
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      <p className="text-[10px] opacity-80 font-semibold truncate">
                         {appt.type || appt.title || "Consulta"}
                       </p>
-                      <p className="text-[9px] text-neutral-400 font-medium">
+                      <p className="text-[9px] opacity-60 font-medium">
                         {dayStr} • {timeStr}
                       </p>
                     </div>
                   </div>
-
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wider shrink-0 ${styles.bg} ${styles.border}`}>
-                    {appt.status === "confirmed" ? "Confirmado" : appt.status === "attended" ? "Realizado" : appt.status === "cancelled" ? "Cancelado" : appt.status === "no_show" ? "Faltou" : "Pendente"}
-                  </span>
                 </div>
               );
             });
@@ -1110,7 +1137,7 @@ export default function AgendaPage() {
                         const topPx = topMinutes * pxPerMin;
                         const heightPx = Math.min(1000 - topPx, durationMinutes * pxPerMin);
 
-                        const styles = getCardStatusStyles(appt.status);
+                        const styles = getCardStatusStyles(appt.status, appt.type);
                         const formattedTime = `${String(startHours).padStart(2, "0")}:${String(startMins).padStart(2, "0")} - ${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
 
                         return (
@@ -1119,6 +1146,7 @@ export default function AgendaPage() {
                             style={{
                               top: `${topPx}px`,
                               height: `${heightPx}px`,
+                              ...styles.bgStyle
                             }}
                             onMouseEnter={(e) => {
                               handleApptMouseEnter(appt, e);
@@ -1128,26 +1156,46 @@ export default function AgendaPage() {
                               e.stopPropagation();
                               handleEditAppointment(appt.id);
                             }}
-                            className={`absolute left-1 right-1 rounded-xl shadow-xs transition-all duration-200 text-left border p-2 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between ${styles.border} ${styles.bg}`}
+                            className="absolute left-1 right-1 rounded-xl shadow-xs transition-all duration-200 text-left border p-2 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between border-l-4"
                           >
                             <div className="space-y-0.5">
                               {/* Patient name & dot */}
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${styles.dot}`} />
+                                <span style={styles.dotStyle} className="h-1.5 w-1.5 shrink-0 rounded-full" />
                                 <span className="text-[11px] font-extrabold truncate flex-1 leading-tight">
                                   {appt.patients?.name || "Sem Nome"}
                                 </span>
                                 {appt.status === "provisional" && (
                                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                                 )}
-                              </div>                              {/* Procedure / Title */}
-                              <p className="text-[9px] text-neutral-600 truncate font-semibold leading-tight pr-1">
-                                {appt.type || appt.title || "Consulta"}
-                              </p>
+                              </div>
+                              <div className="flex items-center justify-between gap-1 mt-1">
+                                <p className="text-[9px] opacity-80 truncate font-semibold leading-tight pr-1">
+                                  {appt.type || appt.title || "Consulta"}
+                                </p>
+                                <span 
+                                  className="text-[7px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide shrink-0"
+                                  style={{
+                                    backgroundColor: `color-mix(in srgb, ${styles.dotColor} 15%, transparent)`,
+                                    color: styles.dotColor,
+                                    border: `1px solid color-mix(in srgb, ${styles.dotColor} 30%, transparent)`
+                                  }}
+                                >
+                                  {(() => {
+                                    switch (appt.status) {
+                                      case "confirmed": return "Confirmado";
+                                      case "attended": return "Realizado";
+                                      case "cancelled": return "Cancelado";
+                                      case "no_show": return "Falta";
+                                      default: return "Pendente";
+                                    }
+                                  })()}
+                                </span>
+                              </div>
                             </div>
                             {/* Time range */}
                             <div className="text-[8px] opacity-75 font-semibold mt-1 flex items-center gap-1">
-                              <ClockIcon className="h-2.5 w-2.5 text-neutral-500" />
+                              <ClockIcon className="h-2.5 w-2.5 opacity-60" />
                               {formattedTime}
                             </div>
                           </div>
@@ -1163,7 +1211,7 @@ export default function AgendaPage() {
       </div>
 
       {/* Floating Action Buttons bottom-right */}
-      <div className="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-50">
+      <div className="fixed bottom-24 right-6 flex flex-col items-end gap-3 z-50">
         {/* Popover Menu above the FAB */}
         {isFabMenuOpen && (
           <>
@@ -1280,7 +1328,7 @@ export default function AgendaPage() {
             {/* Header: status and "Agendamento" */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${getCardStatusStyles(popoverAppt.status).dot}`} />
+                <span style={getCardStatusStyles(popoverAppt.status, popoverAppt.type).dotStyle} className="h-2.5 w-2.5 rounded-full" />
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400">
                   Agendamento • {(() => {
                     switch (popoverAppt.status) {
