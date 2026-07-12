@@ -223,9 +223,9 @@ export default function DocumentSigningPortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070c19] text-white flex flex-col items-center justify-center p-4">
-        <Loader2Icon className="h-10 w-10 animate-spin text-blue-500 mb-3" />
-        <p className="text-sm text-neutral-400 font-semibold uppercase tracking-wider">
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-4">
+        <Loader2Icon className="h-10 w-10 animate-spin text-blue-600 mb-3" />
+        <p className="text-sm text-slate-500 font-semibold uppercase tracking-wider">
           Verificando Link de Assinatura...
         </p>
       </div>
@@ -234,14 +234,14 @@ export default function DocumentSigningPortalPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#070c19] text-white flex flex-col items-center justify-center p-4 text-center">
-        <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-8 space-y-4 shadow-2xl">
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-4 text-center">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-8 space-y-4 shadow-xl">
           <ShieldCheckIcon className="h-12 w-12 text-rose-500 mx-auto" />
-          <h2 className="text-lg font-black text-white">Falha na Verificação</h2>
-          <p className="text-xs text-neutral-400 leading-relaxed">{error}</p>
+          <h2 className="text-lg font-black text-slate-800">Falha na Verificação</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">{error}</p>
           <button
             onClick={() => router.push("/")}
-            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
+            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-xs"
           >
             Ir para a Página Inicial
           </button>
@@ -259,13 +259,11 @@ export default function DocumentSigningPortalPage() {
 
   return (
     <div
-      className="min-h-screen text-white flex flex-col font-sans"
-      style={{ background: "radial-gradient(circle at top, #0d1b3e 0%, #070c19 100%)" }}
+      className="min-h-screen text-slate-800 flex flex-col font-sans bg-slate-50"
     >
       {/* Header */}
       <header
-        className="border-b sticky top-0 z-50 backdrop-blur-md"
-        style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(15,15,26,0.85)" }}
+        className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur-md border-slate-200"
       >
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
@@ -273,16 +271,15 @@ export default function DocumentSigningPortalPage() {
               {clinic?.name?.charAt(0)?.toUpperCase() || "C"}
             </div>
             <div>
-              <p className="text-xs font-black leading-tight text-white">
+              <p className="text-xs font-black leading-tight text-slate-800">
                 {clinic?.name || "Clínica"}
               </p>
-              <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
                 Assinatura Eletrônica
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] text-emerald-400 font-bold"
-            style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100">
             <ShieldCheckIcon className="h-3.5 w-3.5 text-emerald-500" />
             Conexão Segura SSL
           </div>
@@ -294,27 +291,23 @@ export default function DocumentSigningPortalPage() {
         {success ? (
           /* ── Success state ── */
           <div
-            className="rounded-2xl p-8 text-center space-y-5 shadow-2xl animate-fade-in"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+            className="rounded-2xl p-8 text-center space-y-5 bg-white border border-slate-200 shadow-sm animate-fade-in"
           >
-            <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto"
-              style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)" }}>
-              <CheckCircle2Icon className="h-10 w-10 text-emerald-400" />
+            <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto bg-emerald-50 border border-emerald-100">
+              <CheckCircle2Icon className="h-10 w-10 text-emerald-500" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-xl font-black text-white">Documento Assinado com Sucesso!</h1>
-              <p className="text-xs text-neutral-400 leading-relaxed max-w-md mx-auto">
-                Olá, <strong className="text-white">{patient?.name}</strong>. Seu documento{" "}
-                <strong className="text-white">&ldquo;{document.title}&rdquo;</strong> foi assinado
+              <h1 className="text-xl font-black text-slate-900">Documento Assinado com Sucesso!</h1>
+              <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
+                Olá, <strong className="text-slate-800">{patient?.name}</strong>. Seu documento{" "}
+                <strong className="text-slate-800">&ldquo;{document.title}&rdquo;</strong> foi assinado
                 eletronicamente e registrado com segurança.
               </p>
             </div>
             <div
-              className="rounded-xl p-4 text-[10px] text-left text-neutral-500 font-semibold space-y-1 max-w-md mx-auto"
-              style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.06)" }}
+              className="rounded-xl p-4 text-[10px] text-left text-slate-500 font-semibold space-y-1 max-w-md mx-auto bg-slate-50 border border-slate-200"
             >
-              <p className="text-neutral-400 font-bold uppercase tracking-wider border-b pb-1.5 mb-1.5"
-                style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+              <p className="text-slate-700 font-bold uppercase tracking-wider border-b pb-1.5 mb-1.5 border-slate-200">
                 Comprovante de Validação Digital
               </p>
               <p>• ID do Documento: {document.id}</p>
@@ -322,7 +315,7 @@ export default function DocumentSigningPortalPage() {
               <p>• Data / Hora: {new Date(document.signed_at || new Date()).toLocaleString("pt-BR")}</p>
               <p>• IP de Origem: Registrado pelo Servidor</p>
             </div>
-            <p className="text-[10px] text-neutral-500 italic">
+            <p className="text-[10px] text-slate-400 italic">
               Você pode fechar esta guia. A equipe da clínica já foi notificada.
             </p>
           </div>
@@ -331,62 +324,55 @@ export default function DocumentSigningPortalPage() {
           <div className="space-y-5 flex-1 flex flex-col">
             {/* Meta */}
             <div
-              className="rounded-2xl p-5 space-y-3"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              className="rounded-2xl p-5 space-y-3 bg-white border border-slate-200 shadow-xs"
             >
               <span
-                className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block"
-                style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#93c5fd" }}
+                className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block bg-blue-50 text-blue-600 border border-blue-100"
               >
                 {document.type?.toUpperCase() || "CONTRATO"}
               </span>
-              <h1 className="text-lg font-black text-white leading-snug">{document.title}</h1>
-              <div className="grid grid-cols-2 gap-4 text-xs pt-2 border-t text-neutral-400"
-                style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+              <h1 className="text-lg font-black text-slate-900 leading-snug">{document.title}</h1>
+              <div className="grid grid-cols-2 gap-4 text-xs pt-2 border-t text-slate-500 border-slate-100">
                 <div>
-                  <p className="text-[9px] text-neutral-500 font-extrabold uppercase mb-0.5">Contratante / Paciente</p>
-                  <p className="font-bold text-white truncate">{patient?.name || "—"}</p>
+                  <p className="text-[9px] text-slate-400 font-extrabold uppercase mb-0.5">Contratante / Paciente</p>
+                  <p className="font-bold text-slate-800 truncate">{patient?.name || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-neutral-500 font-extrabold uppercase mb-0.5">Prestadora / Clínica</p>
-                  <p className="font-bold text-white truncate">{clinic?.name || "—"}</p>
+                  <p className="text-[9px] text-slate-400 font-extrabold uppercase mb-0.5">Prestadora / Clínica</p>
+                  <p className="font-bold text-slate-800 truncate">{clinic?.name || "—"}</p>
                 </div>
               </div>
             </div>
 
             {/* Document body */}
             <div
-              className="rounded-2xl flex-1 flex flex-col overflow-hidden shadow-lg"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+              className="rounded-2xl flex-1 flex flex-col overflow-hidden bg-white border border-slate-200 shadow-xs"
             >
               <div
-                className="px-4 py-2.5 flex items-center gap-2 text-[10px] text-neutral-400 font-bold uppercase tracking-wider select-none border-b"
-                style={{ background: "rgba(0,0,0,0.3)", borderColor: "rgba(255,255,255,0.06)" }}
+                className="px-4 py-2.5 flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider select-none border-b bg-slate-50 border-slate-100"
               >
-                <ShieldCheckIcon className="h-4 w-4 text-blue-400" />
+                <ShieldCheckIcon className="h-4 w-4 text-blue-600" />
                 Conteúdo do Documento para Revisão
               </div>
-              <div className="p-6 overflow-y-auto max-h-[360px] leading-relaxed text-xs text-neutral-300 font-sans space-y-4 whitespace-pre-wrap select-none text-justify">
+              <div className="p-6 overflow-y-auto max-h-[360px] leading-relaxed text-xs text-slate-700 font-sans space-y-4 whitespace-pre-wrap select-none text-justify">
                 {documentText || (
-                  <span className="text-neutral-600 italic">Carregando conteúdo do documento...</span>
+                  <span className="text-slate-400 italic">Carregando conteúdo do documento...</span>
                 )}
               </div>
             </div>
 
             {/* Signature area */}
             <div
-              className="rounded-2xl p-5 space-y-4"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              className="rounded-2xl p-5 space-y-4 bg-white border border-slate-200 shadow-xs"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                  <PenToolIcon className="h-4 w-4 text-blue-400" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <PenToolIcon className="h-4 w-4 text-blue-600" />
                   Assinatura Digital do Cliente
                 </h3>
                 {isSigned ? (
                   <span
-                    className="text-[10px] px-2 py-0.5 rounded font-bold uppercase"
-                    style={{ background: "rgba(16,185,129,0.1)", color: "#34d399", border: "1px solid rgba(16,185,129,0.2)" }}
+                    className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-100"
                   >
                     Assinado
                   </span>
@@ -394,7 +380,7 @@ export default function DocumentSigningPortalPage() {
                   <button
                     type="button"
                     onClick={handleClearSignature}
-                    className="text-[10px] text-neutral-400 hover:text-white flex items-center gap-1 font-bold transition-colors"
+                    className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1 font-bold transition-colors"
                   >
                     <RotateCcwIcon className="h-3 w-3" /> Limpar
                   </button>
@@ -403,21 +389,20 @@ export default function DocumentSigningPortalPage() {
 
               {isSigned ? (
                 <div
-                  className="h-40 rounded-xl flex flex-col items-center justify-center p-4 gap-2"
-                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.06)" }}
+                  className="h-40 rounded-xl flex flex-col items-center justify-center p-4 gap-2 bg-slate-50 border border-slate-200"
                 >
                   {document.content?.signature_image ? (
                     <img
                       src={document.content.signature_image}
                       alt="Assinatura registrada"
-                      className="max-h-24 object-contain filter invert opacity-80"
+                      className="max-h-24 object-contain opacity-90"
                     />
                   ) : (
-                    <p className="text-[10px] text-neutral-500 font-semibold italic">
+                    <p className="text-[10px] text-slate-400 font-semibold italic">
                       Registro de assinatura digital eletrônica arquivado.
                     </p>
                   )}
-                  <p className="text-[9px] text-emerald-400 font-extrabold uppercase tracking-wide flex items-center gap-1">
+                  <p className="text-[9px] text-emerald-600 font-extrabold uppercase tracking-wide flex items-center gap-1">
                     <LockIcon className="h-3 w-3" />
                     Assinado eletronicamente em{" "}
                     {document.signed_at
@@ -427,12 +412,11 @@ export default function DocumentSigningPortalPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-[10px] text-neutral-400 leading-normal">
+                  <p className="text-[10px] text-slate-500 leading-normal">
                     Desenhe sua assinatura dentro do retângulo abaixo com o dedo (celular) ou mouse (computador).
                   </p>
                   <div
-                    className="h-40 rounded-xl overflow-hidden relative"
-                    style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.09)" }}
+                    className="h-40 rounded-xl overflow-hidden relative bg-white border border-slate-200 shadow-inner"
                   >
                     <canvas
                       ref={canvasRef}
@@ -443,8 +427,7 @@ export default function DocumentSigningPortalPage() {
                   <button
                     onClick={handleSignDocument}
                     disabled={submitting}
-                    className="w-full h-11 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-60"
-                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "white" }}
+                    className="w-full h-11 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {submitting ? (
                       <>

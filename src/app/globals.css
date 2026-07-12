@@ -257,5 +257,6 @@ html[data-theme="rose"] {
     background-position: right 0.75rem center;
     background-size: 1em;
     padding-right: 2.5rem;
+    border-radius: 0.75rem !important;
   }
 }

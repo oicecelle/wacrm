@@ -43,6 +43,7 @@ import {
 import { generateAIDocument } from "@/app/actions/ai-actions";
 import { cn } from "@/lib/utils";
 import { QuoteModal } from "@/components/quotes/quote-modal";
+import { uploadAccountMedia } from "@/lib/storage/upload-media";
 
 interface AppointmentModalProps {
   open: boolean;
@@ -123,6 +124,15 @@ export function AppointmentModal({
   const [status, setStatus] = useState("provisional");
   const [notes, setNotes] = useState("");
   const [appointmentColor, setAppointmentColor] = useState<string | null>(null);
+  // Recurrence
+  const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly" | "biweekly" | "monthly" | "custom">("none");
+  const [recurrenceCount, setRecurrenceCount] = useState(4); // custom: how many occurrences
+  // Tag / Etiqueta
+  const [appointmentTag, setAppointmentTag] = useState("");
+  const [appointmentTagColor, setAppointmentTagColor] = useState("#3b82f6");
+  // Procedure duration and value (editable)
+  const [procedureDuration, setProcedureDuration] = useState(60);
+  const [procedureValue, setProcedureValue] = useState("");
 
   const fetchQuotes = useCallback(async () => {
     if (!patientId) return;
@@ -198,6 +208,10 @@ export function AppointmentModal({
   const [evalDate, setEvalDate] = useState(new Date().toISOString().split("T")[0]);
   const [savingBodyEval, setSavingBodyEval] = useState(false);
   const [selectedChartMetric, setSelectedChartMetric] = useState<"weight" | "fat_percentage" | "waist" | "hip">("weight");
+
+  // EMR Photos states
+  const [patientPhotos, setPatientPhotos] = useState<any[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Financial transactions state
   const [patientTransactions, setPatientTransactions] = useState<any[]>([]);
@@ -391,6 +405,7 @@ export function AppointmentModal({
       setPendingDocsCount(0);
       setClinicalEvolutions([]);
       setBodyEvaluations([]);
+      setPatientPhotos([]);
       setPatientTransactions([]);
       setQuotes([]);
       return;
@@ -533,6 +548,15 @@ export function AppointmentModal({
           .eq("contact_id", patientId)
           .order("created_at", { ascending: false });
         setQuotes(quotesList || []);
+
+        // 9. EMR Photos
+        const { data: photosList } = await supabase
+          .from("patient_timeline")
+          .select("*")
+          .eq("patient_id", patientId)
+          .eq("event_type", "emr_photo")
+          .order("created_at", { ascending: false });
+        setPatientPhotos(photosList || []);
 
       } catch (err) {
         console.error("Error loading patient sub-details:", err);
@@ -1185,6 +1209,72 @@ export function AppointmentModal({
     }
   };
 
+  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const res = await uploadAccountMedia("chat-media", file);
+      
+      // Insert into patient_timeline
+      const { error: insertErr } = await supabase.from("patient_timeline").insert({
+        patient_id: patientId,
+        event_type: "emr_photo",
+        title: "Foto de Acompanhamento",
+        payload: {
+          url: res.publicUrl,
+          path: res.path,
+          name: file.name,
+        },
+      });
+
+      if (insertErr) throw insertErr;
+
+      // Re-fetch photos
+      const { data: photosList } = await supabase
+        .from("patient_timeline")
+        .select("*")
+        .eq("patient_id", patientId)
+        .eq("event_type", "emr_photo")
+        .order("created_at", { ascending: false });
+      setPatientPhotos(photosList || []);
+
+      alert("Foto enviada com sucesso!");
+    } catch (err: any) {
+      console.error("Error uploading photo:", err);
+      alert("Erro ao enviar foto: " + err.message);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string, storagePath: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta foto de acompanhamento?")) return;
+
+    try {
+      // 1. Delete timeline entry
+      const { error: deleteErr } = await supabase
+        .from("patient_timeline")
+        .delete()
+        .eq("id", photoId);
+
+      if (deleteErr) throw deleteErr;
+
+      // 2. Delete file from storage
+      if (storagePath) {
+        await supabase.storage.from("chat-media").remove([storagePath]);
+      }
+
+      // Re-fetch photos
+      setPatientPhotos(prev => prev.filter(p => p.id !== photoId));
+      alert("Foto removida!");
+    } catch (err: any) {
+      console.error("Error deleting photo:", err);
+      alert("Erro ao excluir foto: " + err.message);
+    }
+  };
+
   const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -1703,53 +1793,55 @@ export function AppointmentModal({
                 ))}
               </div>
 
-              {/* Color Picker */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider">Cor na Agenda</label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { color: "#3ba2e8", label: "Azul" },
-                    { color: "#4caf50", label: "Verde" },
-                    { color: "#e05b5c", label: "Vermelho" },
-                    { color: "#dfab01", label: "Amarelo" },
-                    { color: "#8b5cf6", label: "Violeta" },
-                    { color: "#f97316", label: "Laranja" },
-                    { color: "#ec4899", label: "Rosa" },
-                    { color: "#14b8a6", label: "Teal" },
-                    { color: "#6b7280", label: "Cinza" },
-                    { color: "#0f172a", label: "Preto" },
-                  ].map(({ color, label }) => (
-                    <button
-                      key={color}
-                      type="button"
-                      title={label}
-                      onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
-                      className={`h-7 w-7 rounded-full transition-all border-2 ${
-                        appointmentColor === color
-                          ? "border-blue-600 scale-110 shadow-md"
-                          : "border-transparent hover:scale-105 hover:border-neutral-300"
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                  {/* Custom color input */}
-                  <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all overflow-hidden relative">
-                    <input
-                      type="color"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      onChange={(e) => setAppointmentColor(e.target.value)}
-                    />
-                    <span className="text-[10px] text-neutral-400 select-none">+</span>
-                  </label>
+
+              {/* Color Picker — only for Evento and Bloqueio */}
+              {(apptType === "evento" || apptType === "bloqueio") && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider">Cor na Agenda</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { color: "#3ba2e8", label: "Azul" },
+                      { color: "#4caf50", label: "Verde" },
+                      { color: "#e05b5c", label: "Vermelho" },
+                      { color: "#dfab01", label: "Amarelo" },
+                      { color: "#8b5cf6", label: "Violeta" },
+                      { color: "#f97316", label: "Laranja" },
+                      { color: "#ec4899", label: "Rosa" },
+                      { color: "#14b8a6", label: "Teal" },
+                      { color: "#6b7280", label: "Cinza" },
+                      { color: "#0f172a", label: "Preto" },
+                    ].map(({ color, label }) => (
+                      <button
+                        key={color}
+                        type="button"
+                        title={label}
+                        onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
+                        className={`h-7 w-7 rounded-full transition-all border-2 ${
+                          appointmentColor === color
+                            ? "border-blue-600 scale-110 shadow-md"
+                            : "border-transparent hover:scale-105 hover:border-neutral-300"
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                    <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all overflow-hidden relative">
+                      <input
+                        type="color"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => setAppointmentColor(e.target.value)}
+                      />
+                      <span className="text-[10px] text-neutral-400 select-none">+</span>
+                    </label>
+                  </div>
+                  {appointmentColor && (
+                    <p className="text-[10px] text-neutral-400 flex items-center gap-1.5">
+                      <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
+                      Cor selecionada: <span className="font-mono">{appointmentColor}</span>
+                      <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 ml-1 font-black">✕</button>
+                    </p>
+                  )}
                 </div>
-                {appointmentColor && (
-                  <p className="text-[10px] text-neutral-400 flex items-center gap-1.5">
-                    <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
-                    Cor selecionada: <span className="font-mono">{appointmentColor}</span>
-                    <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 ml-1 font-black">✕</button>
-                  </p>
-                )}
-              </div>
+              )}
 
               {/* For Evento/Bloqueio: show quick form inline */}
               {(apptType === "evento" || apptType === "bloqueio") ? (
@@ -1772,29 +1864,83 @@ export function AppointmentModal({
                     <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
                     {renderStaffSelector()}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Date/Time: Dia | Início | Fim */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="quick-day" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
+                      <input
+                        id="quick-day"
+                        type="date"
+                        required
+                        value={startTime.slice(0, 10)}
+                        onChange={(e) => {
+                          const d = e.target.value;
+                          const sTime = startTime.slice(11, 16) || "09:00";
+                          const eTime = endTime.slice(11, 16) || "10:00";
+                          setStartTime(`${d}T${sTime}`);
+                          setEndTime(`${d}T${eTime}`);
+                        }}
+                        className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
                     <div className="space-y-1">
                       <Label htmlFor="quick-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
-                      <Input
+                      <input
                         id="quick-start"
-                        type="datetime-local"
+                        type="time"
                         required
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                        value={startTime.slice(11, 16)}
+                        onChange={(e) => {
+                          const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                          setStartTime(`${d}T${e.target.value}`);
+                        }}
+                        className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="quick-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Término *</Label>
-                      <Input
+                      <Label htmlFor="quick-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Fim *</Label>
+                      <input
                         id="quick-end"
-                        type="datetime-local"
+                        type="time"
                         required
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                        value={endTime.slice(11, 16)}
+                        onChange={(e) => {
+                          const d = endTime.slice(0, 10) || startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                          setEndTime(`${d}T${e.target.value}`);
+                        }}
+                        className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
+                  </div>
+                  {/* Recorrência */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Recorrência *</Label>
+                    <select
+                      value={recurrence}
+                      onChange={(e) => setRecurrence(e.target.value as any)}
+                      className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="none">Não se repete</option>
+                      <option value="daily">Diariamente</option>
+                      <option value="weekly">Semanalmente</option>
+                      <option value="biweekly">Quinzenalmente</option>
+                      <option value="monthly">Mensalmente</option>
+                      <option value="custom">Personalizado...</option>
+                    </select>
+                    {recurrence === "custom" && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-neutral-500">Repetir</span>
+                        <input
+                          type="number"
+                          min={2}
+                          max={52}
+                          value={recurrenceCount}
+                          onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                          className="w-16 rounded-xl border border-neutral-200 h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                        <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="quick-notes" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Observações</Label>
@@ -1857,7 +2003,11 @@ export function AppointmentModal({
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => setPatientId(p.id)}
+                          onClick={() => {
+                            // Immediately set selectedPatientInfo from local data so header shows name/phone instantly
+                            setSelectedPatientInfo({ id: p.id, name: p.name, phone: p.phone || "", email: p.email || "" });
+                            setPatientId(p.id);
+                          }}
                           className="w-full text-left p-3 hover:bg-blue-50/50 flex items-center justify-between gap-3 transition-all"
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -2018,32 +2168,88 @@ export function AppointmentModal({
                             {renderStaffSelector()}
                           </div>
 
-                          {/* Date and Times */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Date and Times: Dia | Início | Fim */}
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-day" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
+                              <input
+                                id="det-day"
+                                type="date"
+                                required
+                                disabled={saving}
+                                value={startTime.slice(0, 10)}
+                                onChange={(e) => {
+                                  const d = e.target.value;
+                                  const sTime = startTime.slice(11, 16) || "09:00";
+                                  const eTime = endTime.slice(11, 16) || "10:00";
+                                  setStartTime(`${d}T${sTime}`);
+                                  setEndTime(`${d}T${eTime}`);
+                                }}
+                                className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
+                              />
+                            </div>
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
-                              <Input
+                              <input
                                 id="det-start"
-                                type="datetime-local"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
+                                type="time"
                                 required
                                 disabled={saving}
-                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                value={startTime.slice(11, 16)}
+                                onChange={(e) => {
+                                  const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                                  setStartTime(`${d}T${e.target.value}`);
+                                }}
+                                className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
                               />
                             </div>
                             <div className="space-y-1 text-left">
-                              <Label htmlFor="det-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Término *</Label>
-                              <Input
+                              <Label htmlFor="det-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Fim *</Label>
+                              <input
                                 id="det-end"
-                                type="datetime-local"
-                                value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
+                                type="time"
                                 required
                                 disabled={saving}
-                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                value={endTime.slice(11, 16)}
+                                onChange={(e) => {
+                                  const d = endTime.slice(0, 10) || startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                                  setEndTime(`${d}T${e.target.value}`);
+                                }}
+                                className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
                               />
                             </div>
+                          </div>
+
+                          {/* Recorrência */}
+                          <div className="space-y-1 text-left">
+                            <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Recorrência</Label>
+                            <select
+                              value={recurrence}
+                              onChange={(e) => setRecurrence(e.target.value as any)}
+                              disabled={saving}
+                              className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
+                            >
+                              <option value="none">Não se repete</option>
+                              <option value="daily">Diariamente</option>
+                              <option value="weekly">Semanalmente</option>
+                              <option value="biweekly">Quinzenalmente</option>
+                              <option value="monthly">Mensalmente</option>
+                              <option value="custom">Personalizado...</option>
+                            </select>
+                            {recurrence === "custom" && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs text-neutral-500">Repetir</span>
+                                <input
+                                  type="number"
+                                  min={2}
+                                  max={52}
+                                  value={recurrenceCount}
+                                  onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                                  className="w-16 rounded-xl border border-neutral-200 h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                />
+                                <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Procedure and Room Selector */}
@@ -2054,8 +2260,16 @@ export function AppointmentModal({
                                 id="det-procedure"
                                 value={procedureName}
                                 onChange={(e) => {
-                                  setProcedureName(e.target.value);
-                                  setAiDocProcedure(e.target.value);
+                                  const name = e.target.value;
+                                  setProcedureName(name);
+                                  setAiDocProcedure(name);
+                                  // Pre-fill duration and value from procedure data
+                                  const proc = procedures.find((p) => p.name === name);
+                                  if (proc) {
+                                    if (proc.duration_minutes) setProcedureDuration(proc.duration_minutes);
+                                    if (proc.price) setProcedureValue(String(proc.price));
+                                    else if (proc.valor) setProcedureValue(String(proc.valor));
+                                  }
                                 }}
                                 className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                 disabled={saving}
@@ -2076,6 +2290,34 @@ export function AppointmentModal({
                                   </>
                                 )}
                               </select>
+                              {/* Editable duration and value */}
+                              {procedureName && (
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                  <div>
+                                    <label className="text-[10px] font-bold text-neutral-500 uppercase">Duração (min)</label>
+                                    <input
+                                      type="number"
+                                      min={5}
+                                      max={480}
+                                      value={procedureDuration}
+                                      onChange={(e) => setProcedureDuration(Number(e.target.value))}
+                                      className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-bold text-neutral-500 uppercase">Valor (R$)</label>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      value={procedureValue}
+                                      onChange={(e) => setProcedureValue(e.target.value)}
+                                      placeholder="0,00"
+                                      className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    />
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-room" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Sala / Mesa de Atendimento</Label>
@@ -2135,51 +2377,92 @@ export function AppointmentModal({
                             />
                           </div>
 
-                          {/* Color Picker */}
-                          <div className="space-y-2 text-left">
-                            <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Cor do Agendamento</Label>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {[
-                                { color: "#3ba2e8", label: "Azul" },
-                                { color: "#4caf50", label: "Verde" },
-                                { color: "#e05b5c", label: "Vermelho" },
-                                { color: "#dfab01", label: "Amarelo" },
-                                { color: "#8b5cf6", label: "Violeta" },
-                                { color: "#f97316", label: "Laranja" },
-                                { color: "#ec4899", label: "Rosa" },
-                                { color: "#14b8a6", label: "Teal" },
-                                { color: "#6b7280", label: "Cinza" },
-                                { color: "#0f172a", label: "Preto" },
-                              ].map(({ color, label }) => (
-                                <button
-                                  key={color}
-                                  type="button"
-                                  title={label}
-                                  onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
-                                  className={`h-6 w-6 rounded-full border-2 transition-all hover:scale-110 ${
-                                    appointmentColor === color
-                                      ? "border-neutral-900 scale-110 shadow-md"
-                                      : "border-transparent"
-                                  }`}
-                                  style={{ backgroundColor: color }}
+                          {/* Color Picker: only for evento/bloqueio type */}
+                          {(apptType === "evento" || apptType === "bloqueio") && (
+                            <div className="space-y-2 text-left">
+                              <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Cor do Evento</Label>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {[
+                                  { color: "#3ba2e8", label: "Azul" },
+                                  { color: "#4caf50", label: "Verde" },
+                                  { color: "#e05b5c", label: "Vermelho" },
+                                  { color: "#dfab01", label: "Amarelo" },
+                                  { color: "#8b5cf6", label: "Violeta" },
+                                  { color: "#f97316", label: "Laranja" },
+                                  { color: "#ec4899", label: "Rosa" },
+                                  { color: "#14b8a6", label: "Teal" },
+                                  { color: "#6b7280", label: "Cinza" },
+                                  { color: "#0f172a", label: "Preto" },
+                                ].map(({ color, label }) => (
+                                  <button
+                                    key={color}
+                                    type="button"
+                                    title={label}
+                                    onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
+                                    className={`h-6 w-6 rounded-full border-2 transition-all hover:scale-110 ${
+                                      appointmentColor === color
+                                        ? "border-neutral-900 scale-110 shadow-md"
+                                        : "border-transparent"
+                                    }`}
+                                    style={{ backgroundColor: color }}
+                                  />
+                                ))}
+                                <input
+                                  type="color"
+                                  title="Cor personalizada"
+                                  value={appointmentColor || "#3ba2e8"}
+                                  onChange={(e) => setAppointmentColor(e.target.value)}
+                                  className="h-6 w-6 rounded-full cursor-pointer border border-neutral-200 p-0 overflow-hidden"
+                                  style={{ padding: 0 }}
                                 />
-                              ))}
-                              {/* Custom color input */}
-                              <input
-                                type="color"
-                                title="Cor personalizada"
-                                value={appointmentColor || "#3ba2e8"}
-                                onChange={(e) => setAppointmentColor(e.target.value)}
-                                className="h-6 w-6 rounded-full cursor-pointer border border-neutral-200 p-0 overflow-hidden"
-                                style={{ padding: 0 }}
-                              />
+                              </div>
+                              {appointmentColor && (
+                                <p className="text-[10px] text-neutral-500 flex items-center gap-1.5">
+                                  <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
+                                  Cor selecionada: <span className="font-mono">{appointmentColor}</span>
+                                  <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 underline ml-1">Remover</button>
+                                </p>
+                              )}
                             </div>
-                            {appointmentColor && (
-                              <p className="text-[10px] text-neutral-500 flex items-center gap-1.5">
-                                <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
-                                Cor selecionada: <span className="font-mono">{appointmentColor}</span>
-                                <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 underline ml-1">Remover</button>
-                              </p>
+                          )}
+
+                          {/* Tag / Etiqueta personalizada */}
+                          <div className="space-y-2 text-left">
+                            <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Etiqueta (Tag)</Label>
+                            <div className="flex gap-2 items-center">
+                              <input
+                                type="text"
+                                maxLength={20}
+                                value={appointmentTag}
+                                onChange={(e) => setAppointmentTag(e.target.value)}
+                                placeholder="Ex: Retorno, VIP, Urgente..."
+                                className="flex-1 rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                              />
+                              <div className="flex gap-1.5">
+                                {["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#f97316","#ec4899","#6b7280"].map(c => (
+                                  <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => setAppointmentTagColor(c)}
+                                    className={`h-5 w-5 rounded-full border-2 transition-all ${
+                                      appointmentTagColor === c ? "border-neutral-800 scale-110" : "border-transparent"
+                                    }`}
+                                    style={{ backgroundColor: c }}
+                                    title={c}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {appointmentTag && (
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className="inline-flex items-center gap-1 text-white text-[10px] font-bold px-2.5 py-1 rounded-full"
+                                  style={{ backgroundColor: appointmentTagColor }}
+                                >
+                                  {appointmentTag}
+                                </span>
+                                <span className="text-[10px] text-neutral-400">{appointmentTag.length}/20 chars</span>
+                              </div>
                             )}
                           </div>
 
@@ -2329,122 +2612,6 @@ export function AppointmentModal({
                               Gerar & Enviar Selecionados
                             </Button>
                           </div>
-                        </div>
-
-                        {/* AI Term and Contract Generator Section */}
-                        <div className="border border-blue-100 rounded-xl p-4 bg-blue-50/20 space-y-4 shadow-sm/5">
-                          <h4 className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5 uppercase tracking-wide">
-                            <SparklesIcon className="h-4 w-4 text-blue-600 animate-pulse" />
-                            Redator de Documentos por IA (GPT)
-                          </h4>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-bold text-neutral-500 uppercase">Serviço / Procedimento</Label>
-                              <Input 
-                                type="text"
-                                placeholder="Ex: Contrato de Mentoria CRM"
-                                value={aiDocProcedure}
-                                onChange={(e) => setAiDocProcedure(e.target.value)}
-                                className="text-xs h-8 bg-white border-neutral-200"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-bold text-neutral-500 uppercase">Tipo de Documento</Label>
-                              <select
-                                value={aiDocType}
-                                onChange={(e) => setAiDocType(e.target.value)}
-                                className="w-full text-xs h-8 rounded-md border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
-                              >
-                                <option value="contrato">Contrato de Prestação de Serviços</option>
-                                <option value="consentimento">Termo de Consentimento Livre e Esclarecido</option>
-                                <option value="anamnese">Termo de Responsabilidade / Ficha Geral</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-[10px] font-bold text-neutral-500 uppercase">Riscos e Responsabilidades</Label>
-                            <Input 
-                              type="text"
-                              placeholder="Descreva riscos específicos se houver..."
-                              value={aiDocRisks}
-                              onChange={(e) => setAiDocRisks(e.target.value)}
-                              className="text-xs h-8 bg-white border-neutral-200"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-bold text-neutral-500 uppercase">Cuidados Necessários</Label>
-                              <Textarea 
-                                placeholder="Cuidados após o atendimento..."
-                                value={aiDocCuidados}
-                                onChange={(e) => setAiDocCuidados(e.target.value)}
-                                rows={2}
-                                className="text-xs bg-white border-neutral-200"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-bold text-neutral-500 uppercase">Observações Adicionais</Label>
-                              <Textarea 
-                                placeholder="Cláusulas extras, prazos ou devoluções..."
-                                value={aiDocNotes}
-                                onChange={(e) => setAiDocNotes(e.target.value)}
-                                rows={2}
-                                className="text-xs bg-white border-neutral-200"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex justify-end pt-1">
-                            <Button
-                              type="button"
-                              onClick={handleGenerateAIDoc}
-                              disabled={aiGeneratingDoc || !aiDocProcedure}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] h-8 font-black gap-1 rounded-lg"
-                            >
-                              {aiGeneratingDoc ? (
-                                <>
-                                  <Loader2Icon className="h-3 w-3 animate-spin" /> Redigindo Termo...
-                                </>
-                              ) : (
-                                <>
-                                  <SparklesIcon className="h-3 w-3" /> Gerar Termo com IA
-                                </>
-                              )}
-                            </Button>
-                          </div>
-
-                          {aiGeneratedContent && (
-                            <div className="space-y-3 bg-white p-3 rounded-lg border border-blue-100 shadow-inner">
-                              <Label className="text-[10px] font-bold text-blue-900 uppercase">Documento Gerado (Pode editar se desejar)</Label>
-                              <Textarea
-                                value={aiGeneratedContent}
-                                onChange={(e) => setAiGeneratedContent(e.target.value)}
-                                rows={8}
-                                className="text-xs font-mono border-neutral-200 leading-relaxed bg-[#fafafa]"
-                              />
-                              <div className="flex justify-end pt-1">
-                                <Button
-                                  type="button"
-                                  onClick={handleSaveAIDoc}
-                                  disabled={isSavingGeneratedDoc}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] h-8 font-black gap-1 rounded-lg"
-                                >
-                                  {isSavingGeneratedDoc ? (
-                                    <>
-                                      <Loader2Icon className="h-3 w-3 animate-spin" /> Salvando...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <SendIcon className="h-3 w-3" /> Salvar & Enviar via WhatsApp
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          )}
                         </div>
 
                         {/* List of Sent/Generated Documents */}
@@ -2743,6 +2910,62 @@ export function AppointmentModal({
                                         Compartilhado no Portal
                                       </span>
                                     )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section: Photos / Images */}
+                        <div className="space-y-4 border-t border-neutral-100 pt-5 text-left">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Fotos de Acompanhamento</h3>
+                            <label className={`text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 transition-all ${uploadingPhoto ? "opacity-55 pointer-events-none" : ""}`}>
+                              {uploadingPhoto ? (
+                                <>
+                                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                                  Enviando...
+                                </>
+                              ) : (
+                                <>
+                                  <PlusIcon className="h-3.5 w-3.5" />
+                                  Adicionar Foto
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleUploadPhoto}
+                                disabled={uploadingPhoto}
+                              />
+                            </label>
+                          </div>
+
+                          {patientPhotos.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">Nenhuma foto de acompanhamento anexada.</p>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              {patientPhotos.map((photo) => (
+                                <div key={photo.id} className="relative group rounded-xl overflow-hidden border border-neutral-200 bg-white aspect-square flex flex-col shadow-xs">
+                                  <img
+                                    src={photo.payload?.url}
+                                    alt={photo.payload?.name || "Foto"}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2.5 text-[10px] text-white">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeletePhoto(photo.id, photo.payload?.path)}
+                                      className="self-end bg-rose-600 hover:bg-rose-700 text-white rounded p-1 transition-all"
+                                      title="Excluir foto"
+                                    >
+                                      <Trash2Icon className="h-3.5 w-3.5" />
+                                    </button>
+                                    <span className="font-bold">
+                                      {new Date(photo.created_at).toLocaleDateString("pt-BR")}
+                                    </span>
                                   </div>
                                 </div>
                               ))}

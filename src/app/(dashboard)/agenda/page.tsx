@@ -176,17 +176,20 @@ export default function AgendaPage() {
       hoverTimeoutRef.current = null;
     }
 
+    // Only recompute position if switching to a different appointment
+    if (popoverAppt?.id === appt.id) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
-    let left = rect.right + 8;
+    let left = rect.right + 12;
     let top = rect.top;
     
     const popoverWidth = 320;
     if (left + popoverWidth > window.innerWidth) {
-      left = rect.left - popoverWidth - 8;
+      left = rect.left - popoverWidth - 12;
     }
     if (left < 0) left = 16;
     
-    const popoverHeight = 310;
+    const popoverHeight = 340;
     if (top + popoverHeight > window.innerHeight) {
       top = window.innerHeight - popoverHeight - 16;
     }
@@ -200,7 +203,7 @@ export default function AgendaPage() {
     hoverTimeoutRef.current = setTimeout(() => {
       setPopoverAppt(null);
       setPopoverPosition(null);
-    }, 200);
+    }, 300);
   };
 
   // Fetch data
@@ -990,11 +993,11 @@ export default function AgendaPage() {
               <select
                 value={calendarView}
                 onChange={(e) => setCalendarView(e.target.value as any)}
-                className="h-8 rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none font-medium cursor-pointer"
+                className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 font-semibold cursor-pointer shadow-xs"
               >
-                <option value="dia">Dia</option>
-                <option value="semana">Semana</option>
-                <option value="mes">Mês</option>
+                <option value="dia">📅 Dia</option>
+                <option value="semana">📆 Semana</option>
+                <option value="mes">🗓️ Mês</option>
               </select>
             </div>
           </div>
@@ -1211,12 +1214,12 @@ export default function AgendaPage() {
       </div>
 
       {/* Floating Action Buttons bottom-right */}
-      <div className="fixed bottom-24 right-6 flex flex-col items-end gap-3 z-50">
+      <div className="fixed bottom-6 right-6 flex flex-col items-center gap-3 z-50">
         {/* Popover Menu above the FAB */}
         {isFabMenuOpen && (
           <>
             <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFabMenuOpen(false)} />
-            <div className="bg-white border border-neutral-200 shadow-2xl rounded-2xl p-2 z-50 w-52 flex flex-col gap-1 text-left animate-in fade-in slide-in-from-bottom-5 duration-150">
+            <div className="absolute bottom-[calc(100%+12px)] right-0 bg-white border border-neutral-200 shadow-2xl rounded-2xl p-2 z-50 w-52 flex flex-col gap-1 text-left animate-in fade-in slide-in-from-bottom-5 duration-150">
               <button
                 type="button"
                 onClick={() => {
@@ -1265,10 +1268,19 @@ export default function AgendaPage() {
         {/* Plus FAB Button */}
         <button
           onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-          className={`h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all transform duration-200 ${isFabMenuOpen ? 'rotate-45 bg-neutral-800' : ''}`}
+          className={`h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all duration-200 ${isFabMenuOpen ? 'rotate-45 bg-neutral-800' : ''}`}
           title="Novo Agendamento"
         >
           <PlusIcon className="h-6 w-6" />
+        </button>
+
+        {/* Copilot FAB Button — same size, blue gradient */}
+        <button
+          onClick={triggerCopilot}
+          className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-700 text-white flex items-center justify-center shadow-lg hover:shadow-indigo-500/30 hover:from-blue-400 hover:to-indigo-600 active:scale-95 transition-all duration-200"
+          title="Abrir Copiloto IA"
+        >
+          <SparklesIcon className="h-5 w-5" />
         </button>
       </div>
 

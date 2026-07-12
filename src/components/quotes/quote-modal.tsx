@@ -85,7 +85,7 @@ export function QuoteModal({
   onQuoteCreated,
 }: QuoteModalProps) {
   const supabase = createClient();
-  const { accountId } = useAuth();
+  const { accountId, user } = useAuth();
 
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -93,12 +93,73 @@ export function QuoteModal({
   const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
   const [discountValue, setDiscountValue] = useState("0");
   const [specialCondition, setSpecialCondition] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [resolvedContactId, setResolvedContactId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState<"build" | "message">("build");
   const [loading, setLoading] = useState(true);
+
+  /* ─── Resolve patient ID to contacts.id if needed ─── */
+  useEffect(() => {
+    if (!open || !accountId) return;
+
+    const resolveContact = async () => {
+      if (!contactId) return;
+      try {
+        // 1. Check if contact exists by ID in contacts
+        const { data: existingById } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("id", contactId)
+          .maybeSingle();
+
+        if (existingById) {
+          setResolvedContactId(existingById.id);
+          return;
+        }
+
+        // 2. If it does not exist, insert it into contacts with the same ID
+        const cleanPhone = contactPhone ? contactPhone.replace(/\D/g, "") : "";
+        const { error: insertErr } = await supabase
+          .from("contacts")
+          .insert({
+            id: contactId,
+            user_id: user?.id,
+            account_id: accountId,
+            name: contactName || "Paciente Sem Nome",
+            phone: cleanPhone,
+            contact_type: "client",
+          });
+
+        if (insertErr) {
+          console.error("Error inserting matching contact for quote:", insertErr);
+          // fallback to lookup by phone if constraint failed
+          if (cleanPhone) {
+            const { data: existingByPhone } = await supabase
+              .from("contacts")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("phone", cleanPhone)
+              .maybeSingle();
+            if (existingByPhone) {
+              setResolvedContactId(existingByPhone.id);
+              return;
+            }
+          }
+          throw insertErr;
+        }
+
+        setResolvedContactId(contactId);
+      } catch (err) {
+        console.error("Error resolving contact for quote:", err);
+      }
+    };
+
+    resolveContact();
+  }, [open, contactId, contactPhone, contactName, accountId, user, supabase]);
 
   /* ─── Load procedures & packages ─── */
   const loadOptions = useCallback(async () => {
@@ -122,6 +183,8 @@ export function QuoteModal({
       setItems([]);
       setDiscountValue("0");
       setSpecialCondition("");
+      setExpiresAt("");
+      setResolvedContactId(null);
       setStep("build");
     }
   }, [open, loadOptions]);
@@ -180,11 +243,15 @@ export function QuoteModal({
       ? `\n✅ *Condição especial:* ${specialCondition}`
       : "";
 
+    const validityText = expiresAt
+      ? `\n📅 *Validade:* ${new Date(expiresAt + "T12:00:00").toLocaleDateString("pt-BR")}`
+      : "";
+
     let msg = DEFAULT_TEMPLATE
       .replace("{{nome}}", contactName || "cliente")
       .replace("{{itens}}", itemsText)
       .replace("{{total}}", fmt(total))
-      .replace("{{condicao}}", condText);
+      .replace("{{condicao}}", condText + validityText);
 
     if (discountAmount > 0) {
       msg = msg.replace("💰", `🎁 *Desconto:* -${fmt(discountAmount)}\n💰`);
@@ -196,16 +263,19 @@ export function QuoteModal({
 
   /* ─── Save quote ──────────────────────────────────────────── */
   const saveQuote = async (status: "draft" | "sent") => {
-    if (!accountId || !contactId) return null;
+    const targetContactId = resolvedContactId || contactId;
+    if (!accountId || !targetContactId) return null;
+    
     const { data, error } = await supabase.from("quotes").insert({
       account_id: accountId,
-      contact_id: contactId,
+      contact_id: targetContactId,
       status,
       total_value: total,
       discount_value: discountAmount,
       discount_type: discountType,
       special_condition: specialCondition || null,
       message_text: messageText,
+      expires_at: expiresAt || null,
       sent_at: status === "sent" ? new Date().toISOString() : null,
     }).select("id").single();
 
@@ -237,11 +307,23 @@ export function QuoteModal({
     setSending(true);
     try {
       const quoteId = await saveQuote("sent");
-      if (quoteId && onQuoteCreated) onQuoteCreated(quoteId);
+      if (!quoteId) throw new Error("Falha ao salvar orçamento");
 
-      // Open WhatsApp with the message
+      // Generate the public portal quote link
+      const portalLink = `${window.location.origin}/portal/orcamento/${quoteId}`;
+      const finalMessage = `${messageText}\n\n🔗 Visualize e aprove seu orçamento clicando aqui:\n${portalLink}`;
+
+      // Update message_text with the link
+      await supabase
+        .from("quotes")
+        .update({ message_text: finalMessage })
+        .eq("id", quoteId);
+
+      if (onQuoteCreated) onQuoteCreated(quoteId);
+
+      // Open WhatsApp with the final link-augmented message
       const phone = contactPhone.replace(/\D/g, "");
-      const waUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(messageText)}`;
+      const waUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(finalMessage)}`;
       window.open(waUrl, "_blank");
 
       toast.success("Orçamento registrado e WhatsApp aberto!");
@@ -435,6 +517,17 @@ export function QuoteModal({
                       value={specialCondition}
                       onChange={(e) => setSpecialCondition(e.target.value)}
                       className="h-8 text-xs"
+                    />
+                  </div>
+
+                  {/* Validity */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Validade do Orçamento (opcional)</Label>
+                    <input
+                      type="date"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      className="w-full rounded-xl border border-neutral-200 h-8 px-3 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                     />
                   </div>
 
