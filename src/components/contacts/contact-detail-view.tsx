@@ -39,6 +39,8 @@ import {
   Hourglass,
   MessageSquare,
   Clock,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { ProntuarioTab } from '@/components/contacts/prontuario-tab';
 import { EvolucaoTab } from '@/components/contacts/evolucao-tab';
@@ -98,6 +100,21 @@ export function ContactDetailView({
   // AI Summary
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAISummary, setLoadingAISummary] = useState(false);
+
+  // Financeiro tab
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+
+  // Form para registrar nova transação
+  const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [txDesc, setTxDesc] = useState('');
+  const [txCategory, setTxCategory] = useState('Procedimento');
+  const [txMethod, setTxMethod] = useState('pix');
+  const [txType, setTxType] = useState<'receita' | 'despesa'>('receita');
+  const [txValue, setTxValue] = useState('');
+  const [txStatus, setTxStatus] = useState('paid');
+  const [txDate, setTxDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [savingTransaction, setSavingTransaction] = useState(false);
 
   const fetchContact = useCallback(async () => {
     if (!contactId) return;
@@ -194,6 +211,18 @@ export function ContactDetailView({
     setLoadingTimeline(false);
   }, [contactId, supabase]);
 
+  const fetchTransactions = useCallback(async () => {
+    if (!contactId) return;
+    setLoadingTransactions(true);
+    const { data } = await supabase
+      .from('financial_transactions')
+      .select('*')
+      .eq('patient_id', contactId)
+      .order('date', { ascending: false });
+    if (data) setTransactions(data);
+    setLoadingTransactions(false);
+  }, [contactId, supabase]);
+
   const handleIARequest = async () => {
     if (!contactId) return;
     setLoadingAISummary(true);
@@ -234,6 +263,40 @@ export function ContactDetailView({
     }
   };
 
+  const handleSaveTransaction = async () => {
+    if (!contactId || !accountId || !txDesc.trim() || !txValue.trim()) {
+      toast.error('Preencha os campos obrigatórios.');
+      return;
+    }
+    setSavingTransaction(true);
+    try {
+      const { error } = await supabase.from('financial_transactions').insert({
+        clinic_id: accountId,
+        patient_id: contactId,
+        description: txDesc.trim(),
+        category: txCategory,
+        method: txMethod,
+        type: txType,
+        value: parseFloat(txValue),
+        status: txStatus,
+        date: txDate,
+        source: 'manual',
+      });
+      if (error) throw error;
+      toast.success('Transação registrada com sucesso!');
+      setTxDesc('');
+      setTxValue('');
+      setTxStatus('paid');
+      setShowTransactionForm(false);
+      await fetchTransactions();
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao salvar transação: ' + e.message);
+    } finally {
+      setSavingTransaction(false);
+    }
+  };
+
   useEffect(() => {
     if (open && contactId) {
       fetchContact();
@@ -242,9 +305,10 @@ export function ContactDetailView({
       fetchCustomFields();
       fetchDeals();
       fetchTimeline();
+      fetchTransactions();
       setAiSummary(null);
     }
-  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals, fetchTimeline]);
+  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals, fetchTimeline, fetchTransactions]);
 
   async function copyPhone() {
     if (!contact) return;
@@ -397,6 +461,19 @@ export function ContactDetailView({
       .slice(0, 2);
   }
 
+  // Calculos financeiros resumidos
+  const totalPaid = transactions
+    .filter((t) => t.type === 'receita' && t.status === 'paid')
+    .reduce((sum, t) => sum + Number(t.value), 0);
+
+  const totalPending = transactions
+    .filter((t) => t.type === 'receita' && t.status === 'pending')
+    .reduce((sum, t) => sum + Number(t.value), 0);
+
+  const totalOverdue = transactions
+    .filter((t) => t.type === 'receita' && t.status === 'overdue')
+    .reduce((sum, t) => sum + Number(t.value), 0);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -534,6 +611,12 @@ export function ContactDetailView({
                   className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
                   📈 Evolução
+                </TabsTrigger>
+                <TabsTrigger
+                  value="financeiro"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
+                >
+                  💵 Financeiro
                 </TabsTrigger>
                 <TabsTrigger
                   value="custom"
@@ -843,6 +926,229 @@ export function ContactDetailView({
                     ))
                   )}
                 </div>
+              </TabsContent>
+
+              {/* Prontuário Tab */}
+              <TabsContent value="prontuario" className="flex-1 overflow-y-auto px-4 py-4">
+                <ProntuarioTab patientId={contactId!} />
+              </TabsContent>
+
+              {/* Evolução Tab */}
+              <TabsContent value="evolucao" className="flex-1 overflow-y-auto px-4 py-4">
+                <EvolucaoTab patientId={contactId!} />
+              </TabsContent>
+
+              {/* Financeiro Tab */}
+              <TabsContent value="financeiro" className="flex-1 flex flex-col min-h-0 px-4 py-3">
+                {/* Financial overview stats */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="rounded-xl border border-border bg-card p-3 shadow-sm text-center">
+                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                      <CheckCircle className="size-3 text-emerald-500" /> Pago
+                    </p>
+                    <p className="text-sm font-black text-emerald-600">
+                      {formatCurrency(totalPaid, defaultCurrency)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3 shadow-sm text-center">
+                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                      <Clock className="size-3 text-amber-500" /> Pendente
+                    </p>
+                    <p className="text-sm font-black text-amber-600">
+                      {formatCurrency(totalPending, defaultCurrency)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3 shadow-sm text-center">
+                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                      <AlertCircle className="size-3 text-red-500" /> Atrasado
+                    </p>
+                    <p className="text-sm font-black text-red-600">
+                      {formatCurrency(totalOverdue, defaultCurrency)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Registrar nova transação action */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-500">
+                      Histórico Financeiro
+                    </h3>
+                    <button
+                      onClick={() => setShowTransactionForm(!showTransactionForm)}
+                      className="inline-flex items-center gap-1 h-7 rounded-lg border border-border bg-card hover:bg-muted/40 px-2.5 text-[10px] font-bold transition-all cursor-pointer"
+                    >
+                      <Plus className="size-3" />
+                      {showTransactionForm ? 'Cancelar' : 'Nova Transação'}
+                    </button>
+                  </div>
+
+                  {showTransactionForm && (
+                    <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.02] p-4 space-y-3">
+                      <p className="text-[10px] text-indigo-700 dark:text-indigo-400 font-black uppercase tracking-wider">
+                        💵 Registrar Novo Recebimento / Despesa
+                      </p>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Tipo</Label>
+                          <select
+                            value={txType}
+                            onChange={(e) => setTxType(e.target.value as 'receita' | 'despesa')}
+                            className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="receita">Receita (Entrada)</option>
+                            <option value="despesa">Despesa (Saída)</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Valor</Label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="0,00"
+                            value={txValue}
+                            onChange={(e) => setTxValue(e.target.value)}
+                            className="w-full rounded-lg bg-background border border-border px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-neutral-500 text-[10px] font-bold uppercase">Descrição</Label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Botox - 50U Testa"
+                          value={txDesc}
+                          onChange={(e) => setTxDesc(e.target.value)}
+                          className="w-full rounded-lg bg-background border border-border px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Categoria</Label>
+                          <select
+                            value={txCategory}
+                            onChange={(e) => setTxCategory(e.target.value)}
+                            className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="Procedimento">Procedimento</option>
+                            <option value="Consulta">Consulta</option>
+                            <option value="Retoque">Retoque</option>
+                            <option value="Pacote">Pacote</option>
+                            <option value="Outro">Outro</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Método</Label>
+                          <select
+                            value={txMethod}
+                            onChange={(e) => setTxMethod(e.target.value)}
+                            className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="pix">Pix</option>
+                            <option value="credito">Crédito</option>
+                            <option value="debito">Débito</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="transferencia">Transferência</option>
+                            <option value="boleto">Boleto</option>
+                            <option value="outro">Outro</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Status</Label>
+                          <select
+                            value={txStatus}
+                            onChange={(e) => setTxStatus(e.target.value)}
+                            className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="paid">Confirmado (Pago)</option>
+                            <option value="pending">Pendente</option>
+                            <option value="overdue">Atrasado</option>
+                            <option value="cancelled">Cancelado</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Data</Label>
+                          <input
+                            type="date"
+                            value={txDate}
+                            onChange={(e) => setTxDate(e.target.value)}
+                            className="w-full rounded-lg bg-background border border-border px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleSaveTransaction}
+                        disabled={savingTransaction}
+                        className="w-full h-8 rounded-lg text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                        style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+                      >
+                        {savingTransaction && <Loader2 className="size-3.5 animate-spin" />}
+                        Salvar Transação
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* List of transactions */}
+                <ScrollArea className="flex-1 pr-1">
+                  {loadingTransactions ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="size-5 animate-spin text-primary" />
+                    </div>
+                  ) : transactions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-8">Nenhuma movimentação financeira registrada.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {transactions.map((tx) => {
+                        const statusColors = {
+                          paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+                          pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+                          overdue: 'bg-red-500/10 text-red-600 border-red-500/20',
+                          cancelled: 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:border-neutral-800',
+                        };
+                        const currentStatusColor = statusColors[tx.status as 'paid'|'pending'|'overdue'|'cancelled'] || statusColors.pending;
+                        const isRevenue = tx.type === 'receita';
+
+                        return (
+                          <div
+                            key={tx.id}
+                            className="rounded-xl border border-border bg-card p-3 shadow-sm flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-foreground truncate">{tx.description}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                <span className={`inline-flex rounded px-1.5 py-0.5 text-[8px] font-black uppercase border ${currentStatusColor}`}>
+                                  {tx.status}
+                                </span>
+                                <span className="text-[9px] text-muted-foreground font-semibold">
+                                  {tx.category} · {tx.method}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className={`text-xs font-extrabold ${isRevenue ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {isRevenue ? '+' : '-'} {formatCurrency(tx.value, defaultCurrency)}
+                              </p>
+                              <span className="text-[9px] text-muted-foreground block mt-1 font-semibold">
+                                {new Date(tx.date).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
               {/* Custom Fields Tab */}

@@ -389,6 +389,25 @@ export default function AgendaPage() {
     fetchBirthdays();
   }, [fetchAppointments, fetchBirthdays]);
 
+  useEffect(() => {
+    const handleCreateAppt = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { contactId, contactName, contactPhone } = customEvent.detail;
+      setSelectedApptId(null);
+      setModalDefaultPatientId(contactId);
+      setModalDefaultPatientName(contactName);
+      setModalDefaultPatientPhone(contactPhone);
+      setModalDefaultDate(new Date().toISOString().split("T")[0]);
+      setModalDefaultType("consulta");
+      setModalOpen(true);
+    };
+
+    window.addEventListener("create-appointment", handleCreateAppt);
+    return () => {
+      window.removeEventListener("create-appointment", handleCreateAppt);
+    };
+  }, []);
+
   // Mini Month Picker Math
   const handlePickerPrevMonth = () => {
     if (pickerMonth === 0) {
