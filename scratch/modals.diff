@@ -1,0 +1,335 @@
+diff --git "a/c:\\Users\\SenetUser\\Downloads\\MARCELLE-20260617T162810Z-3-001\\MARCELLE\\lead-pluz\\web\\src\\components\\ui\\appointment-modal.tsx" "b/c:\\Users\\SenetUser\\Downloads\\MARCELLE-20260617T162810Z-3-001\\MARCELLE\\wacrm\\src\\components\\ui\\appointment-modal.tsx"
+index 5312e4b..7e0216f 100644
+--- "a/c:\\Users\\SenetUser\\Downloads\\MARCELLE-20260617T162810Z-3-001\\MARCELLE\\lead-pluz\\web\\src\\components\\ui\\appointment-modal.tsx"
++++ "b/c:\\Users\\SenetUser\\Downloads\\MARCELLE-20260617T162810Z-3-001\\MARCELLE\\wacrm\\src\\components\\ui\\appointment-modal.tsx"
+@@ -1,8 +1,8 @@
+ "use client";
+ 
+ import { useEffect, useState } from "react";
+-import { supabase } from "@/lib/supabase";
+-import { useAuthStore } from "@/hooks/useAuthStore";
++import { createClient } from "@/lib/supabase/client";
++import { useAuth } from "@/hooks/use-auth";
+ import {
+   Dialog,
+   DialogContent,
+@@ -77,7 +77,10 @@ export function AppointmentModal({
+   defaultDate,
+   onSave,
+ }: AppointmentModalProps) {
+-  const { profile } = useAuthStore();
++  const supabase = createClient();
++  const { profile, accountId, user } = useAuth();
++  const clinicId = accountId;
++  const [originalStatus, setOriginalStatus] = useState<string>("");
+   const [patients, setPatients] = useState<PatientOption[]>([]);
+   const [staff, setStaff] = useState<StaffOption[]>([]);
+   const [procedures, setProcedures] = useState<any[]>([]);
+@@ -184,7 +187,6 @@ export function AppointmentModal({
+ 
+     const loadOptions = async () => {
+       try {
+-        const clinicId = profile.clinic_id;
+ 
+         // Fetch patients (include phone & email for search cards)
+         const { data: ptsData } = await supabase
+@@ -235,7 +237,7 @@ export function AppointmentModal({
+     if (!appointmentId) {
+       // Pre-fill fields for creation
+       setPatientId("");
+-      setProfessionalId(profile?.user_id || "");
++      setProfessionalId(user?.id || "");
+       setProcedureName("");
+       setRoomId("");
+       setStatus("provisional");
+@@ -526,7 +528,7 @@ export function AppointmentModal({
+             const { data: prof } = await supabase
+               .from("clinic_users")
+               .select("name")
+-              .eq("user_id", lastAppt.professional_id)
++              .eq("id", lastAppt.professional_id)
+               .maybeSingle();
+             if (prof) {
+               lastProfessionalName = prof.name;
+@@ -571,7 +573,7 @@ export function AppointmentModal({
+     }
+ 
+     try {
+-      const clinicId = profile.clinic_id;
++      const clinicId = accountId;
+ 
+       if (appointmentId) {
+         // Update appointment
+@@ -605,14 +607,56 @@ export function AppointmentModal({
+           event_type: "appointment",
+           title: `Agendamento atualizado para [${statusMap[status] || status}]`,
+           payload: {
+-            updated_by: profile.name,
++            updated_by: (profile?.full_name || "Sistema"),
+             start_time: startObj.toISOString(),
+           },
+         });
+ 
++        // Trigger notifications via API
++        const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
++        const formattedDate = startObj.toLocaleDateString("pt-BR");
++        const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
++
++        let eventType = "agendamento_alterado";
++        if (status !== originalStatus) {
++          if (status === "confirmed") {
++            eventType = "agendamento_confirmado";
++          } else if (status === "cancelled") {
++            eventType = "agendamento_cancelado";
++          }
++        }
++
++        fetch("/api/whatsapp/trigger", {
++          method: "POST",
++          headers: { "Content-Type": "application/json" },
++          body: JSON.stringify({
++            event_type: eventType,
++            appointment_id: appointmentId,
++            patient_id: patientId,
++            metadata: {
++              paciente: selectedPatientInfo?.name || "",
++              phone: selectedPatientInfo?.phone || "",
++              data: formattedDate,
++              hora: formattedTime,
++              profissional: professionalName,
++              procedimento: procedureName,
++            },
++          }),
++        }).catch((err) => console.error("Error triggering appointment update/status:", err));
++
++        // Trigger Google Calendar sync
++        fetch("/api/integrations/google/sync", {
++          method: "POST",
++          headers: { "Content-Type": "application/json" },
++          body: JSON.stringify({
++            action: "update",
++            appointmentId: appointmentId,
++          }),
++        }).catch((err) => console.error("Error syncing Google Calendar update:", err));
++
+       } else {
+         // Create appointment
+-        const { error: createErr } = await supabase
++        const { data: newAppt, error: createErr } = await supabase
+           .from("appointments")
+           .insert({
+             clinic_id: clinicId,
+@@ -624,7 +668,9 @@ export function AppointmentModal({
+             notes,
+             type: procedureName || null,
+             room_id: roomId || null,
+-          });
++          })
++          .select("id")
++          .single();
+ 
+         if (createErr) throw createErr;
+ 
+@@ -634,10 +680,45 @@ export function AppointmentModal({
+           event_type: "appointment",
+           title: `Nova consulta agendada para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+           payload: {
+-            created_by: profile.name,
++            created_by: (profile?.full_name || "Sistema"),
+             status,
+           },
+         });
++
++        // Trigger created notification via API
++        if (newAppt?.id) {
++          const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
++          const formattedDate = startObj.toLocaleDateString("pt-BR");
++          const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
++
++          fetch("/api/whatsapp/trigger", {
++            method: "POST",
++            headers: { "Content-Type": "application/json" },
++            body: JSON.stringify({
++              event_type: "agendamento_criado",
++              appointment_id: newAppt.id,
++              patient_id: patientId,
++              metadata: {
++                paciente: selectedPatientInfo?.name || "",
++                phone: selectedPatientInfo?.phone || "",
++                data: formattedDate,
++                hora: formattedTime,
++                profissional: professionalName,
++                procedimento: procedureName,
++              },
++            }),
++          }).catch((err) => console.error("Error triggering appointment_created:", err));
++
++          // Trigger Google Calendar sync
++          fetch("/api/integrations/google/sync", {
++            method: "POST",
++            headers: { "Content-Type": "application/json" },
++            body: JSON.stringify({
++              action: "create",
++              appointmentId: newAppt.id,
++            }),
++          }).catch((err) => console.error("Error syncing Google Calendar create:", err));
++        }
+       }
+ 
+       // Send WhatsApp message if checked
+@@ -648,7 +729,7 @@ export function AppointmentModal({
+           event_type: "whatsapp",
+           title: "Confirmação de agendamento enviada automaticamente via WhatsApp",
+           payload: {
+-            sent_by: profile.name,
++            sent_by: (profile?.full_name || "Sistema"),
+             phone: selectedPatientInfo?.phone,
+             message: `Olá! Seu agendamento foi realizado para ${startObj.toLocaleDateString("pt-BR")} às ${startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Status: ${statusName}.`,
+           },
+@@ -693,7 +774,7 @@ export function AppointmentModal({
+           event_type: "appointment",
+           title: "Agendamento excluído da agenda",
+           payload: {
+-            deleted_by: profile.name,
++            deleted_by: (profile?.full_name || "Sistema"),
+           },
+         });
+       }
+@@ -723,7 +804,7 @@ export function AppointmentModal({
+         const { data: newDoc, error: docErr } = await supabase
+           .from("documents")
+           .insert({
+-            clinic_id: profile.clinic_id,
++            clinic_id: clinicId,
+             patient_id: patientId,
+             title: template.name,
+             type: template.type || "contrato",
+@@ -745,7 +826,7 @@ export function AppointmentModal({
+           title: `Documento [${template.name}] enviado via WhatsApp para assinatura`,
+           payload: {
+             template_id: template.id,
+-            sent_by: profile.name,
++            sent_by: (profile?.full_name || "Sistema"),
+             public_token: generatedToken,
+           },
+         });
+@@ -757,7 +838,7 @@ export function AppointmentModal({
+           event_type: "whatsapp",
+           title: `Link de assinatura enviado via WhatsApp`,
+           payload: {
+-            sent_by: profile.name,
++            sent_by: (profile?.full_name || "Sistema"),
+             phone: selectedPatientInfo?.phone,
+             message: `Olá! Por favor, assine digitalmente o documento "${template.name}" acessando: ${portalUrl}`,
+           },
+@@ -826,7 +907,7 @@ export function AppointmentModal({
+       const { data: newDoc, error: docErr } = await supabase
+         .from("documents")
+         .insert({
+-          clinic_id: profile.clinic_id,
++          clinic_id: clinicId,
+           patient_id: patientId,
+           title: title,
+           type: aiDocType,
+@@ -848,7 +929,7 @@ export function AppointmentModal({
+         title: `Documento de IA [${title}] gerado e enviado para assinatura`,
+         payload: {
+           document_id: newDoc.id,
+-          sent_by: profile.name,
++          sent_by: (profile?.full_name || "Sistema"),
+           public_token: generatedToken,
+         },
+       });
+@@ -860,7 +941,7 @@ export function AppointmentModal({
+         event_type: "whatsapp",
+         title: `Link de assinatura IA enviado via WhatsApp`,
+         payload: {
+-          sent_by: profile.name,
++          sent_by: (profile?.full_name || "Sistema"),
+           phone: selectedPatientInfo?.phone,
+           message: `Olá! Criamos o seu documento personalizado de "${aiDocProcedure}". Por favor, revise e assine digitalmente aqui: ${portalUrl}`,
+         },
+@@ -900,9 +981,9 @@ export function AppointmentModal({
+       const { data: newEv, error: evErr } = await supabase
+         .from("clinical_evolutions")
+         .insert({
+-          clinic_id: profile.clinic_id,
++          clinic_id: clinicId,
+           patient_id: patientId,
+-          professional_id: profile.user_id,
++          professional_id: user?.id,
+           content: newEvolContent.trim(),
+           signed: evolSigned,
+           shared: evolShared,
+@@ -918,7 +999,7 @@ export function AppointmentModal({
+         event_type: "evolution_added",
+         title: evolSigned ? "Nova evolução clínica assinada" : "Evolução adicionada como rascunho",
+         payload: {
+-          professional: profile.name,
++          professional: (profile?.full_name || "Sistema"),
+           signed: evolSigned,
+         },
+       });
+@@ -972,7 +1053,7 @@ export function AppointmentModal({
+       const { error: evalErr } = await supabase
+         .from("body_evaluations")
+         .insert({
+-          clinic_id: profile.clinic_id,
++          clinic_id: clinicId,
+           patient_id: patientId,
+           evaluation_date: evalDate,
+           weight: w || null,
+@@ -1002,7 +1083,7 @@ export function AppointmentModal({
+           weight: w,
+           fat_percentage: parseFloat(evalFatPercentage) || null,
+           imc: calculatedImc,
+-          created_by: profile.name,
++          created_by: (profile?.full_name || "Sistema"),
+         },
+       });
+ 
+@@ -1057,7 +1138,7 @@ export function AppointmentModal({
+       const { data: existing } = await supabase
+         .from("patients")
+         .select("id")
+-        .eq("clinic_id", profile.clinic_id)
++        .eq("clinic_id", clinicId)
+         .eq("phone", cleanPhone)
+         .maybeSingle();
+ 
+@@ -1069,7 +1150,7 @@ export function AppointmentModal({
+       const { data: newPatient, error: insertErr } = await supabase
+         .from("patients")
+         .insert({
+-          clinic_id: profile.clinic_id,
++          clinic_id: clinicId,
+           name: newPatientName.trim(),
+           phone: cleanPhone,
+           email: newPatientEmail.trim() || null,
+@@ -1089,7 +1170,7 @@ export function AppointmentModal({
+           event_type: "lead_created",
+           title: `Paciente cadastrado no CRM via formulário de agendamento`,
+           payload: {
+-            created_by: profile.name,
++            created_by: (profile?.full_name || "Sistema"),
+           },
+         });
+       }
+@@ -1250,7 +1331,7 @@ export function AppointmentModal({
+               </DialogHeader>
+ 
+               {newPatientError && (
+-                <Alert variant="error" className="py-2">
++                <Alert variant="destructive" className="py-2">
+                   <AlertDescription className="text-xs">{newPatientError}</AlertDescription>
+                 </Alert>
+               )}
+@@ -1490,7 +1571,7 @@ export function AppointmentModal({
+               {/* Main Tab Area (Left - 65% width) */}
+               <div className="flex-1 overflow-y-auto p-6 bg-white min-w-0">
+                 {error && (
+-                  <Alert variant="error" className="mb-4">
++                  <Alert variant="destructive" className="mb-4">
+                     <AlertDescription className="text-xs">{error}</AlertDescription>
+                   </Alert>
+                 )}

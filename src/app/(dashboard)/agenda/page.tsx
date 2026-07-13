@@ -9,6 +9,12 @@ import { AppointmentDetailModal } from "@/components/agenda/appointment-detail-m
 import { QuoteModal } from "@/components/quotes/quote-modal";
 import { WaitlistDrawer } from "@/components/ui/waitlist-drawer";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeftIcon,
@@ -21,6 +27,7 @@ import {
   CakeIcon,
   ClipboardList,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 
 interface Appointment {
@@ -57,6 +64,15 @@ interface FilterOption {
 
 export default function AgendaPage() {
   const supabase = useMemo(() => createClient(), []);
+  const getStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case "confirmed": return "#10b981";
+      case "attended": return "#3b82f6";
+      case "cancelled": return "#ef4444";
+      case "no_show": return "#f97316";
+      default: return "#f59e0b";
+    }
+  }, []);
   const { accountId } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -704,9 +720,9 @@ export default function AgendaPage() {
                         <span 
                           className="text-[8px] px-1.5 py-0.2 rounded-md font-black uppercase tracking-wider shrink-0"
                           style={{
-                            backgroundColor: `color-mix(in srgb, ${styles.dotColor} 12%, transparent)`,
-                            color: styles.dotColor,
-                            border: `1px solid color-mix(in srgb, ${styles.dotColor} 25%, transparent)`
+                            backgroundColor: `color-mix(in srgb, ${getStatusColor(appt.status)} 12%, transparent)`,
+                            color: getStatusColor(appt.status),
+                            border: `1px solid color-mix(in srgb, ${getStatusColor(appt.status)} 25%, transparent)`
                           }}
                         >
                           {(() => {
@@ -990,15 +1006,32 @@ export default function AgendaPage() {
                 Lista de espera
               </Button>
 
-              <select
-                value={calendarView}
-                onChange={(e) => setCalendarView(e.target.value as any)}
-                className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 font-semibold cursor-pointer shadow-xs"
-              >
-                <option value="dia">📅 Dia</option>
-                <option value="semana">📆 Semana</option>
-                <option value="mes">🗓️ Mês</option>
-              </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none font-semibold cursor-pointer shadow-xs flex items-center gap-1.5">
+                  {calendarView === "dia" ? "📅 Dia" : calendarView === "semana" ? "📆 Semana" : "🗓️ Mês"}
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl border border-neutral-200 bg-white shadow-md p-1 min-w-[110px]">
+                  <DropdownMenuItem
+                    onClick={() => setCalendarView("dia")}
+                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
+                  >
+                    📅 Dia
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setCalendarView("semana")}
+                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
+                  >
+                    📆 Semana
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setCalendarView("mes")}
+                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
+                  >
+                    🗓️ Mês
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -1179,9 +1212,9 @@ export default function AgendaPage() {
                                 <span 
                                   className="text-[7px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide shrink-0"
                                   style={{
-                                    backgroundColor: `color-mix(in srgb, ${styles.dotColor} 15%, transparent)`,
-                                    color: styles.dotColor,
-                                    border: `1px solid color-mix(in srgb, ${styles.dotColor} 30%, transparent)`
+                                    backgroundColor: `color-mix(in srgb, ${getStatusColor(appt.status)} 15%, transparent)`,
+                                    color: getStatusColor(appt.status),
+                                    border: `1px solid color-mix(in srgb, ${getStatusColor(appt.status)} 30%, transparent)`
                                   }}
                                 >
                                   {(() => {
@@ -1268,7 +1301,7 @@ export default function AgendaPage() {
         {/* Plus FAB Button */}
         <button
           onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-          className={`h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all duration-200 ${isFabMenuOpen ? 'rotate-45 bg-neutral-800' : ''}`}
+          className={`h-12 w-12 shrink-0 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all duration-200 ${isFabMenuOpen ? 'rotate-45 bg-neutral-800' : ''}`}
           title="Novo Agendamento"
         >
           <PlusIcon className="h-6 w-6" />
@@ -1277,10 +1310,10 @@ export default function AgendaPage() {
         {/* Copilot FAB Button — same size, blue gradient */}
         <button
           onClick={triggerCopilot}
-          className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-700 text-white flex items-center justify-center shadow-lg hover:shadow-indigo-500/30 hover:from-blue-400 hover:to-indigo-600 active:scale-95 transition-all duration-200"
-          title="Abrir Copiloto IA"
+          className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-[#2585fc] to-[#003bbd] text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/30 hover:opacity-95 active:scale-95 transition-all duration-200"
+          title="Pedir à LIA"
         >
-          <SparklesIcon className="h-5 w-5" />
+          <SparklesIcon className="h-6 w-6 text-blue-100" />
         </button>
       </div>
 

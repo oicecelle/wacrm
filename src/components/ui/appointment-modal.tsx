@@ -38,11 +38,19 @@ import {
   UserPlusIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  PlusIcon
+  PlusIcon,
+  Camera
 } from "lucide-react";
 import { generateAIDocument } from "@/app/actions/ai-actions";
 import { cn } from "@/lib/utils";
 import { QuoteModal } from "@/components/quotes/quote-modal";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { uploadAccountMedia } from "@/lib/storage/upload-media";
 
 interface AppointmentModalProps {
@@ -415,11 +423,52 @@ export function AppointmentModal({
       setLoadingDetails(true);
       try {
         // 1. Patient basic profile
-        const { data: patient } = await supabase
+        let { data: patient } = await supabase
           .from("patients")
           .select("*")
           .eq("id", patientId)
-          .single();
+          .maybeSingle();
+
+        if (!patient) {
+          // Check if contact exists
+          const { data: contact } = await supabase
+            .from("contacts")
+            .select("*")
+            .eq("id", patientId)
+            .maybeSingle();
+
+          if (contact) {
+            // Auto register them as patient to avoid RLS/FK errors and populate details
+            const cleanPhone = contact.phone ? contact.phone.replace(/\D/g, "") : "";
+            const { data: newPt } = await supabase
+              .from("patients")
+              .insert({
+                id: contact.id,
+                clinic_id: clinicId,
+                name: contact.name,
+                phone: cleanPhone,
+                email: contact.email || null,
+                lead_score: 50,
+                tags: ["lead-convertido"],
+                stage: "novo"
+              })
+              .select("*")
+              .maybeSingle();
+            
+            if (newPt) {
+              patient = newPt;
+              // Log to timeline
+              await supabase.from("patient_timeline").insert({
+                patient_id: contact.id,
+                event_type: "lead_created",
+                title: "Lead convertido em paciente via agendamento",
+                payload: {
+                  created_by: profileName
+                }
+              });
+            }
+          }
+        }
         setSelectedPatientInfo(patient);
 
         // Pre-fill procedure if AI docs is empty
@@ -1532,7 +1581,8 @@ export function AppointmentModal({
         "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0",
         (apptType === "evento" || apptType === "bloqueio") 
           ? "sm:max-w-md p-6 rounded-2xl"
-          : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl")
+          : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"),
+        quoteModalOpen && "hidden"
       )}>
         {loading ? (
           <div className="flex flex-1 items-center justify-center py-20 min-h-[300px]">
@@ -2041,41 +2091,41 @@ export function AppointmentModal({
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-[#0B1528] text-white p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-blue-900/40">
+            <header className="bg-slate-50 text-slate-900 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-200">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
-                <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-blue-400 text-white flex items-center justify-center text-lg font-black shadow-inner shrink-0">
+                <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-lg font-black shadow-md shrink-0">
                   {firstName.charAt(0).toUpperCase()}
                   {lastName.charAt(0).toUpperCase()}
                 </div>
 
                 <div className="space-y-0.5 text-left min-w-0">
                   <div className="flex items-center flex-wrap gap-2">
-                    <h2 className="text-lg font-extrabold tracking-tight truncate">
-                      {firstName} <span className="font-medium text-neutral-300">{lastName}</span>
+                    <h2 className="text-lg font-extrabold tracking-tight truncate text-slate-900">
+                      {firstName} <span className="font-medium text-slate-500">{lastName}</span>
                     </h2>
                     
                     {/* Documents Alert status badge */}
                     {pendingDocsCount > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[10px] text-rose-400 font-bold border border-rose-500/20">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[10px] text-rose-600 font-bold border border-rose-500/20">
                         <BadgeAlertIcon className="h-3 w-3" />
                         {pendingDocsCount} Assinatura{pendingDocsCount > 1 ? "s" : ""} Pendente{pendingDocsCount > 1 ? "s" : ""}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] text-emerald-400 font-bold border border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] text-emerald-600 font-bold border border-emerald-500/20">
                         <CheckCircle2Icon className="h-3 w-3" />
                         Tudo Assinado
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-neutral-400 font-semibold flex-wrap">
+                  <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold flex-wrap">
                     {selectedPatientInfo?.phone && (
                       <a
                         href={`https://wa.me/${selectedPatientInfo.phone.replace(/\D/g, "")}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="hover:text-emerald-400 transition-colors flex items-center gap-1 text-emerald-500"
+                        className="hover:text-emerald-600 transition-colors flex items-center gap-1 text-emerald-600"
                         title="Iniciar conversa no WhatsApp"
                       >
                         <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
@@ -2085,7 +2135,7 @@ export function AppointmentModal({
                       </a>
                     )}
                     {selectedPatientInfo?.email && (
-                      <span className="truncate max-w-[180px]">{selectedPatientInfo.email}</span>
+                      <span className="truncate max-w-[180px] text-slate-500">{selectedPatientInfo.email}</span>
                     )}
                   </div>
                 </div>
@@ -2110,7 +2160,7 @@ export function AppointmentModal({
                       className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all ${
                         isActive
                           ? "bg-blue-600 text-white shadow-md"
-                          : "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -2188,54 +2238,72 @@ export function AppointmentModal({
                                 className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
                               />
                             </div>
-                            <div className="space-y-1 text-left">
+                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
-                              <input
-                                id="det-start"
-                                type="time"
-                                required
-                                disabled={saving}
-                                value={startTime.slice(11, 16)}
-                                onChange={(e) => {
+                              <Select
+                                value={startTime.slice(11, 16) || "09:00"}
+                                onValueChange={(val) => {
                                   const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                                  setStartTime(`${d}T${e.target.value}`);
+                                  setStartTime(`${d}T${val}`);
                                 }}
-                                className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
-                              />
+                                disabled={saving}
+                              >
+                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                  {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"].map((t) => (
+                                    <SelectItem key={t} value={t} className="rounded-lg text-xs">
+                                      {t}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Fim *</Label>
-                              <input
-                                id="det-end"
-                                type="time"
-                                required
-                                disabled={saving}
-                                value={endTime.slice(11, 16)}
-                                onChange={(e) => {
+                              <Select
+                                value={endTime.slice(11, 16) || "10:00"}
+                                onValueChange={(val) => {
                                   const d = endTime.slice(0, 10) || startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                                  setEndTime(`${d}T${e.target.value}`);
+                                  setEndTime(`${d}T${val}`);
                                 }}
-                                className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
-                              />
+                                disabled={saving}
+                              >
+                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                  {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"].map((t) => (
+                                    <SelectItem key={t} value={t} className="rounded-lg text-xs">
+                                      {t}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
 
                           {/* Recorrência */}
                           <div className="space-y-1 text-left">
                             <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Recorrência</Label>
-                            <select
-                              value={recurrence}
-                              onChange={(e) => setRecurrence(e.target.value as any)}
+                            <Select
+                              value={recurrence || "none"}
+                              onValueChange={(val) => setRecurrence(val as any)}
                               disabled={saving}
-                              className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
                             >
-                              <option value="none">Não se repete</option>
-                              <option value="daily">Diariamente</option>
-                              <option value="weekly">Semanalmente</option>
-                              <option value="biweekly">Quinzenalmente</option>
-                              <option value="monthly">Mensalmente</option>
-                              <option value="custom">Personalizado...</option>
-                            </select>
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl bg-white border border-neutral-200">
+                                <SelectItem value="none" className="rounded-lg text-xs">Não se repete</SelectItem>
+                                <SelectItem value="daily" className="rounded-lg text-xs">Diariamente</SelectItem>
+                                <SelectItem value="weekly" className="rounded-lg text-xs">Semanalmente</SelectItem>
+                                <SelectItem value="biweekly" className="rounded-lg text-xs">Quinzenalmente</SelectItem>
+                                <SelectItem value="monthly" className="rounded-lg text-xs">Mensalmente</SelectItem>
+                                <SelectItem value="custom" className="rounded-lg text-xs">Personalizado...</SelectItem>
+                              </SelectContent>
+                            </Select>
                             {recurrence === "custom" && (
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="text-xs text-neutral-500">Repetir</span>
