@@ -45,7 +45,7 @@ export function CopilotChat() {
     if (open && !minimized) inputRef.current?.focus();
   }, [open, minimized]);
 
-  const handleOpen = () => {
+  const handleOpen = useCallback(() => {
     setOpen(true);
     setMinimized(false);
     if (messages.length === 0) {
@@ -54,7 +54,17 @@ export function CopilotChat() {
         content: "Olá! Sou o Copiloto do LeadPluz 🚀\n\nPosso te ajudar a agendar, buscar leads, criar lembretes, atualizar o CRM e muito mais. É só me pedir!",
       }]);
     }
-  };
+  }, [messages.length]);
+
+  useEffect(() => {
+    const handleOpenCopilot = () => {
+      handleOpen();
+    };
+    window.addEventListener("open-copilot", handleOpenCopilot);
+    return () => {
+      window.removeEventListener("open-copilot", handleOpenCopilot);
+    };
+  }, [handleOpen]);
 
   const handleSend = async (text?: string) => {
     const msg = (text || input).trim();
@@ -98,10 +108,10 @@ export function CopilotChat() {
         onClick={handleOpen}
         id="copilot-open-btn"
         aria-label="Abrir Copiloto"
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-2xl hover:scale-110 transition-transform active:scale-95 group"
+        className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#2585fc] to-[#003bbd] text-white shadow-lg hover:shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-200 group"
       >
-        <SparklesIcon className="h-6 w-6 group-hover:rotate-12 transition-transform" />
-        <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-400 border-2 border-white animate-pulse" />
+        <SparklesIcon className="h-5.5 w-5.5 group-hover:rotate-12 transition-transform" />
+        <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 border-2 border-white animate-pulse" />
       </button>
     );
   }

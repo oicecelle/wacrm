@@ -13,6 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   PlusIcon,
@@ -180,31 +187,43 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
               {/* Select Patient */}
               <div className="space-y-1">
                 <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Paciente *</Label>
-                <select
-                  value={selectedPatientId}
-                  onChange={(e) => setSelectedPatientId(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9 font-medium cursor-pointer"
+                <Select
+                  value={selectedPatientId || "none"}
+                  onValueChange={(val) => setSelectedPatientId(val === "none" || val === null ? "" : val)}
                 >
-                  <option value="">Selecione o paciente...</option>
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                    <SelectValue placeholder="Selecione o paciente..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                    <SelectItem value="none" className="rounded-lg text-xs">Selecione o paciente...</SelectItem>
+                    {patients.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="rounded-lg text-xs">
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Select Professional */}
               <div className="space-y-1">
                 <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional Desejado</Label>
-                <select
-                  value={selectedStaffId}
-                  onChange={(e) => setSelectedStaffId(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9 font-medium cursor-pointer"
+                <Select
+                  value={selectedStaffId || "none"}
+                  onValueChange={(val) => setSelectedStaffId(val === "none" || val === null ? "" : val)}
                 >
-                  <option value="">Qualquer profissional...</option>
-                  {staff.map(s => (
-                    <option key={s.user_id} value={s.user_id}>{s.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                    <SelectValue placeholder="Qualquer profissional..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                    <SelectItem value="none" className="rounded-lg text-xs">Qualquer profissional...</SelectItem>
+                    {staff.map(s => (
+                      <SelectItem key={s.user_id} value={s.user_id} className="rounded-lg text-xs">
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Procedure */}

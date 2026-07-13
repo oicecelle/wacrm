@@ -55,6 +55,172 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { uploadAccountMedia } from "@/lib/storage/upload-media";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
+const TIME_SLOTS = [
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", 
+  "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
+];
+
+function RoundedDatePicker({ 
+  value, 
+  onChange, 
+  disabled 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const parsedDate = value ? new Date(value + "T12:00:00") : new Date();
+  const [currentMonth, setCurrentMonth] = useState(parsedDate.getMonth());
+  const [currentYear, setCurrentYear] = useState(parsedDate.getFullYear());
+  
+  useEffect(() => {
+    if (value) {
+      const d = new Date(value + "T12:00:00");
+      setCurrentMonth(d.getMonth());
+      setCurrentYear(d.getFullYear());
+    }
+  }, [value]);
+
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  const weekdayInitials = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+  const getDaysInMonth = (month: number, year: number) => {
+    const date = new Date(year, month, 1);
+    const days = [];
+    const firstDayOfWeek = date.getDay();
+    const prevMonth = month === 0 ? 11 : month - 1;
+    const prevYear = month === 0 ? year - 1 : year;
+    const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+    
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(prevYear, prevMonth, daysInPrevMonth - i),
+        isCurrentMonth: false
+      });
+    }
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true
+      });
+    }
+    
+    const totalCells = 42;
+    const nextMonth = month === 11 ? 0 : month + 1;
+    const nextYear = month === 11 ? year + 1 : year;
+    const remaining = totalCells - days.length;
+    for (let i = 1; i <= remaining; i++) {
+      days.push({
+        date: new Date(nextYear, nextMonth, i),
+        isCurrentMonth: false
+      });
+    }
+    
+    return days;
+  };
+
+  const cells = getDaysInMonth(currentMonth, currentYear);
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const displayValue = value ? new Date(value + "T12:00:00").toLocaleDateString("pt-BR") : "Selecione o dia...";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        disabled={disabled}
+        className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
+      >
+        <span>{displayValue}</span>
+        <CalendarDaysIcon className="h-4 w-4 text-neutral-400 shrink-0" />
+      </PopoverTrigger>
+      <PopoverContent className="rounded-2xl bg-white border border-neutral-200 p-4 shadow-xl w-64 text-xs z-50">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-extrabold text-neutral-800 capitalize">
+            {monthNames[currentMonth]} {currentYear}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-600 transition-colors cursor-pointer"
+            >
+              <ChevronRightIcon className="h-4 w-4 rotate-180" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-600 transition-colors cursor-pointer"
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-neutral-400">
+          {weekdayInitials.map((initial, i) => (
+            <div key={i}>{initial}</div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {cells.map((cell, idx) => {
+            const cellDateStr = cell.date.toISOString().slice(0, 10);
+            const isSelected = cellDateStr === value;
+            const isToday = cell.date.toDateString() === new Date().toDateString();
+            
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  onChange(cellDateStr);
+                  setOpen(false);
+                }}
+                className={`h-7 w-7 rounded-full flex items-center justify-center relative font-semibold transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-blue-600 text-white font-extrabold shadow-sm"
+                    : isToday
+                    ? "border border-blue-600 text-blue-600"
+                    : cell.isCurrentMonth
+                    ? "text-neutral-700 hover:bg-neutral-100"
+                    : "text-neutral-300 hover:bg-neutral-50"
+                }`}
+              >
+                {cell.date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface AppointmentModalProps {
   open: boolean;
@@ -481,9 +647,21 @@ export function AppointmentModal({
             .maybeSingle();
 
           if (contact) {
-            // Auto register them as patient to avoid RLS/FK errors and populate details
+            // Set contact details immediately to avoid blank name/number in UI
+            patient = {
+              id: contact.id,
+              clinic_id: clinicId || "",
+              name: contact.name,
+              phone: contact.phone || "",
+              email: contact.email || null,
+              lead_score: 50,
+              tags: ["lead-convertido"],
+              stage: "novo"
+            };
+
+            // Attempt to register them as a patient in Supabase (async, background)
             const cleanPhone = contact.phone ? contact.phone.replace(/\D/g, "") : "";
-            const { data: newPt } = await supabase
+            supabase
               .from("patients")
               .insert({
                 id: contact.id,
@@ -496,20 +674,28 @@ export function AppointmentModal({
                 stage: "novo"
               })
               .select("*")
-              .maybeSingle();
-            
-            if (newPt) {
-              patient = newPt;
-              // Log to timeline
-              await supabase.from("patient_timeline").insert({
-                patient_id: contact.id,
-                event_type: "lead_created",
-                title: "Lead convertido em paciente via agendamento",
-                payload: {
-                  created_by: profileName
+              .then(async ({ data: newPt, error: insertErr }) => {
+                if (insertErr) {
+                  console.error("Error creating patient in background:", insertErr);
+                  return;
+                }
+                if (newPt) {
+                  setSelectedPatientInfo(newPt);
+                  // Log to timeline
+                  try {
+                    await supabase.from("patient_timeline").insert({
+                      patient_id: contact.id,
+                      event_type: "lead_created",
+                      title: "Lead convertido em paciente via agendamento",
+                      payload: {
+                        created_by: profileName
+                      }
+                    });
+                  } catch (timelineErr) {
+                    console.error("Error inserting to timeline:", timelineErr);
+                  }
                 }
               });
-            }
           }
         }
         setSelectedPatientInfo(patient);
@@ -1722,16 +1908,20 @@ Qualquer dúvida, estou à disposição! 😊`;
       <div className="space-y-3 text-left">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Métrica do Gráfico de Progresso</label>
-          <select
+          <Select
             value={selectedChartMetric}
-            onChange={(e) => setSelectedChartMetric(e.target.value as any)}
-            className="text-xs rounded-lg border border-neutral-200 bg-white px-2 py-1 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            onValueChange={(val) => setSelectedChartMetric(val as any)}
           >
-            <option value="weight">Peso (kg)</option>
-            <option value="fat_percentage">Gordura (%)</option>
-            <option value="waist">Cintura (cm)</option>
-            <option value="hip">Quadril (cm)</option>
-          </select>
+            <SelectTrigger className="rounded-lg border border-neutral-200 bg-white h-8 px-2 text-xs font-semibold text-neutral-800 shadow-xs focus:ring-1 focus:ring-blue-500">
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white border border-neutral-200">
+              <SelectItem value="weight" className="rounded-lg text-xs">Peso (kg)</SelectItem>
+              <SelectItem value="fat_percentage" className="rounded-lg text-xs">Gordura (%)</SelectItem>
+              <SelectItem value="waist" className="rounded-lg text-xs">Cintura (cm)</SelectItem>
+              <SelectItem value="hip" className="rounded-lg text-xs">Quadril (cm)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="bg-white border border-neutral-100 rounded-xl p-3 shadow-inner overflow-visible">
@@ -1830,7 +2020,7 @@ Qualquer dúvida, estou à disposição! 😊`;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
-        "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 text-[13px] font-medium",
+        "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 text-xs font-medium",
         (apptType === "evento" || apptType === "bloqueio") 
           ? "sm:max-w-md p-6 rounded-2xl"
           : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"),
@@ -1882,28 +2072,60 @@ Qualquer dúvida, estou à disposição! 😊`;
               </div>
 
               {/* Times */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="evt-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
-                  <Input
-                    id="evt-start"
-                    type="datetime-local"
-                    required
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1 text-left">
+                  <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
+                  <RoundedDatePicker
+                    value={startTime.slice(0, 10)}
+                    onChange={(dayVal) => {
+                      const sTime = startTime.slice(11, 16) || "09:00";
+                      const eTime = endTime.slice(11, 16) || "10:00";
+                      setStartTime(`${dayVal}T${sTime}`);
+                      setEndTime(`${dayVal}T${eTime}`);
+                    }}
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="evt-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Término *</Label>
-                  <Input
-                    id="evt-end"
-                    type="datetime-local"
-                    required
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
-                  />
+                <div className="space-y-1 text-left">
+                  <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
+                  <Select
+                    value={startTime.slice(11, 16) || "09:00"}
+                    onValueChange={(val) => {
+                      const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                      setStartTime(`${d}T${val}`);
+                    }}
+                  >
+                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                      {TIME_SLOTS.map((t) => (
+                        <SelectItem key={t} value={t} className="rounded-lg text-xs">
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 text-left">
+                  <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Fim *</Label>
+                  <Select
+                    value={endTime.slice(11, 16) || "10:00"}
+                    onValueChange={(val) => {
+                      const d = endTime.slice(0, 10) || startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                      setEndTime(`${d}T${val}`);
+                    }}
+                  >
+                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                      {TIME_SLOTS.map((t) => (
+                        <SelectItem key={t} value={t} className="rounded-lg text-xs">
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2168,50 +2390,59 @@ Qualquer dúvida, estou à disposição! 😊`;
                   </div>
                   {/* Date/Time: Dia | Início | Fim */}
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-left">
                       <Label htmlFor="quick-day" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
-                      <input
-                        id="quick-day"
-                        type="date"
-                        required
+                      <RoundedDatePicker
                         value={startTime.slice(0, 10)}
-                        onChange={(e) => {
-                          const d = e.target.value;
+                        onChange={(dayVal) => {
                           const sTime = startTime.slice(11, 16) || "09:00";
                           const eTime = endTime.slice(11, 16) || "10:00";
-                          setStartTime(`${d}T${sTime}`);
-                          setEndTime(`${d}T${eTime}`);
+                          setStartTime(`${dayVal}T${sTime}`);
+                          setEndTime(`${dayVal}T${eTime}`);
                         }}
-                        className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-left">
                       <Label htmlFor="quick-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
-                      <input
-                        id="quick-start"
-                        type="time"
-                        required
-                        value={startTime.slice(11, 16)}
-                        onChange={(e) => {
+                      <Select
+                        value={startTime.slice(11, 16) || "09:00"}
+                        onValueChange={(val) => {
                           const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                          setStartTime(`${d}T${e.target.value}`);
+                          setStartTime(`${d}T${val}`);
                         }}
-                        className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
+                      >
+                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                          {TIME_SLOTS.map((t) => (
+                            <SelectItem key={t} value={t} className="rounded-lg text-xs">
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-left">
                       <Label htmlFor="quick-end" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Fim *</Label>
-                      <input
-                        id="quick-end"
-                        type="time"
-                        required
-                        value={endTime.slice(11, 16)}
-                        onChange={(e) => {
+                      <Select
+                        value={endTime.slice(11, 16) || "10:00"}
+                        onValueChange={(val) => {
                           const d = endTime.slice(0, 10) || startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                          setEndTime(`${d}T${e.target.value}`);
+                          setEndTime(`${d}T${val}`);
                         }}
-                        className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
+                      >
+                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                          {TIME_SLOTS.map((t) => (
+                            <SelectItem key={t} value={t} className="rounded-lg text-xs">
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   {/* Recorrência */}
@@ -2343,7 +2574,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-[#fafafc] text-neutral-800 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100">
+            <header className="bg-white text-neutral-800 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
                 <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-lg font-black shadow-md shrink-0">
@@ -2504,20 +2735,15 @@ Qualquer dúvida, estou à disposição! 😊`;
                           <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-day" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
-                              <input
-                                id="det-day"
-                                type="date"
-                                required
-                                disabled={saving}
+                              <RoundedDatePicker
                                 value={startTime.slice(0, 10)}
-                                onChange={(e) => {
-                                  const d = e.target.value;
+                                onChange={(dayVal) => {
                                   const sTime = startTime.slice(11, 16) || "09:00";
                                   const eTime = endTime.slice(11, 16) || "10:00";
-                                  setStartTime(`${d}T${sTime}`);
-                                  setEndTime(`${d}T${eTime}`);
+                                  setStartTime(`${dayVal}T${sTime}`);
+                                  setEndTime(`${dayVal}T${eTime}`);
                                 }}
-                                className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-60"
+                                disabled={saving}
                               />
                             </div>
                              <div className="space-y-1 text-left">
@@ -2606,11 +2832,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-procedure" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Procedimento / Serviço</Label>
-                              <select
-                                id="det-procedure"
+                              <Select
                                 value={procedureName}
-                                onChange={(e) => {
-                                  const name = e.target.value;
+                                onValueChange={(val) => {
+                                  const name = (val === null || val === "none") ? "" : val;
                                   setProcedureName(name);
                                   setAiDocProcedure(name);
                                   // Pre-fill duration and value from procedure data
@@ -2621,25 +2846,29 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     else if (proc.valor) setProcedureValue(String(proc.valor));
                                   }
                                 }}
-                                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                 disabled={saving}
                               >
-                                <option value="">Selecione...</option>
-                                {procedures.map((p) => (
-                                  <option key={p.id} value={p.name}>
-                                    {p.name}
-                                  </option>
-                                ))}
-                                {procedures.length === 0 && (
-                                  <>
-                                    <option value="Mentoria de Negócios">Mentoria de Negócios</option>
-                                    <option value="Consultoria Operacional">Consultoria Operacional</option>
-                                    <option value="Configuração de Funil CRM">Configuração de Funil CRM</option>
-                                    <option value="Integração WhatsApp API">Integração WhatsApp API</option>
-                                    <option value="Atendimento Avulso">Atendimento Avulso</option>
-                                  </>
-                                )}
-                              </select>
+                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                  <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                  <SelectItem value="none" className="rounded-lg text-xs">Selecione...</SelectItem>
+                                  {procedures.map((p) => (
+                                    <SelectItem key={p.id} value={p.name} className="rounded-lg text-xs">
+                                      {p.name}
+                                    </SelectItem>
+                                  ))}
+                                  {procedures.length === 0 && (
+                                    <>
+                                      <SelectItem value="Mentoria de Negócios" className="rounded-lg text-xs">Mentoria de Negócios</SelectItem>
+                                      <SelectItem value="Consultoria Operacional" className="rounded-lg text-xs">Consultoria Operacional</SelectItem>
+                                      <SelectItem value="Configuração de Funil CRM" className="rounded-lg text-xs">Configuração de Funil CRM</SelectItem>
+                                      <SelectItem value="Integração WhatsApp API" className="rounded-lg text-xs">Integração WhatsApp API</SelectItem>
+                                      <SelectItem value="Atendimento Avulso" className="rounded-lg text-xs">Atendimento Avulso</SelectItem>
+                                    </>
+                                  )}
+                                </SelectContent>
+                              </Select>
                               {/* Editable duration and value */}
                               {procedureName && (
                                 <div className="grid grid-cols-2 gap-2 mt-2">
@@ -2671,46 +2900,52 @@ Qualquer dúvida, estou à disposição! 😊`;
                             </div>
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-room" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Sala / Mesa de Atendimento</Label>
-                              <select
-                                id="det-room"
-                                value={roomId}
-                                onChange={(e) => setRoomId(e.target.value)}
-                                className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              <Select
+                                value={roomId || "none"}
+                                onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
                                 disabled={saving}
                               >
-                                <option value="">Selecione...</option>
-                                {rooms.map((r) => (
-                                  <option key={r.id} value={r.id}>
-                                    {r.name}
-                                  </option>
-                                ))}
-                                {rooms.length === 0 && (
-                                  <>
-                                    <option value="Sala Principal">Sala Principal</option>
-                                    <option value="Sala de Reuniões">Sala de Reuniões</option>
-                                    <option value="Estação de Trabalho A">Estação de Trabalho A</option>
-                                  </>
-                                )}
-                              </select>
+                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                  <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                  <SelectItem value="none" className="rounded-lg text-xs">Selecione...</SelectItem>
+                                  {rooms.map((r) => (
+                                    <SelectItem key={r.id} value={r.id} className="rounded-lg text-xs">
+                                      {r.name}
+                                    </SelectItem>
+                                  ))}
+                                  {rooms.length === 0 && (
+                                    <>
+                                      <SelectItem value="Sala Principal" className="rounded-lg text-xs">Sala Principal</SelectItem>
+                                      <SelectItem value="Sala de Reuniões" className="rounded-lg text-xs">Sala de Reuniões</SelectItem>
+                                      <SelectItem value="Estação de Trabalho A" className="rounded-lg text-xs">Estação de Trabalho A</SelectItem>
+                                    </>
+                                  )}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
 
                           {/* Status selector */}
                           <div className="space-y-1 text-left">
                             <Label htmlFor="det-status" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Status da Consulta</Label>
-                            <select
-                              id="det-status"
+                            <Select
                               value={status}
-                              onChange={(e) => setStatus(e.target.value)}
-                              className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              onValueChange={(val) => setStatus(val || "provisional")}
                               disabled={saving}
                             >
-                              <option value="provisional">Provisório (Pendente)</option>
-                              <option value="confirmed">Confirmado</option>
-                              <option value="attended">Realizado</option>
-                              <option value="cancelled">Cancelado</option>
-                              <option value="no_show">Não compareceu</option>
-                            </select>
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                <SelectValue placeholder="Selecione o status" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl bg-white border border-neutral-200">
+                                <SelectItem value="provisional" className="rounded-lg text-xs">Provisório (Pendente)</SelectItem>
+                                <SelectItem value="confirmed" className="rounded-lg text-xs">Confirmado</SelectItem>
+                                <SelectItem value="attended" className="rounded-lg text-xs">Realizado</SelectItem>
+                                <SelectItem value="cancelled" className="rounded-lg text-xs">Cancelado</SelectItem>
+                                <SelectItem value="no_show" className="rounded-lg text-xs">Não compareceu</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
 
                           {/* Notes */}
@@ -3136,14 +3371,18 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="space-y-0.5 text-left">
                                         <label className="text-[9px] font-bold text-neutral-500 uppercase">Desconto</label>
-                                        <select
+                                        <Select
                                           value={quoteDiscountType}
-                                          onChange={(e) => setQuoteDiscountType(e.target.value as any)}
-                                          className="w-full text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-400"
+                                          onValueChange={(val) => setQuoteDiscountType(val as any)}
                                         >
-                                          <option value="fixed">R$ Fixo</option>
-                                          <option value="percent">% Percentual</option>
-                                        </select>
+                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-400">
+                                            <SelectValue placeholder="Selecione..." />
+                                          </SelectTrigger>
+                                          <SelectContent className="rounded-xl bg-white border border-neutral-200">
+                                            <SelectItem value="fixed" className="rounded-lg text-xs">R$ Fixo</SelectItem>
+                                            <SelectItem value="percent" className="rounded-lg text-xs">% Percentual</SelectItem>
+                                          </SelectContent>
+                                        </Select>
                                       </div>
                                       <div className="space-y-0.5 text-left">
                                         <label className="text-[9px] font-bold text-neutral-500 uppercase">Valor Desconto</label>
@@ -3347,12 +3586,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               <Button
                                 type="button"
                                 onClick={() => {
-                                  setIsCreatingQuote(true);
-                                  setQuoteStep("build");
-                                  setQuoteItems([]);
-                                  setQuoteDiscountValue("0");
-                                  setQuoteSpecialCondition("");
-                                  setQuoteExpiresAt("");
+                                  setQuoteModalOpen(true);
                                 }}
                                 className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 gap-1 rounded-lg"
                               >
