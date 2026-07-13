@@ -15,6 +15,9 @@ import type {
   PipelineStageSlice,
   ResponseTimeBucket,
   ResponseTimeSummary,
+  ClinicDashboardMetrics,
+  ClinicPriorityLead,
+  ClinicAIInsight,
 } from './types'
 
 // ------------------------------------------------------------
@@ -396,3 +399,204 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     .sort((a, b) => (a.at > b.at ? -1 : a.at < b.at ? 1 : 0))
     .slice(0, limit)
 }
+
+// --- 6. Clinic Gerencial Dashboard -------------------------------------
+
+function startOfLocalMonth(d: Date = new Date()): Date {
+  const out = new Date(d)
+  out.setDate(1)
+  out.setHours(0, 0, 0, 0)
+  return out
+}
+
+function startOfLastMonth(d: Date = new Date()): Date {
+  const out = startOfLocalMonth(d)
+  out.setMonth(out.getMonth() - 1)
+  return out
+}
+
+export async function loadClinicDashboardMetrics(db: DB): Promise<ClinicDashboardMetrics> {
+  const todayStart = startOfLocalDay().toISOString()
+  
+  const tomorrowStart = new Date(startOfLocalDay())
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1)
+  const tomorrowStartISO = tomorrowStart.toISOString()
+  
+  const yesterdayStart = daysAgoStart(1).toISOString()
+  const thirtyDaysAgoStart = daysAgoStart(30).toISOString()
+  const thisMonthStart = startOfLocalMonth().toISOString()
+  const lastMonthStart = startOfLastMonth().toISOString()
+  const lastMonthEnd = thisMonthStart
+
+  const [
+    contactsToday,
+    contactsYesterday,
+    appointmentsToday,
+    appointmentsYesterday,
+    wonDealsThisMonth,
+    wonDealsLastMonth,
+    openDeals,
+    lostDealsThisMonth,
+    openDealsNoResponse,
+    appointmentsLast30Days,
+    proceduresList,
+  ] = await Promise.all([
+    db.from('contacts').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
+    db.from('contacts').select('id', { count: 'exact', head: true }).gte('created_at', yesterdayStart).lt('created_at', todayStart),
+    db.from('appointments').select('id', { count: 'exact', head: true }).gte('start_time', todayStart).lt('start_time', tomorrowStartISO).neq('status', 'cancelled'),
+    db.from('appointments').select('id', { count: 'exact', head: true }).gte('start_time', yesterdayStart).lt('start_time', todayStart).neq('status', 'cancelled'),
+    db.from('deals').select('value').eq('status', 'won').gte('updated_at', thisMonthStart),
+    db.from('deals').select('value').eq('status', 'won').gte('updated_at', lastMonthStart).lt('updated_at', lastMonthEnd),
+    db.from('deals').select('id, title, value, score, temperature, next_action, main_objection, waiting_since, waiting_side, contact:contacts(name, phone)').eq('status', 'open'),
+    db.from('deals').select('value').eq('status', 'lost').gte('updated_at', thisMonthStart),
+    db.from('deals').select('value').eq('status', 'open').eq('waiting_side', 'lead'),
+    db.from('appointments').select('status, type, start_time').gte('start_time', thirtyDaysAgoStart),
+    db.from('procedures').select('name, valor, price'),
+  ])
+
+  const leadsNovosHoje = contactsToday.count ?? 0
+  const leadsNovosOntem = contactsYesterday.count ?? 0
+  const atendimentosHoje = appointmentsToday.count ?? 0
+  const atendimentosOntem = appointmentsYesterday.count ?? 0
+
+  const wonThisMonthRows = (wonDealsThisMonth.data ?? []) as { value: number | null }[]
+  const faturamentoRealizadoMes = wonThisMonthRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+
+  const wonLastMonthRows = (wonDealsLastMonth.data ?? []) as { value: number | null }[]
+  const faturamentoRealizadoMesAnterior = wonLastMonthRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+
+  const openDealsRows = (openDeals.data ?? []) as any[]
+  const faturamentoPrevisto = openDealsRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+  const faturamentoPrevistoQuantidade = openDealsRows.length
+
+  const lostThisMonthRows = (lostDealsThisMonth.data ?? []) as { value: number | null }[]
+  const receitaPerdidaLostDealsValue = lostThisMonthRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+
+  const unansweredRows = (openDealsNoResponse.data ?? []) as { value: number | null }[]
+  const leadsSemRespostaCount = unansweredRows.length
+  const leadsSemRespostaValue = unansweredRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+
+  const procedurePriceMap = new Map<string, number>()
+  for (const proc of (proceduresList.data || []) as any[]) {
+    const price = proc.price ?? proc.valor ?? 0
+    procedurePriceMap.set(proc.name, Number(price))
+  }
+
+  let cancellationsCount = 0
+  let cancellationsValue = 0
+  let noShowsCount = 0
+  let noShowsValue = 0
+
+  for (const appt of (appointmentsLast30Days.data || []) as any[]) {
+    const price = appt.type ? (procedurePriceMap.get(appt.type) ?? 0) : 0
+    if (appt.status === 'cancelled') {
+      cancellationsCount++
+      cancellationsValue += price
+    } else if (appt.status === 'no_show') {
+      noShowsCount++
+      noShowsValue += price
+    }
+  }
+
+  const receitaPerdidaTotal = receitaPerdidaLostDealsValue + cancellationsValue + noShowsValue
+
+  const priorities: ClinicPriorityLead[] = openDealsRows
+    .map(d => {
+      const contact = Array.isArray(d.contact) ? d.contact[0] : d.contact
+      return {
+        dealId: d.id,
+        title: d.title,
+        value: d.value ?? 0,
+        score: d.score ?? 50,
+        temperature: (d.temperature ?? 'warm') as 'hot' | 'warm' | 'cold',
+        contactName: contact?.name || contact?.phone || 'Sem nome',
+        contactPhone: contact?.phone || '',
+        nextAction: d.next_action || null,
+        objection: d.main_objection || null,
+        waitingSince: d.waiting_since || null,
+        waitingSide: d.waiting_side || null,
+      }
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return b.value - a.value
+    })
+    .slice(0, 5)
+
+  const aiInsights: ClinicAIInsight[] = []
+  
+  if (cancellationsCount > 0) {
+    aiInsights.push({
+      id: 'cxl-rate',
+      type: 'warning',
+      title: 'Vazamento por Cancelamento',
+      description: `${cancellationsCount} consultas canceladas nos últimos 30 dias representam R$ ${cancellationsValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} não faturados. Sugerimos ativar lembretes no WhatsApp.`
+    })
+  }
+
+  if (noShowsCount > 0) {
+    aiInsights.push({
+      id: 'noshow-rate',
+      type: 'warning',
+      title: 'Ausências de Pacientes (No-Show)',
+      description: `${noShowsCount} ausências registradas nos últimos 30 dias representam R$ ${noShowsValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} perdidos. Sugerimos enviar mensagens de reengajamento automático.`
+    })
+  }
+
+  if (leadsSemRespostaCount > 0) {
+    aiInsights.push({
+      id: 'no-reply',
+      type: 'opportunity',
+      title: 'Leads Sem Resposta no Funil',
+      description: `${leadsSemRespostaCount} leads aguardando retorno, representando R$ ${leadsSemRespostaValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Acesse a fila de prioridades abaixo para interagir.`
+    })
+  }
+
+  if (faturamentoRealizadoMes > faturamentoRealizadoMesAnterior) {
+    aiInsights.push({
+      id: 'rev-up',
+      type: 'success',
+      title: 'Faturamento Comercial em Alta',
+      description: `O faturamento fechado deste mês (R$ ${faturamentoRealizadoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) superou o mês anterior (R$ ${faturamentoRealizadoMesAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`
+    })
+  } else if (faturamentoRealizadoMes < faturamentoRealizadoMesAnterior && faturamentoRealizadoMesAnterior > 0) {
+    aiInsights.push({
+      id: 'rev-down',
+      type: 'info',
+      title: 'Alinhamento de Metas de Faturamento',
+      description: `Faturamento atual está R$ ${(faturamentoRealizadoMesAnterior - faturamentoRealizadoMes).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} abaixo do mês anterior. Revise a lista de 'O que fazer hoje' para reverter.`
+    })
+  }
+
+  const hotLeads = openDealsRows.filter(d => d.temperature === 'hot')
+  if (hotLeads.length > 0) {
+    aiInsights.push({
+      id: 'hot-leads-alert',
+      type: 'opportunity',
+      title: 'Oportunidades Quentes (Hot)',
+      description: `Temos ${hotLeads.length} leads classificados como 'Hot' com score de engajamento acima de 80. Agende uma avaliação estática e faça o fechamento.`
+    })
+  }
+
+  return {
+    leadsNovosHoje,
+    leadsNovosOntem,
+    atendimentosHoje,
+    atendimentosOntem,
+    faturamentoRealizadoMes,
+    faturamentoRealizadoMesAnterior,
+    faturamentoPrevisto,
+    faturamentoPrevistoQuantidade,
+    leadsSemRespostaCount,
+    leadsSemRespostaValue,
+    cancellationsCount,
+    cancellationsValue,
+    noShowsCount,
+    noShowsValue,
+    receitaPerdidaTotal,
+    receitaPerdidaLostDealsValue,
+    priorities,
+    aiInsights
+  }
+}
+

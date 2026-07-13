@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Pipeline, PipelineStage, Deal } from "@/types";
@@ -58,6 +58,13 @@ export default function PipelinesPage() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters State
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterTemperature, setFilterTemperature] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterInterest, setFilterInterest] = useState<string>("all");
+  const [filterResponsible, setFilterResponsible] = useState<string>("all");
 
   // Unanswered Conversations / Leads
   const [unansweredConversations, setUnansweredConversations] = useState<any[]>([]);
@@ -359,6 +366,68 @@ export default function PipelinesPage() {
     toast.success("Pipeline created");
   }
 
+  // Real-time client-side filtering logic
+  const filteredDeals = useMemo(() => {
+    return deals.filter((deal) => {
+      // 1. Text Search (name, phone, whatsapp, title, cpf)
+      if (filterSearch.trim()) {
+        const query = filterSearch.toLowerCase();
+        const contactName = (deal.contact?.name || "").toLowerCase();
+        const contactPhone = (deal.contact?.phone || "").toLowerCase();
+        const contactCpf = (deal.contact?.cpf || "").toLowerCase();
+        const dealTitle = (deal.title || "").toLowerCase();
+        const dealInterest = (deal.interest || "").toLowerCase();
+
+        if (
+          !contactName.includes(query) &&
+          !contactPhone.includes(query) &&
+          !contactCpf.includes(query) &&
+          !dealTitle.includes(query) &&
+          !dealInterest.includes(query)
+        ) {
+          return false;
+        }
+      }
+
+      // 2. Temperature Filter
+      if (filterTemperature !== "all") {
+        if (deal.temperature !== filterTemperature) return false;
+      }
+
+      // 3. Source Filter
+      if (filterSource !== "all") {
+        if (deal.source !== filterSource) return false;
+      }
+
+      // 4. Interest Filter
+      if (filterInterest !== "all") {
+        if (deal.interest !== filterInterest) return false;
+      }
+
+      // 5. Responsible Agent Filter
+      if (filterResponsible !== "all") {
+        if (deal.responsible_user_id !== filterResponsible) return false;
+      }
+
+      return true;
+    });
+  }, [deals, filterSearch, filterTemperature, filterSource, filterInterest, filterResponsible]);
+
+  const uniqueInterests = useMemo(() => {
+    return Array.from(new Set(deals.map((d) => d.interest).filter(Boolean))) as string[];
+  }, [deals]);
+
+  const uniqueAssignees = useMemo(() => {
+    const map = new Map<string, any>();
+    deals.forEach((d) => {
+      const id = d.responsible_user_id || d.assigned_to;
+      if (id && d.assignee) {
+        map.set(id, d.assignee);
+      }
+    });
+    return Array.from(map.entries()) as Array<[string, any]>;
+  }, [deals]);
+
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
 
   if (loading) {
@@ -479,6 +548,97 @@ export default function PipelinesPage() {
         </div>
       </div>
 
+      {/* Barra de Filtros */}
+      {pipelines.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-wrap items-center gap-3">
+          {/* Busca Textual */}
+          <div className="flex-1 min-w-[200px]">
+            <input
+              type="text"
+              placeholder="Buscar por nome, telefone, CPF, procedimento..."
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {/* Filtro de Temperatura */}
+          <div className="min-w-[120px]">
+            <select
+              value={filterTemperature}
+              onChange={(e) => setFilterTemperature(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todas Temperaturas</option>
+              <option value="hot">🔥 Hot</option>
+              <option value="warm">⚡ Warm</option>
+              <option value="cold">❄️ Cold</option>
+            </select>
+          </div>
+
+          {/* Filtro de Origem */}
+          <div className="min-w-[120px]">
+            <select
+              value={filterSource}
+              onChange={(e) => setFilterSource(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todas Origens</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Google">Google</option>
+              <option value="Site">Site</option>
+              <option value="Indicação">Indicação</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+
+          {/* Filtro de Interesse */}
+          <div className="min-w-[140px]">
+            <select
+              value={filterInterest}
+              onChange={(e) => setFilterInterest(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todos Interesses</option>
+              {uniqueInterests.map((interest) => (
+                <option key={interest} value={interest}>{interest}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro de Responsável */}
+          <div className="min-w-[140px]">
+            <select
+              value={filterResponsible}
+              onChange={(e) => setFilterResponsible(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todos Responsáveis</option>
+              {uniqueAssignees.map(([id, assignee]) => (
+                <option key={id} value={id}>{assignee?.full_name || assignee?.name || id}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Limpar Filtros */}
+          {(filterSearch || filterTemperature !== "all" || filterSource !== "all" || filterInterest !== "all" || filterResponsible !== "all") && (
+            <button
+              onClick={() => {
+                setFilterSearch("");
+                setFilterTemperature("all");
+                setFilterSource("all");
+                setFilterInterest("all");
+                setFilterResponsible("all");
+              }}
+              className="text-xs font-bold text-neutral-500 hover:text-primary transition-colors hover:underline px-2 cursor-pointer"
+            >
+              Limpar Filtros
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Board */}
       {pipelines.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20">
@@ -501,10 +661,10 @@ export default function PipelinesPage() {
         </div>
       ) : (
         <>
-          <PipelineAnalytics stages={stages} deals={deals} />
+          <PipelineAnalytics stages={stages} deals={filteredDeals} />
           <PipelineBoard
             stages={stages}
-            deals={deals}
+            deals={filteredDeals}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
             onEditDeal={handleEditDeal}

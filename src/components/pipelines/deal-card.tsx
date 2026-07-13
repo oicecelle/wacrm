@@ -1,6 +1,41 @@
 import type { Deal, PipelineStage } from "@/types";
-import { Calendar, Check, X, Flame, AlertCircle, Hourglass, Target, CalendarClock, Clock, BellRing, MapPin } from "lucide-react";
+import {
+  Calendar,
+  Check,
+  X,
+  Flame,
+  AlertCircle,
+  Hourglass,
+  Target,
+  CalendarClock,
+  Clock,
+  BellRing,
+  MapPin,
+  Thermometer,
+  Snowflake,
+  MessageSquare,
+  Globe,
+  Users,
+  Zap
+} from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+
+const InstagramIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+  </svg>
+);
+
 
 interface DealCardProps {
   deal: Deal;
@@ -25,7 +60,6 @@ function formatDateShort(dateStr: string) {
   const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
 
   if (diffMs < 0) {
-    // Past
     const absDays = Math.abs(diffDays);
     if (absDays === 0) return "hoje";
     if (absDays === 1) return "ontem";
@@ -75,17 +109,74 @@ function formatWaitingSince(sinceStr?: string, side?: string) {
   return `Aguardando ${who} (${timeStr})`;
 }
 
+function TemperatureBadge({ temperature }: { temperature?: 'hot' | 'warm' | 'cold' }) {
+  if (!temperature) return null;
+
+  const config = {
+    hot: {
+      color: "bg-red-500/10 text-red-600 border-red-500/20 dark:border-red-500/30",
+      icon: Flame,
+      label: "Hot",
+    },
+    warm: {
+      color: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:border-amber-500/30",
+      icon: Thermometer,
+      label: "Warm",
+    },
+    cold: {
+      color: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:border-blue-500/30",
+      icon: Snowflake,
+      label: "Cold",
+    },
+  };
+
+  const current = config[temperature] || config.warm;
+  const Icon = current.icon;
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider border ${current.color}`}>
+      <Icon className="h-2.5 w-2.5 fill-current" />
+      {current.label}
+    </span>
+  );
+}
+
+function SourceBadge({ source }: { source?: string }) {
+  if (!source) return null;
+
+  const sourceLower = source.toLowerCase();
+  let Icon: any = MapPin;
+  let color = "bg-neutral-100 text-neutral-600 border-neutral-200 dark:border-neutral-800";
+
+  if (sourceLower.includes("whatsapp")) {
+    Icon = MessageSquare;
+    color = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:border-emerald-500/30";
+  } else if (sourceLower.includes("instagram")) {
+    Icon = InstagramIcon;
+    color = "bg-pink-500/10 text-pink-600 border-pink-500/20 dark:border-pink-500/30";
+  } else if (sourceLower.includes("google")) {
+    Icon = Globe;
+    color = "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:border-blue-500/30";
+  } else if (sourceLower.includes("site") || sourceLower.includes("web")) {
+    Icon = Globe;
+    color = "bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:border-indigo-500/30";
+  } else if (sourceLower.includes("indica")) {
+    Icon = Users;
+    color = "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:border-purple-500/30";
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase border ${color}`}>
+      <Icon className="h-2.5 w-2.5" />
+      {source}
+    </span>
+  );
+}
+
 export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
   const contactLabel = deal.contact?.name || deal.contact?.phone || "Sem contato";
   const assigneeLabel = deal.assignee?.full_name || null;
   const waitingLabel = formatWaitingSince(deal.waiting_since, deal.waiting_side);
-
-  // Temperature classes
-  const tempColors = {
-    hot: "bg-red-500/10 text-red-600 border-red-500/20",
-    warm: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    cold: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  };
 
   // Follow-up overdue?
   const followupOverdue = deal.followup_scheduled_at && new Date(deal.followup_scheduled_at) < new Date();
@@ -95,8 +186,33 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
     ? Math.ceil((new Date(deal.future_task_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  // Objections to show (max 2 + overflow)
+  // Objections and tags list
   const objList = deal.objections ?? [];
+  const visualTags = deal.contact?.tags_visual || [];
+
+  const smartTags: Array<{ text: string; color: string }> = [];
+  const dealCreatedAt = new Date(deal.created_at);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - dealCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    smartTags.push({ text: "Novo", color: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:border-blue-500/30" });
+  }
+
+  if (deal.waiting_side === 'lead' && deal.waiting_since) {
+    const hoursWaiting = Math.floor((now.getTime() - new Date(deal.waiting_since).getTime()) / (1000 * 60 * 60));
+    if (hoursWaiting >= 24) {
+      smartTags.push({ text: "Sem Resposta", color: "bg-red-500/10 text-red-600 border-red-500/20 dark:border-red-500/30" });
+    }
+  }
+
+  visualTags.forEach((t) => {
+    let tagColor = "bg-neutral-100 text-neutral-600 border-neutral-200 dark:border-neutral-800";
+    const tLower = t.toLowerCase();
+    if (tLower.includes("vip")) tagColor = "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:border-purple-500/30";
+    else if (tLower.includes("recorrente") || tLower.includes("antigo")) tagColor = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:border-emerald-500/30";
+    smartTags.push({ text: t, color: tagColor });
+  });
 
   return (
     <button
@@ -120,36 +236,26 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
       />
 
       {/* Top badges & status row */}
-      <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {deal.temperature && (
-            <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider border ${tempColors[deal.temperature]}`}>
-              <Flame className="h-2.5 w-2.5" />
-              {deal.temperature}
-            </span>
-          )}
+      <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+        <div className="flex items-center gap-1 flex-wrap">
+          <TemperatureBadge temperature={deal.temperature} />
           {deal.score !== undefined && deal.score !== null && (
-            <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[9px] font-bold">
-              {deal.score}% engajado
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 text-[9px] font-extrabold border border-blue-100/30">
+              <Zap className="h-2.5 w-2.5 fill-current" />
+              {deal.score}%
             </span>
           )}
-          {/* Origin badge */}
-          {deal.source && (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200 px-1.5 py-0.5 text-[9px] font-semibold">
-              <MapPin className="h-2 w-2" />
-              {deal.source}
-            </span>
-          )}
+          <SourceBadge source={deal.source} />
         </div>
 
         {deal.status === "won" && (
-          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-primary uppercase">
+          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-600 uppercase border border-emerald-500/20">
             <Check className="h-2.5 w-2.5" />
             Ganha
           </span>
         )}
         {deal.status === "lost" && (
-          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-500 uppercase">
+          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-extrabold text-red-500 uppercase border border-red-500/20">
             <X className="h-2.5 w-2.5" />
             Perdida
           </span>
@@ -242,6 +348,17 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
         <div className="mt-1.5 flex items-center gap-1 text-[10px] text-blue-600 font-semibold bg-blue-500/5 border border-blue-500/10 px-2 py-0.5 rounded-lg">
           <Target className="h-3 w-3 shrink-0" />
           <span className="truncate">Próxima: {deal.next_action}</span>
+        </div>
+      )}
+
+      {/* Smart/Visual tags render */}
+      {smartTags.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap gap-1">
+          {smartTags.slice(0, 3).map((tag, i) => (
+            <span key={i} className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${tag.color}`}>
+              {tag.text}
+            </span>
+          ))}
         </div>
       )}
 

@@ -65,3 +65,48 @@ export interface ActivityItem {
   /** Optional deep-link for the whole row (not all items have a target). */
   href?: string
 }
+
+export interface ClinicPriorityLead {
+  dealId: string
+  title: string
+  value: number
+  score: number
+  temperature: 'hot' | 'warm' | 'cold'
+  contactName: string
+  contactPhone: string
+  nextAction: string | null
+  objection: string | null
+  waitingSince: string | null
+  waitingSide: string | null
+}
+
+export interface ClinicAIInsight {
+  id: string
+  type: 'opportunity' | 'warning' | 'info' | 'success'
+  title: string
+  description: string
+}
+
+export interface ClinicDashboardMetrics {
+  leadsNovosHoje: number
+  leadsNovosOntem: number
+  atendimentosHoje: number
+  atendimentosOntem: number
+  faturamentoRealizadoMes: number
+  faturamentoRealizadoMesAnterior: number
+  faturamentoPrevisto: number
+  faturamentoPrevistoQuantidade: number
+
+  leadsSemRespostaCount: number
+  leadsSemRespostaValue: number
+  cancellationsCount: number
+  cancellationsValue: number
+  noShowsCount: number
+  noShowsValue: number
+  receitaPerdidaTotal: number
+  receitaPerdidaLostDealsValue: number
+
+  priorities: ClinicPriorityLead[]
+  aiInsights: ClinicAIInsight[]
+}
+

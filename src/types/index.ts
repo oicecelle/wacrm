@@ -101,6 +101,11 @@ export interface Contact {
   is_group?: boolean;
   created_at: string;
   updated_at: string;
+  contact_type?: 'lead' | 'client';
+  cpf?: string;
+  birthday?: string;
+  gender?: 'male' | 'female' | 'other';
+  tags_visual?: string[];
 }
 
 export interface Tag {
