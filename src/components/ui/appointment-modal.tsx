@@ -63,6 +63,8 @@ interface AppointmentModalProps {
   defaultDate?: string; // ISO date string if creating on a specific day
   defaultType?: "consulta" | "evento" | "bloqueio";
   defaultPatientId?: string;
+  defaultPatientName?: string;
+  defaultPatientPhone?: string;
   defaultProfessionalId?: string;
   defaultProcedureName?: string;
   onSave: () => void;
@@ -97,6 +99,8 @@ export function AppointmentModal({
   defaultDate,
   defaultType = "consulta",
   defaultPatientId = "",
+  defaultPatientName = "",
+  defaultPatientPhone = "",
   defaultProfessionalId = "",
   defaultProcedureName = "",
   onSave,
@@ -344,6 +348,15 @@ export function AppointmentModal({
     if (!appointmentId) {
       // Pre-fill fields for creation
       setPatientId(defaultPatientId || "");
+      if (defaultPatientId) {
+        setSelectedPatientInfo({
+          id: defaultPatientId,
+          name: defaultPatientName || "",
+          phone: defaultPatientPhone || "",
+        });
+      } else {
+        setSelectedPatientInfo(null);
+      }
       setProfessionalId(defaultProfessionalId || user?.id || "");
       setProcedureName(defaultProcedureName || "");
       setRoomId("");
@@ -427,7 +440,7 @@ export function AppointmentModal({
     };
 
     loadAppointment();
-  }, [open, appointmentId, defaultDate, profile, defaultPatientId, defaultProfessionalId, defaultProcedureName]);
+  }, [open, appointmentId, defaultDate, profile, defaultPatientId, defaultPatientName, defaultPatientPhone, defaultProfessionalId, defaultProcedureName]);
 
   // Fetch all patient related data (EMR notes, history stats, documents, packages, evaluations, transactions)
   useEffect(() => {

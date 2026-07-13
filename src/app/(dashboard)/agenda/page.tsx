@@ -110,6 +110,8 @@ export default function AgendaPage() {
   // Waitlist States
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [modalDefaultPatientId, setModalDefaultPatientId] = useState("");
+  const [modalDefaultPatientName, setModalDefaultPatientName] = useState("");
+  const [modalDefaultPatientPhone, setModalDefaultPatientPhone] = useState("");
   const [modalDefaultProfessionalId, setModalDefaultProfessionalId] = useState("");
   const [modalDefaultProcedureName, setModalDefaultProcedureName] = useState("");
 
@@ -514,6 +516,8 @@ export default function AgendaPage() {
     setSelectedApptId(null);
     setModalDefaultDate(dayStr);
     setModalDefaultPatientId("");
+    setModalDefaultPatientName("");
+    setModalDefaultPatientPhone("");
     setModalDefaultProfessionalId("");
     setModalDefaultProcedureName("");
     setModalOpen(true);
@@ -523,6 +527,8 @@ export default function AgendaPage() {
     setSelectedApptId(apptId);
     setModalDefaultDate(undefined);
     setModalDefaultPatientId("");
+    setModalDefaultPatientName("");
+    setModalDefaultPatientPhone("");
     setModalDefaultProfessionalId("");
     setModalDefaultProcedureName("");
     setModalOpen(true);
@@ -1325,6 +1331,8 @@ export default function AgendaPage() {
         defaultDate={modalDefaultDate}
         defaultType={modalDefaultType}
         defaultPatientId={modalDefaultPatientId}
+        defaultPatientName={modalDefaultPatientName}
+        defaultPatientPhone={modalDefaultPatientPhone}
         defaultProfessionalId={modalDefaultProfessionalId}
         defaultProcedureName={modalDefaultProcedureName}
         onSave={fetchAppointments}
@@ -1334,11 +1342,13 @@ export default function AgendaPage() {
       <WaitlistDrawer
         open={waitlistOpen}
         onClose={() => setWaitlistOpen(false)}
-        onSchedule={(ptId, profId, procName) => {
+        onSchedule={(ptId, profId, procName, ptName, ptPhone) => {
           setSelectedApptId(null);
           setModalDefaultDate(new Date().toISOString().split("T")[0]); // Default to today
           setModalDefaultType("consulta");
           setModalDefaultPatientId(ptId);
+          setModalDefaultPatientName(ptName || "");
+          setModalDefaultPatientPhone(ptPhone || "");
           setModalDefaultProfessionalId(profId);
           setModalDefaultProcedureName(procName);
           setModalOpen(true);

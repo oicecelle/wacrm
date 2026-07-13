@@ -36,7 +36,7 @@ interface WaitlistItem {
 interface WaitlistDrawerProps {
   open: boolean;
   onClose: () => void;
-  onSchedule: (patientId: string, professionalId: string, procedureName: string) => void;
+  onSchedule: (patientId: string, professionalId: string, procedureName: string, patientName?: string, patientPhone?: string) => void;
 }
 
 export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProps) {
@@ -153,7 +153,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
 
   const handleScheduleClick = (item: WaitlistItem) => {
     // Call parent schedule hook
-    onSchedule(item.patientId, item.professionalId, item.procedureName);
+    onSchedule(item.patientId, item.professionalId, item.procedureName, item.patientName, item.patientPhone);
     // Remove from waitlist since they are being scheduled!
     handleDelete(item.id);
     onClose();
