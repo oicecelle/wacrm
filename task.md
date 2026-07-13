@@ -73,3 +73,13 @@
   - `[x]` Vincular KPIs e DRE para atualizarem dinamicamente de acordo com os filtros
   - `[x]` Implementar apuração de comissões reais via `clinic_users` e `procedure_professionals`
   - `[x]` Integrar a ação "Consumir Sessão" de pacotes com o registro de log na `patient_timeline`
+
+---
+
+# Lista de Tarefas - Fase 6 (Concluída)
+
+- `[x]` **Central de Documentos & Assinatura Digital** (`wacrm/src/app/(dashboard)/documentos/page.tsx`)
+  - `[x]` Criar aba "Biblioteca de Modelos" para gerenciar templates de termos/contratos
+  - `[x]` Implementar formulário/drawer para criar e editar templates com Nome, Tipo, Conteúdo e Padrão
+  - `[x]` Integrar requisições Supabase (Select, Insert, Update, Delete) no CRUD de templates
+  - `[x]` Filtrar e mesclar modelos globais (`clinic_id IS NULL`) com modelos customizados (`clinic_id = accountId`)
