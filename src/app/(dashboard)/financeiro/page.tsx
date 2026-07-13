@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 import {
   PlusIcon,
   TrendingUpIcon,
@@ -40,6 +41,7 @@ interface Transaction {
 
 interface Package {
   id: string;
+  contactId?: string;
   contactName: string;
   procedure: string;
   totalSessions: number;
@@ -423,10 +425,16 @@ const MOCK_PROFESSIONALS = [
 /* ─── Main page ───────────────────────────────────────────────── */
 export default function FinanceiroPage() {
   const supabase = createClient();
-  const { accountId } = useAuth();
+  const { accountId, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<"ledger" | "contas" | "pacotes" | "comissoes" | "previsibilidade" | "dre">("ledger");
   const [typeFilter, setTypeFilter] = useState<TxType | "all">("all");
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Filters State
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterPeriod, setFilterPeriod] = useState<"all" | "today" | "yesterday" | "7days" | "30days" | "month" | "last_month">("all");
+  const [filterMethod, setFilterMethod] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -516,7 +524,7 @@ export default function FinanceiroPage() {
       });
 
       const formattedPkgs: Package[] = (pPkgsData || []).map((pkg) => {
-        const templName = templatesMap[pkg.package_id] || "Pacote de Sessões";
+        const templName = pkg.package_name || templatesMap[pkg.package_id] || "Pacote de Sessões";
         const pctRemaining = pkg.sessions_total - pkg.sessions_used;
 
         let warningDays: number | undefined = undefined;
@@ -529,6 +537,7 @@ export default function FinanceiroPage() {
 
         return {
           id: pkg.id,
+          contactId: pkg.contact_id,
           contactName: pkg.contact_id ? pkgPatientsMap[pkg.contact_id] || "Paciente" : "Paciente",
           procedure: templName,
           totalSessions: pkg.sessions_total,
@@ -553,16 +562,19 @@ export default function FinanceiroPage() {
 
       const { data: procData } = await supabase
         .from("procedures")
-        .select("name, price")
+        .select("id, name, price, valor")
         .eq("clinic_id", clinicId);
 
       const procPrices: Record<string, number> = {};
+      const procDetails: Record<string, { id: string; price: number }> = {};
       (procData || []).forEach((p) => {
-        procPrices[p.name] = Number(p.price) || 0;
+        const priceVal = Number(p.price) || Number(p.valor) || 250;
+        procPrices[p.name] = priceVal;
+        procDetails[p.name] = { id: p.id, price: priceVal };
       });
 
       const calculatedFuture = (apptData || []).reduce((sum, appt) => {
-        const price = procPrices[appt.type || ""] || 180; // default 180 se procedimento sem valor cadastrado
+        const price = procPrices[appt.type || ""] || 180;
         return sum + price;
       }, 0);
       if (calculatedFuture === 0) {
@@ -571,25 +583,74 @@ export default function FinanceiroPage() {
         setFutureReceivables(calculatedFuture);
       }
 
-      // 4. Fetch clinic profiles to calculate professional commissions
-      const { data: teamMembers } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
+      // 4. Fetch clinic users & procedure professionals to calculate real commissions
+      const { data: teamUsers } = await supabase
+        .from("clinic_users")
+        .select("*")
+        .eq("clinic_id", clinicId);
+
+      const { data: procRules } = await supabase
+        .from("procedure_professionals")
+        .select("*")
         .eq("account_id", clinicId);
 
-      const computedReceita = (txData || [])
-        .filter((t) => t.type === "receita" && t.status === "paid")
-        .reduce((a, t) => a + Number(t.value), 0);
+      // Fetch appointments for comissão calc (attended status)
+      const { data: attendedAppts } = await supabase
+        .from("appointments")
+        .select("professional_id, status, type, patient_id")
+        .eq("clinic_id", clinicId)
+        .eq("status", "attended");
 
-      const formattedCommissions = (teamMembers || []).map((m, idx) => {
-        const seed = idx + 1;
-        const share = teamMembers?.length ? seed / teamMembers.length : 1;
-        const totalComm = (computedReceita * 0.15) * share; // comissão mockada baseada na receita real rateada
+      // Build a lookup map for custom rules: clinic_user_id -> procedure_id -> rule
+      const customRulesMap: Record<string, Record<string, any>> = {};
+      (procRules || []).forEach((rule) => {
+        if (!customRulesMap[rule.clinic_user_id]) {
+          customRulesMap[rule.clinic_user_id] = {};
+        }
+        customRulesMap[rule.clinic_user_id][rule.procedure_id] = rule;
+      });
+
+      const formattedCommissions = (teamUsers || []).map((user) => {
+        const uAppts = (attendedAppts || []).filter((a) => a.professional_id === user.id);
+        let commission = 0;
+
+        uAppts.forEach((a) => {
+          const details = procDetails[a.type || ""];
+          const basePrice = details?.price || 250;
+          const procId = details?.id;
+
+          // Check custom rule first
+          const customRule = procId ? customRulesMap[user.id]?.[procId] : null;
+
+          if (customRule) {
+            const ruleType = customRule.commission_type;
+            if (ruleType === "percentage") {
+              commission += (basePrice * Number(customRule.commission_rate)) / 100;
+            } else if (ruleType === "fixed") {
+              commission += Number(customRule.commission_fixed);
+            }
+          } else {
+            // Default rule fallback
+            const model = user.commission_model || "percentage";
+            const rate = Number(user.commission_rate) || 0;
+            const fixedVal = Number(user.commission_fixed) || 0;
+
+            if (model === "percentage") {
+              commission += (basePrice * rate) / 100;
+            } else if (model === "fixed") {
+              commission += fixedVal;
+            } else if (model === "hybrid") {
+              commission += (basePrice * rate) / 100 + fixedVal;
+            }
+          }
+        });
+
         return {
-          name: m.full_name || "Profissional",
-          commission: totalComm,
+          name: user.name || "Profissional",
+          commission: commission,
         };
       });
+
       if (formattedCommissions.length === 0) {
         setProfessionals(MOCK_PROFESSIONALS);
       } else {
@@ -608,7 +669,7 @@ export default function FinanceiroPage() {
   }, [loadFinancialData]);
 
   // Handle session decrement directly
-  const handleConsumeSession = async (pkgId: string, total: number, remaining: number) => {
+  const handleConsumeSession = async (pkgId: string, total: number, remaining: number, contactId?: string, packageName?: string) => {
     if (remaining <= 0) return;
     const newUsed = total - remaining + 1;
     
@@ -622,21 +683,114 @@ export default function FinanceiroPage() {
         .eq("id", pkgId);
 
       if (error) throw error;
+
+      // Add timeline log if contactId is present
+      if (contactId) {
+        await supabase.from("patient_timeline").insert({
+          patient_id: contactId,
+          event_type: "session_consumed",
+          title: `Sessão consumida: ${packageName || "Procedimento"}`,
+          payload: {
+            remaining: total - newUsed,
+            total: total,
+            consumed_at: new Date().toISOString(),
+            recorded_by: profile?.full_name || "Sistema",
+          },
+        });
+      }
       
-      // Refresh
+      toast.success("Sessão debitada com sucesso!");
       loadFinancialData();
     } catch (err) {
       console.error("Error decrementing session:", err);
-      alert("Erro ao debitar sessão.");
+      toast.error("Erro ao debitar sessão.");
     }
   };
 
-  const receita = transactions.filter((t) => t.type === "receita" && t.status === "paid").reduce((a, t) => a + t.value, 0);
-  const despesa = transactions.filter((t) => t.type === "despesa" && t.status === "paid").reduce((a, t) => a + t.value, 0);
-  const sinais = transactions.filter((t) => t.type === "sinal" && t.status === "paid").reduce((a, t) => a + t.value, 0);
-  const inadimplentes = transactions.filter((t) => t.status === "overdue");
+  // Helper function to check if transaction date fits period filter
+  const checkDateInRange = useCallback((dateStr: string, range: typeof filterPeriod) => {
+    if (range === "all") return true;
 
-  const filteredTx = typeFilter === "all" ? transactions : transactions.filter((t) => t.type === typeFilter);
+    let txDate: Date;
+    if (dateStr.includes("/")) {
+      const [d, m] = dateStr.split("/").map(Number);
+      const currentYear = new Date().getFullYear();
+      txDate = new Date(currentYear, m - 1, d);
+    } else {
+      txDate = new Date(dateStr);
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const txTime = txDate.getTime();
+
+    switch (range) {
+      case "today": {
+        return txDate.toDateString() === new Date().toDateString();
+      }
+      case "yesterday": {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return txDate.toDateString() === yesterday.toDateString();
+      }
+      case "7days": {
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        return txTime >= sevenDaysAgo.getTime() && txTime <= new Date().getTime();
+      }
+      case "30days": {
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return txTime >= thirtyDaysAgo.getTime() && txTime <= new Date().getTime();
+      }
+      case "month": {
+        return txDate.getMonth() === new Date().getMonth() && txDate.getFullYear() === new Date().getFullYear();
+      }
+      case "last_month": {
+        const lastMonth = new Date(today);
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+        return txDate.getMonth() === lastMonth.getMonth() && txDate.getFullYear() === lastMonth.getFullYear();
+      }
+      default:
+        return true;
+    }
+  }, [filterPeriod]);
+
+  // Client-side filtering logic
+  const filteredTx = useMemo(() => {
+    return transactions.filter((t) => {
+      // 1. Tab/Type Selector (receita, despesa, sinal)
+      if (typeFilter !== "all" && t.type !== typeFilter) return false;
+
+      // 2. Text Search
+      if (filterSearch.trim()) {
+        const query = filterSearch.toLowerCase();
+        const desc = (t.description || "").toLowerCase();
+        const cat = (t.category || "").toLowerCase();
+        const pName = (t.contactName || "").toLowerCase();
+        if (!desc.includes(query) && !cat.includes(query) && !pName.includes(query)) {
+          return false;
+        }
+      }
+
+      // 3. Period Selector
+      if (!checkDateInRange(t.date, filterPeriod)) return false;
+
+      // 4. Method Selector
+      if (filterMethod !== "all" && t.method !== filterMethod) return false;
+
+      // 5. Status Selector
+      if (filterStatus !== "all" && t.status !== filterStatus) return false;
+
+      return true;
+    });
+  }, [transactions, typeFilter, filterSearch, filterPeriod, filterMethod, filterStatus, checkDateInRange]);
+
+  // KPIs dynamically computed over filteredTx
+  const receita = filteredTx.filter((t) => t.type === "receita" && t.status === "paid").reduce((a, t) => a + t.value, 0);
+  const despesa = filteredTx.filter((t) => t.type === "despesa" && t.status === "paid").reduce((a, t) => a + t.value, 0);
+  const sinais = filteredTx.filter((t) => t.type === "sinal" && t.status === "paid").reduce((a, t) => a + t.value, 0);
+  const inadimplentes = filteredTx.filter((t) => t.status === "overdue");
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -648,9 +802,9 @@ export default function FinanceiroPage() {
   };
   const statusLabel = { paid: "Pago", pending: "Pendente", overdue: "Vencido" };
 
-  // Dynamic DRE metrics
+  // DRE dynamically computed over filtered variables
   const totalFaturamento = receita + sinais;
-  const mc = totalFaturamento - (receita * 0.05) - (receita * 0.15); // mock mc formula
+  const mc = totalFaturamento - (receita * 0.05) - (receita * 0.15);
   const lucro = mc - despesa;
 
   const dreRows = [
@@ -665,18 +819,18 @@ export default function FinanceiroPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       {showAddModal && <AddTransactionModal onClose={() => setShowAddModal(false)} onSuccess={loadFinancialData} />}
 
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
-          <p className="text-sm text-muted-foreground">Caixa, pacotes, parcelamentos e DRE em tempo real da clínica.</p>
+          <p className="text-sm text-muted-foreground">Caixa, pacotes, comissões reais e DRE em tempo real da clínica.</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background hover:opacity-90 transition-opacity cursor-pointer"
+          className="flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background hover:opacity-90 transition-opacity cursor-pointer border-0"
         >
           <PlusIcon className="h-4 w-4" />
           Lançar Transação
@@ -722,13 +876,90 @@ export default function FinanceiroPage() {
             </div>
           )}
 
+          {/* Filters Bar */}
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-wrap items-center gap-3">
+            {/* Search Input */}
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="text"
+                placeholder="Buscar por descrição, categoria ou paciente..."
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            {/* Period Filter */}
+            <div className="min-w-[120px]">
+              <select
+                value={filterPeriod}
+                onChange={(e) => setFilterPeriod(e.target.value as any)}
+                className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="all">Todo Período</option>
+                <option value="today">Hoje</option>
+                <option value="yesterday">Ontem</option>
+                <option value="7days">Últimos 7 dias</option>
+                <option value="30days">Últimos 30 dias</option>
+                <option value="month">Mês Atual</option>
+                <option value="last_month">Mês Anterior</option>
+              </select>
+            </div>
+
+            {/* Method Filter */}
+            <div className="min-w-[120px]">
+              <select
+                value={filterMethod}
+                onChange={(e) => setFilterMethod(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="all">Todos Métodos</option>
+                <option value="pix">Pix</option>
+                <option value="credito">Cartão de Crédito</option>
+                <option value="debito">Cartão de Débito</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="transferencia">Transferência</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="min-w-[120px]">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="all">Todas Situações</option>
+                <option value="paid">Pago</option>
+                <option value="pending">Pendente</option>
+                <option value="overdue">Vencido</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            {(filterSearch || filterPeriod !== "all" || filterMethod !== "all" || filterStatus !== "all" || typeFilter !== "all") && (
+              <button
+                onClick={() => {
+                  setFilterSearch("");
+                  setFilterPeriod("all");
+                  setFilterMethod("all");
+                  setFilterStatus("all");
+                  setTypeFilter("all");
+                }}
+                className="text-xs font-bold text-neutral-500 hover:text-primary transition-colors hover:underline px-2 cursor-pointer border-0 bg-transparent"
+              >
+                Limpar Filtros
+              </button>
+            )}
+          </div>
+
           {/* Tab navigation */}
           <div className="flex gap-1 border-b border-border overflow-x-auto">
             {(["ledger", "contas", "pacotes", "comissoes", "previsibilidade", "dre"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px cursor-pointer shrink-0 ${
+                className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px cursor-pointer shrink-0 border-t-0 border-l-0 border-r-0 bg-transparent ${
                   activeTab === tab
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -758,7 +989,7 @@ export default function FinanceiroPage() {
                     key={f}
                     onClick={() => setTypeFilter(f)}
                     className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                      typeFilter === f ? "bg-foreground text-background" : "border border-border text-muted-foreground hover:bg-muted"
+                      typeFilter === f ? "bg-foreground text-background" : "border border-border text-muted-foreground hover:bg-muted bg-transparent"
                     }`}
                   >
                     {f === "all" ? "Todos" : f === "receita" ? "Receitas" : f === "despesa" ? "Despesas" : "Sinais"}
@@ -788,15 +1019,15 @@ export default function FinanceiroPage() {
                       filteredTx.map((tx) => (
                         <tr key={tx.id} className="hover:bg-muted/10 transition-colors">
                           <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{tx.date}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 text-left">
                             <p className="text-sm font-semibold text-foreground">{tx.description}</p>
                             {tx.contactName && (
                               <p className="text-xs text-muted-foreground">Paciente: {tx.contactName}</p>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell capitalize">{tx.category}</td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">{PAYMENT_LABELS[tx.method]}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell capitalize text-left">{tx.category}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell text-left">{PAYMENT_LABELS[tx.method]}</td>
+                          <td className="px-4 py-3 text-left">
                             <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${statusCls[tx.status]}`}>
                               {statusLabel[tx.status]}
                             </span>
@@ -817,7 +1048,7 @@ export default function FinanceiroPage() {
           {activeTab === "contas" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Contas a Receber (Receitas pendentes/atrasadas) */}
-              <div className="space-y-3">
+              <div className="space-y-3 text-left">
                 <h3 className="text-sm font-bold text-emerald-600 uppercase tracking-wider">Contas a Receber</h3>
                 <div className="rounded-xl border border-border bg-card overflow-hidden">
                   <table className="w-full text-xs">
@@ -828,16 +1059,16 @@ export default function FinanceiroPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                      {transactions.filter(t => (t.type === "receita" || t.type === "sinal") && t.status !== "paid").length === 0 ? (
+                      {filteredTx.filter(t => (t.type === "receita" || t.type === "sinal") && t.status !== "paid").length === 0 ? (
                         <tr>
                           <td colSpan={2} className="text-center py-8 text-xs text-muted-foreground italic">
                             Nenhuma receita pendente.
                           </td>
                         </tr>
                       ) : (
-                        transactions.filter(t => (t.type === "receita" || t.type === "sinal") && t.status !== "paid").map(t => (
+                        filteredTx.filter(t => (t.type === "receita" || t.type === "sinal") && t.status !== "paid").map(t => (
                           <tr key={t.id} className="hover:bg-muted/10">
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 text-left">
                               <p className="font-semibold text-foreground">{t.description}</p>
                               <p className="text-[10px] text-muted-foreground">Vencimento: {t.date} • {t.contactName ? `Paciente: ${t.contactName}` : "Geral"}</p>
                             </td>
@@ -851,7 +1082,7 @@ export default function FinanceiroPage() {
               </div>
 
               {/* Contas a Pagar (Despesas pendentes/atrasadas) */}
-              <div className="space-y-3">
+              <div className="space-y-3 text-left">
                 <h3 className="text-sm font-bold text-rose-500 uppercase tracking-wider">Contas a Pagar</h3>
                 <div className="rounded-xl border border-border bg-card overflow-hidden">
                   <table className="w-full text-xs">
@@ -862,16 +1093,16 @@ export default function FinanceiroPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                      {transactions.filter(t => t.type === "despesa" && t.status !== "paid").length === 0 ? (
+                      {filteredTx.filter(t => t.type === "despesa" && t.status !== "paid").length === 0 ? (
                         <tr>
                           <td colSpan={2} className="text-center py-8 text-xs text-muted-foreground italic">
                             Nenhuma despesa pendente.
                           </td>
                         </tr>
                       ) : (
-                        transactions.filter(t => t.type === "despesa" && t.status !== "paid").map(t => (
+                        filteredTx.filter(t => t.type === "despesa" && t.status !== "paid").map(t => (
                           <tr key={t.id} className="hover:bg-muted/10">
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 text-left">
                               <p className="font-semibold text-foreground">{t.description}</p>
                               <p className="text-[10px] text-muted-foreground">Vencimento: {t.date}</p>
                             </td>
@@ -888,7 +1119,7 @@ export default function FinanceiroPage() {
 
           {/* ── Tab: Pacotes ── */}
           {activeTab === "pacotes" && (
-            <div className="space-y-3">
+            <div className="space-y-3 text-left">
               {packages.length === 0 ? (
                 <div className="text-center py-16 border border-dashed rounded-xl text-xs text-muted-foreground italic bg-card">
                   Nenhum pacote contratado por pacientes cadastrado ainda.
@@ -903,10 +1134,10 @@ export default function FinanceiroPage() {
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-bold text-foreground">{pkg.procedure}</h3>
                             <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                              pkg.status === "active" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
-                              pkg.status === "completed" ? "border-border text-muted-foreground bg-muted" :
-                              "border-destructive/30 text-destructive bg-destructive/10"
-                            }`}>
+                               pkg.status === "active" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
+                               pkg.status === "completed" ? "border-border text-muted-foreground bg-muted" :
+                               "border-destructive/30 text-destructive bg-destructive/10"
+                             }`}>
                               {pkg.status === "active" ? "Ativo" : pkg.status === "completed" ? "Concluído" : "Vencido"}
                             </span>
                           </div>
@@ -914,8 +1145,8 @@ export default function FinanceiroPage() {
                         </div>
                         {pkg.status === "active" && pkg.remainingSessions > 0 && (
                           <button
-                            onClick={() => handleConsumeSession(pkg.id, pkg.totalSessions, pkg.remainingSessions)}
-                            className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                            onClick={() => handleConsumeSession(pkg.id, pkg.totalSessions, pkg.remainingSessions, pkg.contactId, pkg.procedure)}
+                            className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer border-0"
                           >
                             Consumir Sessão
                           </button>
@@ -950,11 +1181,11 @@ export default function FinanceiroPage() {
 
           {/* ── Tab: Comissões ── */}
           {activeTab === "comissoes" && (
-            <div className="space-y-3">
+            <div className="space-y-3 text-left">
               <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="border-b border-border bg-muted/20 px-6 py-4">
                   <h2 className="text-sm font-bold text-foreground">Comissões Acumuladas</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Valores apurados para repasse profissional (calculado a 15% sobre procedimentos pagos)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Valores reais apurados para repasse (calculados conforme regras individuais ou específicas de procedimentos para atendimentos finalizados)</p>
                 </div>
                 <div className="divide-y divide-border/50">
                   {professionals.length === 0 ? (
@@ -966,7 +1197,7 @@ export default function FinanceiroPage() {
                       <div key={idx} className="flex items-center justify-between px-6 py-4 text-xs hover:bg-muted/5 transition-colors">
                         <div>
                           <p className="text-sm font-semibold text-foreground">{p.name}</p>
-                          <p className="text-[10px] text-muted-foreground">Taxa padrão: 15%</p>
+                          <p className="text-[10px] text-muted-foreground">Apurado com base nos atendimentos realizados</p>
                         </div>
                         <span className="font-mono font-bold text-sm text-foreground">{fmt(p.commission)}</span>
                       </div>
@@ -979,7 +1210,7 @@ export default function FinanceiroPage() {
 
           {/* ── Tab: Previsibilidade ── */}
           {activeTab === "previsibilidade" && (
-            <div className="space-y-4">
+            <div className="space-y-4 text-left">
               <div className="rounded-xl border border-border bg-card p-6 space-y-4">
                 <div>
                   <h2 className="text-sm font-bold text-foreground">Previsão de Recebimentos Futuros</h2>
@@ -998,10 +1229,10 @@ export default function FinanceiroPage() {
 
           {/* ── Tab: DRE ── */}
           {activeTab === "dre" && (
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="rounded-xl border border-border bg-card overflow-hidden text-left">
               <div className="border-b border-border bg-muted/20 px-6 py-4">
                 <h2 className="text-sm font-bold text-foreground">DRE — Mês Atual</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Demonstração de Resultado do Exercício consolidada</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Demonstração de Resultado do Exercício consolidada (respeita os filtros ativos)</p>
               </div>
               <div className="divide-y divide-border/50 bg-card">
                 {dreRows.map((row, i) => {

@@ -63,3 +63,13 @@
 - `[x]` **Editor de Templates Unificado** (`wacrm/src/app/(dashboard)/comunicacao/modelos/page.tsx`)
   - `[x]` Adicionar sistema de abas na tela de modelos de comunicação
   - `[x]` Centralizar os modelos automáticos (gatilhos do sistema) e os modelos de disparos diretos (Meta TemplateManager)
+
+---
+
+# Lista de Tarefas - Fase 5 (Concluída)
+
+- `[x]` **Módulo Financeiro Expandido** (`wacrm/src/app/(dashboard)/financeiro/page.tsx`)
+  - `[x]` Adicionar barra de filtros dinâmica (busca, período, método, situação)
+  - `[x]` Vincular KPIs e DRE para atualizarem dinamicamente de acordo com os filtros
+  - `[x]` Implementar apuração de comissões reais via `clinic_users` e `procedure_professionals`
+  - `[x]` Integrar a ação "Consumir Sessão" de pacotes com o registro de log na `patient_timeline`
