@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Phone,
@@ -33,10 +32,13 @@ import {
   Save,
   X,
   DollarSign,
-  UserIcon,
   CalendarIcon,
   FileTextIcon,
   TrendingUpIcon,
+  Sparkles,
+  Hourglass,
+  MessageSquare,
+  Clock,
 } from 'lucide-react';
 import { ProntuarioTab } from '@/components/contacts/prontuario-tab';
 import { EvolucaoTab } from '@/components/contacts/evolucao-tab';
@@ -88,6 +90,14 @@ export function ContactDetailView({
   // Deals tab
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
+
+  // Timeline tab
+  const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
+
+  // AI Summary
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [loadingAISummary, setLoadingAISummary] = useState(false);
 
   const fetchContact = useCallback(async () => {
     if (!contactId) return;
@@ -172,6 +182,58 @@ export function ContactDetailView({
     setLoadingDeals(false);
   }, [contactId, supabase]);
 
+  const fetchTimeline = useCallback(async () => {
+    if (!contactId) return;
+    setLoadingTimeline(true);
+    const { data } = await supabase
+      .from('contact_timeline')
+      .select('*')
+      .eq('contact_id', contactId)
+      .order('created_at', { ascending: false });
+    if (data) setTimelineEvents(data);
+    setLoadingTimeline(false);
+  }, [contactId, supabase]);
+
+  const handleIARequest = async () => {
+    if (!contactId) return;
+    setLoadingAISummary(true);
+    try {
+      // 1. Fetch conversations for this contact
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('contact_id', contactId)
+        .single();
+
+      let formattedMsgs: { sender: string; text: string }[] = [];
+      if (conv) {
+        const { data: msgs } = await supabase
+          .from('messages')
+          .select('sender_type, content_text')
+          .eq('conversation_id', conv.id)
+          .order('created_at', { ascending: true });
+
+        if (msgs) {
+          formattedMsgs = msgs.map((m) => ({
+            sender: m.sender_type === 'lead' || m.sender_type === 'patient' ? 'patient' : 'clinic',
+            text: m.content_text || '',
+          }));
+        }
+      }
+
+      // 2. Call generateAISummary action
+      const { generateAISummary } = await import('@/app/actions/ai-actions');
+      const summary = await generateAISummary(formattedMsgs);
+      setAiSummary(summary);
+      toast.success('Resumo gerado pela LIA!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao gerar análise da IA: ' + err.message);
+    } finally {
+      setLoadingAISummary(false);
+    }
+  };
+
   useEffect(() => {
     if (open && contactId) {
       fetchContact();
@@ -179,8 +241,10 @@ export function ContactDetailView({
       fetchNotes();
       fetchCustomFields();
       fetchDeals();
+      fetchTimeline();
+      setAiSummary(null);
     }
-  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals]);
+  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals, fetchTimeline]);
 
   async function copyPhone() {
     if (!contact) return;
@@ -358,7 +422,7 @@ export function ContactDetailView({
                     {contact.name || 'Unknown'}
                   </SheetTitle>
                   <SheetDescription className="text-muted-foreground text-xs mt-0.5">
-                    Contact details
+                    Detalhes do paciente
                   </SheetDescription>
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                     <button
@@ -386,6 +450,48 @@ export function ContactDetailView({
                       </span>
                     )}
                   </div>
+
+                  {/* Ações Rápidas no Cabeçalho */}
+                  <div className="flex flex-wrap items-center gap-2 mt-3.5">
+                    <a
+                      href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 h-7 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] text-emerald-600 hover:bg-emerald-500/10 px-2.5 text-[10px] font-black uppercase transition-all shrink-0 cursor-pointer"
+                    >
+                      <MessageSquare className="size-3" />
+                      WhatsApp
+                    </a>
+                    <button
+                      onClick={() => {
+                        const ev = new CustomEvent('create-appointment', {
+                          detail: {
+                            contactId: contact.id,
+                            contactName: contact.name,
+                            contactPhone: contact.phone,
+                          },
+                        });
+                        window.dispatchEvent(ev);
+                        onOpenChange(false);
+                      }}
+                      className="inline-flex items-center gap-1 h-7 rounded-lg border border-blue-500/20 bg-blue-500/[0.03] text-blue-600 hover:bg-blue-500/10 px-2.5 text-[10px] font-black uppercase transition-all shrink-0 cursor-pointer"
+                    >
+                      <CalendarIcon className="size-3" />
+                      Agendar
+                    </button>
+                    <button
+                      disabled={loadingAISummary}
+                      onClick={handleIARequest}
+                      className="inline-flex items-center gap-1 h-7 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.03] text-indigo-600 hover:bg-indigo-500/10 px-2.5 text-[10px] font-black uppercase transition-all shrink-0 cursor-pointer"
+                    >
+                      {loadingAISummary ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="size-3 text-indigo-500" />
+                      )}
+                      Análise IA
+                    </button>
+                  </div>
                 </div>
               </div>
             </SheetHeader>
@@ -398,6 +504,12 @@ export function ContactDetailView({
                   className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
                 >
                   Dados
+                </TabsTrigger>
+                <TabsTrigger
+                  value="timeline"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground text-xs"
+                >
+                  Linha do Tempo
                 </TabsTrigger>
                 <TabsTrigger
                   value="tags"
@@ -439,55 +551,194 @@ export function ContactDetailView({
 
               {/* Details Tab */}
               <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-3">
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Name</Label>
-                    <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">Name</Label>
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="bg-muted border-border text-foreground h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">
+                        Phone <span className="text-red-400">*</span>
+                      </Label>
+                      <Input
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="bg-muted border-border text-foreground h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">Email</Label>
+                      <Input
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="bg-muted border-border text-foreground h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">Company</Label>
+                      <Input
+                        value={editCompany}
+                        onChange={(e) => setEditCompany(e.target.value)}
+                        className="bg-muted border-border text-foreground h-8 text-sm"
+                      />
+                    </div>
+                    <Button
+                      onClick={saveDetails}
+                      disabled={savingDetails}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
+                      size="sm"
+                    >
+                      {savingDetails ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Save className="size-3.5" />
+                      )}
+                      Salvar Alterações
+                    </Button>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Phone <span className="text-red-400">*</span>
-                    </Label>
-                    <Input
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Email</Label>
-                    <Input
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Company</Label>
-                    <Input
-                      value={editCompany}
-                      onChange={(e) => setEditCompany(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
-                    />
-                  </div>
-                  <Button
-                    onClick={saveDetails}
-                    disabled={savingDetails}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
-                    size="sm"
-                  >
-                    {savingDetails ? (
-                      <Loader2 className="size-3.5 animate-spin" />
+
+                  {/* LIA Copilot Summary Insights Box */}
+                  <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.01] p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="size-4 text-indigo-500 fill-indigo-500/10" />
+                        <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-400">LIA Copilot Summary</h4>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={loadingAISummary}
+                        onClick={handleIARequest}
+                        className="h-6 text-[10px] font-bold border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/10 cursor-pointer rounded-lg px-2"
+                      >
+                        {loadingAISummary ? <Loader2 className="size-3 animate-spin" /> : 'Analisar Conversa'}
+                      </Button>
+                    </div>
+                    {aiSummary ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">{aiSummary}</p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => {
+                            if (!accountId) return;
+                            const { data: { session } } = await supabase.auth.getSession();
+                            const user = session?.user;
+                            if (!user) return;
+                            const { error } = await supabase.from('contact_notes').insert({
+                              contact_id: contactId,
+                              account_id: accountId,
+                              user_id: user.id,
+                              note_text: `[LIA INSIGHTS SUMMARY]:\n${aiSummary}`,
+                            });
+                            if (!error) {
+                              fetchNotes();
+                              toast.success('Resumo salvo nas anotações!');
+                            }
+                          }}
+                          className="h-6 text-[9px] text-indigo-600 hover:text-indigo-700 hover:underline px-0 cursor-pointer font-extrabold"
+                        >
+                          Salvar nas anotações do contato
+                        </Button>
+                      </div>
                     ) : (
-                      <Save className="size-3.5" />
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        A LIA pode ler e processar o histórico de mensagens deste paciente para extrair interesses, objeções e planejar os próximos passos de forma instantânea.
+                      </p>
                     )}
-                    Save Changes
-                  </Button>
+                  </div>
                 </div>
+              </TabsContent>
+
+              {/* Timeline Tab */}
+              <TabsContent value="timeline" className="flex-1 flex flex-col min-h-0 px-4 py-3">
+                {loadingTimeline ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="size-5 animate-spin text-primary" />
+                  </div>
+                ) : timelineEvents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Hourglass className="size-8 text-muted-foreground/40 mb-2" />
+                    <p className="text-sm font-semibold text-foreground">Nenhum evento registrado</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      A linha do tempo do paciente é gerada automaticamente com base nas interações com a clínica.
+                    </p>
+                  </div>
+                ) : (
+                  <ScrollArea className="flex-1 pr-2">
+                    <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border/60">
+                      {timelineEvents.map((evt) => {
+                        const getEventConfig = (type: string) => {
+                          switch (type) {
+                            case 'message':
+                              return { icon: MessageSquare, color: "bg-emerald-500 text-white ring-emerald-500/20" };
+                            case 'appointment':
+                              return { icon: CalendarIcon, color: "bg-blue-500 text-white ring-blue-500/20" };
+                            case 'appointment_cancelled':
+                              return { icon: X, color: "bg-red-500 text-white ring-red-500/20" };
+                            case 'appointment_rescheduled':
+                              return { icon: CalendarIcon, color: "bg-amber-500 text-white ring-amber-500/20" };
+                            case 'document_sent':
+                              return { icon: FileTextIcon, color: "bg-indigo-500 text-white ring-indigo-500/20" };
+                            case 'document_signed':
+                              return { icon: Check, color: "bg-violet-500 text-white ring-violet-500/20" };
+                            case 'payment':
+                              return { icon: DollarSign, color: "bg-green-600 text-white ring-green-600/20" };
+                            case 'quote_sent':
+                            case 'quote_accepted':
+                              return { icon: DollarSign, color: "bg-cyan-500 text-white ring-cyan-500/20" };
+                            case 'status_change':
+                            case 'deal_stage_change':
+                              return { icon: TrendingUpIcon, color: "bg-sky-500 text-white ring-sky-500/20" };
+                            case 'note':
+                              return { icon: FileTextIcon, color: "bg-neutral-500 text-white ring-neutral-500/20" };
+                            default:
+                              return { icon: Clock, color: "bg-neutral-500 text-white ring-neutral-500/20" };
+                          }
+                        };
+
+                        const config = getEventConfig(evt.event_type);
+                        const Icon = config.icon;
+
+                        return (
+                          <div key={evt.id} className="relative group">
+                            {/* Timeline marker */}
+                            <span className={`absolute -left-[21px] top-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4 ${config.color}`}>
+                              <Icon className="size-3" />
+                            </span>
+
+                            <div className="rounded-xl border border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/20 dark:bg-neutral-900/10 p-3.5 transition-all group-hover:border-neutral-200 dark:group-hover:border-neutral-700">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <h4 className="text-xs font-bold text-foreground">{evt.title}</h4>
+                                <span className="text-[10px] text-muted-foreground font-medium">
+                                  {new Date(evt.created_at).toLocaleString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              {evt.description && (
+                                <p className="text-xs text-muted-foreground leading-relaxed">{evt.description}</p>
+                              )}
+                              {evt.metadata && Object.keys(evt.metadata).length > 0 && (
+                                <div className="mt-2 text-[10px] bg-neutral-100/50 dark:bg-neutral-900/40 p-2 rounded-lg text-muted-foreground max-h-24 overflow-y-auto">
+                                  <pre className="font-mono text-[9px] whitespace-pre-wrap">{JSON.stringify(evt.metadata, null, 2)}</pre>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
               </TabsContent>
 
               {/* Tags Tab */}
