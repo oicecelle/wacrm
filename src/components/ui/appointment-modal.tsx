@@ -39,7 +39,10 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
   PlusIcon,
-  Camera
+  Camera,
+  CopyIcon,
+  TrashIcon,
+  ClipboardListIcon
 } from "lucide-react";
 import { generateAIDocument } from "@/app/actions/ai-actions";
 import { cn } from "@/lib/utils";
@@ -118,6 +121,20 @@ export function AppointmentModal({
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+
+  // Inline Quote creation states
+  const [isCreatingQuote, setIsCreatingQuote] = useState(false);
+  const [quoteStep, setQuoteStep] = useState<"build" | "message">("build");
+  const [quoteItems, setQuoteItems] = useState<any[]>([]);
+  const [quoteDiscountType, setQuoteDiscountType] = useState<"fixed" | "percent">("fixed");
+  const [quoteDiscountValue, setQuoteDiscountValue] = useState("0");
+  const [quoteSpecialCondition, setQuoteSpecialCondition] = useState("");
+  const [quoteExpiresAt, setQuoteExpiresAt] = useState("");
+  const [quoteMessageText, setQuoteMessageText] = useState("");
+  const [quoteCopied, setQuoteCopied] = useState(false);
+  const [quoteSaving, setQuoteSaving] = useState(false);
+  const [quoteSending, setQuoteSending] = useState(false);
+  const [packagesTemplates, setPackagesTemplates] = useState<any[]>([]);
 
   // Search queries
   const [searchQuery, setSearchQuery] = useState("");
@@ -286,14 +303,23 @@ export function AppointmentModal({
           .order("name");
         setStaff((stData || []).map((s) => ({ id: s.user_id, name: s.name })));
 
-        // Fetch procedures
+        // Fetch procedures with values and prices
         const { data: procData } = await supabase
           .from("procedures")
-          .select("id, name")
+          .select("id, name, valor, price")
           .eq("clinic_id", clinicId)
           .eq("ativo", true)
           .order("name");
         setProcedures(procData || []);
+
+        // Fetch packages templates catalog
+        const { data: pkgCatalog } = await supabase
+          .from("packages")
+          .select("id, name, price, validity_days")
+          .eq("account_id", clinicId)
+          .eq("is_active", true)
+          .order("name");
+        setPackagesTemplates(pkgCatalog || []);
 
         // Fetch rooms
         const { data: rmData } = await supabase
@@ -694,6 +720,201 @@ export function AppointmentModal({
     
     loadSmartPanelData();
   }, [patientId, open]);
+
+  // ─── Inline Quote Creator Helpers ──────────────────────────────────────────
+  const fmt = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+  const subtotal = quoteItems.reduce((s, i) => s + i.total_price, 0);
+  const discountNum = parseFloat(quoteDiscountValue.replace(",", ".")) || 0;
+  const discountAmount = quoteDiscountType === "percent" ? (subtotal * discountNum) / 100 : discountNum;
+  const total = Math.max(0, subtotal - discountAmount);
+
+  const addQuoteProcedure = (proc: any) => {
+    const existing = quoteItems.findIndex((i) => i.item_type === "procedure" && i.item_id === proc.id);
+    if (existing >= 0) {
+      const updated = [...quoteItems];
+      updated[existing].quantity += 1;
+      updated[existing].total_price = updated[existing].quantity * updated[existing].unit_price;
+      setQuoteItems(updated);
+    } else {
+      const price = proc.valor || proc.price || 0;
+      setQuoteItems((prev) => [...prev, {
+        item_type: "procedure", item_id: proc.id, name: proc.name,
+        quantity: 1, unit_price: price, total_price: price,
+      }]);
+    }
+  };
+
+  const addQuotePackage = (pkg: any) => {
+    const existing = quoteItems.findIndex((i) => i.item_type === "package" && i.item_id === pkg.id);
+    if (existing >= 0) return;
+    setQuoteItems((prev) => [...prev, {
+      item_type: "package", item_id: pkg.id, name: pkg.name,
+      quantity: 1, unit_price: pkg.price, total_price: pkg.price,
+    }]);
+  };
+
+  const updateQuoteItemQty = (idx: number, qty: number) => {
+    if (qty < 1) return;
+    const updated = [...quoteItems];
+    updated[idx].quantity = qty;
+    updated[idx].total_price = qty * updated[idx].unit_price;
+    setQuoteItems(updated);
+  };
+
+  const removeQuoteItem = (idx: number) => {
+    setQuoteItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const buildQuoteMessage = () => {
+    const itemsText = quoteItems.map((i) =>
+      `• ${i.name}${i.quantity > 1 ? ` (x${i.quantity})` : ""} — ${fmt(i.total_price)}`
+    ).join("\n");
+
+    const condText = quoteSpecialCondition
+      ? `\n✅ *Condição especial:* ${quoteSpecialCondition}`
+      : "";
+
+    const validityText = quoteExpiresAt
+      ? `\n📅 *Validade:* ${new Date(quoteExpiresAt + "T12:00:00").toLocaleDateString("pt-BR")}`
+      : "";
+
+    const template = `Olá, {{nome}}! 👋
+
+Preparei um orçamento especial para você:
+
+{{itens}}
+
+💰 *Total: {{total}}*
+{{condicao}}
+
+Este orçamento é válido por 7 dias.
+Qualquer dúvida, estou à disposição! 😊`;
+
+    let msg = template
+      .replace("{{nome}}", selectedPatientInfo?.name || "cliente")
+      .replace("{{itens}}", itemsText)
+      .replace("{{total}}", fmt(total))
+      .replace("{{condicao}}", condText + validityText);
+
+    if (discountAmount > 0) {
+      msg = msg.replace("💰", `🎁 *Desconto:* -${fmt(discountAmount)}\n💰`);
+    }
+
+    setQuoteMessageText(msg);
+    setQuoteStep("message");
+  };
+
+  const saveQuoteInline = async (status: "draft" | "sent") => {
+    if (!accountId || !patientId) return null;
+    
+    // Resolve contact first (ensure it exists in contacts table)
+    const { data: existingContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("id", patientId)
+      .maybeSingle();
+
+    if (!existingContact) {
+      const cleanPhone = selectedPatientInfo?.phone ? selectedPatientInfo.phone.replace(/\D/g, "") : "";
+      await supabase
+        .from("contacts")
+        .insert({
+          id: patientId,
+          user_id: user?.id,
+          account_id: accountId,
+          name: selectedPatientInfo?.name || "Paciente Sem Nome",
+          phone: cleanPhone,
+          contact_type: "client",
+        });
+    }
+
+    const { data, error } = await supabase.from("quotes").insert({
+      account_id: accountId,
+      contact_id: patientId,
+      status,
+      total_value: total,
+      discount_value: discountAmount,
+      discount_type: quoteDiscountType,
+      special_condition: quoteSpecialCondition || null,
+      message_text: quoteMessageText,
+      expires_at: quoteExpiresAt || null,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
+    }).select("id").single();
+
+    if (error) throw error;
+
+    if (quoteItems.length > 0) {
+      await supabase.from("quote_items").insert(
+        quoteItems.map((i) => ({
+          quote_id: data.id,
+          item_type: i.item_type,
+          item_id: i.item_id,
+          name: i.name,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          total_price: i.total_price,
+        }))
+      );
+    }
+
+    return data.id;
+  };
+
+  const handleSendWhatsAppInline = async () => {
+    if (!selectedPatientInfo?.phone) {
+      alert("Este contato não tem WhatsApp cadastrado.");
+      return;
+    }
+    setQuoteSending(true);
+    try {
+      const quoteId = await saveQuoteInline("sent");
+      if (!quoteId) throw new Error("Falha ao salvar orçamento");
+
+      const portalLink = `${window.location.origin}/portal/orcamento/${quoteId}`;
+      const finalMessage = `${quoteMessageText}\n\n🔗 Visualize e aprove seu orçamento clicando aqui:\n${portalLink}`;
+
+      await supabase
+        .from("quotes")
+        .update({ message_text: finalMessage })
+        .eq("id", quoteId);
+
+      fetchQuotes();
+
+      const phone = selectedPatientInfo.phone.replace(/\D/g, "");
+      const waUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(finalMessage)}`;
+      window.open(waUrl, "_blank");
+
+      alert("Orçamento registrado e WhatsApp aberto!");
+      setIsCreatingQuote(false);
+    } catch (err: any) {
+      alert("Erro: " + err.message);
+    } finally {
+      setQuoteSending(false);
+    }
+  };
+
+  const handleCopyMessageInline = async () => {
+    await navigator.clipboard.writeText(quoteMessageText);
+    setQuoteCopied(true);
+    setTimeout(() => setQuoteCopied(false), 2000);
+    alert("Mensagem copiada!");
+  };
+
+  const handleSaveDraftInline = async () => {
+    setQuoteSaving(true);
+    try {
+      const quoteId = await saveQuoteInline("draft");
+      if (quoteId) fetchQuotes();
+      alert("Orçamento salvo como rascunho!");
+      setIsCreatingQuote(false);
+    } catch (err: any) {
+      alert("Erro: " + err.message);
+    } finally {
+      setQuoteSaving(false);
+    }
+  };
 
   // Save/Update appointment details
   const handleSave = async (e: React.FormEvent) => {
@@ -1578,7 +1799,7 @@ export function AppointmentModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
-        "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0",
+        "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 text-[13px] font-medium",
         (apptType === "evento" || apptType === "bloqueio") 
           ? "sm:max-w-md p-6 rounded-2xl"
           : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"),
@@ -2091,7 +2312,7 @@ export function AppointmentModal({
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-slate-50 text-slate-900 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-200">
+            <header className="bg-[#fafafc] text-neutral-800 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
                 <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-lg font-black shadow-md shrink-0">
@@ -2101,8 +2322,8 @@ export function AppointmentModal({
 
                 <div className="space-y-0.5 text-left min-w-0">
                   <div className="flex items-center flex-wrap gap-2">
-                    <h2 className="text-lg font-extrabold tracking-tight truncate text-slate-900">
-                      {firstName} <span className="font-medium text-slate-500">{lastName}</span>
+                    <h2 className="text-base font-extrabold tracking-tight truncate text-neutral-800">
+                      {firstName} <span className="font-medium text-neutral-500">{lastName}</span>
                     </h2>
                     
                     {/* Documents Alert status badge */}
@@ -2734,173 +2955,453 @@ export function AppointmentModal({
 
                     {/* Tab: FINANCIAL (Paid/Pending transactions & packages credit list) */}
                     {activeTab === "financial" && (
-                      <div className="space-y-6 text-left">
-                        {/* Summary metrics card */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-left shadow-xs">
-                            <span className="text-[9px] text-emerald-600 font-black uppercase block tracking-wider">Faturado / Recebido</span>
-                            <span className="text-xl font-black text-emerald-800">
-                              R$ {patientTransactions.filter(t => t.type === 'receita' && t.status === 'paid').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-left shadow-xs">
-                            <span className="text-[9px] text-rose-600 font-black uppercase block tracking-wider">Pendente de Cobrança</span>
-                            <span className="text-xl font-black text-rose-800">
-                              R$ {patientTransactions.filter(t => t.type === 'receita' && t.status === 'pending').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* List of Financial Transactions */}
-                        <div className="space-y-3">
-                          <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Lançamentos Financeiros</h4>
-                          {patientTransactions.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic">Nenhuma transação financeira lançada no histórico.</p>
-                          ) : (
-                            <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
-                              {patientTransactions.map((tx) => {
-                                const isIncome = tx.type === "receita";
-                                const isPaid = tx.status === "paid";
-                                return (
-                                  <div key={tx.id} className="flex items-center justify-between p-3.5 bg-white text-xs gap-4">
-                                    <div className="text-left min-w-0">
-                                      <p className="font-extrabold text-neutral-800 truncate">{tx.description || "Transação Sem Título"}</p>
-                                      <p className="text-[9px] text-neutral-400">
-                                        Data: {new Date(tx.created_at || tx.due_date).toLocaleDateString("pt-BR")}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-3 shrink-0">
-                                      <span className={`font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>
-                                        {isIncome ? "+" : "-"} R$ {Number(tx.value).toFixed(2)}
-                                      </span>
-                                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                        isPaid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-600"
-                                      }`}>
-                                        {isPaid ? "Pago" : "Pendente"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                      isCreatingQuote ? (
+                        /* Quote Builder Inside Tab */
+                        <div className="space-y-4 text-left animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between border-b border-neutral-100 pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <FileTextIcon className="h-4.5 w-4.5 text-blue-600 animate-pulse" />
+                              <div>
+                                <h3 className="text-xs font-black text-neutral-800">Novo Orçamento</h3>
+                                <p className="text-[10px] text-neutral-400">Monte o orçamento para {selectedPatientInfo?.name || "o paciente"}</p>
+                              </div>
                             </div>
-                          )}
-                        </div>
-
-                        {/* Quotes / Orçamentos Section */}
-                        <div className="space-y-4 pt-4 border-t border-neutral-100">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Orçamentos Enviados</h4>
                             <Button
                               type="button"
-                              onClick={() => setQuoteModalOpen(true)}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 gap-1 rounded-lg"
+                              variant="ghost"
+                              onClick={() => setIsCreatingQuote(false)}
+                              className="text-neutral-500 hover:text-neutral-800 text-[10px] font-bold h-7 px-2.5 rounded-lg border border-neutral-200"
                             >
-                              <PlusIcon className="h-3 w-3" />
-                              Novo Orçamento
+                              ← Voltar
                             </Button>
                           </div>
 
-                          {/* Quotes stats row */}
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-neutral-50 border border-neutral-200/50 rounded-xl p-2.5 text-center shadow-xs">
-                              <span className="text-[8px] text-neutral-500 font-extrabold uppercase block tracking-wider">Total</span>
-                              <span className="text-sm font-black text-neutral-700">{quotes.length}</span>
+                          {quoteStep === "build" ? (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Left Column: Catalog selection */}
+                                <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-neutral-50/20">
+                                  <div>
+                                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                      <TagIcon className="h-3 w-3 text-blue-500" /> Procedimentos
+                                    </p>
+                                    <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                      {procedures.map((p) => (
+                                        <button
+                                          key={p.id}
+                                          type="button"
+                                          onClick={() => addQuoteProcedure(p)}
+                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 border border-neutral-100 bg-white transition-all text-left shadow-xs font-semibold"
+                                        >
+                                          <span className="truncate">{p.name}</span>
+                                          <span className="text-neutral-400 font-mono shrink-0 ml-2">{fmt(p.valor || p.price || 0)}</span>
+                                        </button>
+                                      ))}
+                                      {procedures.length === 0 && (
+                                        <p className="text-[10px] text-neutral-400 italic text-center py-4">Nenhum procedimento.</p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="border-t border-neutral-100 pt-3">
+                                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                      <PackageIcon className="h-3 w-3 text-purple-500" /> Pacotes Catálogo
+                                    </p>
+                                    <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                                      {packagesTemplates.map((pkg) => (
+                                        <button
+                                          key={pkg.id}
+                                          type="button"
+                                          onClick={() => addQuotePackage(pkg)}
+                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-purple-50 hover:text-purple-700 border border-neutral-100 bg-white transition-all text-left shadow-xs font-semibold"
+                                        >
+                                          <span className="truncate">{pkg.name}</span>
+                                          <span className="text-neutral-400 font-mono shrink-0 ml-2">{fmt(pkg.price)}</span>
+                                        </button>
+                                      ))}
+                                      {packagesTemplates.length === 0 && (
+                                        <p className="text-[10px] text-neutral-400 italic text-center py-4">Nenhum pacote catalogado.</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Right Column: Cart items & configuration */}
+                                <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-white flex flex-col justify-between">
+                                  <div className="space-y-3">
+                                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                                      <ClipboardListIcon className="h-3 w-3 text-emerald-500" /> Itens Selecionados
+                                    </p>
+                                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                                      {quoteItems.length === 0 && (
+                                        <p className="text-[10px] text-neutral-400 italic text-center py-8">
+                                          Selecione procedimentos ou pacotes ao lado →
+                                        </p>
+                                      )}
+                                      {quoteItems.map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-neutral-50/80 rounded-lg p-2 border border-neutral-100 text-[11px]">
+                                          <div className="flex-1 min-w-0 text-left">
+                                            <p className="font-extrabold text-neutral-800 truncate">{item.name}</p>
+                                            <p className="text-[9px] text-neutral-400">{fmt(item.unit_price)} cada</p>
+                                          </div>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                              type="button"
+                                              onClick={() => updateQuoteItemQty(idx, item.quantity - 1)}
+                                              className="h-4.5 w-4.5 rounded bg-neutral-200 hover:bg-neutral-300 text-[10px] font-bold flex items-center justify-center"
+                                            >−</button>
+                                            <span className="w-4 text-center font-bold">{item.quantity}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => updateQuoteItemQty(idx, item.quantity + 1)}
+                                              className="h-4.5 w-4.5 rounded bg-neutral-200 hover:bg-neutral-300 text-[10px] font-bold flex items-center justify-center"
+                                            >+</button>
+                                          </div>
+                                          <span className="font-bold text-blue-700 w-16 text-right shrink-0">{fmt(item.total_price)}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => removeQuoteItem(idx)}
+                                            className="text-rose-400 hover:text-rose-600 shrink-0"
+                                          >
+                                            <TrashIcon className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-3 pt-3 border-t border-neutral-100">
+                                    {/* Discount Row */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-0.5 text-left">
+                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Desconto</label>
+                                        <select
+                                          value={quoteDiscountType}
+                                          onChange={(e) => setQuoteDiscountType(e.target.value as any)}
+                                          className="w-full text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-400"
+                                        >
+                                          <option value="fixed">R$ Fixo</option>
+                                          <option value="percent">% Percentual</option>
+                                        </select>
+                                      </div>
+                                      <div className="space-y-0.5 text-left">
+                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Valor Desconto</label>
+                                        <Input
+                                          placeholder="0"
+                                          value={quoteDiscountValue}
+                                          onChange={(e) => setQuoteDiscountValue(e.target.value)}
+                                          className="h-8 text-xs rounded-lg"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Special Condition & Validity */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-0.5 text-left">
+                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Condição Especial</label>
+                                        <Input
+                                          placeholder="Ex: 3x sem juros"
+                                          value={quoteSpecialCondition}
+                                          onChange={(e) => setQuoteSpecialCondition(e.target.value)}
+                                          className="h-8 text-xs rounded-lg"
+                                        />
+                                      </div>
+                                      <div className="space-y-0.5 text-left">
+                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Validade</label>
+                                        <input
+                                          type="date"
+                                          value={quoteExpiresAt}
+                                          onChange={(e) => setQuoteExpiresAt(e.target.value)}
+                                          className="w-full rounded-lg border border-neutral-200 h-8 px-2.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Calculations */}
+                                    <div className="bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100 text-xs space-y-1 font-semibold">
+                                      <div className="flex justify-between text-neutral-500">
+                                        <span>Subtotal</span>
+                                        <span className="font-mono">{fmt(subtotal)}</span>
+                                      </div>
+                                      {discountAmount > 0 && (
+                                        <div className="flex justify-between text-emerald-600">
+                                          <span>Desconto</span>
+                                          <span className="font-mono">-{fmt(discountAmount)}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex justify-between text-neutral-800 font-extrabold border-t border-neutral-200/50 pt-1.5">
+                                        <span>Total Líquido</span>
+                                        <span className="text-blue-700">{fmt(total)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setIsCreatingQuote(false)}
+                                  className="text-xs h-9 rounded-lg"
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  onClick={buildQuoteMessage}
+                                  disabled={quoteItems.length === 0}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 font-bold rounded-lg px-4"
+                                >
+                                  Gerar Mensagem WhatsApp →
+                                </Button>
+                              </div>
                             </div>
-                            <div className="bg-blue-50 border border-blue-100/50 rounded-xl p-2.5 text-center shadow-xs">
-                              <span className="text-[8px] text-blue-600 font-extrabold uppercase block tracking-wider">Enviados</span>
-                              <span className="text-sm font-black text-blue-700">
-                                {quotes.filter(q => q.status === 'sent').length}
+                          ) : (
+                            /* Step: message review */
+                            <div className="space-y-4">
+                              <div className="space-y-1 text-left">
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Mensagem Gerada (Edite se necessário)</label>
+                                <textarea
+                                  value={quoteMessageText}
+                                  onChange={(e) => setQuoteMessageText(e.target.value)}
+                                  rows={8}
+                                  className="w-full text-xs font-mono rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                />
+                                <p className="text-[9px] text-neutral-400">Você pode modificar o texto livremente antes de enviar.</p>
+                              </div>
+
+                              <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-left">
+                                <div className="font-semibold text-blue-900">
+                                  <p>{quoteItems.length} item{quoteItems.length > 1 ? "ns" : ""} • Total Líquido: {fmt(total)}</p>
+                                  {quoteSpecialCondition && <p className="text-[10px] text-blue-700 mt-0.5">{quoteSpecialCondition}</p>}
+                                </div>
+                                <span className="text-xs font-bold text-blue-700">{selectedPatientInfo?.name}</span>
+                              </div>
+
+                              <div className="flex justify-between items-center pt-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  onClick={() => setQuoteStep("build")}
+                                  className="text-neutral-500 hover:text-neutral-800 text-xs h-9 rounded-lg border border-neutral-200"
+                                >
+                                  ← Voltar para Edição
+                                </Button>
+
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={handleCopyMessageInline}
+                                    className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
+                                  >
+                                    {quoteCopied ? <CheckCircle2Icon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}
+                                    {quoteCopied ? "Copiado!" : "Copiar"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveDraftInline}
+                                    disabled={quoteSaving}
+                                    className="text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors disabled:opacity-40"
+                                  >
+                                    {quoteSaving ? "Salvando..." : "Salvar Rascunho"}
+                                  </button>
+
+                                  <Button
+                                    type="button"
+                                    onClick={handleSendWhatsAppInline}
+                                    disabled={quoteSending || !selectedPatientInfo?.phone}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg gap-1.5 text-xs h-9 px-4 disabled:opacity-40"
+                                  >
+                                    {quoteSending ? (
+                                      <><Loader2Icon className="h-4 w-4 animate-spin" /> Enviando...</>
+                                    ) : (
+                                      <><SendIcon className="h-4 w-4" /> Enviar pelo WhatsApp</>
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        /* Standard Financial View */
+                        <div className="space-y-6 text-left animate-in fade-in duration-200">
+                          {/* Summary metrics card */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-left shadow-xs">
+                              <span className="text-[9px] text-emerald-600 font-black uppercase block tracking-wider">Faturado / Recebido</span>
+                              <span className="text-xl font-black text-emerald-800">
+                                R$ {patientTransactions.filter(t => t.type === 'receita' && t.status === 'paid').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
                               </span>
                             </div>
-                            <div className="bg-emerald-50 border border-emerald-100/50 rounded-xl p-2.5 text-center shadow-xs">
-                              <span className="text-[8px] text-emerald-600 font-extrabold uppercase block tracking-wider">Aprovados</span>
-                              <span className="text-sm font-black text-emerald-700">
-                                {quotes.filter(q => q.status === 'accepted' || q.status === 'approved').length}
+                            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-left shadow-xs">
+                              <span className="text-[9px] text-rose-600 font-black uppercase block tracking-wider">Pendente de Cobrança</span>
+                              <span className="text-xl font-black text-rose-800">
+                                R$ {patientTransactions.filter(t => t.type === 'receita' && t.status === 'pending').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
                               </span>
                             </div>
                           </div>
 
-                          {loadingQuotes ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Loader2Icon className="h-4 w-4 animate-spin text-blue-600" />
-                            </div>
-                          ) : quotes.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic">Nenhum orçamento gerado para este paciente.</p>
-                          ) : (
-                            <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
-                              {quotes.map((q) => {
-                                const isSent = q.status === "sent";
-                                const isAccepted = q.status === "accepted" || q.status === "approved";
-                                return (
-                                  <div key={q.id} className="flex items-center justify-between p-3 bg-white text-xs gap-4">
-                                    <div className="text-left min-w-0">
-                                      <p className="font-extrabold text-neutral-800 truncate">
-                                        Orçamento #{q.id.substring(0, 6).toUpperCase()}
-                                      </p>
-                                      {q.special_condition && (
-                                        <p className="text-[9px] text-neutral-500 italic truncate">{q.special_condition}</p>
-                                      )}
-                                      <p className="text-[8px] text-neutral-400 font-medium">
-                                        Gerado em: {new Date(q.created_at || q.sent_at).toLocaleDateString("pt-BR")}
-                                      </p>
+                          {/* List of Financial Transactions */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Lançamentos Financeiros</h4>
+                            {patientTransactions.length === 0 ? (
+                              <p className="text-xs text-neutral-400 italic">Nenhuma transação financeira lançada no histórico.</p>
+                            ) : (
+                              <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
+                                {patientTransactions.map((tx) => {
+                                  const isIncome = tx.type === "receita";
+                                  const isPaid = tx.status === "paid";
+                                  return (
+                                    <div key={tx.id} className="flex items-center justify-between p-3.5 bg-white text-xs gap-4">
+                                      <div className="text-left min-w-0">
+                                        <p className="font-extrabold text-neutral-800 truncate">{tx.description || "Transação Sem Título"}</p>
+                                        <p className="text-[9px] text-neutral-400">
+                                          Data: {new Date(tx.created_at || tx.due_date).toLocaleDateString("pt-BR")}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-3 shrink-0">
+                                        <span className={`font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>
+                                          {isIncome ? "+" : "-"} R$ {Number(tx.value).toFixed(2)}
+                                        </span>
+                                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                          isPaid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-600"
+                                        }`}>
+                                          {isPaid ? "Pago" : "Pendente"}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-3 shrink-0">
-                                      <span className="font-extrabold text-neutral-700">
-                                        R$ {Number(q.total_value || 0).toFixed(2)}
-                                      </span>
-                                      <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                        isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-blue-50 text-blue-700 border border-blue-100/50" : "bg-neutral-100 text-neutral-500"
-                                      }`}>
-                                        {isAccepted ? "Aprovado" : isSent ? "Enviado" : "Rascunho"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
 
-                        {/* Active Packages Credit list inside Financial */}
-                        <div className="space-y-3 pt-4 border-t border-neutral-100">
-                          <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Crédito de Pacotes Contratados</h4>
-                          {patientPackages.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic">Nenhum pacote contratado no momento.</p>
-                          ) : (
-                            <div className="grid grid-cols-1 gap-3">
-                              {patientPackages.map((pkg) => {
-                                const remaining = pkg.total - pkg.used;
-                                const pct = (pkg.used / pkg.total) * 100;
-                                return (
-                                  <div key={pkg.id} className="border border-neutral-200/80 rounded-xl p-3 bg-neutral-50/50 space-y-2.5 shadow-xs">
-                                    <div className="flex justify-between items-center text-xs">
-                                      <div>
-                                        <p className="font-extrabold text-neutral-800">{pkg.name}</p>
-                                        <p className="text-[8px] text-neutral-400 font-bold uppercase mt-0.5">Expira: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem validade"}</p>
-                                      </div>
-                                      <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
-                                        pkg.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-500"
-                                      }`}>
-                                        {pkg.status}
-                                      </span>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <div className="flex justify-between text-[9px] font-bold text-neutral-600">
-                                        <span>Consumido: {pkg.used} / {pkg.total}</span>
-                                        <span className="text-blue-700">{remaining} restantes</span>
-                                      </div>
-                                      <div className="w-full bg-neutral-200/60 rounded-full h-1.5 overflow-hidden">
-                                        <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                          {/* Quotes / Orçamentos Section */}
+                          <div className="space-y-4 pt-4 border-t border-neutral-100">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Orçamentos Enviados</h4>
+                              <Button
+                                type="button"
+                                onClick={() => {
+                                  setIsCreatingQuote(true);
+                                  setQuoteStep("build");
+                                  setQuoteItems([]);
+                                  setQuoteDiscountValue("0");
+                                  setQuoteSpecialCondition("");
+                                  setQuoteExpiresAt("");
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 gap-1 rounded-lg"
+                              >
+                                <PlusIcon className="h-3 w-3" />
+                                Novo Orçamento
+                              </Button>
                             </div>
-                          )}
+
+                            {/* Quotes stats row */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="bg-neutral-50 border border-neutral-200/50 rounded-xl p-2.5 text-center shadow-xs">
+                                <span className="text-[8px] text-neutral-500 font-extrabold uppercase block tracking-wider">Total</span>
+                                <span className="text-sm font-black text-neutral-700">{quotes.length}</span>
+                              </div>
+                              <div className="bg-blue-50 border border-blue-100/50 rounded-xl p-2.5 text-center shadow-xs">
+                                <span className="text-[8px] text-blue-600 font-extrabold uppercase block tracking-wider">Enviados</span>
+                                <span className="text-sm font-black text-blue-700">
+                                  {quotes.filter(q => q.status === 'sent').length}
+                                </span>
+                              </div>
+                              <div className="bg-emerald-50 border border-emerald-100/50 rounded-xl p-2.5 text-center shadow-xs">
+                                <span className="text-[8px] text-emerald-600 font-extrabold uppercase block tracking-wider">Aprovados</span>
+                                <span className="text-sm font-black text-emerald-700">
+                                  {quotes.filter(q => q.status === 'accepted' || q.status === 'approved').length}
+                                </span>
+                              </div>
+                            </div>
+
+                            {loadingQuotes ? (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2Icon className="h-4 w-4 animate-spin text-blue-600" />
+                              </div>
+                            ) : quotes.length === 0 ? (
+                              <p className="text-xs text-neutral-400 italic">Nenhum orçamento gerado para este paciente.</p>
+                            ) : (
+                              <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
+                                {quotes.map((q) => {
+                                  const isSent = q.status === "sent";
+                                  const isAccepted = q.status === "accepted" || q.status === "approved";
+                                  return (
+                                    <div key={q.id} className="flex items-center justify-between p-3 bg-white text-xs gap-4">
+                                      <div className="text-left min-w-0">
+                                        <p className="font-extrabold text-neutral-800 truncate">
+                                          Orçamento #{q.id.substring(0, 6).toUpperCase()}
+                                        </p>
+                                        {q.special_condition && (
+                                          <p className="text-[9px] text-neutral-500 italic truncate">{q.special_condition}</p>
+                                        )}
+                                        <p className="text-[8px] text-neutral-400 font-medium">
+                                          Gerado em: {new Date(q.created_at || q.sent_at).toLocaleDateString("pt-BR")}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-3 shrink-0">
+                                        <span className="font-extrabold text-neutral-700">
+                                          R$ {Number(q.total_value || 0).toFixed(2)}
+                                        </span>
+                                        <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                          isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-blue-50 text-blue-700 border border-blue-100/50" : "bg-neutral-100 text-neutral-500"
+                                        }`}>
+                                          {isAccepted ? "Aprovado" : isSent ? "Enviado" : "Rascunho"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Active Packages Credit list inside Financial */}
+                          <div className="space-y-3 pt-4 border-t border-neutral-100">
+                            <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Crédito de Pacotes Contratados</h4>
+                            {patientPackages.length === 0 ? (
+                              <p className="text-xs text-neutral-400 italic">Nenhum pacote contratado no momento.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 gap-3">
+                                {patientPackages.map((pkg) => {
+                                  const remaining = pkg.total - pkg.used;
+                                  const pct = (pkg.used / pkg.total) * 100;
+                                  return (
+                                    <div key={pkg.id} className="border border-neutral-200/80 rounded-xl p-3 bg-neutral-50/50 space-y-2.5 shadow-xs">
+                                      <div className="flex justify-between items-center text-xs">
+                                        <div>
+                                          <p className="font-extrabold text-neutral-800">{pkg.name}</p>
+                                          <p className="text-[8px] text-neutral-400 font-bold uppercase mt-0.5">Expira: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem validade"}</p>
+                                        </div>
+                                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                                          pkg.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-500"
+                                        }`}>
+                                          {pkg.status}
+                                        </span>
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[9px] font-bold text-neutral-600">
+                                          <span>Consumido: {pkg.used} / {pkg.total}</span>
+                                          <span className="text-blue-700">{remaining} restantes</span>
+                                        </div>
+                                        <div className="w-full bg-neutral-200/60 rounded-full h-1.5 overflow-hidden">
+                                          <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )
                     )}
 
                     {/* Tab: PRONTUARIO (Clinical note EMR, Body evaluations & interactive SVG charts) */}
@@ -2989,26 +3490,41 @@ export function AppointmentModal({
                         <div className="space-y-4 border-t border-neutral-100 pt-5 text-left">
                           <div className="flex items-center justify-between">
                             <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Fotos de Acompanhamento</h3>
-                            <label className={`text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 transition-all ${uploadingPhoto ? "opacity-55 pointer-events-none" : ""}`}>
+                            <div className="flex items-center gap-3">
                               {uploadingPhoto ? (
-                                <>
-                                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-                                  Enviando...
-                                </>
+                                <span className="text-xs font-bold text-neutral-400 flex items-center gap-1.5">
+                                  <Loader2Icon className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                                  Processando foto...
+                                </span>
                               ) : (
                                 <>
-                                  <PlusIcon className="h-3.5 w-3.5" />
-                                  Adicionar Foto
+                                  <label className="text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 bg-blue-50/50 hover:bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100/50 transition-colors">
+                                    <PlusIcon className="h-3.5 w-3.5" />
+                                    Upload de Imagem
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={handleUploadPhoto}
+                                      disabled={uploadingPhoto}
+                                    />
+                                  </label>
+
+                                  <label className="text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 bg-blue-50/50 hover:bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100/50 transition-colors">
+                                    <Camera className="h-3.5 w-3.5" />
+                                    Tirar Foto (Câmera)
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      capture="environment"
+                                      className="hidden"
+                                      onChange={handleUploadPhoto}
+                                      disabled={uploadingPhoto}
+                                    />
+                                  </label>
                                 </>
                               )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleUploadPhoto}
-                                disabled={uploadingPhoto}
-                              />
-                            </label>
+                            </div>
                           </div>
 
                           {patientPhotos.length === 0 ? (
