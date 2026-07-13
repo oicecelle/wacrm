@@ -13,9 +13,10 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
+  Sparkles,
 } from 'lucide-react';
 
-type AudienceType = 'all' | 'tags' | 'custom_field' | 'csv';
+type AudienceType = 'all' | 'tags' | 'custom_field' | 'filters' | 'csv';
 type CustomFieldOperator = 'is' | 'is_not' | 'contains';
 
 interface CustomFieldFilter {
@@ -30,6 +31,14 @@ interface AudienceConfig {
   customField?: CustomFieldFilter;
   csvContacts?: { phone: string; name?: string }[];
   excludeTagIds?: string[];
+  filters?: {
+    contact_type?: 'all' | 'lead' | 'client';
+    gender?: 'all' | 'male' | 'female' | 'other';
+    temperature?: 'all' | 'hot' | 'warm' | 'cold';
+    interest?: string;
+    source?: string;
+    minScore?: number;
+  };
 }
 
 interface Step2Props {
@@ -43,7 +52,7 @@ const audienceOptions: {
   type: AudienceType;
   label: string;
   description: string;
-  icon: typeof Users;
+  icon: any;
 }[] = [
   {
     type: 'all',
@@ -62,6 +71,12 @@ const audienceOptions: {
     label: 'Custom Field',
     description: 'Filter by a custom field value',
     icon: Filter,
+  },
+  {
+    type: 'filters',
+    label: 'Advanced Segmentation',
+    description: 'Filter by Stage, Temperature, Interest or Score',
+    icon: Sparkles,
   },
   {
     type: 'csv',
@@ -160,6 +175,43 @@ export function Step2SelectAudience({
         else q = q.ilike('value', `%${value}%`);
         const { data } = await q;
         baseIds = new Set((data ?? []).map((r) => r.contact_id));
+      } else if (audience.type === 'filters' && audience.filters) {
+        const { contact_type, gender, temperature, interest, source, minScore } = audience.filters;
+        let query = supabase.from('contacts').select('id');
+        
+        if (contact_type && contact_type !== 'all') {
+          query = query.eq('contact_type', contact_type);
+        }
+        if (gender && gender !== 'all') {
+          query = query.eq('gender', gender);
+        }
+
+        const filterByDeals = (temperature && temperature !== 'all') || interest || source || (minScore !== undefined && minScore !== null && minScore !== 0);
+        if (filterByDeals) {
+          let dealsQuery = supabase.from('deals').select('contact_id');
+          if (temperature && temperature !== 'all') {
+            dealsQuery = dealsQuery.eq('temperature', temperature);
+          }
+          if (interest) {
+            dealsQuery = dealsQuery.ilike('interest', `%${interest}%`);
+          }
+          if (source) {
+            dealsQuery = dealsQuery.ilike('source', `%${source}%`);
+          }
+          if (minScore !== undefined && minScore !== null && minScore !== 0) {
+            dealsQuery = dealsQuery.gte('score', minScore);
+          }
+          const { data: matchedDeals } = await dealsQuery;
+          const matchedContactIds = [...new Set((matchedDeals ?? []).map((d) => d.contact_id))];
+          if (matchedContactIds.length === 0) {
+            setEstimatedCount(0);
+            return;
+          }
+          query = query.in('id', matchedContactIds);
+        }
+
+        const { data: matchedContacts } = await query;
+        baseIds = new Set((matchedContacts ?? []).map((c) => c.id));
       } else if (
         audience.type === 'csv' &&
         audience.csvContacts &&
@@ -203,6 +255,7 @@ export function Step2SelectAudience({
     audience.type,
     audience.tagIds,
     audience.customField,
+    audience.filters,
     audience.csvContacts,
     audience.excludeTagIds,
   ]);
@@ -236,26 +289,39 @@ export function Step2SelectAudience({
     onUpdate({ ...audience, customField: { ...prev, ...patch } });
   }
 
+  function updateFilters(patch: Partial<NonNullable<AudienceConfig['filters']>>) {
+    const prev = audience.filters ?? {
+      contact_type: 'all',
+      gender: 'all',
+      temperature: 'all',
+      interest: '',
+      source: '',
+      minScore: 0,
+    };
+    onUpdate({ ...audience, filters: { ...prev, ...patch } });
+  }
+
   const isValid =
     audience.type === 'all' ||
     (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) ||
     (audience.type === 'custom_field' &&
       !!audience.customField?.fieldId &&
       audience.customField.value.length > 0) ||
+    (audience.type === 'filters' && !!audience.filters) ||
     (audience.type === 'csv' &&
       audience.csvContacts &&
       audience.csvContacts.length > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Select Audience</h2>
+        <h2 className="text-lg font-semibold text-foreground">Selecionar Público</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Choose who will receive this broadcast.
+          Escolha quem receberá as mensagens desta campanha.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {audienceOptions.map((option) => {
           const isSelected = audience.type === option.type;
           const Icon = option.icon;
@@ -273,11 +339,22 @@ export function Step2SelectAudience({
                     option.type === 'custom_field'
                       ? audience.customField
                       : undefined,
+                  filters:
+                    option.type === 'filters'
+                      ? audience.filters ?? {
+                          contact_type: 'all',
+                          gender: 'all',
+                          temperature: 'all',
+                          interest: '',
+                          source: '',
+                          minScore: 0,
+                        }
+                      : undefined,
                   csvContacts:
                     option.type === 'csv' ? audience.csvContacts : undefined,
                 })
               }
-              className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
+              className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all cursor-pointer ${
                 isSelected
                   ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                   : 'border-border bg-card/50 hover:border-border'
@@ -294,7 +371,7 @@ export function Step2SelectAudience({
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">{option.label}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
                   {option.description}
                 </p>
               </div>
@@ -320,7 +397,7 @@ export function Step2SelectAudience({
                   <button
                     key={tag.id}
                     onClick={() => toggleTag(tag.id)}
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
                       isSelected
                         ? 'border-primary/30 bg-primary/10 text-primary'
                         : 'border-border bg-muted text-muted-foreground hover:border-border'
@@ -389,6 +466,99 @@ export function Step2SelectAudience({
         </div>
       )}
 
+      {/* Advanced Segmentation Dashboard Form */}
+      {audience.type === 'filters' && (
+        <div className="space-y-4 rounded-xl border border-border bg-card/50 p-4">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <Sparkles className="size-4 text-indigo-500" /> Filtros de Segmentação Avançada
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Contact Type */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Estágio do Paciente</label>
+              <select
+                value={audience.filters?.contact_type ?? 'all'}
+                onChange={(e) => updateFilters({ contact_type: e.target.value as any })}
+                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-xs text-foreground outline-none focus:border-primary"
+              >
+                <option value="all">Todos (Leads e Clientes)</option>
+                <option value="lead">Apenas Leads</option>
+                <option value="client">Apenas Clientes</option>
+              </select>
+            </div>
+
+            {/* Gender */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Gênero</label>
+              <select
+                value={audience.filters?.gender ?? 'all'}
+                onChange={(e) => updateFilters({ gender: e.target.value as any })}
+                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-xs text-foreground outline-none focus:border-primary"
+              >
+                <option value="all">Todos os Gêneros</option>
+                <option value="female">Feminino</option>
+                <option value="male">Masculino</option>
+                <option value="other">Outros</option>
+              </select>
+            </div>
+
+            {/* Lead Temperature */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Temperatura do Lead (CRM)</label>
+              <select
+                value={audience.filters?.temperature ?? 'all'}
+                onChange={(e) => updateFilters({ temperature: e.target.value as any })}
+                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-xs text-foreground outline-none focus:border-primary"
+              >
+                <option value="all">Todas as Temperaturas</option>
+                <option value="hot">🔥 Quente (Hot)</option>
+                <option value="warm">⚡ Morno (Warm)</option>
+                <option value="cold">❄️ Frio (Cold)</option>
+              </select>
+            </div>
+
+            {/* Min Lead Score */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
+                Score de Engajamento Mínimo ({audience.filters?.minScore ?? 0})
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={audience.filters?.minScore ?? 0}
+                onChange={(e) => updateFilters({ minScore: parseInt(e.target.value) })}
+                className="w-full h-9 accent-indigo-600"
+              />
+            </div>
+
+            {/* Interest */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Interesse de Tratamento</label>
+              <input
+                type="text"
+                placeholder="Ex: Botox, Preenchimento"
+                value={audience.filters?.interest ?? ''}
+                onChange={(e) => updateFilters({ interest: e.target.value })}
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+              />
+            </div>
+
+            {/* Source */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Origem/Canal de Entrada</label>
+              <input
+                type="text"
+                placeholder="Ex: Instagram, Google, Indicação"
+                value={audience.filters?.source ?? ''}
+                onChange={(e) => updateFilters({ source: e.target.value })}
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Exclude list — applies regardless of audience type */}
       <div className="rounded-xl border border-border bg-card/50 p-4">
         <div className="mb-3 flex items-center gap-2">
@@ -408,7 +578,7 @@ export function Step2SelectAudience({
                 <button
                   key={tag.id}
                   onClick={() => toggleExcludeTag(tag.id)}
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
                     isExcluded
                       ? 'border-red-500/30 bg-red-500/10 text-red-300'
                       : 'border-border bg-muted text-muted-foreground hover:border-border'
@@ -428,23 +598,23 @@ export function Step2SelectAudience({
 
       {/* Audience Summary */}
       <div className="rounded-xl border border-border bg-card/50 p-4">
-        <p className="mb-2 text-sm font-medium text-foreground">Audience Summary</p>
+        <p className="mb-2 text-sm font-medium text-foreground">Resumo do Público Selecionado</p>
         {loadingCount ? (
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground">Calculating…</span>
+            <span className="text-xs text-muted-foreground">Calculando...</span>
           </div>
         ) : estimatedCount !== null ? (
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            <span className="text-sm text-foreground">
+            <span className="text-sm font-black text-foreground">
               {estimatedCount.toLocaleString()}
             </span>
-            <span className="text-xs text-muted-foreground">estimated recipients</span>
+            <span className="text-xs text-muted-foreground">destinatários estimados</span>
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Select an audience type to see the estimate.
+            Selecione uma opção de público para ver a estimativa.
           </p>
         )}
       </div>
@@ -456,14 +626,14 @@ export function Step2SelectAudience({
           className="border-border text-muted-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          Voltar
         </Button>
         <Button
           onClick={onNext}
           disabled={!isValid}
           className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          Next
+          Próximo
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

@@ -20,9 +20,12 @@ import {
   Loader2,
   Settings,
   HelpCircle,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { PersonalizarModal } from '@/components/comunicacao/personalizar-modal';
+import { TemplateManager } from '@/components/settings/template-manager';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface SystemTemplateRow {
   event_type: string;
@@ -184,75 +187,92 @@ export default function ModelosPage() {
   return (
     <div className="space-y-6 text-left">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-neutral-900">Modelos de Mensagem do Sistema</h1>
-        <p className="text-sm text-neutral-500">Configure os lembretes automáticos e mensagens de relacionamento enviadas pelo WhatsApp.</p>
+        <h1 className="text-2xl font-black tracking-tight text-neutral-900">Gerenciador de Modelos</h1>
+        <p className="text-sm text-neutral-500">Configure os templates de disparos e lembretes automáticos do WhatsApp.</p>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20 min-h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {EVENT_TEMPLATES.map((item) => {
-            const status = getTemplateStatus(item.type);
-            const Icon = item.icon;
+      <Tabs defaultValue="system" className="space-y-6">
+        <TabsList className="bg-muted border border-border/60 p-0.5 rounded-xl w-fit flex gap-0.5">
+          <TabsTrigger value="system" className="text-xs font-black uppercase tracking-wider px-4 py-2 rounded-lg cursor-pointer">
+            Gatilhos do Sistema
+          </TabsTrigger>
+          <TabsTrigger value="campaign" className="text-xs font-black uppercase tracking-wider px-4 py-2 rounded-lg cursor-pointer">
+            Templates de Campanha (Meta)
+          </TabsTrigger>
+        </TabsList>
 
-            return (
-              <div
-                key={item.type}
-                className="group relative flex flex-col justify-between rounded-3xl border border-neutral-200 bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all"
-              >
-                <div>
-                  {/* Top Header Card */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-2xl bg-gradient-to-br ${item.color} border`}>
-                      <Icon className="h-5 w-5" />
+        <TabsContent value="system" className="space-y-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-20 min-h-[300px]">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {EVENT_TEMPLATES.map((item) => {
+                const status = getTemplateStatus(item.type);
+                const Icon = item.icon;
+
+                return (
+                  <div
+                    key={item.type}
+                    className="group relative flex flex-col justify-between rounded-3xl border border-neutral-200 bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all"
+                  >
+                    <div>
+                      {/* Top Header Card */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`p-3 rounded-2xl bg-gradient-to-br ${item.color} border`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1.5">
+                          {status.active ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200/40 px-2.5 py-0.5 text-[9px] font-black text-emerald-700">
+                              Ativo
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-neutral-100 border border-neutral-200/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
+                              Inativo
+                            </span>
+                          )}
+                          {status.active && (
+                            <span className="text-[9px] font-bold text-neutral-400">
+                              {status.channel}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Body Content */}
+                      <h3 className="text-sm font-black text-neutral-800 tracking-tight group-hover:text-blue-600 transition-colors">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-neutral-500 leading-relaxed mt-1.5 min-h-[48px]">
+                        {item.description}
+                      </p>
                     </div>
 
-                    <div className="flex flex-col items-end gap-1.5">
-                      {status.active ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200/40 px-2.5 py-0.5 text-[9px] font-black text-emerald-700">
-                          Ativo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-neutral-100 border border-neutral-200/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
-                          Inativo
-                        </span>
-                      )}
-                      {status.active && (
-                        <span className="text-[9px] font-bold text-neutral-400">
-                          {status.channel}
-                        </span>
-                      )}
+                    {/* Footer Action */}
+                    <div className="border-t border-neutral-100 pt-4 mt-4 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-neutral-400">Gatilho Automático</span>
+                      <button
+                        onClick={() => setSelectedTemplate(item)}
+                        className="flex items-center gap-1 text-xs font-black text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        Personalizar
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
 
-                  {/* Body Content */}
-                  <h3 className="text-sm font-black text-neutral-800 tracking-tight group-hover:text-blue-600 transition-colors">
-                    {item.name}
-                  </h3>
-                  <p className="text-xs text-neutral-500 leading-relaxed mt-1.5 min-h-[48px]">
-                    {item.description}
-                  </p>
-                </div>
-
-                {/* Footer Action */}
-                <div className="border-t border-neutral-100 pt-4 mt-4 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-neutral-400">Gatilho Automático</span>
-                  <button
-                    onClick={() => setSelectedTemplate(item)}
-                    className="flex items-center gap-1 text-xs font-black text-blue-600 hover:text-blue-700 transition-colors"
-                  >
-                    Personalizar
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+        <TabsContent value="campaign" className="rounded-3xl border border-border bg-card p-6 shadow-xs">
+          <TemplateManager />
+        </TabsContent>
+      </Tabs>
 
       {/* Modal Integration */}
       {selectedTemplate && accountId && (

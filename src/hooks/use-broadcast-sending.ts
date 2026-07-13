@@ -14,12 +14,20 @@ export interface CustomFieldFilter {
 }
 
 export interface AudienceConfig {
-  type: 'all' | 'tags' | 'custom_field' | 'csv';
+  type: 'all' | 'tags' | 'custom_field' | 'filters' | 'csv';
   tagIds?: string[];
   customField?: CustomFieldFilter;
   csvContacts?: { phone: string; name?: string }[];
   /** Contacts carrying any of these tags are subtracted from the result. */
   excludeTagIds?: string[];
+  filters?: {
+    contact_type?: 'all' | 'lead' | 'client';
+    gender?: 'all' | 'male' | 'female' | 'other';
+    temperature?: 'all' | 'hot' | 'warm' | 'cold';
+    interest?: string;
+    source?: string;
+    minScore?: number;
+  };
 }
 
 /**
@@ -180,6 +188,43 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
       contacts = await resolveCustomFieldAudience(supabase, audience.customField);
+    } else if (audience.type === 'filters' && audience.filters) {
+      const { contact_type, gender, temperature, interest, source, minScore } = audience.filters;
+      let query = supabase.from('contacts').select('*');
+      
+      if (contact_type && contact_type !== 'all') {
+        query = query.eq('contact_type', contact_type);
+      }
+      if (gender && gender !== 'all') {
+        query = query.eq('gender', gender);
+      }
+
+      const filterByDeals = (temperature && temperature !== 'all') || interest || source || (minScore !== undefined && minScore !== null && minScore !== 0);
+      if (filterByDeals) {
+        let dealsQuery = supabase.from('deals').select('contact_id');
+        if (temperature && temperature !== 'all') {
+          dealsQuery = dealsQuery.eq('temperature', temperature);
+        }
+        if (interest) {
+          dealsQuery = dealsQuery.ilike('interest', `%${interest}%`);
+        }
+        if (source) {
+          dealsQuery = dealsQuery.ilike('source', `%${source}%`);
+        }
+        if (minScore !== undefined && minScore !== null && minScore !== 0) {
+          dealsQuery = dealsQuery.gte('score', minScore);
+        }
+        const { data: matchedDeals } = await dealsQuery;
+        const matchedContactIds = [...new Set((matchedDeals ?? []).map((d) => d.contact_id))];
+        if (matchedContactIds.length === 0) {
+          return [];
+        }
+        query = query.in('id', matchedContactIds);
+      }
+
+      const { data, error } = await query;
+      if (error) throw new Error(`Failed to fetch filtered contacts: ${error.message}`);
+      contacts = data ?? [];
     } else if (audience.type === 'csv' && audience.csvContacts) {
       contacts = await upsertCsvContacts(supabase, audience.csvContacts);
     }

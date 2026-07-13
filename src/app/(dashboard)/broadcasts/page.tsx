@@ -66,6 +66,25 @@ export default function BroadcastsPage() {
   // Used to kick off polling only while something is actively sending.
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const { totalMessages, avgDelivery, avgRead, avgReplied } = useMemo(() => {
+    let total = 0;
+    let delivered = 0;
+    let read = 0;
+    let replied = 0;
+    broadcasts.forEach(b => {
+      total += b.total_recipients || 0;
+      delivered += b.delivered_count || 0;
+      read += b.read_count || 0;
+      replied += b.replied_count || 0;
+    });
+    return {
+      totalMessages: total,
+      avgDelivery: total > 0 ? Math.round((delivered / total) * 100) : 0,
+      avgRead: total > 0 ? Math.round((read / total) * 100) : 0,
+      avgReplied: total > 0 ? Math.round((replied / total) * 100) : 0,
+    };
+  }, [broadcasts]);
+
   async function fetchBroadcasts() {
     try {
       const supabase = createClient();
@@ -179,9 +198,9 @@ export default function BroadcastsPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Broadcasts</h1>
+          <h1 className="text-2xl font-bold text-foreground">Disparos de Campanhas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Send bulk messages to your contacts using approved templates.
+            Envie mensagens em massa para seus contatos utilizando modelos oficiais do WhatsApp.
           </p>
         </div>
         <GatedButton
@@ -191,9 +210,41 @@ export default function BroadcastsPage() {
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          New Broadcast
+          Novo Disparo
         </GatedButton>
       </div>
+
+      {/* Aggregate Performance Cards */}
+      {broadcasts.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Total Enviado</p>
+            <p className="text-2xl font-black text-foreground">{totalMessages.toLocaleString()}</p>
+            <p className="text-[9px] text-muted-foreground mt-1">Destinatários totais</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Entrega</p>
+            <p className="text-2xl font-black text-emerald-600">{avgDelivery}%</p>
+            <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${avgDelivery}%` }} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Abertura</p>
+            <p className="text-2xl font-black text-blue-600">{avgRead}%</p>
+            <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${avgRead}%` }} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Resposta</p>
+            <p className="text-2xl font-black text-indigo-600">{avgReplied}%</p>
+            <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${avgReplied}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {broadcasts.length === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
