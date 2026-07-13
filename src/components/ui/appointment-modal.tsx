@@ -362,6 +362,8 @@ export function AppointmentModal({
       setRoomId("");
       setStatus("provisional");
       setNotes("");
+      setAppointmentTag("");
+      setAppointmentTagColor("#3b82f6");
       setSendWa(true);
       setActiveTab("details");
       setShowNewPatientForm(false);
@@ -425,6 +427,8 @@ export function AppointmentModal({
         setStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
         setAppointmentColor(appt.color || null);
+        setAppointmentTag(appt.tag || "");
+        setAppointmentTagColor(appt.tag_color || "#3b82f6");
         setSendWa(true);
 
         const loadedType = appt.type === "Evento" || appt.type === "evento"
@@ -964,6 +968,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             type: procedureName || null,
             room_id: roomId || null,
             color: appointmentColor || null,
+            tag: appointmentTag || null,
+            tag_color: appointmentTag ? appointmentTagColor : null,
           })
           .eq("id", appointmentId);
 
@@ -1049,6 +1055,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             type: procedureName || null,
             room_id: roomId || null,
             color: appointmentColor || null,
+            tag: appointmentTag || null,
+            tag_color: appointmentTag ? appointmentTagColor : null,
           })
           .select("id")
           .single();
@@ -1636,6 +1644,16 @@ Qualquer dúvida, estou à disposição! 😊`;
       firstName: parts[0],
       lastName: parts.slice(1).join(" ") || "",
     };
+  };
+
+  const getStatusColor = (statusVal: string) => {
+    switch (statusVal) {
+      case "confirmed": return "#10b981"; // green
+      case "attended": return "#3b82f6"; // blue
+      case "cancelled": return "#ef4444"; // red
+      case "no_show": return "#f97316"; // orange
+      default: return "#f59e0b"; // yellow/amber for provisional
+    }
   };
 
   const { firstName, lastName } = getPatientNameParts();
@@ -2349,6 +2367,36 @@ Qualquer dúvida, estou à disposição! 😊`;
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] text-emerald-600 font-bold border border-emerald-500/20">
                         <CheckCircle2Icon className="h-3 w-3" />
                         Tudo Assinado
+                      </span>
+                    )}
+
+                    {/* Appointment Status Badge */}
+                    <span 
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border shadow-2xs"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${getStatusColor(status)} 12%, #ffffff)`,
+                        color: getStatusColor(status),
+                        borderColor: `color-mix(in srgb, ${getStatusColor(status)} 25%, transparent)`
+                      }}
+                    >
+                      {(() => {
+                        switch (status) {
+                          case "confirmed": return "Confirmado";
+                          case "attended": return "Realizado";
+                          case "cancelled": return "Cancelado";
+                          case "no_show": return "Falta";
+                          default: return "Pendente";
+                        }
+                      })()}
+                    </span>
+
+                    {/* Custom Tag Badge */}
+                    {appointmentTag && (
+                      <span 
+                        className="inline-flex items-center gap-1 text-white text-[10px] font-black tracking-wide px-2.5 py-0.5 rounded-full shadow-2xs"
+                        style={{ backgroundColor: appointmentTagColor }}
+                      >
+                        {appointmentTag}
                       </span>
                     )}
                   </div>

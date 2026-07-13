@@ -41,6 +41,8 @@ interface Appointment {
   notes: string | null;
   start_time: string;
   end_time: string;
+  tag?: string | null;
+  tag_color?: string | null;
   patients: {
     name: string;
     phone: string;
@@ -327,6 +329,8 @@ export default function AgendaPage() {
           notes,
           start_time,
           end_time,
+          tag,
+          tag_color,
           patients (
             name,
             phone
@@ -719,7 +723,7 @@ export default function AgendaPage() {
                     </div>
                     
                     <div className="min-w-0 text-left space-y-0.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs font-extrabold truncate">
                           {appt.patients?.name || "Sem Nome"}
                         </p>
@@ -741,6 +745,14 @@ export default function AgendaPage() {
                             }
                           })()}
                         </span>
+                        {appt.tag && (
+                          <span 
+                            className="text-[7.5px] px-1.5 py-0.2 rounded-md font-black uppercase tracking-wider shrink-0 text-white"
+                            style={{ backgroundColor: appt.tag_color || "#3b82f6" }}
+                          >
+                            {appt.tag}
+                          </span>
+                        )}
                       </div>
                       <p className="text-[10px] opacity-80 font-semibold truncate">
                         {appt.type || appt.title || "Consulta"}
@@ -1215,24 +1227,34 @@ export default function AgendaPage() {
                                 <p className="text-[9px] opacity-80 truncate font-semibold leading-tight pr-1">
                                   {appt.type || appt.title || "Consulta"}
                                 </p>
-                                <span 
-                                  className="text-[7px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide shrink-0"
-                                  style={{
-                                    backgroundColor: `color-mix(in srgb, ${getStatusColor(appt.status)} 15%, transparent)`,
-                                    color: getStatusColor(appt.status),
-                                    border: `1px solid color-mix(in srgb, ${getStatusColor(appt.status)} 30%, transparent)`
-                                  }}
-                                >
-                                  {(() => {
-                                    switch (appt.status) {
-                                      case "confirmed": return "Confirmado";
-                                      case "attended": return "Realizado";
-                                      case "cancelled": return "Cancelado";
-                                      case "no_show": return "Falta";
-                                      default: return "Pendente";
-                                    }
-                                  })()}
-                                </span>
+                                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                  <span 
+                                    className="text-[7px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide"
+                                    style={{
+                                      backgroundColor: `color-mix(in srgb, ${getStatusColor(appt.status)} 15%, transparent)`,
+                                      color: getStatusColor(appt.status),
+                                      border: `1px solid color-mix(in srgb, ${getStatusColor(appt.status)} 30%, transparent)`
+                                    }}
+                                  >
+                                    {(() => {
+                                      switch (appt.status) {
+                                        case "confirmed": return "Confirmado";
+                                        case "attended": return "Realizado";
+                                        case "cancelled": return "Cancelado";
+                                        case "no_show": return "Falta";
+                                        default: return "Pendente";
+                                      }
+                                    })()}
+                                  </span>
+                                  {appt.tag && (
+                                    <span 
+                                      className="text-[6.5px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide text-white leading-none shadow-3xs"
+                                      style={{ backgroundColor: appt.tag_color || "#3b82f6" }}
+                                    >
+                                      {appt.tag}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {/* Time range */}
