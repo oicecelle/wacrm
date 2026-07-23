@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? {
               id: accountRaw.id,
               name: accountRaw.name,
-              default_currency: accountRaw.default_currency ?? DEFAULT_CURRENCY,
+              default_currency: "BRL",
             }
           : null;
 

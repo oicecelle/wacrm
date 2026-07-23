@@ -26,24 +26,21 @@ export interface CurrencyOption {
  * The currencies offered in pickers. Default to BRL.
  */
 export const CURRENCIES: CurrencyOption[] = [
-  { code: "BRL", label: "Real Brasileiro", symbol: "R$" },
-  { code: "USD", label: "US Dollar", symbol: "$" },
-  { code: "EUR", label: "Euro", symbol: "€" },
+  { code: "BRL", label: "Real Brasileiro (R$)", symbol: "R$" },
 ];
 
 /**
- * Format a deal value as a currency string in pt-BR locale.
+ * Format a deal value as a currency string in pt-BR locale with R$.
  */
 export function formatCurrency(
   value: number,
-  currency: string = DEFAULT_CURRENCY,
+  _currency?: string,
 ): string {
-  const code = (currency || DEFAULT_CURRENCY).trim();
   const amount = Number(value) || 0;
   try {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: code === "USD" || code === "EUR" ? code : "BRL",
+      currency: "BRL",
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(amount);
@@ -60,10 +57,9 @@ export function formatCurrency(
  */
 export function formatCurrencyShort(
   value: number,
-  currency: string = DEFAULT_CURRENCY,
+  _currency?: string,
 ): string {
-  const code = currency || DEFAULT_CURRENCY;
-  const symbol = CURRENCIES.find((c) => c.code === code)?.symbol ?? "R$";
+  const symbol = "R$";
   const v = Number(value || 0);
   if (v >= 1_000_000) return `${symbol} ${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `${symbol} ${(v / 1_000).toFixed(1)}k`;
