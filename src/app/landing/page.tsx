@@ -26,13 +26,12 @@ import {
   Search,
   CheckSquare,
   BarChart2,
-  Building2,
-  Stethoscope,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
   UserCheck
 } from 'lucide-react';
+import { FeaturePreview } from '@/components/landing/feature-previews';
 
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,7 +41,7 @@ export default function LandingPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 30);
+    const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handler);
     return () => window.removeEventListener("scroll", handler);
   }, []);
@@ -55,12 +54,12 @@ export default function LandingPage() {
   };
 
   const triggerTags = [
-    { label: "Follow-up", color: "bg-purple-950/50 border-purple-700/40 text-purple-300" },
-    { label: "Resgate", color: "bg-red-950/40 border-red-800/40 text-red-300" },
-    { label: "Aniversário", color: "bg-pink-950/40 border-pink-800/40 text-pink-300" },
-    { label: "Manutenção", color: "bg-amber-950/40 border-amber-800/40 text-amber-300" },
-    { label: "Pós-procedimento", color: "bg-emerald-950/40 border-emerald-800/40 text-emerald-300" },
-    { label: "Lembrete", color: "bg-blue-950/40 border-blue-800/40 text-blue-300" },
+    { label: "Follow-up", color: "bg-blue-50 border-blue-200 text-blue-700" },
+    { label: "Resgate", color: "bg-red-50 border-red-200 text-red-700" },
+    { label: "Aniversário", color: "bg-pink-50 border-pink-200 text-pink-700" },
+    { label: "Manutenção", color: "bg-amber-50 border-amber-200 text-amber-700" },
+    { label: "Pós-procedimento", color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+    { label: "Lembrete", color: "bg-indigo-50 border-indigo-200 text-indigo-700" },
   ];
 
   const marqueeTips = [
@@ -119,6 +118,7 @@ export default function LandingPage() {
     { icon: BarChart2, cmd: '"LIA, me envie o relatório de faturamento deste mês"', action: "Gera e envia resumo completo com métricas e conversões" }
   ];
 
+  // REMOVIDO MULTICLÍNICA CONFORME SOLICITADO NO PROMPT E PRINT
   const allFeatures = [
     { icon: Zap, title: "CRM 100% Autônomo", desc: "Kanban visual com atualização automatizada em tempo real. A conversa acontece no WhatsApp e a IA organiza o funil." },
     { icon: Calendar, title: "Agenda Inteligente Autônoma", desc: "Agendamento, confirmações e reagendamentos efetuados automaticamente direto na conversa com o cliente." },
@@ -126,285 +126,219 @@ export default function LandingPage() {
     { icon: FileSignature, title: "Assinatura Digital no WhatsApp", desc: "Envio e assinatura jurídica de contratos e termos de consentimento diretamente no chat sem apps terceiros." },
     { icon: Bot, title: "Disparos & Automações 24/7", desc: "Sequências com gatilhos de follow-up, resgate, aniversários, manutenção e lembretes de pós-procedimento." },
     { icon: MessageSquare, title: "LIA — Assistente Interna", desc: "Comande a plataforma por mensagem de texto ou áudio no WhatsApp da própria equipe." },
-    { icon: Stethoscope, title: "Prontuário & Evolução", desc: "Registro estruturado do histórico clínico do paciente, observações e arquivos anexados ao perfil." },
-    { icon: Building2, title: "Suporte Multiclínica", desc: "Gerencie múltiplas unidades ou filiais dentro do mesmo painel administrativo centralizado." },
+    { icon: CheckCircle2, title: "Prontuário & Evolução", desc: "Registro estruturado do histórico clínico do paciente, observações e arquivos anexados ao perfil." },
     { icon: BarChart2, title: "Relatórios Periódicos", desc: "Relatórios diários, quinzenais e mensais automáticos enviados direto no grupo do WhatsApp da equipe." },
     { icon: ShieldCheck, title: "Isolamento de Dados (RLS)", desc: "Padrão Enterprise com isolamento por conta, criptografia de credenciais e segurança de nível médico." }
   ];
 
   const faqs = [
-    { q: "O que é a LeadPluz e como ela funciona?", a: "A LeadPluz é uma plataforma CRM 100% autônoma integrada ao WhatsApp para clínicas de saúde e estética. Ela captura, atende, agenda e gerencia o funil de leads sem que sua equipe precise digitar dados manualmente no sistema." },
-    { q: "Preciso cadastrar meu cartão para testar por 7 dias?", a: "Não! Você pode criar sua conta e usar a plataforma por 7 dias totalmente grátis, sem necessidade de informar cartão de crédito ou dados bancários." },
+    { q: "O que torna o LeadPluz diferente de outros sistemas?", a: "Ao contrário dos CRMs tradicionais que exigem alimentação manual de dados o dia todo, o LeadPluz é inteligente e conectado ao WhatsApp. Ele escuta as conversas, atualiza a ficha dos contatos, insere consultas na agenda, gera faturas financeiras e envia links de termos para assinatura de forma 100% autônoma." },
+    { q: "Preciso instalar algo no meu computador?", a: "Não. O LeadPluz roda inteiramente na nuvem. Basta ler o QR Code do seu WhatsApp para conectar a conta e ter acesso a todo o painel de forma instantânea." },
     { q: "O que é a LIA e como minha equipe a utiliza?", a: "A LIA é a assistente de IA interna da sua equipe. Ela funciona diretamente dentro de uma conversa no WhatsApp da clínica e aceita comandos de voz ou texto para criar agendamentos, tarefas, buscar histórico de pacientes e enviar relatórios." },
     { q: "Como funciona a gestão de agenda da clínica?", a: "A IA cria e gerencia a agenda de forma totalmente autônoma. Se um cliente solicitar reagendamento ou troca de horário no WhatsApp, a própria IA reajusta a vaga e notifica sua equipe." },
-    { q: "Meus dados e os dados dos pacientes ficam seguros?", a: "Sim. Adotamos o padrão Enterprise de isolamento de dados por conta (Row Level Security — RLS). Cada clínica tem acesso exclusivo às suas informações com criptografia de ponta a ponta." },
-    { q: "Como funciona o envio de contratos e documentos?", a: "A LeadPluz permite enviar termos e contratos diretamente no chat do WhatsApp para assinatura digital com validade jurídica, sem precisar que o paciente instale nada." }
+    { q: "Como o paciente assina o contrato ou termo de consentimento?", a: "O robô gera o link único e envia pelo WhatsApp. O paciente clica, confere os dados e assina desenhando com o dedo no próprio celular. A assinatura fica registrada na timeline do contato na hora." },
+    { q: "Consigo testar gratuitamente?", a: "Com certeza! Você pode criar sua conta e testar por 7 dias grátis sem precisar cadastrar cartão de crédito." }
   ];
 
   return (
-    <div className="min-h-screen bg-[#050508] text-[#a0a0b8] font-sans antialiased text-left select-none overflow-x-hidden">
-      
-      {/* CSS Utility Keyframes */}
+    <div className="min-h-screen bg-[#FAFBFF] text-[#10182B] font-sans antialiased text-left selection:bg-blue-100 overflow-x-hidden">
       <style>{`
-        @keyframes marquee {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          display: flex;
-          width: max-content;
-          animation: marquee 35s linear infinite;
-        }
-        .gradient-text {
-          background: linear-gradient(135deg, #ffffff 0%, #c084fc 50%, #a855f7 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .btn-gradient {
-          background: linear-gradient(135deg, #6b2fb5, #a855f7);
-          transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
-        }
-        .btn-gradient:hover {
-          opacity: 0.92;
-          transform: translateY(-1px);
-          box-shadow: 0 8px 30px rgba(139, 69, 212, 0.45);
-        }
-        .grid-pattern {
-          background-image: linear-gradient(rgba(139, 69, 212, 0.03) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(139, 69, 212, 0.03) 1px, transparent 1px);
-          background-size: 60px 60px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+        body { font-family: 'Outfit', sans-serif; }
+        .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .glow-blue { box-shadow: 0 0 60px -10px rgba(108, 155, 255, 0.25); }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        .float { animation: float 4s ease-in-out infinite; }
+        @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .animate-marquee { display: flex; width: max-content; animation: marquee 35s linear infinite; }
       `}</style>
 
-      {/* Background Orbs */}
-      <div className="fixed inset-0 grid-pattern opacity-10 pointer-events-none -z-20" />
-      <div className="fixed top-[15%] left-[-100px] w-[500px] h-[500px] bg-purple-900/10 rounded-full filter blur-[120px] pointer-events-none -z-30" />
-      <div className="fixed top-[45%] right-[-100px] w-[550px] h-[550px] bg-purple-900/10 rounded-full filter blur-[120px] pointer-events-none -z-30" />
-
-      {/* ── 1. Header Navbar (Menu com exatamente 4 itens: Recursos, Planos, Demonstração, FAQ) ── */}
-      <header className={`fixed top-0 left-0 w-full h-[70px] z-50 transition-all duration-300 flex items-center justify-between px-6 md:px-12 ${scrolled ? "bg-[#050508]/90 border-b border-[rgba(139,69,212,0.2)] backdrop-blur-lg shadow-xl" : "bg-transparent border-b border-transparent"}`}>
-        {/* Logo tipografia oficial */}
-        <Link href="/" className="flex items-center space-x-2 group">
-          <Zap className="w-5 h-5 text-purple-400 group-hover:text-purple-300 transition-colors fill-purple-400/20" />
-          <span className="text-sm font-extrabold tracking-widest text-white uppercase font-sans">
-            LEAD<span className="text-purple-400">PLUZ</span>
-          </span>
-        </Link>
-
-        {/* Desktop Links (4 itens exatos) */}
-        <nav className="hidden md:flex items-center space-x-8 text-xs font-semibold uppercase tracking-wider text-gray-400">
-          <a href="#recursos" className="hover:text-purple-300 transition-colors">Recursos</a>
-          <a href="#planos" className="hover:text-purple-300 transition-colors">Planos</a>
-          <a href="#demonstracao" className="hover:text-purple-300 transition-colors">Demonstração</a>
-          <a href="#faq" className="hover:text-purple-300 transition-colors">FAQ</a>
-        </nav>
-
-        {/* CTAs */}
-        <div className="hidden md:flex items-center space-x-4">
-          <Link href="/login" className="px-5 py-2 border border-purple-800/40 rounded-lg text-xs font-bold uppercase tracking-wider text-white hover:bg-purple-950/40 transition-all">
-            Login
+      {/* ── Navbar (Somente os 4 itens solicitados: Recursos, Planos, Demonstração, FAQ - Item 3.13) ── */}
+      <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/85 backdrop-blur-md border-b border-[#E3E9F5] shadow-xs py-3" : "bg-transparent py-5"}`}>
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#3B6BE0] to-[#6C9BFF] flex items-center justify-center text-white shadow-xs font-bold">
+              <Zap className="w-4 h-4 text-white fill-white/20" />
+            </div>
+            <span className="text-lg font-black tracking-tight text-[#10182B] uppercase font-sans">
+              LEAD<span className="text-[#6C9BFF]">PLUZ</span>
+            </span>
           </Link>
-          <Link href="/signup" className="btn-gradient px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-md hover:scale-105 transition-all">
-            Começar agora
-          </Link>
-        </div>
 
-        {/* Mobile Toggle */}
-        <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </header>
-
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="fixed top-[70px] left-0 w-full bg-[#050508]/95 border-b border-purple-900/30 backdrop-blur-lg md:hidden flex flex-col px-6 py-6 space-y-4 text-center text-xs font-bold uppercase tracking-wider text-gray-300 z-40">
-          <a href="#recursos" onClick={() => setMenuOpen(false)}>Recursos</a>
-          <a href="#planos" onClick={() => setMenuOpen(false)}>Planos</a>
-          <a href="#demonstracao" onClick={() => setMenuOpen(false)}>Demonstração</a>
-          <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
-          <div className="pt-2 flex flex-col space-y-3">
-            <Link href="/login" className="py-2.5 border border-purple-800/40 rounded-lg text-white">Login</Link>
-            <Link href="/signup" className="btn-gradient py-2.5 rounded-lg text-white">Começar agora</Link>
+          {/* Menu Desktop: 4 Itens Exatos (Item 3.13) */}
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#recursos" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">Recursos</a>
+            <a href="#planos" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">Planos</a>
+            <a href="#demonstracao" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">Demonstração</a>
+            <a href="#faq" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">FAQ</a>
           </div>
-        </div>
-      )}
 
-      {/* ── 2. Hero Section ── */}
-      <section className="relative min-h-[90vh] flex items-center justify-center pt-28 pb-16 px-6 md:px-12 overflow-hidden grid-pattern">
-        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center z-10">
-          
-          <div className="flex flex-col space-y-6 text-left">
-            <div>
-              <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
-                ✦ CRM 100% Autônomo para Clínicas & Estética
-              </span>
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="/login" className="rounded-xl px-4 py-2 text-xs font-bold text-[#5B6478] hover:bg-[#F0F4FC] transition-colors">Login</Link>
+            <Link href="/signup" className="rounded-xl bg-[#6C9BFF] px-4 py-2 text-xs font-bold text-white hover:bg-[#5486F0] transition-all shadow-xs">
+              Começar Grátis →
+            </Link>
+          </div>
+
+          <button className="md:hidden p-2 rounded-lg hover:bg-[#F0F4FC]" onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {menuOpen && (
+          <div className="md:hidden bg-white border-t border-[#E3E9F5] px-6 py-4 space-y-3 text-xs font-bold uppercase tracking-wider text-[#5B6478]">
+            <a href="#recursos" onClick={() => setMenuOpen(false)} className="block py-1">Recursos</a>
+            <a href="#planos" onClick={() => setMenuOpen(false)} className="block py-1">Planos</a>
+            <a href="#demonstracao" onClick={() => setMenuOpen(false)} className="block py-1">Demonstração</a>
+            <a href="#faq" onClick={() => setMenuOpen(false)} className="block py-1">FAQ</a>
+            <div className="flex gap-2 pt-2">
+              <Link href="/login" className="flex-1 text-center rounded-xl border border-[#E3E9F5] py-2.5 text-[#5B6478]">Login</Link>
+              <Link href="/signup" className="flex-1 text-center rounded-xl bg-[#6C9BFF] py-2.5 text-white">Criar Conta</Link>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* ── Hero (MANTIDO TÍTULO ORIGINAL EXACTO: "Seu WhatsApp alimenta o CRM, tudo de forma autônoma.") ── */}
+      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#DCE7FF]/40 via-transparent to-violet-50/20 pointer-events-none" />
+        <div className="absolute top-20 left-1/4 w-72 h-72 bg-[#DCE7FF]/30 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-5xl">
+          <div className="text-center mb-12 fade-up">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#DCE7FF] border border-[#6C9BFF]/20 px-4 py-1.5 text-xs font-bold text-[#3B6BE0] mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#6C9BFF] animate-pulse" />
+              CRM 100% Autônomo e Integrado ao WhatsApp
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-[58px] font-extrabold tracking-tight leading-[1.1] text-white">
-              <span className="gradient-text">Atendimento & Agenda</span><br />
-              100% no WhatsApp.
+            {/* TÍTULO ORIGINAL MANTIDO 100% INTACTO */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#10182B] leading-[1.08] mb-6">
+              Seu WhatsApp alimenta o CRM,<br />
+              <span className="text-[#6C9BFF]">tudo de forma autônoma.</span>
             </h1>
 
-            <p className="text-base md:text-lg text-gray-300 max-w-xl leading-relaxed">
-              Sua clínica vende, agenda e organiza leads em tempo real direto nas conversas, sem que sua equipe precise digitar nada no CRM.
+            <p className="text-base sm:text-lg text-[#5B6478] max-w-2xl mx-auto leading-relaxed mb-8">
+              Diga adeus à alimentação manual de planilhas. Nosso diferencial é um <strong className="font-bold text-neutral-800">CRM inteligente e automatizado</strong> onde cada conversa pelo WhatsApp vira dado estruturado na hora. Acompanhe a <strong className="font-bold text-neutral-800">agenda, assinaturas digitais, financeiro</strong> e o progresso do lead sem levantar um dedo.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-              <Link href="/signup" className="btn-gradient px-8 py-4 rounded-xl text-xs font-bold uppercase tracking-widest text-white text-center flex items-center justify-center space-x-2 shadow-lg hover:scale-[1.02] transition-all">
-                <span>Começar teste grátis</span>
-                <ArrowRight className="w-4 h-4" />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/signup"
+                className="group flex items-center gap-2 rounded-xl bg-[#6C9BFF] px-6 py-3.5 text-xs font-bold text-white hover:bg-[#5486F0] transition-all shadow-md shadow-blue-300/35 glow-blue"
+              >
+                Iniciar meu teste grátis de 7 dias
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a href="#demonstracao" className="px-8 py-4 border border-purple-800/40 rounded-xl text-xs font-bold uppercase tracking-widest text-white hover:bg-purple-950/40 transition-all text-center">
-                Ver demonstração
+              <a href="#demonstracao" className="flex items-center gap-2 rounded-xl border border-[#E3E9F5] px-6 py-3.5 text-xs font-bold text-[#5B6478] hover:bg-[#F0F4FC] transition-colors bg-white">
+                Ver Demonstração
               </a>
             </div>
 
             {/* Texto "Teste sem compromisso" maior e destacado (Item 3.5) */}
-            <div className="flex items-center space-x-2.5 pt-1 text-sm font-semibold text-purple-300/90 bg-purple-950/40 border border-purple-800/40 px-4 py-3 rounded-xl max-w-fit shadow-md">
-              <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
-              <span>Teste sem compromisso por 7 dias grátis · Sem cartão de crédito · Configuração em 5 min</span>
-            </div>
+            <p className="text-xs sm:text-sm font-semibold text-[#3B6BE0] bg-[#DCE7FF]/70 border border-[#6C9BFF]/30 px-5 py-2.5 rounded-xl max-w-fit mx-auto mt-6 shadow-xs flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#6C9BFF] shrink-0" />
+              <span>Teste sem compromisso por 7 dias grátis · Sem cartão de crédito · Integração em 5 min</span>
+            </p>
           </div>
 
-          {/* Hero Mockup (Item 3.6: WhatsApp real + Timeline com "Sinal ainda não pago") */}
-          <div className="flex justify-center lg:justify-end">
-            <div className="w-full max-w-[580px] bg-[#090912] border border-purple-800/30 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8),_0_0_40px_rgba(139,69,212,0.2)] flex flex-col font-sans text-left">
-              
-              {/* Mockup Topbar */}
-              <div className="h-10 bg-[#06060c] border-b border-purple-950/40 flex items-center px-4 justify-between">
-                <div className="flex space-x-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
+          {/* Hero Mockup (Item 3.6: Conversa Real + Status "Sinal ainda não pago") */}
+          <div className="grid md:grid-cols-2 gap-8 items-center max-w-3xl mx-auto">
+            
+            {/* Esquerda: Chat Atendimento Clínica WhatsApp */}
+            <div className="bg-white rounded-3xl border border-[#E3E9F5] shadow-lg overflow-hidden max-w-sm mx-auto text-left w-full">
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#5486F0] text-white">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">JC</div>
+                <div>
+                  <div className="text-xs font-bold">Juliana Costa</div>
+                  <div className="text-[10px] text-blue-100 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                    Atendimento de Avaliação
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 bg-[#0d0d18] px-3 py-1 rounded border border-purple-900/30 text-[10px] text-gray-400">
-                  <Zap className="w-3 h-3 text-purple-400 fill-purple-400/20" />
-                  <span className="font-semibold text-white">LeadPluz Sync ● Tempo Real</span>
+              </div>
+
+              <div className="p-4 space-y-3 min-h-[250px] bg-[#f0f4fc]/40">
+                <div className="bg-white rounded-xl p-3 border border-neutral-100 shadow-2xs max-w-[85%] text-xs text-neutral-800">
+                  Olá! Gostaria de agendar uma consulta de avaliação estética para esta semana.
+                  <span className="text-[8px] text-neutral-400 block text-right mt-1">14:32</span>
                 </div>
-                <span className="text-[9px] text-purple-400 font-mono font-bold bg-purple-950/50 px-2 py-0.5 rounded border border-purple-800/30">
-                  Sem Digitação
+
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 max-w-[90%] ml-auto text-xs text-blue-900">
+                  <div className="text-[9px] font-bold text-blue-600 flex items-center gap-1 mb-1">
+                    <Sparkles className="w-3 h-3 text-[#6C9BFF]" /> Resposta Natural da Clínica
+                  </div>
+                  Com certeza, Juliana! Temos disponibilidade para Quinta-feira às 15:00. Posso reservar para você?
+                  <span className="text-[8px] text-blue-400 block text-right mt-1">14:32 ✓✓</span>
+                </div>
+
+                <div className="bg-white rounded-xl p-3 border border-neutral-100 shadow-2xs max-w-[85%] text-xs text-neutral-800">
+                  Perfeito! Pode confirmar na quinta às 15h.
+                  <span className="text-[8px] text-neutral-400 block text-right mt-1">14:33</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Direita: Timeline CRM com Status "Sinal ainda não pago" (Item 3.6) */}
+            <div className="bg-white rounded-3xl border border-[#E3E9F5] shadow-lg p-5 max-w-xs text-left mx-auto w-full">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100">
+                <div className="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Timeline Estruturada ao Vivo</div>
+                <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                  ✓ Sem Digitação
                 </span>
               </div>
 
-              {/* Grid 2 Cols */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-purple-950/30 min-h-[340px]">
-                
-                {/* Esquerda: Conversa WhatsApp Atendimento Clínica */}
-                <div className="p-4 bg-[#0a0a14] flex flex-col justify-between space-y-3">
-                  <div className="flex items-center space-x-3 pb-3 border-b border-purple-950/30">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-700 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow">
-                      JC
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">Juliana Costa</h4>
-                      <p className="text-[9px] text-purple-400 font-semibold">• Atendimento Ativo</p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-xs">JC</div>
+                <div>
+                  <div className="text-sm font-bold text-neutral-900">Juliana Costa</div>
+                  <div className="text-[10px] text-neutral-500">Estágio: Agendada · Score: 95</div>
+                </div>
+              </div>
 
-                  <div className="space-y-3 flex-1 flex flex-col justify-end text-[11px] leading-relaxed">
-                    <div className="bg-[#121222] border border-purple-900/25 rounded-2xl rounded-tl-none p-3 text-gray-200 shadow-sm max-w-[90%]">
-                      <p className="text-white font-medium">Olá! Gostaria de agendar uma consulta de avaliação estética para esta semana.</p>
-                      <span className="text-[8px] text-gray-500 block text-right mt-1 font-mono">14:32</span>
-                    </div>
-
-                    <div className="bg-purple-950/40 border border-purple-700/40 rounded-2xl rounded-tr-none p-3 text-purple-100 shadow-sm self-end max-w-[92%]">
-                      <div className="flex items-center space-x-1 text-[8px] text-purple-300 font-semibold mb-1 uppercase tracking-wider">
-                        <Sparkles className="w-2.5 h-2.5 text-purple-400" />
-                        <span>Resposta Natural da Clínica</span>
-                      </div>
-                      <p>Com certeza, Juliana! Temos disponibilidade para Quinta-feira às 15:00. Posso reservar esse horário para você?</p>
-                      <span className="text-[8px] text-purple-300/60 block text-right mt-1 font-mono">14:32 ✓✓</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 text-[9px] text-gray-500 border-t border-purple-950/20 flex items-center justify-between">
-                    <span className="flex items-center space-x-1">
-                      <MessageSquare className="w-3 h-3 text-purple-400" />
-                      <span>WhatsApp Web Integrado</span>
-                    </span>
-                    <span className="text-emerald-400 font-semibold">● Online</span>
-                  </div>
+              <div className="space-y-2 mb-3">
+                <div className="bg-neutral-50 rounded-xl p-2.5 border border-neutral-100">
+                  <span className="text-[8px] text-neutral-400 uppercase tracking-wider block">Agendamento</span>
+                  <span className="text-xs font-bold text-neutral-800">Quinta-feira · 15:00h</span>
                 </div>
 
-                {/* Direita: Timeline Sincronizada com Status "Sinal ainda não pago" */}
-                <div className="p-4 bg-[#080810] flex flex-col justify-between space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-purple-950/30">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-300 flex items-center space-x-1">
-                      <Sparkles className="w-3 h-3 text-purple-400" />
-                      <span>Timeline Estruturada</span>
+                {/* Status do Sinal: Sinal AINDA NÃO PAGO (Ajustado item 3.6) */}
+                <div className="bg-amber-50 rounded-xl p-2.5 border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[8px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 text-amber-600" /> Status do Sinal
                     </span>
-                    <span className="text-[8px] font-bold text-green-400 bg-green-950/40 border border-green-800/40 px-2 py-0.5 rounded-full animate-pulse">
-                      Atualizando ao vivo
-                    </span>
+                    <span className="bg-amber-100 text-amber-800 font-bold text-[8px] px-1.5 py-0.5 rounded">PENDENTE</span>
                   </div>
-
-                  <div className="space-y-2.5 flex-1">
-                    <div className="bg-[#0f0f1c] border border-purple-900/20 p-2.5 rounded-xl space-y-1">
-                      <div className="flex justify-between items-center text-[9px]">
-                        <span className="text-gray-400 font-bold uppercase flex items-center space-x-1">
-                          <UserCheck className="w-3 h-3 text-purple-400" />
-                          <span>Interesse Identificado</span>
-                        </span>
-                        <span className="text-purple-400 font-bold">Score 94/100</span>
-                      </div>
-                      <p className="text-xs font-bold text-white">Avaliação Estética Facial</p>
-                    </div>
-
-                    <div className="bg-[#0f0f1c] border border-purple-900/20 p-2.5 rounded-xl space-y-1">
-                      <div className="flex justify-between items-center text-[9px]">
-                        <span className="text-gray-400 font-bold uppercase flex items-center space-x-1">
-                          <Calendar className="w-3 h-3 text-blue-400" />
-                          <span>Agendamento Criado</span>
-                        </span>
-                        <span className="text-blue-400 font-mono text-[9px]">Automatizado</span>
-                      </div>
-                      <p className="text-xs font-bold text-white">Quinta-feira · 15:00h</p>
-                    </div>
-
-                    {/* Status do sinal AINDA NÃO PAGO (Ajustado item 3.6) */}
-                    <div className="bg-amber-950/20 border border-amber-500/30 p-2.5 rounded-xl space-y-1">
-                      <div className="flex justify-between items-center text-[9px]">
-                        <span className="text-amber-400 font-bold uppercase flex items-center space-x-1">
-                          <AlertCircle className="w-3 h-3 text-amber-400" />
-                          <span>Status do Sinal</span>
-                        </span>
-                        <span className="bg-amber-500/20 text-amber-300 font-bold text-[8px] px-1.5 py-0.5 rounded border border-amber-500/30">
-                          PENDENTE
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-amber-200">Sinal ainda não pago · Lembrete agendado</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-purple-950/30 border border-purple-800/30 p-2 rounded-lg text-[9px] text-gray-300">
-                    IA estrutura dados, cadastra agendamento e agenda follow-up <strong>sem digitação manual</strong>.
-                  </div>
+                  <span className="text-xs font-bold text-amber-900 block mt-1">Sinal ainda não pago · Lembrete enviado</span>
                 </div>
+              </div>
 
+              <div className="text-[9px] text-blue-700 bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 flex items-start gap-1.5">
+                <Bot className="w-3.5 h-3.5 shrink-0 text-[#6C9BFF] mt-0.5" />
+                <span><b>IA da LeadPluz:</b> Conversa estruturada e agendamento salvo sem que a recepção precise digitar dados no sistema.</span>
               </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </section>
 
-      {/* ── 3. Faixa de Tips Horizontais (Marquee de Benefícios) (Item 3.7) ── */}
-      <section className="bg-[#080812] border-y border-purple-950/30 py-6 overflow-hidden w-full select-none relative">
-        <div className="max-w-7xl mx-auto px-6 mb-3 text-center">
-          <span className="text-[10px] font-extrabold text-purple-400 uppercase tracking-widest flex items-center justify-center space-x-1">
-            <Sparkles className="w-3 h-3 text-purple-400" />
-            <span>Vantagens Exclusivas da Plataforma LeadPluz</span>
+      {/* ── 3. Tips Horizontais (Marquee de Benefícios) (Item 3.7) ── */}
+      <section className="py-8 bg-white border-y border-[#E3E9F5] overflow-hidden w-full select-none">
+        <div className="max-w-4xl mx-auto px-6 mb-3 text-center">
+          <span className="text-[10px] font-bold text-[#5486F0] uppercase tracking-widest flex items-center justify-center gap-1">
+            <Sparkles className="w-3.5 h-3.5" /> Benefícios e Facilidades da Plataforma
           </span>
         </div>
 
-        <div className="relative w-full flex items-center overflow-x-hidden py-2">
+        <div className="relative w-full flex items-center overflow-x-hidden">
           <div className="animate-marquee">
             {[...marqueeTips, ...marqueeTips, ...marqueeTips].map((item, idx) => {
               const Icon = item.icon;
               return (
-                <div key={idx} className="inline-flex items-center space-x-2.5 px-4 py-2 rounded-full bg-purple-950/40 border border-purple-800/35 text-xs font-semibold text-purple-200 shadow-sm shrink-0 mr-4">
-                  <Icon className="w-4 h-4 text-purple-400 shrink-0" />
+                <div key={idx} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F0F4FC] border border-[#E3E9F5] text-xs font-bold text-[#10182B] shrink-0 mr-4 shadow-2xs">
+                  <Icon className="w-4 h-4 text-[#5486F0] shrink-0" />
                   <span>{item.text}</span>
                 </div>
               );
@@ -413,48 +347,31 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 4. Segunda Seção — Follow-up & Alertas com Card de Exemplo + Tags (Item 3.8 & 3.9) ── */}
-      <section id="recursos" className="py-24 px-6 md:px-12 bg-[#050508] border-b border-purple-950/20">
-        <div className="max-w-6xl mx-auto space-y-24">
+      {/* ── 4. Segunda Seção — Follow-up com Card de Exemplo + Tags (Item 3.8 & 3.9) ── */}
+      <section id="recursos" className="py-24 px-6 border-b border-[#E3E9F5] bg-white">
+        <div className="mx-auto max-w-5xl space-y-20">
           
-          {/* Header */}
-          <div className="text-center space-y-3">
-            <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
-              CRM & Automação de Atendimento
-            </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight">
-              Follow-up Autônomo & <span className="gradient-text">Zero Leads Perdidos</span>
-            </h2>
-            <p className="text-sm md:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
-              A IA da LeadPluz identifica o momento exato de interagir com o cliente, envia disparos personalizados e gerencia a agenda da sua clínica de forma autônoma.
-            </p>
-          </div>
-
-          {/* Grid: Card de Exemplo de Follow-up + Line of Tags */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            
-            <div className="space-y-6 text-left">
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-purple-400 uppercase tracking-widest bg-purple-950/40 border border-purple-800/30 px-3 py-1 rounded-full">
-                  Gatilhos Inteligentes 24/7
-                </span>
-                <h3 className="text-2xl md:text-3xl font-extrabold text-white leading-snug">
-                  Nenhum lead fica sem resposta ou é esquecido no WhatsApp
-                </h3>
-              </div>
-
-              <p className="text-sm text-gray-400 leading-relaxed">
-                O sistema detecta automaticamente quando o lead para de responder e agenda um disparo de acompanhamento totalmente humanizado. Você escolhe quais gatilhos ativar e a IA cuida de toda a esteira de vendas.
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Texto + Tags (Item 3.8) */}
+            <div className="space-y-5">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] border border-[#6C9BFF]/20 uppercase">
+                <Bot className="w-3 h-3" /> CRM Inteligente e Follow-up
+              </span>
+              <h2 className="text-3xl font-black tracking-tight text-[#10182B] leading-tight">
+                Você nunca mais vai perder um lead por falta de resposta.
+              </h2>
+              <p className="text-xs text-[#5B6478] leading-relaxed">
+                O bot inteligente monitora os leads frios e atua enviando disparos personalizados de acompanhamento. Defina os gatilhos e deixe a IA cuidar do resgate e nutrição.
               </p>
 
-              {/* Linha de Tags/Pills Coloridas de Disparos Automáticos (Item 3.8) */}
+              {/* Linha de Tags Coloridas de Disparo (Item 3.8) */}
               <div className="space-y-2 pt-2">
-                <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                <span className="text-[10px] font-extrabold text-[#5B6478] uppercase tracking-wider block">
                   Tipos de Disparos Automáticos Configuráveis:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {triggerTags.map((tag, idx) => (
-                    <span key={idx} className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${tag.color}`}>
+                    <span key={idx} className={`px-3 py-1 rounded-full text-xs font-bold border ${tag.color}`}>
                       • {tag.label}
                     </span>
                   ))}
@@ -462,123 +379,99 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card de Exemplo de Follow-up Programado com Alerta 24h (Item 3.8) */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-md bg-[#0f0f1a] border border-purple-800/30 rounded-2xl p-6 shadow-2xl space-y-4 text-left">
-                <div className="flex items-center justify-between pb-3 border-b border-purple-950/30">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-700 to-purple-500 flex items-center justify-center font-bold text-white text-sm shadow">
-                      MS
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">Dr. Marcelo Silva</h4>
-                      <span className="text-[10px] text-purple-300 font-medium">Interesse: Tratamento Ortodôntico</span>
-                    </div>
+            {/* Card de Exemplo de Follow-up Programado (Item 3.8) */}
+            <div className="glow-blue rounded-3xl p-6 bg-white border border-[#E3E9F5] shadow-lg text-left max-w-md mx-auto w-full">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+                    MS
                   </div>
-                  
-                  <div className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-amber-950/50 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
-                    <Clock className="w-3 h-3 text-amber-400 shrink-0" />
-                    <span>24h sem resposta</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-neutral-900">Dr. Marcelo Silva</h4>
+                    <span className="text-[10px] text-[#5B6478]">Interesse: Tratamento Ortodôntico</span>
                   </div>
                 </div>
+                
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold">
+                  <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                  24h sem resposta
+                </span>
+              </div>
 
-                <div className="bg-[#080810] border border-purple-900/30 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase text-purple-400 flex items-center space-x-1">
-                      <Bot className="w-3 h-3 text-purple-400" />
-                      <span>Follow-up Automático Programado</span>
-                    </span>
-                    <span className="text-[9px] text-green-400 font-mono font-bold">Pronto para Envio</span>
-                  </div>
-
-                  <p className="text-xs text-gray-200 leading-relaxed font-sans bg-purple-950/25 p-3 rounded-lg border border-purple-900/20">
-                    "Olá Dr. Marcelo! Vi que você ficou de confirmar o horário de avaliação da clínica. Conseguimos reservar uma vaga especial para amanhã às 16h. Vamos confirmar?"
-                  </p>
-
-                  <div className="flex items-center justify-between text-[9px] text-gray-500 pt-1">
-                    <span>Disparo via WhatsApp da Clínica</span>
-                    <span className="text-purple-300 font-semibold">Agendado para 10:00h</span>
-                  </div>
+              <div className="mt-4 bg-[#F0F4FC]/60 border border-[#E3E9F5] rounded-2xl p-4 space-y-2">
+                <div className="flex justify-between items-center text-[10px]">
+                  <span className="font-bold text-[#3B6BE0] uppercase flex items-center gap-1">
+                    <Bot className="w-3 h-3 text-[#6C9BFF]" /> Follow-up Automático
+                  </span>
+                  <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Pronto para Envio</span>
                 </div>
+                <p className="text-xs text-neutral-700 leading-relaxed font-sans bg-white p-3 rounded-xl border border-neutral-100">
+                  "Olá Dr. Marcelo! Vi que você ficou de confirmar o horário de avaliação da clínica. Conseguimos reservar uma vaga especial para amanhã às 16h. Vamos confirmar?"
+                </p>
+                <div className="text-[9px] text-neutral-400 text-right">Agendado para disparo via WhatsApp</div>
               </div>
             </div>
-
           </div>
 
-          {/* Agenda Autônoma sem Google Calendar (Item 3.9) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center pt-8 border-t border-purple-950/20">
-            <div className="flex justify-center order-2 lg:order-1">
-              <div className="w-full max-w-md bg-[#0f0f1a] border border-purple-800/30 rounded-2xl p-6 shadow-2xl space-y-4 text-left">
-                <div className="flex items-center justify-between pb-3 border-b border-purple-950/30">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-5 h-5 text-purple-400" />
-                    <span className="text-xs font-extrabold text-white uppercase tracking-wider">
-                      Agenda Inteligente Autônoma
-                    </span>
+          {/* Agenda Autônoma SEM MENÇÃO AO GOOGLE CALENDAR (Item 3.9) */}
+          <div className="grid md:grid-cols-2 gap-12 items-center pt-12 border-t border-[#E3E9F5]">
+            {/* Visual preview da agenda */}
+            <div className="order-2 md:order-1 glow-blue rounded-3xl p-6 bg-white border border-[#E3E9F5] shadow-lg text-left max-w-md mx-auto w-full">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-100 mb-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#6C9BFF]" />
+                  <span className="text-xs font-bold text-neutral-900 uppercase">Agenda Autônoma no WhatsApp</span>
+                </div>
+                <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded-full font-bold">
+                  100% Automático
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#5486F0] block">14:00h · Confirmado</span>
+                    <span className="font-bold text-neutral-800">Juliana Costa — Estética Facial</span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-800/40 text-[10px] font-bold">
-                    Automação WhatsApp
-                  </span>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Lembrete Enviado</span>
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="p-3 bg-[#080810] border border-purple-900/25 rounded-xl flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-purple-400 block">14:00h · Confirmado</span>
-                      <span className="text-white font-bold text-xs">Juliana Costa — Estética Facial</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-green-950/50 text-green-400 border border-green-800/40 text-[9px] font-bold">
-                      Lembrete Enviado
+                <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-700 block flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 text-amber-600" /> Remarcado via WhatsApp
                     </span>
+                    <span className="font-bold text-neutral-800">Camila Rocha — Limpeza de Pele</span>
                   </div>
-
-                  <div className="p-3 bg-[#080810] border border-purple-900/25 rounded-xl flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-amber-400 block flex items-center space-x-1">
-                        <RefreshCw className="w-3 h-3 text-amber-400" />
-                        <span>16:30h · Remarcado pelo WhatsApp</span>
-                      </span>
-                      <span className="text-white font-bold text-xs">Camila Rocha — Limpeza de Pele</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-amber-950/50 text-amber-300 border border-amber-800/40 text-[9px] font-bold">
-                      Reajustado pela IA
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-purple-950/30 border border-purple-800/30 rounded-xl text-[10px] text-purple-200 leading-relaxed">
-                  ⚡ <strong>A IA ajusta a agenda de forma 100% autônoma:</strong> Se o cliente solicitar troca de horário ou desmarcar via WhatsApp, a agenda é reajustada instantaneamente.
+                  <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">Reagendado pela IA</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-6 text-left order-1 lg:order-2">
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-purple-400 uppercase tracking-widest bg-purple-950/40 border border-purple-800/30 px-3 py-1 rounded-full">
-                  Gestão de Agenda Autônoma
-                </span>
-                <h3 className="text-2xl md:text-3xl font-extrabold text-white leading-snug">
-                  A IA cria e gerencia a agenda da sua clínica de forma 100% autônoma
-                </h3>
-              </div>
-
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Esqueça recepção sobrecarregada ou planilhas desatualizadas. Se o cliente desmarcar ou pedir para mudar a data diretamente na conversa do WhatsApp, a própria IA encontra o próximo horário livre e atualiza os agendamentos.
+            {/* Copy da Agenda (Item 3.9: Reforçar IA e remover Google Calendar) */}
+            <div className="space-y-5 order-1 md:order-2">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                <Calendar className="w-3 h-3" /> Gestão de Agenda Autônoma
+              </span>
+              <h2 className="text-3xl font-black tracking-tight text-[#10182B] leading-tight">
+                A IA cria e gerencia a agenda da sua clínica de forma 100% autônoma.
+              </h2>
+              <p className="text-xs text-[#5B6478] leading-relaxed">
+                O assistente cria e gerencia consultas de forma autônoma. Se o cliente solicitar troca de horário ou desmarcar diretamente pelo WhatsApp, a agenda é ajustada e liberada instantaneamente sem intervenção humana.
               </p>
-
-              <div className="space-y-3 pt-2">
-                {[
-                  "Confirmação de presenças automatizada 24h antes da consulta",
-                  "Reagendamento automático direto pelo WhatsApp",
-                  "Histórico completo de atendimentos e procedimentos registrados"
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center space-x-2.5 text-xs text-gray-300">
-                    <div className="w-5 h-5 rounded-full bg-purple-900/50 border border-purple-700/40 flex items-center justify-center text-purple-300 font-bold shrink-0">
-                      ✓
-                    </div>
-                    <span>{item}</span>
-                  </div>
-                ))}
+              <div className="space-y-2.5 pt-1 text-xs text-[#5B6478]">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Confirmação de presenças automatizada 24h antes da consulta</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Reagendamento automático direto pela conversa do WhatsApp</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Histórico completo de retornos e procedimentos registrados</span>
+                </div>
               </div>
             </div>
           </div>
@@ -587,55 +480,53 @@ export default function LandingPage() {
       </section>
 
       {/* ── 5. Quinta Seção — Carrossel de Funcionalidades Arredondadas (Item 3.10) ── */}
-      <section className="py-24 px-6 md:px-12 bg-[#080812] border-b border-purple-950/20 overflow-hidden relative">
-        <div className="max-w-6xl mx-auto space-y-12">
+      <section className="py-24 px-6 bg-[#F0F4FC]/40 border-b border-[#E3E9F5]">
+        <div className="mx-auto max-w-5xl space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-3 text-left max-w-xl">
-              <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
+            <div className="space-y-2 max-w-xl text-left">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] uppercase">
                 Recursos da Plataforma
               </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">
-                Tudo o que sua clínica precisa, <span className="gradient-text">em um único sistema</span>
+              <h2 className="text-3xl font-black tracking-tight text-[#10182B]">
+                Tudo o que sua clínica precisa, <span className="text-[#6C9BFF]">em um único sistema</span>
               </h2>
-              <p className="text-xs md:text-sm text-gray-400">
-                Arraste para os lados para explorar as funcionalidades autônomas da LeadPluz.
-              </p>
+              <p className="text-xs text-[#5B6478]">Arraste os cards para explorar todas as funcionalidades da LeadPluz.</p>
             </div>
 
-            <div className="flex items-center space-x-3 shrink-0">
-              <button onClick={() => handleCarouselScroll('left')} className="w-10 h-10 rounded-full bg-purple-950/40 border border-purple-800/35 flex items-center justify-center text-purple-300 hover:bg-purple-900/40 transition-all cursor-pointer">
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => handleCarouselScroll('left')} className="w-10 h-10 rounded-full bg-white border border-[#E3E9F5] shadow-xs flex items-center justify-center text-[#5B6478] hover:bg-[#F0F4FC] transition-colors cursor-pointer">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <button onClick={() => handleCarouselScroll('right')} className="w-10 h-10 rounded-full bg-purple-950/40 border border-purple-800/35 flex items-center justify-center text-purple-300 hover:bg-purple-900/40 transition-all cursor-pointer">
+              <button onClick={() => handleCarouselScroll('right')} className="w-10 h-10 rounded-full bg-white border border-[#E3E9F5] shadow-xs flex items-center justify-center text-[#5B6478] hover:bg-[#F0F4FC] transition-colors cursor-pointer">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Cards do Carrossel (Financeiro, Assinatura Digital, Feed Indicadores) */}
-          <div ref={scrollRef} className="flex space-x-6 overflow-x-auto pb-6 pt-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+          {/* Cards do Carrossel */}
+          <div ref={scrollRef} className="flex gap-6 overflow-x-auto pb-6 pt-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
             {carouselCards.map((card, idx) => {
               const Icon = card.icon;
               return (
-                <div key={idx} className="w-[320px] md:w-[360px] shrink-0 bg-[#0e0e1c] border border-purple-900/30 hover:border-purple-500/50 rounded-2xl p-6 flex flex-col justify-between space-y-6 shadow-xl transition-all group text-left">
+                <div key={idx} className="w-[310px] md:w-[340px] shrink-0 bg-white border border-[#E3E9F5] rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-6 text-left">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 rounded-xl bg-purple-950/60 border border-purple-800/40 flex items-center justify-center text-purple-400 group-hover:text-purple-300 group-hover:scale-110 transition-all">
-                        <Icon className="w-6 h-6" />
+                      <div className="w-11 h-11 rounded-2xl bg-[#DCE7FF] border border-[#6C9BFF]/20 flex items-center justify-center text-[#3B6BE0]">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-300 bg-purple-950/50 border border-purple-800/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#3B6BE0] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
                         {card.badge}
                       </span>
                     </div>
 
-                    <h3 className="text-xl font-bold text-white tracking-wide">{card.title}</h3>
-                    <p className="text-xs text-gray-400 leading-relaxed">{card.desc}</p>
+                    <h3 className="text-lg font-bold text-neutral-900">{card.title}</h3>
+                    <p className="text-xs text-[#5B6478] leading-relaxed">{card.desc}</p>
                   </div>
 
-                  <div className="border-t border-purple-950/40 pt-4 space-y-2">
+                  <div className="border-t border-neutral-100 pt-4 space-y-2">
                     {card.bullets.map((b, bIdx) => (
-                      <div key={bIdx} className="flex items-center space-x-2 text-[11px] text-gray-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                      <div key={bIdx} className="flex items-center gap-2 text-[11px] text-neutral-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#6C9BFF] shrink-0" />
                         <span>{b}</span>
                       </div>
                     ))}
@@ -647,75 +538,69 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 6. Seção Destacada — LIA (Assistente de IA no WhatsApp) (Item 3.11) ── */}
-      <section className="relative py-24 px-6 md:px-12 bg-gradient-to-br from-[#1b0838] via-[#0d061c] to-[#050508] border-b border-purple-500/30 overflow-hidden text-left">
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+      {/* ── 6. Seção Destacada — LIA (Assistente no WhatsApp) (Item 3.11) ── */}
+      <section className="py-24 px-6 bg-[#10182B] text-white rounded-[40px] mx-4 my-8 relative overflow-hidden text-left">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center relative z-10">
           
           <div className="space-y-6">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 text-xs font-extrabold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-              <span>Assistente Interna da Equipe</span>
-            </div>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
+              <Sparkles className="w-3.5 h-3.5" /> Assistente Interna da Equipe
+            </span>
 
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight">
-              Conheça a <span className="gradient-text">LIA</span>: Sua Assistente de IA dentro do WhatsApp
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+              Conheça a <span className="text-[#6C9BFF]">LIA</span>: Sua Assistente de IA dentro do WhatsApp
             </h2>
 
-            <p className="text-sm md:text-base text-gray-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
               A LIA não fala com o seu cliente — <strong>ela é o copiloto da sua equipe</strong>. Dentro do WhatsApp da própria clínica, você ou seus atendentes comandam o CRM usando <strong>mensagens de texto ou áudio</strong>.
             </p>
 
-            <div className="p-4 rounded-2xl bg-purple-950/60 border border-purple-500/30 space-y-2">
-              <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs uppercase tracking-wider">
-                <BarChart2 className="w-4 h-4 text-purple-400" />
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <div className="flex items-center gap-2 text-blue-300 font-bold text-xs uppercase tracking-wider">
+                <BarChart2 className="w-4 h-4 text-[#6C9BFF]" />
                 <span>Relatórios Automáticos no seu WhatsApp</span>
               </div>
-              <p className="text-xs text-gray-300 leading-relaxed">
+              <p className="text-xs text-neutral-400 leading-relaxed">
                 Receba os relatórios dos principais indicadores da clínica de forma 100% automática: <strong>diariamente, quinzenalmente e mensalmente</strong>, direto no grupo da sua equipe.
               </p>
             </div>
           </div>
 
           <div className="flex justify-center">
-            <div className="w-full max-w-md bg-[#0a0a14] border-2 border-purple-500/40 rounded-3xl p-5 shadow-[0_0_60px_rgba(168,85,247,0.25)] space-y-4">
-              <div className="flex items-center space-x-3 pb-3 border-b border-purple-900/30">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-800 flex items-center justify-center text-white shadow-lg shrink-0 font-bold">
-                  <Bot className="w-6 h-6" />
+            <div className="w-full max-w-md bg-[#1e293b]/90 border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                <div className="w-10 h-10 rounded-2xl bg-[#6C9BFF] flex items-center justify-center text-white font-bold shrink-0">
+                  <Bot className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-white flex items-center space-x-1.5">
-                    <span>LIA — Copiloto LeadPluz</span>
-                    <span className="bg-purple-500/30 border border-purple-400/40 text-purple-300 text-[8px] font-bold px-1.5 py-0.5 rounded">IA Ativa</span>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    LIA — Copiloto LeadPluz
+                    <span className="bg-blue-500/20 text-blue-300 text-[8px] px-1.5 py-0.5 rounded font-bold border border-blue-400/30">IA Ativa</span>
                   </h4>
-                  <p className="text-[10px] text-gray-400 flex items-center space-x-1">
-                    <Mic className="w-3 h-3 text-purple-400" />
-                    <span>Aceita comandos de texto e áudio</span>
+                  <p className="text-[10px] text-neutral-400 flex items-center gap-1">
+                    <Mic className="w-3 h-3 text-[#6C9BFF]" /> Aceita comandos por texto e áudio
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3 pt-1">
-                <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">
+              <div className="space-y-2.5 pt-1">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
                   Exemplos de comandos executados no chat:
                 </span>
                 {liaCommands.map((c, i) => {
                   const Icon = c.icon;
                   return (
-                    <div key={i} className="p-3 rounded-xl bg-[#120b24] border border-purple-800/30 space-y-1">
-                      <div className="flex items-center space-x-2 text-xs font-semibold text-purple-200">
-                        <Icon className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-blue-200">
+                        <Icon className="w-3.5 h-3.5 text-[#6C9BFF] shrink-0" />
                         <span>{c.cmd}</span>
                       </div>
-                      <p className="text-[10px] text-gray-400 pl-5">
-                        ↳ <strong>Ação executada:</strong> {c.action}
+                      <p className="text-[10px] text-neutral-400 pl-5">
+                        ↳ <b>Ação executada:</b> {c.action}
                       </p>
                     </div>
                   );
                 })}
-              </div>
-
-              <div className="text-[10px] text-purple-300 font-bold text-center pt-2 border-t border-purple-950/40">
-                ⚡ Sem precisar abrir sistemas lentos — resolva tudo em segundos pelo celular.
               </div>
             </div>
           </div>
@@ -723,31 +608,31 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 7. Nova Seção — "Todos os recursos" (Grid Completo do PRD) (Item 3.14) ── */}
-      <section className="py-24 px-6 md:px-12 bg-[#050508] border-b border-purple-950/20 text-left">
-        <div className="max-w-6xl mx-auto space-y-16">
+      {/* ── 7. Nova Seção — "Todos os Recursos" (Grid Completo - MULTICLÍNICA REMOVIDO CONFORME PEDIDO) (Item 3.14) ── */}
+      <section className="py-24 px-6 bg-white border-b border-[#E3E9F5] text-left">
+        <div className="mx-auto max-w-5xl space-y-16">
           <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] uppercase">
               Todos os Recursos
             </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight">
-              Ecossistema completo para <span className="gradient-text">escalar sua clínica</span>
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-[#10182B]">
+              Ecossistema completo para <span className="text-[#6C9BFF]">escalar sua clínica</span>
             </h2>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-xs md:text-sm text-[#5B6478] leading-relaxed">
               Desenvolvido especificamente para o mercado de saúde, beleza e estética.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {allFeatures.map((feat, idx) => {
               const Icon = feat.icon;
               return (
-                <div key={idx} className="p-6 rounded-2xl bg-[#0d0d1a] border border-purple-900/25 hover:border-purple-500/40 transition-all space-y-3 group">
-                  <div className="w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-800/40 flex items-center justify-center text-purple-400 group-hover:text-purple-300 group-hover:scale-110 transition-all">
+                <div key={idx} className="p-6 rounded-3xl bg-[#F0F4FC]/40 border border-[#E3E9F5] hover:border-[#6C9BFF]/50 transition-all space-y-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#DCE7FF] flex items-center justify-center text-[#3B6BE0]">
                     <Icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-base font-bold text-white tracking-wide">{feat.title}</h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">{feat.desc}</p>
+                  <h3 className="text-base font-bold text-neutral-900">{feat.title}</h3>
+                  <p className="text-xs text-[#5B6478] leading-relaxed">{feat.desc}</p>
                 </div>
               );
             })}
@@ -755,202 +640,172 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 8. Demonstração em Ação ── */}
-      <section id="demonstracao" className="py-24 px-6 md:px-12 bg-[#080812] border-b border-purple-950/20 text-center">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="space-y-3">
-            <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
+      {/* ── 8. Seção de Demonstração em Vídeo ── */}
+      <section id="demonstracao" className="py-24 px-6 bg-[#F0F4FC]/30 border-b border-[#E3E9F5] text-center">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] uppercase">
               Demonstração ao Vivo
             </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight">
-              Veja a <span className="gradient-text">LeadPluz</span> em Ação
-            </h2>
-            <p className="text-sm text-gray-400 max-w-lg mx-auto">
-              Assista como a busca de contatos e a esteira de atendimento funcionam de forma 100% autônoma.
-            </p>
+            <h2 className="text-3xl font-black text-[#10182B]">Veja a LeadPluz em Ação</h2>
+            <p className="text-xs text-[#5B6478]">Assista como a esteira de atendimento e agendamento roda de forma 100% autônoma.</p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-[#0f0f1c] border border-purple-800/30 max-w-2xl mx-auto shadow-2xl space-y-6">
-            <div className="aspect-video bg-[#050508] rounded-2xl border border-purple-900/30 flex items-center justify-center relative overflow-hidden group">
-              <div className="w-16 h-16 rounded-full bg-purple-600/80 border border-purple-400 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform cursor-pointer">
+          <div className="bg-white rounded-3xl border border-[#E3E9F5] p-6 max-w-2xl mx-auto shadow-md space-y-6">
+            <div className="aspect-video bg-[#10182B] rounded-2xl flex items-center justify-center relative overflow-hidden group">
+              <div className="w-14 h-14 rounded-full bg-[#6C9BFF] text-white flex items-center justify-center font-bold text-lg shadow-xl group-hover:scale-110 transition-transform cursor-pointer">
                 ▶
               </div>
-              <span className="absolute bottom-4 left-4 text-xs font-bold text-gray-300 bg-black/60 px-3 py-1 rounded-full backdrop-blur-md">
+              <span className="absolute bottom-4 left-4 text-xs font-bold text-white bg-black/50 px-3 py-1 rounded-full backdrop-blur-xs">
                 Demonstração da Plataforma · 2:15 min
               </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-center border-t border-purple-950/40 pt-4">
-              <div>
-                <span className="text-lg font-extrabold text-white block">100%</span>
-                <span className="text-[10px] text-gray-500 font-bold uppercase">No WhatsApp</span>
-              </div>
-              <div className="border-x border-purple-950/40">
-                <span className="text-lg font-extrabold text-white block">0h</span>
-                <span className="text-[10px] text-gray-500 font-bold uppercase">Digitação no CRM</span>
-              </div>
-              <div>
-                <span className="text-lg font-extrabold text-white block">24/7</span>
-                <span className="text-[10px] text-gray-500 font-bold uppercase">Autônomo</span>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── 9. Faixa Chamativa — Fale com um Especialista (Item 3.15) ── */}
-      <section className="relative py-16 px-6 md:px-12 bg-gradient-to-r from-purple-950 via-[#180833] to-[#0d061c] border-y border-purple-500/30 text-left">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+      <section className="py-16 px-6 bg-gradient-to-r from-[#10182B] via-[#1e293b] to-[#10182B] text-white text-left">
+        <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-3 max-w-2xl">
-            <span className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-[10px] font-extrabold uppercase tracking-wider inline-flex items-center space-x-1">
-              <Sparkles className="w-3 h-3 text-purple-300" />
-              <span>Consultoria Especializada LeadPluz</span>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 uppercase">
+              <Sparkles className="w-3 h-3" /> Consultoria Especializada LeadPluz
             </span>
-            <h2 className="text-2xl md:text-4xl font-extrabold text-white leading-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-white">
               Quer ver como a LeadPluz se adapta à sua clínica?
             </h2>
-            <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
-              Fale diretamente com um de nossos especialistas em automação comercial no WhatsApp. Tiramos suas dúvidas e montamos uma demonstração ao vivo adaptada ao seu fluxo.
+            <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+              Fale diretamente com um de nossos especialistas no WhatsApp. Tiramos suas dúvidas e montamos uma demonstração adaptada.
             </p>
           </div>
 
           <div className="shrink-0 w-full sm:w-auto">
-            <Link href="https://wa.me/5521976640033?text=Quero%20falar%20com%20um%20especialista%20sobre%20o%20LeadPluz" target="_blank" className="w-full sm:w-auto px-8 py-4 bg-white text-[#050508] hover:bg-gray-100 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center space-x-2 shadow-2xl transition-all hover:scale-105">
-              <MessageSquare className="w-4 h-4 text-purple-700 fill-purple-700/20" />
+            <a href="https://wa.me/5521976640033?text=Quero%20falar%20com%20um%20especialista%20sobre%20o%20LeadPluz" target="_blank" className="w-full sm:w-auto px-8 py-4 bg-white text-[#10182B] hover:bg-neutral-100 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-105">
+              <MessageSquare className="w-4 h-4 text-[#5486F0]" />
               <span>Falar com especialista no WhatsApp</span>
-              <ArrowRight className="w-4 h-4 text-[#050508]" />
-            </Link>
+              <ArrowRight className="w-4 h-4" />
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ── 10. Área de Planos (Item 3.12: Tag "Completo", Bullet IA ajustado no Anual, LIA inclusa) ── */}
-      <section id="planos" className="py-24 px-6 md:px-12 bg-[#050508] border-b border-purple-950/20 text-center">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="space-y-4">
-            <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
-              Planos e Assinatura
+      {/* ── 10. Área de Planos (Item 3.12: Tag "Completo", Bullet da IA ajustado, LIA inclusa, sem Google Agenda) ── */}
+      <section id="planos" className="py-20 px-6 bg-white border-t border-[#E3E9F5]">
+        <div className="mx-auto max-w-4xl space-y-12">
+          <div className="text-center space-y-3">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] uppercase">
+              <CreditCard className="w-3 h-3" /> Nossos Planos
             </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight">
-              Escolha o plano ideal para a <span className="gradient-text">sua clínica</span>
+            <h2 className="text-3xl font-black tracking-tight text-[#10182B]">
+              Escolha o plano ideal para a sua clínica
             </h2>
-            <p className="text-sm text-gray-400 max-w-lg mx-auto">
-              Sem pegadinhas ou recursos bloqueados. Todos os planos contam com acesso ilimitado a todas as ferramentas.
+            <p className="text-xs text-[#5B6478] max-w-xl mx-auto leading-relaxed">
+              Todos os planos incluem acesso completo a todos os recursos do LeadPluz. Teste grátis por 7 dias.
             </p>
 
             <div className="flex justify-center pt-2">
-              <div className="bg-[#0e0e1a] p-1.5 rounded-full border border-purple-800/30 flex items-center space-x-1">
-                <button onClick={() => setBillingPeriod("monthly")} className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${billingPeriod === "monthly" ? "bg-purple-600 text-white shadow-md" : "text-gray-400 hover:text-white"}`}>
+              <div className="bg-[#F0F4FC] p-1.5 rounded-full border border-[#E3E9F5] flex items-center gap-1">
+                <button onClick={() => setBillingPeriod("monthly")} className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${billingPeriod === "monthly" ? "bg-[#6C9BFF] text-white shadow-xs" : "text-[#5B6478]"}`}>
                   Faturamento Mensal
                 </button>
-                <button onClick={() => setBillingPeriod("yearly")} className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center space-x-1.5 ${billingPeriod === "yearly" ? "bg-purple-600 text-white shadow-md" : "text-gray-400 hover:text-white"}`}>
+                <button onClick={() => setBillingPeriod("yearly")} className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${billingPeriod === "yearly" ? "bg-[#6C9BFF] text-white shadow-xs" : "text-[#5B6478]"}`}>
                   <span>Faturamento Anual</span>
-                  <span className="bg-emerald-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full">2 MESES GRÁTIS</span>
+                  <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">2 MESES GRÁTIS</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+          <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto text-left">
             {/* Mensal (Tag Completo - Item 3.12) */}
-            <div className="p-8 rounded-3xl bg-[#0e0e1c] border border-purple-800/30 hover:border-purple-500/50 transition-all flex flex-col justify-between space-y-8 shadow-xl">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest bg-purple-950/60 border border-purple-700/40 text-purple-300 px-3 py-1 rounded-full">
-                    ✦ Completo
-                  </span>
-                  <span className="text-xs text-gray-400 font-semibold">Sem fidelidade</span>
+            <div className="bg-white border border-[#E3E9F5] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-neutral-400 uppercase">Mensal</span>
+                  {/* Trocar "Básico" por "Completo" (Item 3.12) */}
+                  <span className="text-xs bg-[#DCE7FF] text-[#3B6BE0] px-2.5 py-0.5 rounded-full font-bold">Completo</span>
                 </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-extrabold text-white">Plano Mensal Completo</h3>
-                  <p className="text-xs text-gray-400">Todos os módulos inclusos sem restrições</p>
+                <div className="mt-4">
+                  <span className="text-3xl font-black text-[#10182B]">{billingPeriod === "monthly" ? "R$ 397" : "R$ 327"}</span>
+                  <span className="text-xs text-[#5B6478]"> /mês</span>
                 </div>
-
-                <div className="flex items-baseline space-x-2 border-b border-purple-900/30 pb-6">
-                  <span className="text-4xl font-black text-white font-mono">{billingPeriod === "monthly" ? "R$ 197" : "R$ 164"}</span>
-                  <span className="text-xs text-gray-400">/mês</span>
-                </div>
-
-                <ul className="space-y-2.5 text-xs text-gray-300">
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> CRM 100% Autônomo Kanban + WhatsApp</li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> Agenda Inteligente Autônoma (marcações e lembretes)</li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> LIA — Assistente de IA direta no WhatsApp da equipe</li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> Assinatura digital de contratos no WhatsApp</li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> Financeiro Completo (receita prevista, sinais, comissões)</li>
-                </ul>
+                <p className="text-xs text-[#5B6478] mt-2 leading-relaxed">
+                  Perfeito para clínicas e consultórios que querem agilidade sem compromisso de fidelidade.
+                </p>
               </div>
 
-              <Link href="/signup" className="btn-gradient w-full py-4 rounded-xl text-xs font-extrabold uppercase tracking-widest text-white text-center block shadow-lg hover:scale-[1.02] transition-all">
-                Começar Teste Grátis de 7 Dias 🚀
+              <ul className="text-xs text-[#5B6478] space-y-2 border-t border-[#E3E9F5] pt-4">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> CRM 100% autônomo Kanban no WhatsApp</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Agenda inteligente autônoma</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> LIA — Assistente de IA direto no WhatsApp da equipe</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Assinaturas eletrônicas ilimitadas no chat</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Financeiro e Receita Prevista</li>
+              </ul>
+
+              <Link href="/signup" className="block text-center rounded-xl border border-[#E3E9F5] bg-white hover:bg-[#F0F4FC] px-6 py-3 text-xs font-bold text-[#5B6478] transition-colors">
+                Inicie seu teste grátis de 7 dias
               </Link>
             </div>
 
-            {/* Anual (Bullet IA ajustado - Item 3.12) */}
-            <div className="p-8 rounded-3xl bg-gradient-to-b from-[#180933] to-[#0a0518] border-2 border-purple-500/60 shadow-[0_0_50px_rgba(139,69,212,0.3)] flex flex-col justify-between space-y-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-[9px] uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow-md">
-                ✦ Melhor Custo-Benefício
+            {/* Anual (Item 3.12: Bullet da IA ajustado) */}
+            <div className="bg-white border-2 border-[#6C9BFF] rounded-3xl p-6 shadow-md flex flex-col justify-between space-y-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-[#6C9BFF] text-white text-[9px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                Melhor Custo-Benefício
+              </div>
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-neutral-400 uppercase">Anual</span>
+                  <span className="text-xs bg-blue-50 text-[#6C9BFF] px-2.5 py-0.5 rounded-full font-bold">25% OFF</span>
+                </div>
+                <div className="mt-4">
+                  <span className="text-3xl font-black text-[#10182B]">{billingPeriod === "monthly" ? "R$ 297" : "R$ 247"}</span>
+                  <span className="text-xs text-[#5B6478]"> /mês</span>
+                  <span className="text-[10px] text-[#5B6478] block mt-1">(Faturamento anual)</span>
+                </div>
+                <p className="text-xs text-[#5B6478] mt-2 leading-relaxed">
+                  Para quem deseja o melhor preço e suporte premium prioritário.
+                </p>
               </div>
 
-              <div className="space-y-6 pt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest bg-purple-500/20 border border-purple-400/40 text-purple-200 px-3 py-1 rounded-full">
-                    ✦ Anual Econômico
-                  </span>
-                  <span className="text-xs text-emerald-400 font-bold">Economize 20%</span>
-                </div>
+              <ul className="text-xs text-[#5B6478] space-y-2 border-t border-[#E3E9F5] pt-4">
+                <li className="flex items-start gap-2 font-semibold text-neutral-900">
+                  <Sparkles className="w-4 h-4 text-[#6C9BFF] shrink-0 mt-0.5" />
+                  <span>IA que cria documentos, sugere disparos e estratégias comerciais</span>
+                </li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Todos os recursos do plano mensal</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> LIA com prioridade de velocidade</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Suporte VIP dedicado no WhatsApp</li>
+              </ul>
 
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-extrabold text-white">Plano Anual Pro</h3>
-                  <p className="text-xs text-gray-300">Para clínicas que buscam aceleração máxima</p>
-                </div>
-
-                <div className="flex items-baseline space-x-2 border-b border-purple-900/30 pb-6">
-                  <span className="text-4xl font-black text-white font-mono">{billingPeriod === "monthly" ? "R$ 147" : "R$ 127"}</span>
-                  <span className="text-xs text-gray-400">/mês em 12x</span>
-                </div>
-
-                <ul className="space-y-2.5 text-xs text-gray-200">
-                  <li className="flex items-start space-x-2.5 font-semibold text-white">
-                    <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                    <span>IA que cria documentos, sugere disparos e estratégias comerciais</span>
-                  </li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> Todos os recursos do plano Mensal</li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> LIA com prioridade de velocidade</li>
-                  <li className="flex items-center space-x-2.5"><Check className="w-4 h-4 text-purple-400 shrink-0" /> Suporte VIP dedicado no WhatsApp</li>
-                </ul>
-              </div>
-
-              <Link href="/signup" className="w-full py-4 bg-white text-[#050508] hover:bg-gray-100 rounded-xl text-xs font-black uppercase tracking-widest text-center block shadow-xl transition-all hover:scale-[1.02]">
-                Assinar Plano Anual ⚡
+              <Link href="/signup" className="block text-center rounded-xl bg-[#6C9BFF] hover:bg-[#5486F0] px-6 py-3 text-xs font-bold text-white transition-all shadow-md">
+                Começar agora gratuitamente
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 11. FAQ Accordion ── */}
-      <section id="faq" className="py-24 px-6 md:px-12 bg-[#050508] border-b border-purple-950/20 text-left">
-        <div className="max-w-4xl mx-auto space-y-12">
-          <div className="text-center space-y-3">
-            <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 text-[10px] font-extrabold uppercase tracking-widest">
-              Dúvidas Frequentes
-            </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white">Perguntas <span className="gradient-text">Frequentes</span></h2>
-            <p className="text-xs text-gray-400">Tudo o que você precisa saber sobre a LeadPluz antes de começar.</p>
+      {/* ── 11. FAQ ── */}
+      <section id="faq" className="py-20 px-6 bg-[#F0F4FC]/20 border-t border-[#E3E9F5]">
+        <div className="mx-auto max-w-2xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-black text-[#10182B] mb-4">Perguntas Frequentes</h2>
+            <p className="text-xs text-[#5B6478]">Esclareça suas principais dúvidas sobre o funcionamento do LeadPluz.</p>
           </div>
-
-          <div className="space-y-4 pt-4">
-            {faqs.map((faq, idx) => (
-              <div key={idx} className="border-b border-purple-950/20 py-1">
-                <button onClick={() => setActiveFaq(activeFaq === idx ? null : idx)} className="w-full flex justify-between items-center py-4 text-sm font-bold text-white uppercase tracking-wider hover:text-purple-300 transition-colors">
-                  <span>{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 text-purple-400 transition-transform ${activeFaq === idx ? "rotate-180" : ""}`} />
+          <div className="space-y-3 text-left">
+            {faqs.map((faq, i) => (
+              <div key={i} className="bg-white rounded-xl border border-[#E3E9F5]/80 overflow-hidden hover:border-[#6C9BFF]/50 transition-all shadow-2xs">
+                <button
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-xs font-bold text-neutral-800 hover:text-[#5486F0] transition-colors focus:outline-none"
+                  onClick={() => setActiveFaq(activeFaq === i ? null : i)}
+                >
+                  {faq.q}
+                  <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${activeFaq === i ? "rotate-180 text-[#6C9BFF]" : ""}`} />
                 </button>
-                {activeFaq === idx && (
-                  <p className="text-xs md:text-sm text-gray-400 leading-relaxed pb-4 pr-6">
+                {activeFaq === i && (
+                  <div className="px-5 pb-4 text-xs text-[#5B6478] leading-relaxed border-t border-neutral-50 pt-3">
                     {faq.a}
-                  </p>
+                  </div>
                 )}
               </div>
             ))}
@@ -958,85 +813,49 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 12. Final CTA ── */}
-      <section className="py-24 px-6 md:px-12 bg-gradient-to-b from-[#0a0a0f] to-[#050508] text-center flex flex-col items-center">
-        <div className="max-w-3xl mx-auto space-y-8 flex flex-col items-center">
-          <div className="w-16 h-16 rounded-2xl bg-purple-900/40 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-xl">
-            <Zap className="w-8 h-8 fill-purple-400/20" />
+      {/* ── 12. CTA Final ── */}
+      <section className="py-24 px-6 bg-gradient-to-br from-[#10182B] to-[#1e293b] text-white text-center relative overflow-hidden">
+        <div className="relative mx-auto max-w-2xl space-y-6 z-10">
+          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold text-blue-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            7 dias de teste grátis · Conecte em 2 min
           </div>
-
-          <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight">
-            Sua clínica pronta para <br />
-            <span className="gradient-text">vender no piloto automático</span>
+          <h2 className="text-4xl font-black">
+            Seu WhatsApp mais inteligente.<br />
+            <span className="text-[#6C9BFF]">Seu CRM rodando sozinho.</span>
           </h2>
-
-          <p className="text-sm text-gray-300 max-w-lg leading-relaxed">
-            Comece agora mesmo seu teste de 7 dias grátis. Configuração rápida em 5 minutos e sem necessidade de cartão de crédito.
+          <p className="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
+            Esqueça digitações e processos manuais. Comece agora a economizar tempo e fechar mais atendimentos.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-            <Link href="/signup" className="px-10 py-4 bg-white text-[#050508] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all shadow-2xl flex items-center justify-center space-x-2">
-              <span>Criar conta grátis agora</span>
-              <ArrowRight className="w-4 h-4 text-[#050508]" />
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Link href="/signup" className="group inline-flex items-center gap-2 bg-[#6C9BFF] hover:bg-[#5486F0] text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all shadow-xl shadow-blue-900/50">
+              Começar agora gratuitamente
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <Link href="https://wa.me/5521976640033?text=Quero%20saber%20mais%20sobre%20o%20LeadPluz" target="_blank" className="px-8 py-4 border border-purple-800/40 rounded-xl text-xs font-bold uppercase tracking-widest text-white hover:bg-purple-950/40 transition-all flex items-center justify-center space-x-2">
-              <MessageSquare className="w-4 h-4 text-purple-400" />
-              <span>Falar com o suporte</span>
+            <Link href="/login" className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/10 text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all">
+              Já Tenho Conta
             </Link>
           </div>
         </div>
       </section>
 
       {/* ── 13. Footer ── */}
-      <footer className="bg-[#050508] border-t border-purple-950/20 pt-16 pb-8 px-6 md:px-12 font-sans select-none text-left">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 pb-12 border-b border-purple-950/15">
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <Zap className="w-5 h-5 text-purple-400 fill-purple-400/20" />
-              <span className="text-sm font-extrabold tracking-widest text-white uppercase">
-                LEAD<span className="text-purple-400">PLUZ</span>
-              </span>
-            </Link>
-            <p className="text-xs text-gray-500 leading-relaxed max-w-xs">
-              CRM 100% autônomo e integrado ao WhatsApp para clínicas de saúde, beleza e estética.
-            </p>
+      <footer className="bg-[#10182B] text-neutral-500 border-t border-white/5 py-8 px-6 text-xs">
+        <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#3B6BE0] to-[#6C9BFF] flex items-center justify-center text-white font-bold text-xs">
+              <Zap className="w-3 h-3 text-white fill-white/20" />
+            </div>
+            <span className="text-sm font-bold text-neutral-300 uppercase">LEADPLUZ</span>
           </div>
-
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-extrabold text-white uppercase tracking-widest">Navegação</h4>
-            <ul className="space-y-2 text-xs text-gray-500">
-              <li><a href="#recursos" className="hover:text-purple-300 transition-colors">Recursos da plataforma</a></li>
-              <li><a href="#planos" className="hover:text-purple-300 transition-colors">Planos de assinatura</a></li>
-              <li><a href="#demonstracao" className="hover:text-purple-300 transition-colors">Demonstração em vídeo</a></li>
-              <li><a href="#faq" className="hover:text-purple-300 transition-colors">Perguntas Frequentes</a></li>
-            </ul>
+          <p>© {new Date().getFullYear()} LeadPluz. Todos os direitos reservados.</p>
+          <div className="flex gap-4">
+            <Link href="/termos" className="hover:text-white transition-colors">Termos</Link>
+            <Link href="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
+            <Link href="/login" className="hover:text-white transition-colors">Login</Link>
           </div>
-
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-extrabold text-white uppercase tracking-widest">Plataforma</h4>
-            <ul className="space-y-2 text-xs text-gray-500">
-              <li><Link href="/login" className="hover:text-purple-300 transition-colors font-semibold text-gray-400">Entrar na Conta (Login)</Link></li>
-              <li><Link href="/signup" className="hover:text-purple-300 transition-colors font-semibold text-purple-400">Criar Conta Grátis</Link></li>
-              <li><a href="https://wa.me/5521976640033" target="_blank" className="hover:text-purple-300 transition-colors">Suporte via WhatsApp</a></li>
-            </ul>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-extrabold text-white uppercase tracking-widest">Legal</h4>
-            <ul className="space-y-2 text-xs text-gray-500">
-              <li><Link href="/termos" className="hover:text-purple-300">Termos de uso</Link></li>
-              <li><Link href="/privacidade" className="hover:text-purple-300">Política de privacidade</Link></li>
-              <li><span className="text-gray-600 block">LGPD Enterprise Compliance</span></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="max-w-6xl mx-auto pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] text-gray-600 gap-4">
-          <span>© {new Date().getFullYear()} LEADPLUZ. Todos os direitos reservados.</span>
-          <span>Feito com excelência 🇧🇷</span>
         </div>
       </footer>
-
     </div>
   );
 }
