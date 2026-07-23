@@ -246,6 +246,7 @@ interface PatientOption {
 interface StaffOption {
   id: string;
   name: string;
+  user_id?: string;
 }
 
 interface SmartPanelData {
@@ -467,11 +468,12 @@ export function AppointmentModal({
         // Fetch staff (clinic_users)
         const { data: stData } = await supabase
           .from("clinic_users")
-          .select("user_id, name")
+          .select("id, user_id, name")
           .eq("clinic_id", clinicId)
           .eq("is_active", true)
           .order("name");
-        setStaff((stData || []).map((s) => ({ id: s.user_id, name: s.name })));
+        const mappedStaff = (stData || []).map((s) => ({ id: s.id, user_id: s.user_id, name: s.name }));
+        setStaff(mappedStaff);
 
         // Fetch procedures with values and prices
         const { data: procData } = await supabase
@@ -1140,13 +1142,18 @@ Qualquer dúvida, estou à disposição! 😊`;
       const clinicId = accountId;
       const profileName = profile?.full_name || "Sistema";
 
+      // Ensure professional_id matches a valid clinic_users.id (or fallback by user_id/first staff)
+      const validProfessionalId = staff.some((s) => s.id === professionalId)
+        ? professionalId
+        : (staff.find((s) => s.user_id === professionalId)?.id || staff[0]?.id || null);
+
       if (appointmentId) {
         // Update appointment
         const { error: updateErr } = await supabase
           .from("appointments")
           .update({
             patient_id: patientId || null,
-            professional_id: professionalId || null,
+            professional_id: validProfessionalId,
             start_time: startObj.toISOString(),
             end_time: endObj.toISOString(),
             status,
@@ -1182,7 +1189,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           });
 
           // Trigger notifications via API (only if toggle is enabled)
-          const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
+          const professionalName = staff.find((s) => s.id === validProfessionalId)?.name || "";
           const formattedDate = startObj.toLocaleDateString("pt-BR");
           const formattedTime = startObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -1233,7 +1240,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           .insert({
             clinic_id: clinicId,
             patient_id: patientId || null,
-            professional_id: professionalId || null,
+            professional_id: validProfessionalId,
             start_time: startObj.toISOString(),
             end_time: endObj.toISOString(),
             status,
