@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Calendar,
   CreditCard,
-  Users,
   Zap,
   ShieldCheck,
   Menu,
@@ -28,10 +27,8 @@ import {
   BarChart2,
   ChevronLeft,
   ChevronRight,
-  AlertCircle,
-  UserCheck
+  AlertCircle
 } from 'lucide-react';
-import { FeaturePreview } from '@/components/landing/feature-previews';
 
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,6 +42,11 @@ export default function LandingPage() {
     window.addEventListener("scroll", handler);
     return () => window.removeEventListener("scroll", handler);
   }, []);
+
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleCarouselScroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -118,7 +120,7 @@ export default function LandingPage() {
     { icon: BarChart2, cmd: '"LIA, me envie o relatório de faturamento deste mês"', action: "Gera e envia resumo completo com métricas e conversões" }
   ];
 
-  // REMOVIDO MULTICLÍNICA CONFORME SOLICITADO NO PROMPT E PRINT
+  // REMOVIDO MULTICLÍNICA
   const allFeatures = [
     { icon: Zap, title: "CRM 100% Autônomo", desc: "Kanban visual com atualização automatizada em tempo real. A conversa acontece no WhatsApp e a IA organiza o funil." },
     { icon: Calendar, title: "Agenda Inteligente Autônoma", desc: "Agendamento, confirmações e reagendamentos efetuados automaticamente direto na conversa com o cliente." },
@@ -141,7 +143,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAFBFF] text-[#10182B] font-sans antialiased text-left selection:bg-blue-100 overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFBFF] text-[#10182B] font-sans antialiased text-left selection:bg-blue-100 overflow-x-hidden pb-16">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
         body { font-family: 'Outfit', sans-serif; }
@@ -154,31 +156,30 @@ export default function LandingPage() {
         .animate-marquee { display: flex; width: max-content; animation: marquee 35s linear infinite; }
       `}</style>
 
-      {/* ── Navbar (Somente os 4 itens solicitados: Recursos, Planos, Demonstração, FAQ - Item 3.13) ── */}
+      {/* ── Navbar (Com a logo original menos arredondada + Clicar na logo vai pro topo + Menu 3 itens: Recursos, Planos, FAQ) ── */}
       <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/85 backdrop-blur-md border-b border-[#E3E9F5] shadow-xs py-3" : "bg-transparent py-5"}`}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#3B6BE0] to-[#6C9BFF] flex items-center justify-center text-white shadow-xs font-bold">
-              <Zap className="w-4 h-4 text-white fill-white/20" />
-            </div>
+          {/* Logo do projeto original + Clicar vai pro topo da página */}
+          <a href="#" onClick={scrollToTop} className="flex items-center gap-2 group cursor-pointer">
+            <img src="/images/logo.png" className="h-7 w-7 object-contain rounded-lg" alt="LeadPluz Logo" />
             <span className="text-lg font-black tracking-tight text-[#10182B] uppercase font-sans">
               LEAD<span className="text-[#6C9BFF]">PLUZ</span>
             </span>
-          </Link>
+          </a>
 
-          {/* Menu Desktop: 4 Itens Exatos (Item 3.13) */}
+          {/* Menu Desktop: Recursos, Planos, FAQ (Demonstração removido) */}
           <div className="hidden md:flex items-center gap-8">
             <a href="#recursos" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">Recursos</a>
             <a href="#planos" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">Planos</a>
-            <a href="#demonstracao" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">Demonstração</a>
             <a href="#faq" className="text-xs font-bold text-[#5B6478] hover:text-[#5486F0] transition-colors">FAQ</a>
           </div>
 
+          {/* CTAs apontando para as URLs especificadas */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="rounded-xl px-4 py-2 text-xs font-bold text-[#5B6478] hover:bg-[#F0F4FC] transition-colors">Login</Link>
-            <Link href="/signup" className="rounded-xl bg-[#6C9BFF] px-4 py-2 text-xs font-bold text-white hover:bg-[#5486F0] transition-all shadow-xs">
+            <a href="https://app.leadpluz.com/login" className="rounded-xl px-4 py-2 text-xs font-bold text-[#5B6478] hover:bg-[#F0F4FC] transition-colors">Login</a>
+            <a href="https://app.leadpluz.com/signup" className="rounded-xl bg-[#6C9BFF] px-4 py-2 text-xs font-bold text-white hover:bg-[#5486F0] transition-all shadow-xs">
               Começar Grátis →
-            </Link>
+            </a>
           </div>
 
           <button className="md:hidden p-2 rounded-lg hover:bg-[#F0F4FC]" onClick={() => setMenuOpen(!menuOpen)}>
@@ -190,17 +191,16 @@ export default function LandingPage() {
           <div className="md:hidden bg-white border-t border-[#E3E9F5] px-6 py-4 space-y-3 text-xs font-bold uppercase tracking-wider text-[#5B6478]">
             <a href="#recursos" onClick={() => setMenuOpen(false)} className="block py-1">Recursos</a>
             <a href="#planos" onClick={() => setMenuOpen(false)} className="block py-1">Planos</a>
-            <a href="#demonstracao" onClick={() => setMenuOpen(false)} className="block py-1">Demonstração</a>
             <a href="#faq" onClick={() => setMenuOpen(false)} className="block py-1">FAQ</a>
             <div className="flex gap-2 pt-2">
-              <Link href="/login" className="flex-1 text-center rounded-xl border border-[#E3E9F5] py-2.5 text-[#5B6478]">Login</Link>
-              <Link href="/signup" className="flex-1 text-center rounded-xl bg-[#6C9BFF] py-2.5 text-white">Criar Conta</Link>
+              <a href="https://app.leadpluz.com/login" className="flex-1 text-center rounded-xl border border-[#E3E9F5] py-2.5 text-[#5B6478]">Login</a>
+              <a href="https://app.leadpluz.com/signup" className="flex-1 text-center rounded-xl bg-[#6C9BFF] py-2.5 text-white">Criar Conta</a>
             </div>
           </div>
         )}
       </nav>
 
-      {/* ── Hero (MANTIDO TÍTULO ORIGINAL EXACTO: "Seu WhatsApp alimenta o CRM, tudo de forma autônoma.") ── */}
+      {/* ── Hero (TÍTULO ORIGINAL EXACTO E SEGUNDA FRASE REQUISITADA) ── */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#DCE7FF]/40 via-transparent to-violet-50/20 pointer-events-none" />
         <div className="absolute top-20 left-1/4 w-72 h-72 bg-[#DCE7FF]/30 rounded-full blur-3xl pointer-events-none" />
@@ -209,29 +209,30 @@ export default function LandingPage() {
           <div className="text-center mb-12 fade-up">
             <div className="inline-flex items-center gap-2 rounded-full bg-[#DCE7FF] border border-[#6C9BFF]/20 px-4 py-1.5 text-xs font-bold text-[#3B6BE0] mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-[#6C9BFF] animate-pulse" />
-              CRM 100% Autônomo e Integrado ao WhatsApp
+              O Único CRM 100% Autônomo e Integrado ao WhatsApp
             </div>
 
-            {/* TÍTULO ORIGINAL MANTIDO 100% INTACTO */}
+            {/* TÍTULO ORIGINAL EXATO */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#10182B] leading-[1.08] mb-6">
               Seu WhatsApp alimenta o CRM,<br />
               <span className="text-[#6C9BFF]">tudo de forma autônoma.</span>
             </h1>
 
+            {/* SEGUNDA FRASE CONFORME PEDIDO: "Somos o único CRM inteligente e automatizado..." */}
             <p className="text-base sm:text-lg text-[#5B6478] max-w-2xl mx-auto leading-relaxed mb-8">
-              Diga adeus à alimentação manual de planilhas. Nosso diferencial é um <strong className="font-bold text-neutral-800">CRM inteligente e automatizado</strong> onde cada conversa pelo WhatsApp vira dado estruturado na hora. Acompanhe a <strong className="font-bold text-neutral-800">agenda, assinaturas digitais, financeiro</strong> e o progresso do lead sem levantar um dedo.
+              Diga adeus à alimentação manual de planilhas. <strong className="font-bold text-neutral-800">Somos o único CRM inteligente e automatizado</strong> onde cada conversa pelo WhatsApp vira dado estruturado na hora. Acompanhe a agenda, assinaturas digitais, financeiro e o progresso do lead sem levantar um dedo.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/signup"
+              <a
+                href="https://app.leadpluz.com/signup"
                 className="group flex items-center gap-2 rounded-xl bg-[#6C9BFF] px-6 py-3.5 text-xs font-bold text-white hover:bg-[#5486F0] transition-all shadow-md shadow-blue-300/35 glow-blue"
               >
                 Iniciar meu teste grátis de 7 dias
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <a href="#demonstracao" className="flex items-center gap-2 rounded-xl border border-[#E3E9F5] px-6 py-3.5 text-xs font-bold text-[#5B6478] hover:bg-[#F0F4FC] transition-colors bg-white">
-                Ver Demonstração
+              </a>
+              <a href="https://app.leadpluz.com/login" className="flex items-center gap-2 rounded-xl border border-[#E3E9F5] px-6 py-3.5 text-xs font-bold text-[#5B6478] hover:bg-[#F0F4FC] transition-colors bg-white">
+                Entrar no Painel
               </a>
             </div>
 
@@ -242,34 +243,31 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Hero Mockup (Item 3.6: Conversa Real + Status "Sinal ainda não pago") */}
+          {/* Hero Mockup (Simulação do WhatsApp fiel ao aplicativo sem tag "resposta natural") */}
           <div className="grid md:grid-cols-2 gap-8 items-center max-w-3xl mx-auto">
             
-            {/* Esquerda: Chat Atendimento Clínica WhatsApp */}
+            {/* Esquerda: Chat Atendimento WhatsApp Realista */}
             <div className="bg-white rounded-3xl border border-[#E3E9F5] shadow-lg overflow-hidden max-w-sm mx-auto text-left w-full">
-              <div className="flex items-center gap-3 px-4 py-3 bg-[#5486F0] text-white">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">JC</div>
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#075E54] text-white">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-800">JC</div>
                 <div>
                   <div className="text-xs font-bold">Juliana Costa</div>
-                  <div className="text-[10px] text-blue-100 flex items-center gap-1">
+                  <div className="text-[10px] text-emerald-100 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-                    Atendimento de Avaliação
+                    online
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 space-y-3 min-h-[250px] bg-[#f0f4fc]/40">
+              <div className="p-4 space-y-3 min-h-[250px] bg-[#E5DDD5]/40">
                 <div className="bg-white rounded-xl p-3 border border-neutral-100 shadow-2xs max-w-[85%] text-xs text-neutral-800">
                   Olá! Gostaria de agendar uma consulta de avaliação estética para esta semana.
                   <span className="text-[8px] text-neutral-400 block text-right mt-1">14:32</span>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 max-w-[90%] ml-auto text-xs text-blue-900">
-                  <div className="text-[9px] font-bold text-blue-600 flex items-center gap-1 mb-1">
-                    <Sparkles className="w-3 h-3 text-[#6C9BFF]" /> Resposta Natural da Clínica
-                  </div>
-                  Com certeza, Juliana! Temos disponibilidade para Quinta-feira às 15:00. Posso reservar para você?
-                  <span className="text-[8px] text-blue-400 block text-right mt-1">14:32 ✓✓</span>
+                <div className="bg-[#D9FDD3] rounded-xl p-3 max-w-[90%] ml-auto text-xs text-neutral-800 border border-emerald-100">
+                  Com certeza, Juliana! Temos disponibilidade para Quinta-feira às 15:00. Posso reservar esse horário para você?
+                  <span className="text-[8px] text-emerald-600 block text-right mt-1">14:32 ✓✓</span>
                 </div>
 
                 <div className="bg-white rounded-xl p-3 border border-neutral-100 shadow-2xs max-w-[85%] text-xs text-neutral-800">
@@ -302,7 +300,7 @@ export default function LandingPage() {
                   <span className="text-xs font-bold text-neutral-800">Quinta-feira · 15:00h</span>
                 </div>
 
-                {/* Status do Sinal: Sinal AINDA NÃO PAGO (Ajustado item 3.6) */}
+                {/* Status do Sinal: Sinal ainda não pago */}
                 <div className="bg-amber-50 rounded-xl p-2.5 border border-amber-200">
                   <div className="flex items-center justify-between">
                     <span className="text-[8px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
@@ -347,12 +345,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 4. Segunda Seção — Follow-up com Card de Exemplo + Tags (Item 3.8 & 3.9) ── */}
+      {/* ── 4. Segunda Seção — Follow-up: Nome "Marcelo Silva" e mensagem ajustada (Item 3.8 & User Request) ── */}
       <section id="recursos" className="py-24 px-6 border-b border-[#E3E9F5] bg-white">
         <div className="mx-auto max-w-5xl space-y-20">
           
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Texto + Tags (Item 3.8) */}
             <div className="space-y-5">
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] border border-[#6C9BFF]/20 uppercase">
                 <Bot className="w-3 h-3" /> CRM Inteligente e Follow-up
@@ -364,7 +361,7 @@ export default function LandingPage() {
                 O bot inteligente monitora os leads frios e atua enviando disparos personalizados de acompanhamento. Defina os gatilhos e deixe a IA cuidar do resgate e nutrição.
               </p>
 
-              {/* Linha de Tags Coloridas de Disparo (Item 3.8) */}
+              {/* Tags Coloridas */}
               <div className="space-y-2 pt-2">
                 <span className="text-[10px] font-extrabold text-[#5B6478] uppercase tracking-wider block">
                   Tipos de Disparos Automáticos Configuráveis:
@@ -379,7 +376,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card de Exemplo de Follow-up Programado (Item 3.8) */}
+            {/* Card de Exemplo: Nome "Marcelo Silva" sem "Dr." (Ajustado) */}
             <div className="glow-blue rounded-3xl p-6 bg-white border border-[#E3E9F5] shadow-lg text-left max-w-md mx-auto w-full">
               <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
                 <div className="flex items-center gap-3">
@@ -387,7 +384,8 @@ export default function LandingPage() {
                     MS
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-neutral-900">Dr. Marcelo Silva</h4>
+                    {/* Nome: Marcelo Silva (sem Dr.) */}
+                    <h4 className="text-xs font-bold text-neutral-900">Marcelo Silva</h4>
                     <span className="text-[10px] text-[#5B6478]">Interesse: Tratamento Ortodôntico</span>
                   </div>
                 </div>
@@ -405,17 +403,17 @@ export default function LandingPage() {
                   </span>
                   <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Pronto para Envio</span>
                 </div>
+                {/* Mensagem: "Olá Marcelo! ..." sem "Dr." (Ajustado) */}
                 <p className="text-xs text-neutral-700 leading-relaxed font-sans bg-white p-3 rounded-xl border border-neutral-100">
-                  "Olá Dr. Marcelo! Vi que você ficou de confirmar o horário de avaliação da clínica. Conseguimos reservar uma vaga especial para amanhã às 16h. Vamos confirmar?"
+                  "Olá Marcelo! Vi que você ficou de confirmar o horário de avaliação da clínica. Conseguimos reservar uma vaga especial para amanhã às 16h. Vamos confirmar?"
                 </p>
                 <div className="text-[9px] text-neutral-400 text-right">Agendado para disparo via WhatsApp</div>
               </div>
             </div>
           </div>
 
-          {/* Agenda Autônoma SEM MENÇÃO AO GOOGLE CALENDAR (Item 3.9) */}
+          {/* Agenda Autônoma sem Google Calendar */}
           <div className="grid md:grid-cols-2 gap-12 items-center pt-12 border-t border-[#E3E9F5]">
-            {/* Visual preview da agenda */}
             <div className="order-2 md:order-1 glow-blue rounded-3xl p-6 bg-white border border-[#E3E9F5] shadow-lg text-left max-w-md mx-auto w-full">
               <div className="flex items-center justify-between pb-3 border-b border-neutral-100 mb-4">
                 <div className="flex items-center gap-2">
@@ -448,7 +446,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Copy da Agenda (Item 3.9: Reforçar IA e remover Google Calendar) */}
             <div className="space-y-5 order-1 md:order-2">
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
                 <Calendar className="w-3 h-3" /> Gestão de Agenda Autônoma
@@ -503,7 +500,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Cards do Carrossel */}
           <div ref={scrollRef} className="flex gap-6 overflow-x-auto pb-6 pt-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
             {carouselCards.map((card, idx) => {
               const Icon = card.icon;
@@ -608,7 +604,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 7. Nova Seção — "Todos os Recursos" (Grid Completo - MULTICLÍNICA REMOVIDO CONFORME PEDIDO) (Item 3.14) ── */}
+      {/* ── 7. Nova Seção — "Todos os Recursos" (SEM CARD MULTICLÍNICA) (Item 3.14 & User Request) ── */}
       <section className="py-24 px-6 bg-white border-b border-[#E3E9F5] text-left">
         <div className="mx-auto max-w-5xl space-y-16">
           <div className="text-center space-y-3 max-w-2xl mx-auto">
@@ -640,56 +636,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 8. Seção de Demonstração em Vídeo ── */}
-      <section id="demonstracao" className="py-24 px-6 bg-[#F0F4FC]/30 border-b border-[#E3E9F5] text-center">
-        <div className="mx-auto max-w-4xl space-y-8">
-          <div className="space-y-2">
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-[#DCE7FF] text-[#3B6BE0] uppercase">
-              Demonstração ao Vivo
-            </span>
-            <h2 className="text-3xl font-black text-[#10182B]">Veja a LeadPluz em Ação</h2>
-            <p className="text-xs text-[#5B6478]">Assista como a esteira de atendimento e agendamento roda de forma 100% autônoma.</p>
-          </div>
-
-          <div className="bg-white rounded-3xl border border-[#E3E9F5] p-6 max-w-2xl mx-auto shadow-md space-y-6">
-            <div className="aspect-video bg-[#10182B] rounded-2xl flex items-center justify-center relative overflow-hidden group">
-              <div className="w-14 h-14 rounded-full bg-[#6C9BFF] text-white flex items-center justify-center font-bold text-lg shadow-xl group-hover:scale-110 transition-transform cursor-pointer">
-                ▶
-              </div>
-              <span className="absolute bottom-4 left-4 text-xs font-bold text-white bg-black/50 px-3 py-1 rounded-full backdrop-blur-xs">
-                Demonstração da Plataforma · 2:15 min
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 9. Faixa Chamativa — Fale com um Especialista (Item 3.15) ── */}
-      <section className="py-16 px-6 bg-gradient-to-r from-[#10182B] via-[#1e293b] to-[#10182B] text-white text-left">
-        <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-3 max-w-2xl">
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 uppercase">
-              <Sparkles className="w-3 h-3" /> Consultoria Especializada LeadPluz
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white">
-              Quer ver como a LeadPluz se adapta à sua clínica?
-            </h2>
-            <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
-              Fale diretamente com um de nossos especialistas no WhatsApp. Tiramos suas dúvidas e montamos uma demonstração adaptada.
-            </p>
-          </div>
-
-          <div className="shrink-0 w-full sm:w-auto">
-            <a href="https://wa.me/5521976640033?text=Quero%20falar%20com%20um%20especialista%20sobre%20o%20LeadPluz" target="_blank" className="w-full sm:w-auto px-8 py-4 bg-white text-[#10182B] hover:bg-neutral-100 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-105">
-              <MessageSquare className="w-4 h-4 text-[#5486F0]" />
-              <span>Falar com especialista no WhatsApp</span>
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 10. Área de Planos (Item 3.12: Tag "Completo", Bullet da IA ajustado, LIA inclusa, sem Google Agenda) ── */}
+      {/* ── 8. Área de Planos (Valores Fixos 397/297, Bullet 1 Mensal Ajustado, Sem LIA prioridade no Anual) (Item 3.12 & User Request) ── */}
       <section id="planos" className="py-20 px-6 bg-white border-t border-[#E3E9F5]">
         <div className="mx-auto max-w-4xl space-y-12">
           <div className="text-center space-y-3">
@@ -717,16 +664,16 @@ export default function LandingPage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto text-left">
-            {/* Mensal (Tag Completo - Item 3.12) */}
+            {/* Mensal (Tag Completo, Bullet 1 "CRM 100% autônomo, integrado ao Whatsapp", Preço fixo R$ 397) */}
             <div className="bg-white border border-[#E3E9F5] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
               <div>
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold text-neutral-400 uppercase">Mensal</span>
-                  {/* Trocar "Básico" por "Completo" (Item 3.12) */}
                   <span className="text-xs bg-[#DCE7FF] text-[#3B6BE0] px-2.5 py-0.5 rounded-full font-bold">Completo</span>
                 </div>
                 <div className="mt-4">
-                  <span className="text-3xl font-black text-[#10182B]">{billingPeriod === "monthly" ? "R$ 397" : "R$ 327"}</span>
+                  {/* VALOR FIXO: 397 */}
+                  <span className="text-3xl font-black text-[#10182B]">R$ 397</span>
                   <span className="text-xs text-[#5B6478]"> /mês</span>
                 </div>
                 <p className="text-xs text-[#5B6478] mt-2 leading-relaxed">
@@ -735,19 +682,21 @@ export default function LandingPage() {
               </div>
 
               <ul className="text-xs text-[#5B6478] space-y-2 border-t border-[#E3E9F5] pt-4">
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> CRM 100% autônomo Kanban no WhatsApp</li>
+                {/* PRIMEIRO PONTO AJUSTADO (User Request) */}
+                <li className="flex items-center gap-2 font-semibold text-neutral-900"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> CRM 100% autônomo, integrado ao Whatsapp</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Agenda inteligente autônoma</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> LIA — Assistente de IA direto no WhatsApp da equipe</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Assinaturas eletrônicas ilimitadas no chat</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Financeiro e Receita Prevista</li>
               </ul>
 
-              <Link href="/signup" className="block text-center rounded-xl border border-[#E3E9F5] bg-white hover:bg-[#F0F4FC] px-6 py-3 text-xs font-bold text-[#5B6478] transition-colors">
+              {/* Botão Mensal com destaque maior no Hover (User Request) */}
+              <a href="https://app.leadpluz.com/signup" className="block text-center rounded-xl border-2 border-[#E3E9F5] bg-white hover:bg-[#5486F0] hover:text-white hover:border-[#5486F0] hover:scale-105 transition-all duration-200 px-6 py-3.5 text-xs font-black text-[#5B6478] shadow-xs">
                 Inicie seu teste grátis de 7 dias
-              </Link>
+              </a>
             </div>
 
-            {/* Anual (Item 3.12: Bullet da IA ajustado) */}
+            {/* Anual (Preço fixo R$ 297, sem item de "LIA com prioridade", bullet da IA ajustado) */}
             <div className="bg-white border-2 border-[#6C9BFF] rounded-3xl p-6 shadow-md flex flex-col justify-between space-y-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-[#6C9BFF] text-white text-[9px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                 Melhor Custo-Benefício
@@ -758,9 +707,10 @@ export default function LandingPage() {
                   <span className="text-xs bg-blue-50 text-[#6C9BFF] px-2.5 py-0.5 rounded-full font-bold">25% OFF</span>
                 </div>
                 <div className="mt-4">
-                  <span className="text-3xl font-black text-[#10182B]">{billingPeriod === "monthly" ? "R$ 297" : "R$ 247"}</span>
+                  {/* VALOR FIXO: 297 */}
+                  <span className="text-3xl font-black text-[#10182B]">R$ 297</span>
                   <span className="text-xs text-[#5B6478]"> /mês</span>
-                  <span className="text-[10px] text-[#5B6478] block mt-1">(Faturamento anual)</span>
+                  <span className="text-[10px] text-[#5B6478] block mt-1">(Faturamento anual de R$ 3.564)</span>
                 </div>
                 <p className="text-xs text-[#5B6478] mt-2 leading-relaxed">
                   Para quem deseja o melhor preço e suporte premium prioritário.
@@ -773,19 +723,18 @@ export default function LandingPage() {
                   <span>IA que cria documentos, sugere disparos e estratégias comerciais</span>
                 </li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Todos os recursos do plano mensal</li>
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> LIA com prioridade de velocidade</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6C9BFF] shrink-0" /> Suporte VIP dedicado no WhatsApp</li>
               </ul>
 
-              <Link href="/signup" className="block text-center rounded-xl bg-[#6C9BFF] hover:bg-[#5486F0] px-6 py-3 text-xs font-bold text-white transition-all shadow-md">
+              <a href="https://app.leadpluz.com/signup" className="block text-center rounded-xl bg-[#6C9BFF] hover:bg-[#5486F0] px-6 py-3.5 text-xs font-black text-white transition-all shadow-md hover:scale-105">
                 Começar agora gratuitamente
-              </Link>
+              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 11. FAQ ── */}
+      {/* ── 9. FAQ ── */}
       <section id="faq" className="py-20 px-6 bg-[#F0F4FC]/20 border-t border-[#E3E9F5]">
         <div className="mx-auto max-w-2xl">
           <div className="text-center mb-12">
@@ -813,7 +762,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 12. CTA Final ── */}
+      {/* ── 10. CTA Final ── */}
       <section className="py-24 px-6 bg-gradient-to-br from-[#10182B] to-[#1e293b] text-white text-center relative overflow-hidden">
         <div className="relative mx-auto max-w-2xl space-y-6 z-10">
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold text-blue-300">
@@ -828,34 +777,52 @@ export default function LandingPage() {
             Esqueça digitações e processos manuais. Comece agora a economizar tempo e fechar mais atendimentos.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <Link href="/signup" className="group inline-flex items-center gap-2 bg-[#6C9BFF] hover:bg-[#5486F0] text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all shadow-xl shadow-blue-900/50">
+            <a href="https://app.leadpluz.com/signup" className="group inline-flex items-center gap-2 bg-[#6C9BFF] hover:bg-[#5486F0] text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all shadow-xl shadow-blue-900/50">
               Começar agora gratuitamente
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link href="/login" className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/10 text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all">
+            </a>
+            <a href="https://app.leadpluz.com/login" className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/10 text-white font-bold rounded-xl px-8 py-3.5 text-xs transition-all">
               Já Tenho Conta
-            </Link>
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ── 13. Footer ── */}
+      {/* ── 11. Footer ── */}
       <footer className="bg-[#10182B] text-neutral-500 border-t border-white/5 py-8 px-6 text-xs">
         <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#3B6BE0] to-[#6C9BFF] flex items-center justify-center text-white font-bold text-xs">
-              <Zap className="w-3 h-3 text-white fill-white/20" />
-            </div>
+          <a href="#" onClick={scrollToTop} className="flex items-center gap-2 cursor-pointer">
+            <img src="/images/logo.png" className="h-6 w-6 object-contain rounded-lg" alt="LeadPluz Logo" />
             <span className="text-sm font-bold text-neutral-300 uppercase">LEADPLUZ</span>
-          </div>
+          </a>
           <p>© {new Date().getFullYear()} LeadPluz. Todos os direitos reservados.</p>
           <div className="flex gap-4">
             <Link href="/termos" className="hover:text-white transition-colors">Termos</Link>
             <Link href="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
-            <Link href="/login" className="hover:text-white transition-colors">Login</Link>
+            <a href="https://app.leadpluz.com/login" className="hover:text-white transition-colors">Login</a>
           </div>
         </div>
       </footer>
+
+      {/* ── 12. Barra Flutuante Fixa no Rodapé: Falar com Especialista (Item 3.15 & User Request) ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#10182B]/95 backdrop-blur-md border-t border-white/10 text-white px-4 py-3 shadow-2xl">
+        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-xs text-neutral-200 text-center sm:text-left">
+            <Sparkles className="w-4 h-4 text-[#6C9BFF] shrink-0" />
+            <span><b>Quer ver como a LeadPluz se adapta à sua clínica?</b> Fale com um especialista no WhatsApp.</span>
+          </div>
+          <a 
+            href="https://wa.me/5521976640033?text=Quero%20falar%20com%20um%20especialista%20sobre%20o%20LeadPluz" 
+            target="_blank" 
+            className="shrink-0 px-5 py-2.5 bg-white text-[#10182B] hover:bg-neutral-100 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-all hover:scale-105"
+          >
+            <MessageSquare className="w-4 h-4 text-[#5486F0]" />
+            <span>Falar no WhatsApp</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#10182B]" />
+          </a>
+        </div>
+      </div>
+
     </div>
   );
 }
