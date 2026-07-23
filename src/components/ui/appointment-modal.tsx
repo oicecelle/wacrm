@@ -583,12 +583,19 @@ export function AppointmentModal({
         setProcedureName(appt.type || "");
         setRoomId(appt.room_id || "");
         
-        const startLocal = new Date(new Date(appt.start_time).getTime() - new Date().getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16);
-        const endLocal = new Date(new Date(appt.end_time).getTime() - new Date().getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16);
+        const formatISOToLocalInput = (str: string) => {
+          if (!str) return "";
+          const clean = str.replace(" ", "T");
+          if (clean.includes("T")) {
+            const [datePart, timePart] = clean.split("T");
+            const hhmm = timePart ? timePart.slice(0, 5) : "09:00";
+            return `${datePart.slice(0, 10)}T${hhmm}`;
+          }
+          return str.slice(0, 16);
+        };
+
+        const startLocal = formatISOToLocalInput(appt.start_time);
+        const endLocal = formatISOToLocalInput(appt.end_time);
 
         setStartTime(startLocal);
         setEndTime(endLocal);
@@ -613,6 +620,61 @@ export function AppointmentModal({
 
     loadAppointment();
   }, [open, appointmentId, defaultDate, profile, defaultPatientId, defaultPatientName, defaultPatientPhone, defaultProfessionalId, defaultProcedureName]);
+
+  const handleSelectProcedure = (name: string) => {
+    const cleanName = (name === null || name === "none") ? "" : name;
+    setProcedureName(cleanName);
+    setAiDocProcedure(cleanName);
+
+    const proc = procedures.find((p) => p.name === cleanName);
+    let duration = procedureDuration || 60;
+    if (proc) {
+      if (proc.duration_minutes) duration = proc.duration_minutes;
+      else if ((proc as any).duracao) duration = (proc as any).duracao;
+      setProcedureDuration(duration);
+
+      const priceVal = proc.price || proc.valor || "";
+      if (priceVal) setProcedureValue(String(priceVal));
+    }
+
+    if (startTime) {
+      const d = startTime.slice(0, 10);
+      const timeVal = startTime.slice(11, 16) || "09:00";
+      const [h, m] = timeVal.split(":").map(Number);
+      const startMins = h * 60 + m;
+      const endMins = startMins + duration;
+      const endH = String(Math.floor(endMins / 60) % 24).padStart(2, "0");
+      const endM = String(endMins % 60).padStart(2, "0");
+      setEndTime(`${d}T${endH}:${endM}`);
+    }
+  };
+
+  const handleSelectStartTime = (timeVal: string) => {
+    const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    setStartTime(`${d}T${timeVal}`);
+
+    const [h, m] = timeVal.split(":").map(Number);
+    const startMins = h * 60 + m;
+    const duration = procedureDuration || 60;
+    const endMins = startMins + duration;
+    const endH = String(Math.floor(endMins / 60) % 24).padStart(2, "0");
+    const endM = String(endMins % 60).padStart(2, "0");
+    setEndTime(`${d}T${endH}:${endM}`);
+  };
+
+  const handleDurationChange = (newDur: number) => {
+    setProcedureDuration(newDur);
+    if (startTime) {
+      const d = startTime.slice(0, 10);
+      const timeVal = startTime.slice(11, 16) || "09:00";
+      const [h, m] = timeVal.split(":").map(Number);
+      const startMins = h * 60 + m;
+      const endMins = startMins + newDur;
+      const endH = String(Math.floor(endMins / 60) % 24).padStart(2, "0");
+      const endM = String(endMins % 60).padStart(2, "0");
+      setEndTime(`${d}T${endH}:${endM}`);
+    }
+  };
 
   // Fetch all patient related data (EMR notes, history stats, documents, packages, evaluations, transactions)
   useEffect(() => {
@@ -1147,6 +1209,15 @@ Qualquer dúvida, estou à disposição! 😊`;
         ? professionalId
         : (staff.find((s) => s.user_id === professionalId)?.id || staff[0]?.id || null);
 
+      const formatLocalISO = (dateTimeStr: string) => {
+        if (!dateTimeStr) return new Date().toISOString();
+        if (dateTimeStr.length === 16) return `${dateTimeStr}:00`;
+        return dateTimeStr;
+      };
+
+      const startTimeIso = formatLocalISO(startTime);
+      const endTimeIso = formatLocalISO(endTime);
+
       if (appointmentId) {
         // Update appointment
         const { error: updateErr } = await supabase
@@ -1154,8 +1225,8 @@ Qualquer dúvida, estou à disposição! 😊`;
           .update({
             patient_id: patientId || null,
             professional_id: validProfessionalId,
-            start_time: startObj.toISOString(),
-            end_time: endObj.toISOString(),
+            start_time: startTimeIso,
+            end_time: endTimeIso,
             status,
             notes,
             type: procedureName || null,
@@ -1184,7 +1255,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             title: `Agendamento atualizado para [${statusMap[status] || status}]`,
             payload: {
               updated_by: profileName,
-              start_time: startObj.toISOString(),
+              start_time: startTimeIso,
             },
           });
 
@@ -1241,8 +1312,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             clinic_id: clinicId,
             patient_id: patientId || null,
             professional_id: validProfessionalId,
-            start_time: startObj.toISOString(),
-            end_time: endObj.toISOString(),
+            start_time: startTimeIso,
+            end_time: endTimeIso,
             status,
             notes,
             type: procedureName || null,
@@ -2627,16 +2698,6 @@ Qualquer dúvida, estou à disposição! 😊`;
                         }
                       })()}
                     </span>
-
-                    {/* Custom Tag Badge */}
-                    {appointmentTag && (
-                      <span 
-                        className="inline-flex items-center gap-1 text-white text-[10px] font-black tracking-wide px-2.5 py-0.5 rounded-full shadow-2xs"
-                        style={{ backgroundColor: appointmentTagColor }}
-                      >
-                        {appointmentTag}
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold flex-wrap">
@@ -2645,7 +2706,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         href={`https://wa.me/${selectedPatientInfo.phone.replace(/\D/g, "")}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="hover:text-emerald-600 transition-colors flex items-center gap-1 text-emerald-600"
+                        className="hover:text-emerald-600 transition-colors flex items-center gap-1 text-emerald-600 font-bold"
                         title="Iniciar conversa no WhatsApp"
                       >
                         <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
@@ -2658,6 +2719,18 @@ Qualquer dúvida, estou à disposição! 😊`;
                       <span className="truncate max-w-[180px] text-slate-500">{selectedPatientInfo.email}</span>
                     )}
                   </div>
+
+                  {/* Custom Tag Badge directly below WhatsApp phone */}
+                  {appointmentTag && (
+                    <div className="pt-1">
+                      <span 
+                        className="inline-flex items-center gap-1 text-white text-[10px] font-black tracking-wide px-2.5 py-0.5 rounded-full shadow-2xs"
+                        style={{ backgroundColor: appointmentTagColor }}
+                      >
+                        {appointmentTag}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2732,13 +2805,57 @@ Qualquer dúvida, estou à disposição! 😊`;
                         )}
 
                         <form id="appt-modal-form" onSubmit={handleSave} className="space-y-4">
-                          {/* Professional selector */}
+                          {/* 1. Procedimento / Serviço */}
+                          <div className="space-y-1 text-left">
+                            <Label htmlFor="det-procedure" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Procedimento / Serviço</Label>
+                            <Select
+                              value={procedureName}
+                              onValueChange={(val) => handleSelectProcedure(val || "")}
+                              disabled={saving}
+                            >
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                <SelectValue placeholder="Selecione o procedimento..." />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                <SelectItem value="none" className="rounded-lg text-xs">Nenhum</SelectItem>
+                                {procedures.map((p) => (
+                                  <SelectItem key={p.id} value={p.name} className="rounded-lg text-xs">
+                                    {p.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* 2. Profissional selector */}
                           <div className="space-y-1 text-left">
                             <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Profissional *</Label>
                             {renderStaffSelector()}
                           </div>
 
-                          {/* Date and Times: Dia | Início | Fim */}
+                          {/* 3. Sala / Mesa de Atendimento */}
+                          <div className="space-y-1 text-left">
+                            <Label htmlFor="det-room" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Sala / Mesa de Atendimento</Label>
+                            <Select
+                              value={roomId || "none"}
+                              onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
+                              disabled={saving}
+                            >
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                <SelectValue placeholder="Selecione a sala..." />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                <SelectItem value="none" className="rounded-lg text-xs">Nenhuma</SelectItem>
+                                {rooms.map((r) => (
+                                  <SelectItem key={r.id} value={r.id} className="rounded-lg text-xs">
+                                    {r.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* 4. Date and Times: Dia | Início | Fim */}
                           <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-1 text-left">
                               <Label htmlFor="det-day" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Dia *</Label>
@@ -2746,28 +2863,30 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={startTime.slice(0, 10)}
                                 onChange={(dayVal) => {
                                   const sTime = startTime.slice(11, 16) || "09:00";
-                                  const eTime = endTime.slice(11, 16) || "10:00";
                                   setStartTime(`${dayVal}T${sTime}`);
-                                  setEndTime(`${dayVal}T${eTime}`);
+                                  const [h, m] = sTime.split(":").map(Number);
+                                  const startMins = h * 60 + m;
+                                  const duration = procedureDuration || 60;
+                                  const endMins = startMins + duration;
+                                  const endH = String(Math.floor(endMins / 60) % 24).padStart(2, "0");
+                                  const endM = String(endMins % 60).padStart(2, "0");
+                                  setEndTime(`${dayVal}T${endH}:${endM}`);
                                 }}
                                 disabled={saving}
                               />
                             </div>
-                             <div className="space-y-1 text-left">
+                            <div className="space-y-1 text-left">
                               <Label htmlFor="det-start" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Início *</Label>
                               <Select
                                 value={startTime.slice(11, 16) || "09:00"}
-                                onValueChange={(val) => {
-                                  const d = startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                                  setStartTime(`${d}T${val}`);
-                                }}
+                                onValueChange={(val) => handleSelectStartTime(val || "09:00")}
                                 disabled={saving}
                               >
                                 <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
-                                  {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"].map((t) => (
+                                  {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((t) => (
                                     <SelectItem key={t} value={t} className="rounded-lg text-xs">
                                       {t}
                                     </SelectItem>
@@ -2789,7 +2908,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
-                                  {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"].map((t) => (
+                                  {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((t) => (
                                     <SelectItem key={t} value={t} className="rounded-lg text-xs">
                                       {t}
                                     </SelectItem>
@@ -2799,7 +2918,34 @@ Qualquer dúvida, estou à disposição! 😊`;
                             </div>
                           </div>
 
-                          {/* Recorrência */}
+                          {/* 5. Duração (min) & Valor (R$) */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-duration" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Duração (min)</Label>
+                              <Input
+                                id="det-duration"
+                                type="number"
+                                min={5}
+                                max={480}
+                                value={procedureDuration}
+                                onChange={(e) => handleDurationChange(Number(e.target.value))}
+                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                              />
+                            </div>
+                            <div className="space-y-1 text-left">
+                              <Label htmlFor="det-price" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Valor (R$)</Label>
+                              <Input
+                                id="det-price"
+                                type="text"
+                                value={procedureValue}
+                                onChange={(e) => setProcedureValue(e.target.value)}
+                                placeholder="0,00"
+                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                              />
+                            </div>
+                          </div>
+
+                          {/* 6. Recorrência */}
                           <div className="space-y-1 text-left">
                             <Label className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Recorrência</Label>
                             <Select
@@ -2833,105 +2979,6 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
                               </div>
                             )}
-                          </div>
-
-                          {/* Procedure and Room Selector */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1 text-left">
-                              <Label htmlFor="det-procedure" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Procedimento / Serviço</Label>
-                              <Select
-                                value={procedureName}
-                                onValueChange={(val) => {
-                                  const name = (val === null || val === "none") ? "" : val;
-                                  setProcedureName(name);
-                                  setAiDocProcedure(name);
-                                  // Pre-fill duration and value from procedure data
-                                  const proc = procedures.find((p) => p.name === name);
-                                  if (proc) {
-                                    if (proc.duration_minutes) setProcedureDuration(proc.duration_minutes);
-                                    if (proc.price) setProcedureValue(String(proc.price));
-                                    else if (proc.valor) setProcedureValue(String(proc.valor));
-                                  }
-                                }}
-                                disabled={saving}
-                              >
-                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                                  <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
-                                  <SelectItem value="none" className="rounded-lg text-xs">Selecione...</SelectItem>
-                                  {procedures.map((p) => (
-                                    <SelectItem key={p.id} value={p.name} className="rounded-lg text-xs">
-                                      {p.name}
-                                    </SelectItem>
-                                  ))}
-                                  {procedures.length === 0 && (
-                                    <>
-                                      <SelectItem value="Mentoria de Negócios" className="rounded-lg text-xs">Mentoria de Negócios</SelectItem>
-                                      <SelectItem value="Consultoria Operacional" className="rounded-lg text-xs">Consultoria Operacional</SelectItem>
-                                      <SelectItem value="Configuração de Funil CRM" className="rounded-lg text-xs">Configuração de Funil CRM</SelectItem>
-                                      <SelectItem value="Integração WhatsApp API" className="rounded-lg text-xs">Integração WhatsApp API</SelectItem>
-                                      <SelectItem value="Atendimento Avulso" className="rounded-lg text-xs">Atendimento Avulso</SelectItem>
-                                    </>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                              {/* Editable duration and value */}
-                              {procedureName && (
-                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                  <div>
-                                    <label className="text-[10px] font-bold text-neutral-500 uppercase">Duração (min)</label>
-                                    <input
-                                      type="number"
-                                      min={5}
-                                      max={480}
-                                      value={procedureDuration}
-                                      onChange={(e) => setProcedureDuration(Number(e.target.value))}
-                                      className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-[10px] font-bold text-neutral-500 uppercase">Valor (R$)</label>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      step={0.01}
-                                      value={procedureValue}
-                                      onChange={(e) => setProcedureValue(e.target.value)}
-                                      placeholder="0,00"
-                                      className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-1 text-left">
-                              <Label htmlFor="det-room" className="text-xs font-bold text-neutral-600 uppercase tracking-wide">Sala / Mesa de Atendimento</Label>
-                              <Select
-                                value={roomId || "none"}
-                                onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
-                                disabled={saving}
-                              >
-                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                                  <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
-                                  <SelectItem value="none" className="rounded-lg text-xs">Selecione...</SelectItem>
-                                  {rooms.map((r) => (
-                                    <SelectItem key={r.id} value={r.id} className="rounded-lg text-xs">
-                                      {r.name}
-                                    </SelectItem>
-                                  ))}
-                                  {rooms.length === 0 && (
-                                    <>
-                                      <SelectItem value="Sala Principal" className="rounded-lg text-xs">Sala Principal</SelectItem>
-                                      <SelectItem value="Sala de Reuniões" className="rounded-lg text-xs">Sala de Reuniões</SelectItem>
-                                      <SelectItem value="Estação de Trabalho A" className="rounded-lg text-xs">Estação de Trabalho A</SelectItem>
-                                    </>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </div>
                           </div>
 
                           {/* Status selector */}

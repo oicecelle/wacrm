@@ -147,6 +147,12 @@ export default function AgendaPage() {
     return dates;
   };
 
+  const [now, setNow] = useState<Date>(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   const weekDates = getWeekDates(selectedDate);
   const displayedDates = useMemo(() => {
     if (calendarView === "dia") {
@@ -220,10 +226,13 @@ export default function AgendaPage() {
   };
 
   const handleApptMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
     hoverTimeoutRef.current = setTimeout(() => {
       setPopoverAppt(null);
       setPopoverPosition(null);
-    }, 300);
+    }, 600);
   };
 
   // Fetch data
@@ -1157,6 +1166,10 @@ export default function AgendaPage() {
                 {displayedDates.map((dayDate, dayIdx) => {
                   const dayOfWeek = dayDate.getDay();
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+                  const isToday = dayDate.toDateString() === now.toDateString();
+
+                  const currentTotalMins = now.getHours() * 60 + now.getMinutes();
+                  const currentTimeTopPx = (currentTotalMins - 480) * 1.6667; // 480 is 08:00
 
                   // Query appointments for this day
                   const dayAppts = filteredAppointments.filter((appt) => {
@@ -1173,6 +1186,17 @@ export default function AgendaPage() {
                         handleAddAppointment(dayStr);
                       }}
                     >
+                      {/* Red Current Time Line */}
+                      {isToday && currentTimeTopPx >= 0 && currentTimeTopPx <= 1000 && (
+                        <div
+                          className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+                          style={{ top: `${currentTimeTopPx}px` }}
+                        >
+                          <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 shadow-md border-2 border-white" />
+                          <div className="h-[2px] bg-red-500 flex-1 shadow-xs" />
+                        </div>
+                      )}
+
                       {/* Hatching for closed hours */}
                       {isWeekend ? (
                         <div className="absolute inset-0 bg-hatched opacity-60 pointer-events-none z-0" />
@@ -1229,55 +1253,40 @@ export default function AgendaPage() {
                               e.stopPropagation();
                               handleEditAppointment(appt.id);
                             }}
-                            className="absolute left-1 right-1 rounded-xl shadow-xs transition-all duration-200 text-left border p-2 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between border-l-4"
+                            className="absolute left-1 right-1 rounded-2xl shadow-sm transition-all duration-200 text-left border p-2.5 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between"
                           >
-                            <div className="space-y-0.5">
-                              {/* Patient name & dot */}
+                            <div className="space-y-0.5 min-w-0">
+                              {/* Line 1: Status Dot & Patient Name */}
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span style={styles.dotStyle} className="h-1.5 w-1.5 shrink-0 rounded-full" />
-                                <span className="text-[11px] font-extrabold truncate flex-1 leading-tight">
+                                <span style={styles.dotStyle} className="h-2 w-2 shrink-0 rounded-full shadow-2xs" />
+                                <span className="text-[11px] font-bold text-neutral-800 truncate flex-1 leading-tight">
                                   {appt.patients?.name || "Sem Nome"}
                                 </span>
                                 {appt.status === "provisional" && (
-                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                  <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
                                 )}
                               </div>
-                              <div className="flex items-center justify-between gap-1 mt-1">
-                                <p className="text-[9px] opacity-80 truncate font-semibold leading-tight pr-1">
-                                  {appt.type || appt.title || "Consulta"}
-                                </p>
-                                <div className="flex flex-col items-end gap-0.5 shrink-0">
+
+                              {/* Line 2: Procedure / Service Name */}
+                              <p className="text-[10px] font-extrabold uppercase tracking-wide opacity-80 truncate text-neutral-700 leading-tight">
+                                {appt.type || appt.title || "Consulta"}
+                              </p>
+
+                              {/* Custom Tag Badge if present */}
+                              {appt.tag && (
+                                <div className="mt-0.5">
                                   <span 
-                                    className="text-[7px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide"
-                                    style={{
-                                      backgroundColor: `color-mix(in srgb, ${getStatusColor(appt.status)} 15%, transparent)`,
-                                      color: getStatusColor(appt.status),
-                                      border: `1px solid color-mix(in srgb, ${getStatusColor(appt.status)} 30%, transparent)`
-                                    }}
+                                    className="text-[7px] px-1.5 py-0.2 rounded-md font-black uppercase tracking-wider text-white shadow-3xs"
+                                    style={{ backgroundColor: appt.tag_color || "#3b82f6" }}
                                   >
-                                    {(() => {
-                                      switch (appt.status) {
-                                        case "confirmed": return "Confirmado";
-                                        case "attended": return "Realizado";
-                                        case "cancelled": return "Cancelado";
-                                        case "no_show": return "Falta";
-                                        default: return "Pendente";
-                                      }
-                                    })()}
+                                    {appt.tag}
                                   </span>
-                                  {appt.tag && (
-                                    <span 
-                                      className="text-[6.5px] px-1 py-0.2 rounded-sm font-extrabold uppercase tracking-wide text-white leading-none shadow-3xs"
-                                      style={{ backgroundColor: appt.tag_color || "#3b82f6" }}
-                                    >
-                                      {appt.tag}
-                                    </span>
-                                  )}
                                 </div>
-                              </div>
+                              )}
                             </div>
-                            {/* Time range */}
-                            <div className="text-[8px] opacity-75 font-semibold mt-1 flex items-center gap-1">
+
+                            {/* Line 3: Time range */}
+                            <div className="text-[9px] font-semibold opacity-75 text-neutral-600 flex items-center gap-1 mt-1">
                               <ClockIcon className="h-2.5 w-2.5 opacity-60" />
                               {formattedTime}
                             </div>
