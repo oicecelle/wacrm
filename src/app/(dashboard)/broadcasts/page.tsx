@@ -207,7 +207,7 @@ export default function BroadcastsPage() {
           canAct={canCreate}
           gateReason="create broadcasts"
           onClick={() => router.push('/broadcasts/new')}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          className="bg-blue-600 text-white hover:bg-blue-700 font-bold"
         >
           <Plus className="h-4 w-4" />
           Novo Disparo
@@ -249,18 +249,18 @@ export default function BroadcastsPage() {
       {broadcasts.length === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
           <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">No broadcasts yet</p>
+          <p className="text-sm font-medium text-foreground">Nenhum disparo criado ainda</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Create your first broadcast to reach your contacts at scale.
+            Crie seu primeiro disparo para engajar seus contatos em escala.
           </p>
           <GatedButton
             canAct={canCreate}
             gateReason="create broadcasts"
             onClick={() => router.push('/broadcasts/new')}
-            className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="mt-4 bg-blue-600 text-white hover:bg-blue-700 font-bold"
           >
             <Plus className="h-4 w-4" />
-            New Broadcast
+            Novo Disparo
           </GatedButton>
         </div>
       ) : (

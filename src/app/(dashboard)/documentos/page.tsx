@@ -606,7 +606,7 @@ export default function DocumentosPage() {
           {activeTab === "modelos" && (
             <button
               onClick={() => handleOpenTemplateForm()}
-              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-neutral-900 text-white hover:bg-neutral-800 shadow-sm"
+              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-sm cursor-pointer border-0"
             >
               <PlusIcon className="h-4 w-4" /> Criar Modelo
             </button>

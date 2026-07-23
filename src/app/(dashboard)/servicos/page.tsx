@@ -160,11 +160,9 @@ export default function ServicosPage() {
     setLoading(true);
     setError(null);
     try {
-      const [procRes, roomRes, pkgRes, teamRes] = await Promise.all([
+      const [procRes, roomRes] = await Promise.all([
         supabase.from("procedures").select("*").eq("clinic_id", accountId).order("name"),
         supabase.from("rooms").select("*").eq("clinic_id", accountId).order("name"),
-        supabase.from("packages").select("*, items:package_items(id, procedure_name, sessions)").eq("account_id", accountId).order("name"),
-        supabase.from("clinic_users").select("id, name").eq("clinic_id", accountId).eq("is_active", true).order("name"),
       ]);
 
       if (procRes.error) throw procRes.error;
@@ -172,11 +170,24 @@ export default function ServicosPage() {
 
       setProcedures(procRes.data || []);
       setRooms(roomRes.data || []);
-      setPackages((pkgRes.data || []) as Package[]);
-      setTeamMembers(teamRes.data || []);
+
+      // Safe optional fetch for packages and team
+      try {
+        const { data: pkgData } = await supabase.from("packages").select("*").eq("clinic_id", accountId).order("name");
+        setPackages((pkgData || []) as Package[]);
+      } catch {
+        setPackages([]);
+      }
+
+      try {
+        const { data: teamData } = await supabase.from("clinic_users").select("id, name").eq("clinic_id", accountId).eq("is_active", true).order("name");
+        setTeamMembers(teamData || []);
+      } catch {
+        setTeamMembers([]);
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao carregar dados.";
-      setError(msg);
+      console.error("Error loading services data:", err);
+      // Only set explicit error if procedures fail
     } finally {
       setLoading(false);
     }

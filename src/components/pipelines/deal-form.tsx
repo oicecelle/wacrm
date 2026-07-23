@@ -15,11 +15,11 @@ import type {
   Profile,
 } from "@/types";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -311,17 +311,16 @@ export function DealForm({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="bg-popover border-border text-popover-foreground sm:max-w-lg w-full p-0"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-4xl h-[85vh] bg-popover border border-neutral-200 shadow-2xl text-popover-foreground w-full p-0 overflow-hidden flex flex-col rounded-2xl z-50"
       >
-        <div className="flex h-full flex-col">
-          <SheetHeader className="border-b border-border/50 p-4">
-            <SheetTitle className="text-popover-foreground">
-              {deal ? "Edit Deal" : "New Deal"}
-            </SheetTitle>
-          </SheetHeader>
+        <div className="flex h-full flex-col overflow-hidden">
+          <DialogHeader className="border-b border-border/50 p-4">
+            <DialogTitle className="text-popover-foreground">
+              {deal ? "Editar Negócio" : "Novo Negócio"}
+            </DialogTitle>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="grid gap-2">
@@ -763,7 +762,7 @@ export function DealForm({
               ))}
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

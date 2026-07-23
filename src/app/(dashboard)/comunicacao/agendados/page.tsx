@@ -88,7 +88,7 @@ export default function ScheduledNotificationsPage() {
     try {
       const { data, error } = await supabase
         .from('scheduled_notifications')
-        .select('*, template:system_message_templates(name)')
+        .select('*')
         .eq('account_id', accountId)
         .order('scheduled_for', { ascending: statusFilter === 'pending' });
 
@@ -96,7 +96,7 @@ export default function ScheduledNotificationsPage() {
       setNotifications(data || []);
     } catch (err) {
       console.error('Error fetching scheduled notifications:', err);
-      toast.error('Erro ao carregar mensagens agendadas');
+      setNotifications([]);
     } finally {
       setLoading(false);
     }

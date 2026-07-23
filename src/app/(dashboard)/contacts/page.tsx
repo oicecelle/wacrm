@@ -373,7 +373,7 @@ export default function ContactsPage() {
               className="border-border text-muted-foreground hover:bg-muted"
             >
               <SlidersHorizontal className="size-4" />
-              Custom fields
+              Campos personalizados
             </Button>
           )}
           <GatedButton
@@ -384,16 +384,16 @@ export default function ContactsPage() {
             className="border-border text-muted-foreground hover:bg-muted"
           >
             <Upload className="size-4" />
-            Import
+            Importar
           </GatedButton>
           <GatedButton
             canAct={canEdit}
             gateReason="add or import contacts"
             onClick={openAddForm}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
           >
             <Plus className="size-4" />
-            Add Contact
+            Adicionar Contato
           </GatedButton>
         </div>
       </div>

@@ -482,9 +482,9 @@ export function TemplateManager() {
   return (
     <section className="animate-in fade-in-50 space-y-4 duration-200">
       <SettingsPanelHead
-        title="Message templates"
+        title="Modelos de Mensagem (Meta)"
         description={
-          'Create templates and submit them to Meta for approval. Use "Sync from Meta" to pull templates approved elsewhere.'
+          'Crie modelos e envie para aprovação da Meta. Use "Sincronizar da Meta" para importar modelos aprovados.'
         }
         action={
           <div className="flex items-center gap-2">
@@ -492,14 +492,14 @@ export function TemplateManager() {
               variant="outline"
               onClick={handleSyncFromMeta}
               disabled={syncing}
-              title="Pull approved templates from your Meta WhatsApp Business Account"
+              title="Sincronizar modelos aprovados da sua conta do WhatsApp Business na Meta"
             >
               <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing…' : 'Sync from Meta'}
+              {syncing ? 'Sincronizando…' : 'Sincronizar da Meta'}
             </Button>
-            <Button onClick={openCreate}>
+            <Button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
               <Plus className="size-4" />
-              New Template
+              Novo Modelo
             </Button>
           </div>
         }
@@ -508,9 +508,9 @@ export function TemplateManager() {
       {templates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground text-sm">No templates yet.</p>
+            <p className="text-muted-foreground text-sm font-medium">Nenhum modelo criado ainda.</p>
             <p className="text-muted-foreground text-xs mt-1">
-              Create your first message template to get started.
+              Crie seu primeiro modelo de mensagem para começar a disparar campanhas.
             </p>
           </CardContent>
         </Card>
