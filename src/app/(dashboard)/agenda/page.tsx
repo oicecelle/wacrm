@@ -577,44 +577,53 @@ export default function AgendaPage() {
     timeSlots.push(`${String(h).padStart(2, "0")}:30`);
   }
 
-  // Card status classes map (now dynamically styled by service color)
+  // Card status classes map (bolinha sempre verde para confirmado)
   const getCardStatusStyles = (status: string, type?: string | null) => {
-    let baseColor = "#3ba2e8"; // Default blue
-    
+    let dotColor = "#f59e0b"; // Default Amber (provisional/pendente)
+    switch (status) {
+      case "confirmed":
+        dotColor = "#10b981"; // VERDE para confirmado!
+        break;
+      case "attended":
+        dotColor = "#3b82f6"; // Azul para realizado
+        break;
+      case "cancelled":
+        dotColor = "#ef4444"; // Vermelho para cancelado
+        break;
+      case "no_show":
+        dotColor = "#f97316"; // Laranja para falta
+        break;
+      default:
+        dotColor = "#f59e0b"; // Amarelo/Laranja para provisorio
+    }
+
+    let bgBaseColor = dotColor;
     if (type === "bloqueio" || status === "bloqueio") {
-      baseColor = "#6b7280"; // Grey for blocked hours
+      bgBaseColor = "#6b7280";
     } else if (type === "evento" || status === "evento") {
-      baseColor = "#8b5cf6"; // Violet for events
+      bgBaseColor = "#8b5cf6";
     } else if (type) {
-      const apptProc = procedures.find(p => p.name === type);
+      const apptProc = procedures.find((p) => p.name === type);
       if (apptProc?.color) {
-        baseColor = apptProc.color;
-      }
-    } else {
-      switch (status) {
-        case "confirmed": baseColor = "#4caf50"; break;
-        case "attended": baseColor = "#787774"; break;
-        case "cancelled": baseColor = "#e05b5c"; break;
-        case "no_show": baseColor = "#dfab01"; break;
-        default: baseColor = "#3ba2e8";
+        bgBaseColor = apptProc.color;
       }
     }
 
-    const isCancelled = status === "cancelled";
+    const isCancelled = status === "cancelled" || status === "no_show";
 
     return {
       borderClass: "border-l-4",
       bgStyle: {
-        backgroundColor: `color-mix(in srgb, ${baseColor} 8%, var(--card, #ffffff))`,
-        color: `color-mix(in srgb, ${baseColor} 80%, var(--foreground, #1f2937))`,
+        backgroundColor: `color-mix(in srgb, ${bgBaseColor} 12%, #ffffff)`,
+        color: `color-mix(in srgb, ${bgBaseColor} 85%, #1f2937)`,
         textDecoration: isCancelled ? "line-through" : "none",
-        borderLeftColor: baseColor,
-        borderColor: `color-mix(in srgb, ${baseColor} 20%, var(--border, #e5e7eb))`
+        borderLeftColor: dotColor,
+        borderColor: `color-mix(in srgb, ${bgBaseColor} 25%, #e5e7eb)`
       },
       dotStyle: {
-        backgroundColor: baseColor
+        backgroundColor: dotColor // Sempre verde quando confirmed!
       },
-      dotColor: baseColor
+      dotColor
     };
   };
 
@@ -1162,14 +1171,28 @@ export default function AgendaPage() {
                   ))}
                 </div>
 
+                {/* Red Current Time Line - Spans 100% across the whole weekly grid */}
+                {(() => {
+                  const currentTotalMins = now.getHours() * 60 + now.getMinutes();
+                  const currentTimeTopPx = (currentTotalMins - 480) * 1.6667; // 480 is 08:00
+                  if (currentTimeTopPx >= 0 && currentTimeTopPx <= 1000) {
+                    return (
+                      <div
+                        className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+                        style={{ top: `${currentTimeTopPx}px` }}
+                      >
+                        <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 shadow-md border-2 border-white" />
+                        <div className="h-[2px] bg-red-500 flex-1 shadow-xs" />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
                 {/* Day Columns */}
                 {displayedDates.map((dayDate, dayIdx) => {
                   const dayOfWeek = dayDate.getDay();
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
-                  const isToday = dayDate.toDateString() === now.toDateString();
-
-                  const currentTotalMins = now.getHours() * 60 + now.getMinutes();
-                  const currentTimeTopPx = (currentTotalMins - 480) * 1.6667; // 480 is 08:00
 
                   // Query appointments for this day
                   const dayAppts = filteredAppointments.filter((appt) => {
@@ -1186,16 +1209,6 @@ export default function AgendaPage() {
                         handleAddAppointment(dayStr);
                       }}
                     >
-                      {/* Red Current Time Line */}
-                      {isToday && currentTimeTopPx >= 0 && currentTimeTopPx <= 1000 && (
-                        <div
-                          className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
-                          style={{ top: `${currentTimeTopPx}px` }}
-                        >
-                          <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 shadow-md border-2 border-white" />
-                          <div className="h-[2px] bg-red-500 flex-1 shadow-xs" />
-                        </div>
-                      )}
 
                       {/* Hatching for closed hours */}
                       {isWeekend ? (
@@ -1362,15 +1375,6 @@ export default function AgendaPage() {
         >
           <PlusIcon className="h-6 w-6" />
         </button>
-
-        {/* Copilot FAB Button — same size, blue gradient */}
-        <button
-          onClick={triggerCopilot}
-          className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-[#2585fc] to-[#003bbd] text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/30 hover:opacity-95 active:scale-95 transition-all duration-200"
-          title="Pedir à LIA"
-        >
-          <SparklesIcon className="h-6 w-6 text-blue-100" />
-        </button>
       </div>
 
       {/* Appointment Modal Form */}
@@ -1405,22 +1409,14 @@ export default function AgendaPage() {
         }}
       />
 
-      {/* Appointment Details Popover overlay */}
+      {/* Appointment Details Popover */}
       {popoverAppt && popoverPosition && (
-        <>
-          <div 
-            className="fixed inset-0 z-40 bg-transparent"
-            onClick={() => {
-              setPopoverAppt(null);
-              setPopoverPosition(null);
-            }}
-          />
-          <div 
-            style={{ 
-              position: 'fixed', 
-              top: `${popoverPosition.top}px`, 
-              left: `${popoverPosition.left}px`,
-            }}
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: `${popoverPosition.top}px`, 
+            left: `${popoverPosition.left}px`,
+          }}
             onMouseEnter={() => {
               if (hoverTimeoutRef.current) {
                 clearTimeout(hoverTimeoutRef.current);
@@ -1615,8 +1611,7 @@ export default function AgendaPage() {
               </Button>
             </div>
           </div>
-        </>
-      )}
+        )}
 
       {/* Appointment Detail Modal (Prontuário, Evolução, Financeiro, Pacotes) */}
       <AppointmentDetailModal
