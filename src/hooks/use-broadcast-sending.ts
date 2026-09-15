@@ -63,27 +63,29 @@ interface UseBroadcastSendingReturn {
 type CustomValueIndex = Map<string, Map<string, string>>;
 
 /**
- * Per-contact resolution of custom-field placeholders. Static and
- * built-in-field mappings resolve synchronously; custom fields read
- * from a pre-built index to avoid N+1 queries during the send loop.
+ * Per-contact resolution of placeholders — one value per variable
+ * *name* (e.g. `{ nome: 'Maria', servico: 'Avaliação' }`), not a
+ * positional array. Static and built-in-field mappings resolve
+ * synchronously; custom fields read from a pre-built index to avoid
+ * N+1 queries.
+ *
+ * For legacy Meta templates, keys are conventionally "1", "2", … and
+ * the cron worker sorts them back into positional order before
+ * calling Meta's API — nothing about that flow changes here, this
+ * function just stopped throwing the names away.
  */
 export function resolveVariables(
   variables: Record<string, VariableMapping>,
   contact: Contact,
   customValues?: Map<string, string>,
-): string[] {
-  // Keys are typically "1","2",... — numeric-aware sort keeps
-  // {{1}} before {{10}}.
-  const keys = Object.keys(variables).sort((a, b) => {
-    const an = Number(a);
-    const bn = Number(b);
-    if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
-    return a.localeCompare(b);
-  });
+): Record<string, string> {
+  const resolved: Record<string, string> = {};
 
-  return keys.map((key) => {
-    const v = variables[key];
-    if (v.type === 'static') return v.value;
+  for (const [key, v] of Object.entries(variables)) {
+    if (v.type === 'static') {
+      resolved[key] = v.value;
+      continue;
+    }
 
     if (v.type === 'field') {
       const fieldMap: Record<string, string | undefined> = {
@@ -92,12 +94,15 @@ export function resolveVariables(
         email: contact.email,
         company: contact.company,
       };
-      return fieldMap[v.value] ?? '';
+      resolved[key] = fieldMap[v.value] ?? '';
+      continue;
     }
 
     // custom_field
-    return customValues?.get(v.value) ?? '';
-  });
+    resolved[key] = customValues?.get(v.value) ?? '';
+  }
+
+  return resolved;
 }
 
 /**

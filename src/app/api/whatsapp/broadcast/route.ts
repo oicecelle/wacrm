@@ -28,7 +28,8 @@ interface IncomingRecipient {
   contact_id?: string | null
   phone: string
   name?: string | null
-  params?: string[]
+  /** Variable name -> resolved value, e.g. { nome: 'Maria', servico: 'Avaliação' }. */
+  params?: Record<string, string>
 }
 
 const INSERT_BATCH_SIZE = 500
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
 
     // Validate + sanitize phones up front so a typo doesn't silently
     // eat one recipient at send time with no way to see why.
-    const validRecipients: { phone: string; params: string[] }[] = []
+    const validRecipients: { phone: string; params: Record<string, string> }[] = []
     const invalidRecipients: { phone: string; reason: string }[] = []
 
     for (const r of recipients) {
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
       }
       validRecipients.push({
         phone: sanitized,
-        params: Array.isArray(r.params) ? r.params : [],
+        params: r.params && typeof r.params === 'object' ? r.params : {},
       })
     }
 
