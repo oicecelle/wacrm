@@ -13,11 +13,22 @@ export interface CustomFieldFilter {
   value: string;
 }
 
+export interface ManualContact {
+  phone: string;
+  name?: string;
+  /** Per-contact variable values, e.g. { servico: 'Avaliação' }. Takes
+   *  precedence over the campaign-wide `variables` mapping for
+   *  whichever keys it sets — this is how manually-added, pasted, and
+   *  imported contacts carry data that isn't stored on the contact
+   *  record itself. */
+  variables?: Record<string, string>;
+}
+
 export interface AudienceConfig {
   type: 'all' | 'tags' | 'custom_field' | 'filters' | 'csv';
   tagIds?: string[];
   customField?: CustomFieldFilter;
-  csvContacts?: { phone: string; name?: string }[];
+  csvContacts?: ManualContact[];
   /** Contacts carrying any of these tags are subtracted from the result. */
   excludeTagIds?: string[];
   filters?: {
@@ -243,7 +254,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
    */
   async function upsertCsvContacts(
     supabase: ReturnType<typeof createClient>,
-    csvRows: { phone: string; name?: string }[],
+    csvRows: ManualContact[],
   ): Promise<Contact[]> {
     if (csvRows.length === 0) return [];
 
@@ -385,13 +396,30 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       const contactIds = contacts.map((c) => c.id);
       const customValueIndex = await fetchCustomValueIndex(supabase, contactIds);
 
+      // Manually-added / pasted / imported contacts (audience.type
+      // === 'csv') can carry their own per-contact variable values —
+      // things like "serviço" or "profissional" that live on the
+      // campaign list, not on the contact record. Those values win
+      // over the campaign-wide mapping for whichever keys they set.
+      const manualVariablesByPhone = new Map<string, Record<string, string>>();
+      if (payload.audience.type === 'csv') {
+        for (const row of payload.audience.csvContacts ?? []) {
+          if (row.phone && row.variables) {
+            manualVariablesByPhone.set(row.phone, row.variables);
+          }
+        }
+      }
+
       const apiRecipients = contacts
         .filter((c) => c.phone)
         .map((c) => ({
           contact_id: c.id,
           phone: c.phone as string,
           name: c.name ?? undefined,
-          params: resolveVariables(payload.variables, c, customValueIndex.get(c.id)),
+          params: {
+            ...resolveVariables(payload.variables, c, customValueIndex.get(c.id)),
+            ...(c.phone ? manualVariablesByPhone.get(c.phone) : undefined),
+          },
         }));
 
       if (apiRecipients.length === 0) {

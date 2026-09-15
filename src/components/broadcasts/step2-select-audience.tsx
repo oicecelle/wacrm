@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { CustomField, Tag } from '@/types';
+import { CustomField, Tag, MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
+import { AudienceListBuilder } from './audience-list-builder';
+import type { ManualContact } from '@/hooks/use-broadcast-sending';
 import {
   Users,
   Tags,
@@ -29,7 +31,7 @@ interface AudienceConfig {
   type: AudienceType;
   tagIds?: string[];
   customField?: CustomFieldFilter;
-  csvContacts?: { phone: string; name?: string }[];
+  csvContacts?: ManualContact[];
   excludeTagIds?: string[];
   filters?: {
     contact_type?: 'all' | 'lead' | 'client';
@@ -44,6 +46,9 @@ interface AudienceConfig {
 interface Step2Props {
   audience: AudienceConfig;
   onUpdate: (audience: AudienceConfig) => void;
+  /** Used to surface the template's declared variable names in the
+   *  manual-add / paste / Excel-import column mapping. */
+  template?: MessageTemplate | null;
   onNext: () => void;
   onBack: () => void;
 }
@@ -80,8 +85,8 @@ const audienceOptions: {
   },
   {
     type: 'csv',
-    label: 'Upload CSV',
-    description: 'Upload a list of phone numbers',
+    label: 'Lista personalizada',
+    description: 'Buscar, adicionar manualmente, colar ou importar contatos',
     icon: Upload,
   },
 ];
@@ -95,6 +100,7 @@ const OPERATOR_OPTIONS: { value: CustomFieldOperator; label: string }[] = [
 export function Step2SelectAudience({
   audience,
   onUpdate,
+  template,
   onNext,
   onBack,
 }: Step2Props) {
@@ -557,6 +563,14 @@ export function Step2SelectAudience({
             </div>
           </div>
         </div>
+      )}
+
+      {audience.type === 'csv' && (
+        <AudienceListBuilder
+          contacts={audience.csvContacts ?? []}
+          onChange={(csvContacts) => onUpdate({ ...audience, csvContacts })}
+          templateVariables={template?.variables ?? []}
+        />
       )}
 
       {/* Exclude list — applies regardless of audience type */}

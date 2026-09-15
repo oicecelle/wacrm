@@ -279,6 +279,8 @@ export interface MessageTemplate {
   quality_score?: 'GREEN' | 'YELLOW' | 'RED';
   submission_error?: string;
   last_submitted_at?: string;
+  /** Names of {{variable}} placeholders used in body_text, e.g. ['nome', 'servico']. */
+  variables?: string[];
   created_at: string;
 }
 
