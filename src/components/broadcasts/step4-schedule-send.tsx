@@ -27,6 +27,8 @@ interface Step4Props {
   onNameChange: (name: string) => void;
   template: MessageTemplate;
   audience: AudienceConfig;
+  /** ISO string from step 3, or undefined for "send as soon as possible". */
+  scheduledAtIso?: string;
   onSend: () => void;
   onSaveDraft?: () => void;
   onBack: () => void;
@@ -39,6 +41,7 @@ export function Step4ScheduleSend({
   onNameChange,
   template,
   audience,
+  scheduledAtIso,
   onSend,
   onSaveDraft,
   onBack,
@@ -139,6 +142,17 @@ export function Step4ScheduleSend({
             <p className="text-xs text-muted-foreground">Language</p>
             <p className="text-foreground">{template.language ?? 'en_US'}</p>
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Envio programado para</p>
+            <p className="text-foreground">
+              {scheduledAtIso
+                ? new Date(scheduledAtIso).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  })
+                : 'Assim que possível'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -204,8 +218,21 @@ export function Step4ScheduleSend({
                 You are about to send this broadcast to{' '}
                 <span className="font-medium text-popover-foreground">{estimatedReach.toLocaleString()}</span>{' '}
                 contacts using the{' '}
-                <span className="font-medium text-popover-foreground">{template.name}</span> template.
-                This action cannot be undone.
+                <span className="font-medium text-popover-foreground">{template.name}</span> template
+                {scheduledAtIso ? (
+                  <>
+                    , programado para{' '}
+                    <span className="font-medium text-popover-foreground">
+                      {new Date(scheduledAtIso).toLocaleString('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </span>
+                  </>
+                ) : (
+                  ', assim que possível'
+                )}
+                . This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

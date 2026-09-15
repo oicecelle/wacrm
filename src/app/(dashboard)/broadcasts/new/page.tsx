@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -32,6 +32,17 @@ export default function NewBroadcastPage() {
     Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
   >({});
   const [name, setName] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [intervalSeconds, setIntervalSeconds] = useState(5);
+
+  /** Combines the date+time pickers into an ISO string, or undefined
+   *  ("send as soon as possible") when either is left blank. */
+  const scheduledAtIso = useMemo(() => {
+    if (!scheduledDate || !scheduledTime) return undefined;
+    const local = new Date(`${scheduledDate}T${scheduledTime}:00`);
+    return Number.isNaN(local.getTime()) ? undefined : local.toISOString();
+  }, [scheduledDate, scheduledTime]);
 
   async function handleSend() {
     if (!template) return;
@@ -48,6 +59,8 @@ export default function NewBroadcastPage() {
           excludeTagIds: audience.excludeTagIds,
         },
         variables,
+        scheduledAt: scheduledAtIso,
+        intervalSeconds,
       });
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
@@ -196,6 +209,14 @@ export default function NewBroadcastPage() {
               template={template}
               variables={variables}
               onUpdate={setVariables}
+              audience={audience}
+              onAudienceUpdate={setAudience}
+              scheduledDate={scheduledDate}
+              onScheduledDateChange={setScheduledDate}
+              scheduledTime={scheduledTime}
+              onScheduledTimeChange={setScheduledTime}
+              intervalSeconds={intervalSeconds}
+              onIntervalSecondsChange={setIntervalSeconds}
               onNext={() => setCurrentStep(3)}
               onBack={() => setCurrentStep(1)}
             />
@@ -206,6 +227,7 @@ export default function NewBroadcastPage() {
               onNameChange={setName}
               template={template}
               audience={audience}
+              scheduledAtIso={scheduledAtIso}
               onSend={handleSend}
               onSaveDraft={handleSaveDraft}
               onBack={() => setCurrentStep(2)}
