@@ -39,6 +39,8 @@ export function ThemedToaster() {
     <Toaster
       theme={isClient ? mode : DEFAULT_MODE}
       position="top-right"
+      offset={{ top: "72px", right: "16px" }}
+      style={{ width: "min(380px, calc(100vw - 32px))" }}
       toastOptions={{
         style: {
           background: "var(--popover)",

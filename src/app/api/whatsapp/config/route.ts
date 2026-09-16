@@ -489,6 +489,10 @@ export async function POST(request: Request) {
         saved: true,
         connected: status.connected,
         state: status.state,
+        // Temporary: raw response body from the Uazapi status check,
+        // so a mismatched schema on a given server can be diagnosed
+        // from the client instead of guessing blind.
+        uazapi_raw_status: status.raw,
         webhook_configured: webhookSuccess,
         uazapi_token: resolvedToken
       })
