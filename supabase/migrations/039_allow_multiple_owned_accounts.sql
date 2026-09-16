@@ -1,0 +1,22 @@
+-- ============================================================
+-- 039_allow_multiple_owned_accounts.sql
+--
+-- migration 017 impôs deliberadamente "uma conta por dono" via
+-- idx_accounts_one_per_owner, com o comentário "the locked design
+-- decision — single membership. Drops automatically if we ever relax
+-- to many-to-many."
+--
+-- Esse é exatamente esse relaxamento: uma pessoa (ex: secretária ou
+-- agência) administrando várias clínicas isoladas pelo mesmo login
+-- precisa poder ser owner_user_id de mais de uma linha em accounts.
+--
+-- Conferido antes de remover: nenhuma outra parte do código faz uma
+-- busca do tipo "a conta deste dono" assumindo uma linha só — todo
+-- lookup existente é por accounts.id específico (troca de clínica,
+-- transferência de propriedade, etc.), então isso não quebra nada
+-- que já funcionava para quem só tem uma conta.
+--
+-- Idempotente.
+-- ============================================================
+
+DROP INDEX IF EXISTS idx_accounts_one_per_owner;
