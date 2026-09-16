@@ -74,10 +74,43 @@ export async function POST(request: Request) {
       )
     }
 
+    // clinic_users.clinic_id is a leftover FK pointing at a separate,
+    // older `clinics` table — not `accounts` — from before this app
+    // moved to the accounts/profiles model. Nothing currently keeps
+    // the two in sync for freshly-created accounts, so every new
+    // clinic needs a matching `clinics` row purely to satisfy that FK.
+    const slug = `${name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40) || 'clinica'}-${account.id.slice(0, 8)}`
+
+    const { data: clinic, error: clinicError } = await admin
+      .from('clinics')
+      // Same id as the accounts row — the clinic switcher's "which
+      // clinics can this user reach" query treats clinic_users.clinic_id
+      // as an accounts.id when looking the clinic up (matching how
+      // pre-existing, migrated data lines up the two tables), so this
+      // has to be identical for the new clinic to show up there later.
+      .insert({ id: account.id, name, slug })
+      .select('id')
+      .single()
+
+    if (clinicError || !clinic) {
+      console.error('[clinics/create] clinics insert failed:', clinicError)
+      await admin.from('accounts').delete().eq('id', account.id)
+      return NextResponse.json(
+        { error: `Falha ao criar a clínica (clinics): ${clinicError?.message ?? 'erro desconhecido'}` },
+        { status: 500 },
+      )
+    }
+
     const displayName = profile?.full_name || profile?.email || user.email || 'Proprietário'
 
     const { error: clinicUserError } = await admin.from('clinic_users').insert({
-      clinic_id: account.id,
+      clinic_id: clinic.id,
       user_id: user.id,
       name: displayName,
       role: 'admin',
@@ -105,8 +138,9 @@ export async function POST(request: Request) {
 
     if (clinicUserError) {
       console.error('[clinics/create] clinic_users insert failed:', clinicUserError)
-      // Roll back the orphaned account rather than leaving a clinic
-      // nobody (including its own owner) can see in the switcher.
+      // Roll back both rows rather than leaving a clinic nobody
+      // (including its own owner) can see in the switcher.
+      await admin.from('clinics').delete().eq('id', clinic.id)
       await admin.from('accounts').delete().eq('id', account.id)
       return NextResponse.json(
         { error: `Falha ao criar a clínica (clinic_users): ${clinicUserError.message}` },
