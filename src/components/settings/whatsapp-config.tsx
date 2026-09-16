@@ -336,7 +336,8 @@ export function WhatsAppConfig() {
       toast.success(
         data.connected
           ? 'Instância conectada e pronta para disparos.'
-          : 'Instância salva, mas ainda não está conectada — confira o número na Uazapi.',
+          : `Instância salva, mas ainda não está conectada (status relatado pela Uazapi: "${data.state ?? 'desconhecido'}"). Confira o número na Uazapi.`,
+        { duration: 10000 },
       );
       setUazapiTokenEdited(false);
       if (accountId) await fetchConfig(accountId);
