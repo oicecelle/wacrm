@@ -46,6 +46,14 @@ export async function POST(request: Request) {
     // do — accounts has no public INSERT policy by design (see
     // migration 017's comment), same as every other account-creation
     // path in this codebase (signup trigger, remove_account_member).
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[clinics/create] SUPABASE_SERVICE_ROLE_KEY is not set')
+      return NextResponse.json(
+        { error: 'Configuração do servidor incompleta (SUPABASE_SERVICE_ROLE_KEY ausente). Contate o suporte.' },
+        { status: 500 },
+      )
+    }
+
     const admin = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -59,7 +67,11 @@ export async function POST(request: Request) {
       .single()
 
     if (accountError || !account) {
-      throw accountError ?? new Error('Failed to create account')
+      console.error('[clinics/create] accounts insert failed:', accountError)
+      return NextResponse.json(
+        { error: `Falha ao criar a clínica (accounts): ${accountError?.message ?? 'erro desconhecido'}` },
+        { status: 500 },
+      )
     }
 
     const displayName = profile?.full_name || profile?.email || user.email || 'Proprietário'
@@ -92,15 +104,20 @@ export async function POST(request: Request) {
     })
 
     if (clinicUserError) {
+      console.error('[clinics/create] clinic_users insert failed:', clinicUserError)
       // Roll back the orphaned account rather than leaving a clinic
       // nobody (including its own owner) can see in the switcher.
       await admin.from('accounts').delete().eq('id', account.id)
-      throw clinicUserError
+      return NextResponse.json(
+        { error: `Falha ao criar a clínica (clinic_users): ${clinicUserError.message}` },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ success: true, account_id: account.id })
   } catch (err) {
     console.error('Error creating clinic:', err)
-    return NextResponse.json({ error: 'Falha ao criar a clínica.' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Falha ao criar a clínica.'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
