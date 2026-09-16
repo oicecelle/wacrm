@@ -173,7 +173,7 @@ export default function BroadcastsPage() {
       {anySending && (
         <div
           role="progressbar"
-          aria-label="Broadcast in progress"
+          aria-label="Disparo em andamento"
           className="broadcast-indeterminate fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden bg-muted"
         >
           <div className="broadcast-indeterminate-bar h-0.5 bg-primary" />
@@ -268,15 +268,15 @@ export default function BroadcastsPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Name</TableHead>
-                <TableHead className="hidden text-muted-foreground md:table-cell">Template</TableHead>
+                <TableHead className="text-muted-foreground">Nome</TableHead>
+                <TableHead className="hidden text-muted-foreground md:table-cell">Modelo</TableHead>
                 <TableHead className="hidden text-right text-muted-foreground sm:table-cell">
                   Recipients
                 </TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">Delivery</TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">Read</TableHead>
+                <TableHead className="hidden text-muted-foreground lg:table-cell">Entrega</TableHead>
+                <TableHead className="hidden text-muted-foreground lg:table-cell">Lida</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="hidden text-muted-foreground sm:table-cell">Date</TableHead>
+                <TableHead className="hidden text-muted-foreground sm:table-cell">Data</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
