@@ -31,6 +31,10 @@ export default function SelecionarClinicaPage() {
   const [switching, setSwitching] = useState(false);
   const [defaultClinicId, setDefaultClinicId] = useState<string | null>(null);
 
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newClinicName, setNewClinicName] = useState("");
+  const [creating, setCreating] = useState(false);
+
   useEffect(() => {
     setDefaultClinicId(localStorage.getItem("default_clinic_id"));
   }, []);
@@ -220,6 +224,42 @@ export default function SelecionarClinicaPage() {
     router.push("/login");
   };
 
+  const handleCreateClinic = async () => {
+    if (!newClinicName.trim() || creating) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/clinics/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newClinicName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao criar a clínica");
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push("/login");
+        return;
+      }
+
+      await supabase
+        .from("profiles")
+        .update({ account_id: data.account_id, account_role: "owner" })
+        .eq("user_id", session.user.id);
+
+      sessionStorage.setItem("clinic_auto_switched", "true");
+      router.push("/agenda");
+    } catch (err) {
+      console.error("Error creating clinic:", err);
+      alert(err instanceof Error ? err.message : "Erro ao criar a clínica. Tente novamente.");
+      setCreating(false);
+    }
+  };
+
   const handleSetDefault = (clinicId: string) => {
     if (defaultClinicId === clinicId) {
       localStorage.removeItem("default_clinic_id");
@@ -365,6 +405,50 @@ export default function SelecionarClinicaPage() {
         <p className="text-[10px] text-slate-400 text-center font-semibold">
           ⭐ Clique na estrela para definir uma clínica como padrão na próxima entrada
         </p>
+
+        {/* Create a new, fully isolated clinic under this same login */}
+        {showCreateForm ? (
+          <div className="space-y-2 rounded-xl border border-dashed border-slate-300 p-3">
+            <label className="text-[11px] font-bold text-slate-600">Nome da nova clínica</label>
+            <input
+              autoFocus
+              value={newClinicName}
+              onChange={(e) => setNewClinicName(e.target.value)}
+              placeholder="Ex: Clínica Bella Vitta"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-500"
+              onKeyDown={(e) => e.key === "Enter" && handleCreateClinic()}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCreateClinic}
+                disabled={creating || !newClinicName.trim()}
+                className="h-9 flex-1 rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40"
+              >
+                {creating ? "Criando..." : "Criar e acessar"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setNewClinicName("");
+                }}
+                disabled={creating}
+                className="rounded-lg px-3 text-xs font-bold text-slate-400 hover:text-slate-600"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowCreateForm(true)}
+            className="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+          >
+            + Criar nova clínica
+          </button>
+        )}
 
         {/* Access button */}
         <button

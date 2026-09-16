@@ -38,6 +38,10 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
 
   const [modalUserName, setModalUserName] = useState<string>("Usuário");
 
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newClinicName, setNewClinicName] = useState("");
+  const [creating, setCreating] = useState(false);
+
   useEffect(() => {
     if (!open || !user) return;
     setModalUserName(profile?.full_name || user.email || "Usuário");
@@ -164,6 +168,39 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
     }
   };
 
+  const handleCreateClinic = async () => {
+    if (!newClinicName.trim() || !user) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/clinics/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newClinicName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao criar a clínica");
+      }
+
+      // Switch straight into the clinic that was just created — same
+      // profiles.account_id update handleSwitchClinic does, then a
+      // reload so every context (auth, permissions, sidebar) picks up
+      // the new account cleanly instead of patching state by hand.
+      const { error: updateErr } = await supabase
+        .from("profiles")
+        .update({ account_id: data.account_id, account_role: "owner" })
+        .eq("user_id", user.id);
+
+      if (updateErr) throw updateErr;
+
+      window.location.reload();
+    } catch (err) {
+      console.error("Error creating clinic:", err);
+      alert(err instanceof Error ? err.message : "Erro ao criar a clínica. Tente novamente.");
+      setCreating(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-2xl p-6 bg-white border border-neutral-100 shadow-xl text-center">
@@ -240,6 +277,52 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   Definir a clínica selecionada como padrão
                 </label>
               </div>
+            )}
+
+            {/* Create a new, fully isolated clinic under this same login —
+                own contacts, inbox, WhatsApp instance and broadcasts. */}
+            {showCreateForm ? (
+              <div className="mt-4 space-y-2 rounded-xl border border-dashed border-neutral-300 p-3">
+                <label className="text-[11px] font-bold text-neutral-600">
+                  Nome da nova clínica
+                </label>
+                <input
+                  autoFocus
+                  value={newClinicName}
+                  onChange={(e) => setNewClinicName(e.target.value)}
+                  placeholder="Ex: Clínica Bella Vitta"
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-800 outline-none focus:border-blue-500"
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateClinic()}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCreateClinic}
+                    disabled={creating || !newClinicName.trim()}
+                    className="h-8 flex-1 rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    {creating ? "Criando..." : "Criar e acessar"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setNewClinicName("");
+                    }}
+                    disabled={creating}
+                    className="rounded-lg px-3 text-xs font-bold text-neutral-400 hover:text-neutral-600"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(true)}
+                className="mt-2 w-full rounded-xl border border-dashed border-neutral-300 py-2.5 text-xs font-bold text-neutral-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              >
+                + Criar nova clínica
+              </button>
             )}
           </div>
         )}
