@@ -5,21 +5,20 @@
 -- não é populada por handle_new_user() (o trigger real de signup, que
 -- só grava em accounts e profiles) nem por nenhum outro código deste
 -- projeto. Provavelmente sobrou de um sistema anterior ao Supabase
--- Auth. Resultado: QUALQUER tentativa de inserir um user_id real
--- (mesmo de um usuário existente e funcional) em clinic_users falhava
--- com "violates foreign key constraint clinic_users_user_id_fkey" —
--- isso inclui tanto a criação de clínica nova quanto, em tese, o
--- fluxo de aceitar convite de equipe, que nunca tinha sido testado
--- com um usuário 100% novo.
+-- Auth.
 --
--- Corrige apontando para auth.users(id), a mesma referência que
--- accounts.owner_user_id já usa corretamente.
+-- Efeito colateral descoberto ao investigar: várias linhas reais e
+-- ativas (owners de outras clínicas do sistema, não dado de teste)
+-- têm user_id que também não bate com auth.users — ou seja, essa
+-- coluna nunca teve uma referência consistente em todo o histórico da
+-- tabela. Por isso NÃO recriamos como FK estrita para auth.users
+-- (quebraria a migração de novo, e mexer nessas linhas é uma decisão
+-- de dados que não é nossa pra tomar). Só removemos a constraint
+-- quebrada, sem substituto — libera inserts com um user_id de login
+-- real (o caso que importa: criar clínica nova, convite de equipe)
+-- sem tocar em nenhuma linha existente.
 --
 -- Idempotente.
 -- ============================================================
 
 ALTER TABLE clinic_users DROP CONSTRAINT IF EXISTS clinic_users_user_id_fkey;
-
-ALTER TABLE clinic_users
-  ADD CONSTRAINT clinic_users_user_id_fkey
-  FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
