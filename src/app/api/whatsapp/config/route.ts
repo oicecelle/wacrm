@@ -673,7 +673,16 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Error in WhatsApp config POST:', error)
-    const message = error instanceof Error ? error.message : 'Internal server error'
+    // Supabase client errors (PostgrestError, AuthError, etc.) are
+    // plain objects with a `.message` — not JS Error instances — so
+    // `error instanceof Error` misses them and falls through to a
+    // useless generic string. Check for `.message` directly instead.
+    const message =
+      error && typeof error === 'object' && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : typeof error === 'string'
+          ? error
+          : 'unknown error'
     return NextResponse.json({ error: `Internal server error: ${message}` }, { status: 500 })
   }
 }
