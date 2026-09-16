@@ -197,7 +197,7 @@ export default function ModelosPage() {
             Gatilhos do Sistema
           </TabsTrigger>
           <TabsTrigger value="campaign" className="text-xs font-black uppercase tracking-wider px-4 py-2 rounded-lg cursor-pointer">
-            Templates de Campanha (Meta)
+            Templates de Campanha
           </TabsTrigger>
         </TabsList>
 

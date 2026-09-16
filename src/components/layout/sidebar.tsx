@@ -39,6 +39,7 @@ import {
   ChevronRight,
   ChevronDown,
   Megaphone,
+  History,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 import { ClinicSwitcherModal } from "@/components/layout/clinic-switcher-modal";
@@ -169,7 +170,8 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       subItems: [
         { href: "/broadcasts", label: "Disparos", icon: Radio },
         { href: "/comunicacao/modelos", label: "Modelos", icon: Sparkles },
-        { href: "/comunicacao/agendados", label: "Histórico", icon: CalendarClock },
+        { href: "/broadcasts/historico", label: "Histórico", icon: History },
+        { href: "/comunicacao/agendados", label: "Notificações Automáticas", icon: CalendarClock },
       ],
     },
     { href: "/automations", label: "Automações", icon: Zap },
