@@ -371,10 +371,30 @@ export async function POST(request: Request) {
       let resolvedInstanceName = uazapi_instance_name
       let clinicId = null
 
+      // Editing an already-configured instance without retyping the
+      // token (the form shows it masked) used to fall straight
+      // through to autoResolveClinicDetails — which only knows about
+      // legacy pre-allocated tokens, so it always failed for any
+      // clinic that didn't come from that old import. Reuse this
+      // account's already-saved token first; only fall back to legacy
+      // auto-resolution when there's truly nothing saved yet.
+      if (!resolvedToken) {
+        const { data: existingConfig } = await supabase
+          .from('whatsapp_config')
+          .select('uazapi_token, uazapi_instance_name')
+          .eq('account_id', accountId)
+          .maybeSingle()
+
+        if (existingConfig?.uazapi_token) {
+          resolvedToken = existingConfig.uazapi_token
+          resolvedInstanceName = resolvedInstanceName || existingConfig.uazapi_instance_name
+        }
+      }
+
       if (!resolvedToken) {
         const resolved = await autoResolveClinicDetails(supabase, user, accountId)
         resolvedToken = resolved.token
-        resolvedInstanceName = resolved.name
+        resolvedInstanceName = resolvedInstanceName || resolved.name
         clinicId = resolved.clinicId
       }
 

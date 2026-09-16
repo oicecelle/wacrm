@@ -45,6 +45,21 @@ export function ThemedToaster() {
           border: "1px solid var(--border)",
           color: "var(--popover-foreground)",
         },
+        // Success (verde) / Error (vermelho) / Warning (amarelo) /
+        // Info-dica (azul) — fundo translúcido, sem cor 100% chapada,
+        // aplica automaticamente a qualquer toast.success/error/
+        // warning/message('info') chamado em qualquer parte do app,
+        // sem precisar tocar em cada chamada individual.
+        classNames: {
+          success:
+            "!bg-emerald-500/10 !border-emerald-500/30 !text-emerald-700 dark:!text-emerald-300",
+          error:
+            "!bg-red-500/10 !border-red-500/30 !text-red-700 dark:!text-red-300",
+          warning:
+            "!bg-amber-500/10 !border-amber-500/30 !text-amber-700 dark:!text-amber-300",
+          info:
+            "!bg-blue-500/10 !border-blue-500/30 !text-blue-700 dark:!text-blue-300",
+        },
       }}
     />
   );
