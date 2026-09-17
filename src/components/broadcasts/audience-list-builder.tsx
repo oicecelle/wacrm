@@ -57,6 +57,16 @@ function splitPastedText(text: string): string[][] {
   return lines.map((line) => line.split(delimiter).map((cell) => cell.trim()));
 }
 
+/** A header row names columns ("telefone", "nome"...); a data row
+ *  carries actual values. If any cell in the first row already looks
+ *  like a phone number (8+ digits once punctuation is stripped),
+ *  it's data, not a header — treating it as one silently dropped the
+ *  first real contact whenever a list was pasted with no header line
+ *  at all (just bare numbers, one per row). */
+function firstRowLooksLikeHeader(row: string[]): boolean {
+  return !row.some((cell) => cell.replace(/\D/g, '').length >= 8);
+}
+
 export function AudienceListBuilder({
   contacts,
   onChange,
@@ -140,7 +150,7 @@ export function AudienceListBuilder({
 
   function processPaste() {
     const rows = splitPastedText(pasteText);
-    beginMapping(rows, true);
+    beginMapping(rows, firstRowLooksLikeHeader(rows[0] ?? []));
   }
 
   function handleExcelFile(file: File) {
@@ -153,7 +163,7 @@ export function AudienceListBuilder({
       const stringRows = rows
         .map((r) => (Array.isArray(r) ? r.map((c) => String(c ?? '').trim()) : []))
         .filter((r) => r.some((c) => c !== ''));
-      beginMapping(stringRows, true);
+      beginMapping(stringRows, firstRowLooksLikeHeader(stringRows[0] ?? []));
     };
     reader.readAsBinaryString(file);
   }
