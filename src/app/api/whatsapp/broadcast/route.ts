@@ -183,6 +183,7 @@ export async function POST(request: Request) {
       const inputByPhone = new Map(recipients.map((r) => [sanitizePhoneForMeta(r.phone ?? ''), r]))
       const newContactRows = missingPhones.map((phone) => ({
         account_id: accountId,
+        user_id: user.id,
         phone,
         name: inputByPhone.get(phone)?.name || phone,
       }))
