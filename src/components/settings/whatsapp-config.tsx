@@ -333,13 +333,13 @@ export function WhatsAppConfig() {
         return;
       }
 
-      toast.success(
-        data.connected
-          ? 'Instância conectada e pronta para disparos.'
-          : `Não conectada. Status da Uazapi: "${data.state ?? 'desconhecido'}". Detalhes técnicos no console (F12).`,
-        { duration: 8000 },
-      );
-      if (!data.connected) {
+      if (data.connected) {
+        toast.success('Instância conectada e pronta para disparos.', { duration: 8000 });
+      } else {
+        toast.error(
+          `Não conectada. Status da Uazapi: "${data.state ?? 'desconhecido'}". Detalhes técnicos no console (F12).`,
+          { duration: 8000 },
+        );
         console.log('[Uazapi] Resposta crua do status:', data.uazapi_raw_status);
       }
       setUazapiTokenEdited(false);

@@ -41,9 +41,12 @@ export async function getUazapiStatus(
       const res = await fetch(url, { method: 'GET', headers });
       if (res.ok) {
         const data = await res.json();
-        // Handle various response schemas from Uazapi status
+        // Handle various response schemas from Uazapi status:
         // Schema 1: flat { connected, status, state, connectionState }
         // Schema 2: customix { info, status: { checked_instance: { connection_status }, server_status } }
+        // Schema 3: { instance: { status: 'connected', ... }, status: { connected, loggedIn, jid } }
+        //   (seen on pluztech.uazapi.com — data.status is an object
+        //   here, not a string, so it must be checked as one too)
         const checkedInstance = data?.status?.checked_instance;
         const isConnected =
           data?.connected === true ||
@@ -51,6 +54,9 @@ export async function getUazapiStatus(
           data?.state === 'connected' ||
           data?.connectionState === 'connected' ||
           data?.instance?.state === 'connected' ||
+          data?.instance?.status === 'connected' ||
+          data?.status?.connected === true ||
+          data?.status?.loggedIn === true ||
           checkedInstance?.connection_status === 'connected' ||
           checkedInstance?.is_healthy === true ||
           data?.status?.server_status === 'running';
@@ -60,6 +66,7 @@ export async function getUazapiStatus(
           data?.state ||
           (typeof data?.status === 'string' ? data.status : null) ||
           data?.connectionState ||
+          (typeof data?.instance?.status === 'string' ? data.instance.status : null) ||
           (isConnected ? 'connected' : 'disconnected');
 
         return {
