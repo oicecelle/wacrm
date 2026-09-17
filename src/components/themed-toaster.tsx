@@ -48,19 +48,19 @@ export function ThemedToaster() {
           color: "var(--popover-foreground)",
         },
         // Success (verde) / Error (vermelho) / Warning (amarelo) /
-        // Info-dica (azul) — fundo translúcido, sem cor 100% chapada,
-        // aplica automaticamente a qualquer toast.success/error/
-        // warning/message('info') chamado em qualquer parte do app,
-        // sem precisar tocar em cada chamada individual.
+        // Info-dica (azul) — cor sólida suave (não translúcida, pra
+        // não deixar o conteúdo atrás aparecer por baixo) e não 100%
+        // saturada. Aplica automaticamente a qualquer toast.success/
+        // error/warning/info chamado em qualquer parte do app.
         classNames: {
           success:
-            "!bg-emerald-500/10 !border-emerald-500/30 !text-emerald-700 dark:!text-emerald-300",
+            "!bg-emerald-50 dark:!bg-emerald-950 !border-emerald-300 dark:!border-emerald-800 !text-emerald-700 dark:!text-emerald-300",
           error:
-            "!bg-red-500/10 !border-red-500/30 !text-red-700 dark:!text-red-300",
+            "!bg-red-50 dark:!bg-red-950 !border-red-300 dark:!border-red-800 !text-red-700 dark:!text-red-300",
           warning:
-            "!bg-amber-500/10 !border-amber-500/30 !text-amber-700 dark:!text-amber-300",
+            "!bg-amber-50 dark:!bg-amber-950 !border-amber-300 dark:!border-amber-800 !text-amber-700 dark:!text-amber-300",
           info:
-            "!bg-blue-500/10 !border-blue-500/30 !text-blue-700 dark:!text-blue-300",
+            "!bg-blue-50 dark:!bg-blue-950 !border-blue-300 dark:!border-blue-800 !text-blue-700 dark:!text-blue-300",
         },
       }}
     />
