@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Contact, CustomField, MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +83,8 @@ export function Step3Personalize({
   onNext,
   onBack,
 }: Step3Props) {
+  const { profile } = useAuth();
+  const accountId = profile?.account_id;
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loadingFields, setLoadingFields] = useState(true);
   const [firstContact, setFirstContact] = useState<Contact | null>(null);
@@ -99,14 +102,16 @@ export function Step3Personalize({
   const csvContacts = useMemo(() => audience.csvContacts ?? [], [audience.csvContacts]);
 
   useEffect(() => {
+    if (!accountId) return;
     let cancelled = false;
     (async () => {
       const supabase = createClient();
       const [fieldsRes, contactRes] = await Promise.all([
-        supabase.from('custom_fields').select('*').order('field_name'),
+        supabase.from('custom_fields').select('*').eq('account_id', accountId).order('field_name'),
         supabase
           .from('contacts')
           .select('*')
+          .eq('account_id', accountId)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
@@ -137,7 +142,7 @@ export function Step3Personalize({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accountId]);
 
   const placeholders = useMemo(
     () => extractPlaceholders(template.body_text),

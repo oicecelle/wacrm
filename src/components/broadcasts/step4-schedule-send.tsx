@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,11 +49,14 @@ export function Step4ScheduleSend({
   isProcessing,
   progress,
 }: Step4Props) {
+  const { profile } = useAuth();
+  const accountId = profile?.account_id;
   const [showConfirm, setShowConfirm] = useState(false);
   const [estimatedReach, setEstimatedReach] = useState<number>(0);
   const [loadingReach, setLoadingReach] = useState(true);
 
   useEffect(() => {
+    if (!accountId) return;
     async function calculateReach() {
       setLoadingReach(true);
       try {
@@ -61,12 +65,14 @@ export function Step4ScheduleSend({
         if (audience.type === 'all') {
           const { count } = await supabase
             .from('contacts')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .eq('account_id', accountId);
           setEstimatedReach(count ?? 0);
         } else if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
           const { data: contactTags } = await supabase
             .from('contact_tags')
-            .select('contact_id')
+            .select('contact_id, contacts!inner(account_id)')
+            .eq('contacts.account_id', accountId)
             .in('tag_id', audience.tagIds);
 
           const uniqueIds = new Set((contactTags ?? []).map((ct) => ct.contact_id));
@@ -82,23 +88,23 @@ export function Step4ScheduleSend({
     }
 
     calculateReach();
-  }, [audience]);
+  }, [audience, accountId]);
 
   const audienceLabel =
     audience.type === 'all'
-      ? 'All Contacts'
+      ? 'Todos os contatos'
       : audience.type === 'tags'
-        ? `Tags (${audience.tagIds?.length ?? 0} selected)`
+        ? `Tags (${audience.tagIds?.length ?? 0} selecionada${(audience.tagIds?.length ?? 0) === 1 ? '' : 's'})`
         : audience.type === 'csv'
-          ? 'CSV Upload'
-          : 'Custom';
+          ? 'Lista personalizada'
+          : 'Personalizado';
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Review & Send</h2>
+        <h2 className="text-lg font-semibold text-foreground">Revisar & Enviar</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Name your broadcast, review the details, and send.
+          Dê um nome ao disparo, revise os detalhes e envie.
         </p>
       </div>
 

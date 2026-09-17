@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +62,7 @@ export function AudienceListBuilder({
   onChange,
   templateVariables,
 }: AudienceListBuilderProps) {
+  const { profile } = useAuth();
   const [tab, setTab] = useState<SourceTab>('search');
 
   // ── Search existing contacts ──────────────────────────────────────
@@ -72,13 +74,14 @@ export function AudienceListBuilder({
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
   async function runSearch() {
-    if (!searchTerm.trim()) return;
+    if (!searchTerm.trim() || !profile?.account_id) return;
     setSearching(true);
     try {
       const supabase = createClient();
       const { data } = await supabase
         .from('contacts')
         .select('id, name, phone')
+        .eq('account_id', profile.account_id)
         .or(`name.ilike.%${searchTerm.trim()}%,phone.ilike.%${searchTerm.trim()}%`)
         .limit(25);
       setSearchResults(data ?? []);

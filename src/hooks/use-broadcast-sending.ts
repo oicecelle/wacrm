@@ -157,7 +157,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     let contacts: Contact[] = [];
 
     if (audience.type === 'all') {
-      const { data, error } = await supabase.from('contacts').select('*');
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('account_id', accountId);
       if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
       contacts = data ?? [];
     } else if (
@@ -167,7 +170,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     ) {
       const { data: contactTags, error: tagError } = await supabase
         .from('contact_tags')
-        .select('contact_id')
+        .select('contact_id, contacts!inner(account_id)')
+        .eq('contacts.account_id', accountId)
         .in('tag_id', audience.tagIds);
 
       if (tagError)
@@ -180,15 +184,16 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         const { data, error } = await supabase
           .from('contacts')
           .select('*')
+          .eq('account_id', accountId)
           .in('id', uniqueContactIds);
         if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
         contacts = data ?? [];
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
-      contacts = await resolveCustomFieldAudience(supabase, audience.customField);
+      contacts = await resolveCustomFieldAudience(supabase, audience.customField, accountId);
     } else if (audience.type === 'filters' && audience.filters) {
       const { contact_type, gender, temperature, interest, source, minScore } = audience.filters;
-      let query = supabase.from('contacts').select('*');
+      let query = supabase.from('contacts').select('*').eq('account_id', accountId);
       
       if (contact_type && contact_type !== 'all') {
         query = query.eq('contact_type', contact_type);
@@ -199,7 +204,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       const filterByDeals = (temperature && temperature !== 'all') || interest || source || (minScore !== undefined && minScore !== null && minScore !== 0);
       if (filterByDeals) {
-        let dealsQuery = supabase.from('deals').select('contact_id');
+        let dealsQuery = supabase.from('deals').select('contact_id').eq('account_id', accountId);
         if (temperature && temperature !== 'all') {
           dealsQuery = dealsQuery.eq('temperature', temperature);
         }
@@ -276,11 +281,15 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     }
     const phones = [...uniqueByPhone.keys()];
 
-    // Single round-trip lookup of existing contacts by phone.
+    // Single round-trip lookup of existing contacts by phone. Scoped
+    // by account_id, not user_id — the same user can own multiple
+    // accounts (e.g. managing several clinics), and user_id alone
+    // would match contacts across all of them instead of just the
+    // one currently being sent from.
     const { data: existing, error: lookupErr } = await supabase
       .from('contacts')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('account_id', accountId)
       .in('phone', phones);
     if (lookupErr) {
       throw new Error(`Failed to look up CSV contacts: ${lookupErr.message}`);
@@ -326,6 +335,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
   async function resolveCustomFieldAudience(
     supabase: ReturnType<typeof createClient>,
     filter: CustomFieldFilter,
+    accountId: string | null,
   ): Promise<Contact[]> {
     const { fieldId, operator, value } = filter;
 
@@ -334,7 +344,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     // for "contains" so the match is case-insensitive.
     let query = supabase
       .from('contact_custom_values')
-      .select('contact_id')
+      .select('contact_id, contacts!inner(account_id)')
+      .eq('contacts.account_id', accountId)
       .eq('custom_field_id', fieldId);
 
     if (operator === 'is') query = query.eq('value', value);
@@ -351,6 +362,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
+      .eq('account_id', accountId)
       .in('id', contactIds);
     if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
     return data ?? [];

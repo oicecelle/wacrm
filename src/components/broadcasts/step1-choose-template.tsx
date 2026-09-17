@@ -82,6 +82,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
       let query = supabase
         .from('message_templates')
         .select('*')
+        .eq('account_id', profile?.account_id)
         .order('created_at', { ascending: false });
 
       if (provider === 'meta') {
@@ -103,8 +104,9 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   }
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    if (profile?.account_id) fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.account_id]);
 
   function insertVariable(key: string) {
     setNewBody((prev) => `${prev}{{${key}}}`);

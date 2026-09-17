@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { CustomField, Tag, MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { AudienceListBuilder } from './audience-list-builder';
@@ -104,6 +105,8 @@ export function Step2SelectAudience({
   onNext,
   onBack,
 }: Step2Props) {
+  const { profile } = useAuth();
+  const accountId = profile?.account_id;
   const [tags, setTags] = useState<Tag[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
@@ -114,22 +117,27 @@ export function Step2SelectAudience({
   // Tags are used both by the primary "Filter by Tags" audience type
   // AND by the exclude-list below — so always load once on mount.
   useEffect(() => {
+    if (!accountId) return;
     async function fetchTags() {
       setLoadingTags(true);
       try {
         const supabase = createClient();
-        const { data } = await supabase.from('tags').select('*').order('name');
+        const { data } = await supabase
+          .from('tags')
+          .select('*')
+          .eq('account_id', accountId)
+          .order('name');
         setTags(data ?? []);
       } finally {
         setLoadingTags(false);
       }
     }
     fetchTags();
-  }, []);
+  }, [accountId]);
 
   // Lazy-load custom fields only when that audience type is active.
   useEffect(() => {
-    if (audience.type !== 'custom_field') return;
+    if (audience.type !== 'custom_field' || !accountId) return;
     async function fetchFields() {
       setLoadingFields(true);
       try {
@@ -137,6 +145,7 @@ export function Step2SelectAudience({
         const { data } = await supabase
           .from('custom_fields')
           .select('*')
+          .eq('account_id', accountId)
           .order('field_name');
         setCustomFields(data ?? []);
       } finally {
@@ -144,9 +153,10 @@ export function Step2SelectAudience({
       }
     }
     fetchFields();
-  }, [audience.type]);
+  }, [audience.type, accountId]);
 
   const fetchEstimatedCount = useCallback(async () => {
+    if (!accountId) return;
     setLoadingCount(true);
     try {
       const supabase = createClient();
@@ -163,7 +173,8 @@ export function Step2SelectAudience({
       ) {
         const { data } = await supabase
           .from('contact_tags')
-          .select('contact_id')
+          .select('contact_id, contacts!inner(account_id)')
+          .eq('contacts.account_id', accountId)
           .in('tag_id', audience.tagIds);
         baseIds = new Set((data ?? []).map((r) => r.contact_id));
       } else if (
@@ -174,7 +185,8 @@ export function Step2SelectAudience({
         const { fieldId, operator, value } = audience.customField;
         let q = supabase
           .from('contact_custom_values')
-          .select('contact_id')
+          .select('contact_id, contacts!inner(account_id)')
+          .eq('contacts.account_id', accountId)
           .eq('custom_field_id', fieldId);
         if (operator === 'is') q = q.eq('value', value);
         else if (operator === 'is_not') q = q.neq('value', value);
@@ -183,7 +195,7 @@ export function Step2SelectAudience({
         baseIds = new Set((data ?? []).map((r) => r.contact_id));
       } else if (audience.type === 'filters' && audience.filters) {
         const { contact_type, gender, temperature, interest, source, minScore } = audience.filters;
-        let query = supabase.from('contacts').select('id');
+        let query = supabase.from('contacts').select('id').eq('account_id', accountId);
         
         if (contact_type && contact_type !== 'all') {
           query = query.eq('contact_type', contact_type);
@@ -194,7 +206,7 @@ export function Step2SelectAudience({
 
         const filterByDeals = (temperature && temperature !== 'all') || interest || source || (minScore !== undefined && minScore !== null && minScore !== 0);
         if (filterByDeals) {
-          let dealsQuery = supabase.from('deals').select('contact_id');
+          let dealsQuery = supabase.from('deals').select('contact_id').eq('account_id', accountId);
           if (temperature && temperature !== 'all') {
             dealsQuery = dealsQuery.eq('temperature', temperature);
           }
@@ -236,7 +248,8 @@ export function Step2SelectAudience({
       if (audience.excludeTagIds && audience.excludeTagIds.length > 0) {
         const { data: excludeRows } = await supabase
           .from('contact_tags')
-          .select('contact_id')
+          .select('contact_id, contacts!inner(account_id)')
+          .eq('contacts.account_id', accountId)
           .in('tag_id', audience.excludeTagIds);
         excludeSet = new Set((excludeRows ?? []).map((r) => r.contact_id));
       }
@@ -250,7 +263,8 @@ export function Step2SelectAudience({
         // "All" — fetch the total, then subtract exclude set if any.
         const { count } = await supabase
           .from('contacts')
-          .select('*', { count: 'exact', head: true });
+          .select('*', { count: 'exact', head: true })
+          .eq('account_id', accountId);
         const total = count ?? 0;
         setEstimatedCount(excludeSet ? Math.max(0, total - excludeSet.size) : total);
       }
@@ -258,6 +272,7 @@ export function Step2SelectAudience({
       setLoadingCount(false);
     }
   }, [
+    accountId,
     audience.type,
     audience.tagIds,
     audience.customField,
