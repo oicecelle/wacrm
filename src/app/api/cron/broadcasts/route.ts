@@ -131,10 +131,25 @@ export async function GET(request: Request) {
       ? new Date(broadcast.last_sent_at).getTime()
       : new Date(broadcast.scheduled_at ?? nowIso).getTime() - intervalMs
     const elapsedMs = Date.now() - anchorMs
-    const dueCount = Math.min(
-      Math.max(1, Math.floor(elapsedMs / intervalMs)),
-      MAX_RECIPIENTS_PER_TICK,
-    )
+    // When the configured interval is longer than we can safely sleep
+    // for within one invocation (see timeLeft() below), there's no
+    // way to space multiple sends apart inside a single tick — so cap
+    // at 1 per tick regardless of how large a backlog `elapsedMs`
+    // implies. The alternative (computed here before this fix) was
+    // releasing the whole backlog at once with no pause between them,
+    // since the per-message sleep got silently skipped whenever it
+    // didn't fit the time budget — defeating the whole point of a
+    // configured interval. Spacing between ticks (driven by the cron
+    // schedule itself) takes over instead; slower than requested is
+    // safe, faster than requested is not.
+    const canPaceWithinTick = intervalMs < TIME_BUDGET_MS
+    const dueCount = canPaceWithinTick
+      ? Math.min(Math.max(1, Math.floor(elapsedMs / intervalMs)), MAX_RECIPIENTS_PER_TICK)
+      : elapsedMs >= intervalMs
+        ? 1
+        : 0
+
+    if (dueCount === 0) continue
 
     const { data: pending } = await admin
       .from('broadcast_recipients')
