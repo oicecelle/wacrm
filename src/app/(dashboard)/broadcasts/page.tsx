@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Broadcast } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,6 +59,8 @@ function RateCell({
 
 export default function BroadcastsPage() {
   const router = useRouter();
+  const { profile } = useAuth();
+  const accountId = profile?.account_id;
   const canCreate = useCan('send-messages');
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,11 +89,13 @@ export default function BroadcastsPage() {
   }, [broadcasts]);
 
   async function fetchBroadcasts() {
+    if (!accountId) return;
     try {
       const supabase = createClient();
       const { data, error: fetchError } = await supabase
         .from('broadcasts')
         .select('*')
+        .eq('account_id', accountId)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -104,7 +109,8 @@ export default function BroadcastsPage() {
 
   useEffect(() => {
     fetchBroadcasts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
 
   const anySending = useMemo(
     () => broadcasts.some((b) => b.status === 'sending'),

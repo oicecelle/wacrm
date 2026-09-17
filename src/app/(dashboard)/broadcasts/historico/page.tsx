@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Broadcast } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,8 @@ interface RecipientRow {
 }
 
 export default function BroadcastHistoryPage() {
+  const { profile } = useAuth();
+  const accountId = profile?.account_id;
   const [tab, setTab] = useState<StatusTab>('scheduled');
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,12 +73,14 @@ export default function BroadcastHistoryPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const fetchBroadcasts = useCallback(async () => {
+    if (!accountId) return;
     setLoading(true);
     try {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('broadcasts')
         .select('*')
+        .eq('account_id', accountId)
         .order('scheduled_at', { ascending: tab === 'scheduled' })
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -85,7 +90,7 @@ export default function BroadcastHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [tab, accountId]);
 
   useEffect(() => {
     fetchBroadcasts();
@@ -160,7 +165,8 @@ export default function BroadcastHistoryPage() {
           ...(scheduledAt ? { scheduled_at: scheduledAt } : {}),
           interval_seconds: Math.max(1, editInterval),
         })
-        .eq('id', editingBroadcast.id);
+        .eq('id', editingBroadcast.id)
+        .eq('account_id', accountId);
       if (error) throw error;
       toast.success('Disparo atualizado');
       setEditingBroadcast(null);
@@ -182,7 +188,8 @@ export default function BroadcastHistoryPage() {
       const { error } = await supabase
         .from('broadcasts')
         .update({ status: 'cancelled' })
-        .eq('id', broadcast.id);
+        .eq('id', broadcast.id)
+        .eq('account_id', accountId);
       if (error) throw error;
       toast.success('Disparo cancelado');
       fetchBroadcasts();
