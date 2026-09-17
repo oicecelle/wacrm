@@ -178,6 +178,27 @@ export function Step3Personalize({
     return missing;
   }, [placeholders, variables, isManualAudience, csvContacts]);
 
+  // For manual audiences, name exactly which contacts are missing each
+  // unmapped variable — "ainda faltando {{horario}}" alone gives no
+  // way to tell whether it's one overlooked row or every row, which
+  // matters both for fixing it and for telling a real bug apart from
+  // a missed field.
+  const missingByContact = useMemo(() => {
+    if (!isManualAudience) return new Map<string, string[]>();
+    const map = new Map<string, string[]>();
+    for (const placeholder of unmappedKeys) {
+      const key = keyOf(placeholder);
+      if (variables[key]?.value?.trim()) continue; // covered by global default
+      for (const c of csvContacts) {
+        if (!c.variables?.[key]?.trim()) {
+          const label = c.name || c.phone;
+          map.set(label, [...(map.get(label) ?? []), key]);
+        }
+      }
+    }
+    return map;
+  }, [unmappedKeys, isManualAudience, csvContacts, variables]);
+
   function updateVariable(key: string, patch: Partial<VariableMapping>) {
     const current = variables[key] ?? { type: 'static' as VariableType, value: '' };
     onUpdate({
@@ -520,8 +541,20 @@ export function Step3Personalize({
 
       {unmappedKeys.length > 0 && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-          Defina um valor padrão para cada variável antes de continuar — ainda faltando{' '}
-          <span className="font-mono font-semibold">{unmappedKeys.join(', ')}</span>.
+          <p>
+            Defina um valor padrão para cada variável antes de continuar — ainda faltando{' '}
+            <span className="font-mono font-semibold">{unmappedKeys.join(', ')}</span>.
+          </p>
+          {missingByContact.size > 0 && (
+            <ul className="mt-1.5 list-disc space-y-0.5 pl-4">
+              {[...missingByContact.entries()].map(([label, keys]) => (
+                <li key={label}>
+                  <span className="font-medium">{label}</span>: falta{' '}
+                  <span className="font-mono">{keys.join(', ')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
