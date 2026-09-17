@@ -132,9 +132,13 @@ export default function BroadcastHistoryPage() {
     setEditingBroadcast(broadcast);
     setEditName(broadcast.name);
     if (broadcast.scheduled_at) {
+      // Local time components, not UTC — toISOString() here showed
+      // the UTC-shifted value (e.g. 3h off for Brazil), which looked
+      // "wrong" compared to what was actually typed in when scheduling.
       const d = new Date(broadcast.scheduled_at);
-      setEditDate(d.toISOString().slice(0, 10));
-      setEditTime(d.toISOString().slice(11, 16));
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setEditDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+      setEditTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
     } else {
       setEditDate('');
       setEditTime('');
