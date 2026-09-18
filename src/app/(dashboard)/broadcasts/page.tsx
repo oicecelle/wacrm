@@ -211,7 +211,7 @@ export default function BroadcastsPage() {
         </div>
         <GatedButton
           canAct={canCreate}
-          gateReason="create broadcasts"
+          gateReason="criar disparos"
           onClick={() => router.push('/broadcasts/new')}
           className="bg-blue-600 text-white hover:bg-blue-700 font-bold"
         >
@@ -261,7 +261,7 @@ export default function BroadcastsPage() {
           </p>
           <GatedButton
             canAct={canCreate}
-            gateReason="create broadcasts"
+            gateReason="criar disparos"
             onClick={() => router.push('/broadcasts/new')}
             className="mt-4 bg-blue-600 text-white hover:bg-blue-700 font-bold"
           >

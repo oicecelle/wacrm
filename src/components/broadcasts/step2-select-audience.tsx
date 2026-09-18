@@ -62,26 +62,26 @@ const audienceOptions: {
 }[] = [
   {
     type: 'all',
-    label: 'All Contacts',
-    description: 'Send to every contact in your database',
+    label: 'Todos os contatos',
+    description: 'Enviar para todos os contatos da sua base',
     icon: Users,
   },
   {
     type: 'tags',
-    label: 'Filter by Tags',
-    description: 'Target contacts with specific tags',
+    label: 'Filtrar por tags',
+    description: 'Segmentar contatos com tags específicas',
     icon: Tags,
   },
   {
     type: 'custom_field',
-    label: 'Custom Field',
-    description: 'Filter by a custom field value',
+    label: 'Campo personalizado',
+    description: 'Filtrar por um valor de campo personalizado',
     icon: Filter,
   },
   {
     type: 'filters',
-    label: 'Advanced Segmentation',
-    description: 'Filter by Stage, Temperature, Interest or Score',
+    label: 'Segmentação avançada',
+    description: 'Filtrar por etapa, temperatura, interesse ou pontuação',
     icon: Sparkles,
   },
   {
@@ -93,9 +93,9 @@ const audienceOptions: {
 ];
 
 const OPERATOR_OPTIONS: { value: CustomFieldOperator; label: string }[] = [
-  { value: 'is', label: 'is' },
-  { value: 'is_not', label: 'is not' },
-  { value: 'contains', label: 'contains' },
+  { value: 'is', label: 'é' },
+  { value: 'is_not', label: 'não é' },
+  { value: 'contains', label: 'contém' },
 ];
 
 export function Step2SelectAudience({
@@ -408,7 +408,7 @@ export function Step2SelectAudience({
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : tags.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              No tags found. Create tags in Settings.
+              Nenhuma tag encontrada. Crie tags em Configurações.
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -444,7 +444,7 @@ export function Step2SelectAudience({
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : customFields.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              No custom fields defined. Create one in Settings → Custom Fields.
+              Nenhum campo personalizado definido. Crie um em Configurações → Campos Personalizados.
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_minmax(0,1fr)]">
@@ -453,7 +453,7 @@ export function Step2SelectAudience({
                 onChange={(e) => updateCustomField({ fieldId: e.target.value })}
                 className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               >
-                <option value="">Select field…</option>
+                <option value="">Selecione o campo…</option>
                 {customFields.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.field_name}
@@ -593,9 +593,9 @@ export function Step2SelectAudience({
         <div className="mb-3 flex items-center gap-2">
           <X className="h-4 w-4 text-red-400" />
           <p className="text-sm font-medium text-foreground">
-            Exclude contacts with these tags
+            Excluir contatos com essas tags
           </p>
-          <span className="text-xs text-muted-foreground">(optional)</span>
+          <span className="text-xs text-muted-foreground">(opcional)</span>
         </div>
         {tags.length === 0 ? (
           <p className="text-xs text-muted-foreground">Nenhuma tag disponível.</p>

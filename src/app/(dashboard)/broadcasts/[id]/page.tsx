@@ -265,10 +265,10 @@ export default function BroadcastDetailPage() {
   const status = getBroadcastStatus(broadcast.status);
 
   const funnelSteps: FunnelStep[] = [
-    { label: 'Sent', value: broadcast.sent_count, color: 'bg-primary' },
-    { label: 'Delivered', value: broadcast.delivered_count, color: 'bg-teal-500' },
-    { label: 'Read', value: broadcast.read_count, color: 'bg-blue-500' },
-    { label: 'Replied', value: broadcast.replied_count, color: 'bg-indigo-500' },
+    { label: 'Enviado', value: broadcast.sent_count, color: 'bg-primary' },
+    { label: 'Entregue', value: broadcast.delivered_count, color: 'bg-teal-500' },
+    { label: 'Lida', value: broadcast.read_count, color: 'bg-blue-500' },
+    { label: 'Respondido', value: broadcast.replied_count, color: 'bg-indigo-500' },
   ];
 
   return (
@@ -294,10 +294,10 @@ export default function BroadcastDetailPage() {
               </span>
             </div>
             <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-              <span>Template: {broadcast.template_name}</span>
+              <span>Modelo: {broadcast.template_name}</span>
               <span>-</span>
               <span>
-                Created {new Date(broadcast.created_at).toLocaleDateString()}
+                Criado em {new Date(broadcast.created_at).toLocaleDateString('pt-BR')}
               </span>
             </div>
           </div>
@@ -309,7 +309,7 @@ export default function BroadcastDetailPage() {
             funnel inconsistent. */}
         {confirmDelete ? (
           <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm">
-            <span className="text-red-300">Delete this broadcast?</span>
+            <span className="text-red-300">Excluir este disparo?</span>
             <Button
               variant="outline"
               size="sm"
@@ -317,7 +317,7 @@ export default function BroadcastDetailPage() {
               disabled={deleting}
               className="h-7 border-border bg-transparent text-muted-foreground hover:bg-muted"
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
               size="sm"
@@ -325,7 +325,7 @@ export default function BroadcastDetailPage() {
               disabled={deleting}
               className="h-7 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
             >
-              {deleting ? 'Deleting…' : 'Confirm'}
+              {deleting ? 'Excluindo…' : 'Confirmar'}
             </Button>
           </div>
         ) : (
