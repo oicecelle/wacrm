@@ -107,6 +107,7 @@ export async function POST(request: Request) {
 
     // 2. Handle connection status updates
     const dataObj = body.data || body || {}
+    const msg = dataObj.message || {}
     const eventType = body.event || body.type
     const connectionState = body.connectionState || body.state || dataObj.connectionState || dataObj.state
     if (eventType === 'connection.update' || connectionState) {
@@ -133,8 +134,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'processed_connection_update' })
     }
 
+    // 2.5. Handle delivery/read status updates for OUR OWN outbound
+    // messages (broadcasts, mainly). Best-effort: this Uazapi
+    // deployment's exact status-update payload shape hasn't been
+    // observed yet in whatsapp_webhook_logs, so this checks broadly
+    // for the field names/conventions Uazapi/Baileys-style servers
+    // commonly use (ack codes 1-4, or string status/event names) and
+    // no-ops harmlessly if none match — it will not misfire on a
+    // normal inbound message, which never carries an ack/status field
+    // together with fromMe: true.
+    const ackRaw = body.ack ?? dataObj.ack ?? msg.ack ?? body.status ?? dataObj.status
+    const updateFromMe = msg.fromMe ?? dataObj.key?.fromMe ?? body.fromMe ?? false
+    const eventLooksLikeStatusUpdate =
+      typeof eventType === 'string' && /messages?[._-]?update|message[._-]?ack|\back\b/i.test(eventType)
+
+    if (ackRaw !== undefined && ackRaw !== null && (updateFromMe || eventLooksLikeStatusUpdate)) {
+      const updateMessageId =
+        dataObj.key?.id || dataObj.messageid || dataObj.messageId || dataObj.id ||
+        body.messageid || body.messageId || body.id || msg.messageid || msg.messageId || msg.id
+
+      const newStatus = mapAckToRecipientStatus(ackRaw)
+      if (updateMessageId && newStatus) {
+        await advanceBroadcastRecipientStatus(db, String(updateMessageId), newStatus)
+        return NextResponse.json({ status: 'processed_status_update', mapped: newStatus })
+      }
+    }
+
     // 3. Process incoming messages
-    const msg = dataObj.message || {}
     const fromMe = msg.fromMe ?? dataObj.key?.fromMe ?? false
     const isGroup = msg.isGroup ?? dataObj.key?.remoteJid?.includes('@g.us') ?? false
 
@@ -660,6 +686,68 @@ async function handleReaction(
       actor_id: contactId,
       emoji: emoji,
     }, { onConflict: 'message_id,actor_type,actor_id' })
+}
+
+// Maps a Uazapi/Baileys-style ack/status value to our recipient
+// status ladder (pending < sent < delivered < read). Covers the
+// common numeric ack codes (WhatsApp Web multi-device: 1=sent to
+// server, 2=delivered to device, 3=read) and the string variants
+// several Uazapi forks report instead.
+function mapAckToRecipientStatus(ack: unknown): 'sent' | 'delivered' | 'read' | null {
+  if (typeof ack === 'number') {
+    if (ack >= 3) return 'read'
+    if (ack === 2) return 'delivered'
+    if (ack === 1) return 'sent'
+    return null
+  }
+  const s = String(ack).toLowerCase()
+  if (s.includes('read')) return 'read'
+  if (s.includes('deliver')) return 'delivered'
+  if (s.includes('sent') || s.includes('server')) return 'sent'
+  return null
+}
+
+const RECIPIENT_STATUS_RANK: Record<string, number> = {
+  pending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  replied: 4,
+  failed: 0,
+}
+
+// Advances a broadcast_recipients row to `newStatus`, but only
+// forward along the ladder — an out-of-order 'delivered' arriving
+// after 'read' (which happens; webhooks aren't guaranteed ordered)
+// must not regress the row. Matched by whatsapp_message_id, which the
+// cron worker (api/cron/broadcasts) stores from the Uazapi send
+// response at send time.
+async function advanceBroadcastRecipientStatus(
+  db: any,
+  whatsappMessageId: string,
+  newStatus: 'sent' | 'delivered' | 'read',
+) {
+  try {
+    const { data: recipient, error } = await db
+      .from('broadcast_recipients')
+      .select('id, status')
+      .eq('whatsapp_message_id', whatsappMessageId)
+      .maybeSingle()
+
+    if (error || !recipient) return // not a broadcast message — nothing to do
+
+    const currentRank = RECIPIENT_STATUS_RANK[recipient.status] ?? 0
+    const newRank = RECIPIENT_STATUS_RANK[newStatus]
+    if (newRank <= currentRank) return
+
+    const patch: Record<string, unknown> = { status: newStatus }
+    if (newStatus === 'delivered') patch.delivered_at = new Date().toISOString()
+    if (newStatus === 'read') patch.read_at = new Date().toISOString()
+
+    await db.from('broadcast_recipients').update(patch).eq('id', recipient.id)
+  } catch (err) {
+    console.error('[uazapi-webhook] advanceBroadcastRecipientStatus failed:', err)
+  }
 }
 
 // Helper: Update broadcast statistics when customer replies
