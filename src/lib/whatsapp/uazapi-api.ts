@@ -173,7 +173,11 @@ export async function setUazapiWebhook(
     enabled: true,
     url: webhookUrl,
     events: 'messages',
-    excludeMessages: '',
+    // Keeps group-chat traffic out of automations/inbox by default —
+    // per-clinic broadcasts and 1:1 conversations are what this
+    // system is built around; group messages would otherwise flood
+    // the same pipeline.
+    excludeMessages: 'isGroupYes',
     addUrlEvents: false,
     addUrlTypesMessages: false,
   };
