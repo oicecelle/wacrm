@@ -24,7 +24,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { PersonalizarModal } from '@/components/comunicacao/personalizar-modal';
-import { TemplateManager } from '@/components/settings/template-manager';
+import { SimpleTemplateManager } from '@/components/comunicacao/simple-template-manager';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface SystemTemplateRow {
@@ -270,7 +270,7 @@ export default function ModelosPage() {
         </TabsContent>
 
         <TabsContent value="campaign" className="rounded-3xl border border-border bg-card p-6 shadow-xs">
-          <TemplateManager />
+          <SimpleTemplateManager />
         </TabsContent>
       </Tabs>
 
