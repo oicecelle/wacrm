@@ -24,15 +24,12 @@ import {
   Loader2,
   Users,
   Send,
-  CheckCheck,
-  Eye,
   AlertCircle,
   MessageCircle,
   Filter,
   Download,
   ChevronDown,
   Trash2,
-  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -267,8 +264,6 @@ export default function BroadcastDetailPage() {
 
   const funnelSteps: FunnelStep[] = [
     { label: 'Enviado', value: broadcast.sent_count, color: 'bg-primary' },
-    { label: 'Entregue', value: broadcast.delivered_count, color: 'bg-teal-500' },
-    { label: 'Lida', value: broadcast.read_count, color: 'bg-blue-500' },
     { label: 'Respondido', value: broadcast.replied_count, color: 'bg-indigo-500' },
   ];
 
@@ -348,8 +343,12 @@ export default function BroadcastDetailPage() {
         )}
       </div>
 
-      {/* Stats — 6 cards: Total / Sent / Delivered / Read / Replied / Failed */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {/* Stats — Total / Sent / Replied / Failed. Delivered/Read
+          removed: Uazapi doesn't confirm delivery/read as a distinct
+          event (confirmed against real webhook payloads — only
+          messages events, no ack), so those numbers only ever filled
+          in indirectly via a reply and were misleadingly incomplete. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           label="Total de Destinatários"
           value={broadcast.total_recipients}
@@ -363,20 +362,6 @@ export default function BroadcastDetailPage() {
           total={broadcast.total_recipients}
           icon={<Send className="h-4 w-4" />}
           color="bg-primary/10 text-primary"
-        />
-        <StatCard
-          label="Entregue"
-          value={broadcast.delivered_count}
-          total={broadcast.total_recipients}
-          icon={<CheckCheck className="h-4 w-4" />}
-          color="bg-teal-500/10 text-teal-400"
-        />
-        <StatCard
-          label="Lida"
-          value={broadcast.read_count}
-          total={broadcast.total_recipients}
-          icon={<Eye className="h-4 w-4" />}
-          color="bg-blue-500/10 text-blue-400"
         />
         <StatCard
           label="Respondido"
@@ -395,12 +380,6 @@ export default function BroadcastDetailPage() {
       </div>
 
       <FunnelChart steps={funnelSteps} />
-      <p className="-mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Info className="h-3.5 w-3.5 shrink-0" />
-        A Uazapi (API não oficial) não confirma entrega/leitura diretamente — &quot;Entregue&quot; e
-        &quot;Lida&quot; só são detectados quando o contato responde, então tendem a ficar abaixo do
-        número real para quem recebeu mas não respondeu.
-      </p>
 
       {/* Recipients Table */}
       <div className="rounded-xl border border-border bg-card">
@@ -481,8 +460,6 @@ export default function BroadcastDetailPage() {
                   <TableHead className="text-muted-foreground">Telefone</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground">Enviado</TableHead>
-                  <TableHead className="text-muted-foreground">Entregue</TableHead>
-                  <TableHead className="text-muted-foreground">Lida</TableHead>
                   <TableHead className="text-muted-foreground">Erro</TableHead>
                 </TableRow>
               </TableHeader>
@@ -492,7 +469,7 @@ export default function BroadcastDetailPage() {
                   return (
                     <TableRow key={recipient.id} className="border-border">
                       <TableCell className="font-medium text-foreground">
-                        {recipient.contact?.name ?? 'Unknown'}
+                        {recipient.contact?.name ?? 'Desconhecido'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {recipient.contact?.phone ?? '-'}
@@ -507,16 +484,6 @@ export default function BroadcastDetailPage() {
                       <TableCell className="text-muted-foreground">
                         {recipient.sent_at
                           ? new Date(recipient.sent_at).toLocaleString()
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {recipient.delivered_at
-                          ? new Date(recipient.delivered_at).toLocaleString()
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {recipient.read_at
-                          ? new Date(recipient.read_at).toLocaleString()
                           : '-'}
                       </TableCell>
                       <TableCell className="max-w-xs truncate text-xs text-red-400">

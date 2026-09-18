@@ -69,21 +69,15 @@ export default function BroadcastsPage() {
   // Used to kick off polling only while something is actively sending.
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { totalMessages, avgDelivery, avgRead, avgReplied } = useMemo(() => {
+  const { totalMessages, avgReplied } = useMemo(() => {
     let total = 0;
-    let delivered = 0;
-    let read = 0;
     let replied = 0;
     broadcasts.forEach(b => {
       total += b.total_recipients || 0;
-      delivered += b.delivered_count || 0;
-      read += b.read_count || 0;
       replied += b.replied_count || 0;
     });
     return {
       totalMessages: total,
-      avgDelivery: total > 0 ? Math.round((delivered / total) * 100) : 0,
-      avgRead: total > 0 ? Math.round((read / total) * 100) : 0,
       avgReplied: total > 0 ? Math.round((replied / total) * 100) : 0,
     };
   }, [broadcasts]);
@@ -222,25 +216,11 @@ export default function BroadcastsPage() {
 
       {/* Aggregate Performance Cards */}
       {broadcasts.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Total Enviado</p>
             <p className="text-2xl font-black text-foreground">{totalMessages.toLocaleString()}</p>
             <p className="text-[9px] text-muted-foreground mt-1">Destinatários totais</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
-            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Entrega</p>
-            <p className="text-2xl font-black text-emerald-600">{avgDelivery}%</p>
-            <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${avgDelivery}%` }} />
-            </div>
-          </div>
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
-            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Abertura</p>
-            <p className="text-2xl font-black text-blue-600">{avgRead}%</p>
-            <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${avgRead}%` }} />
-            </div>
           </div>
           <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Resposta</p>
@@ -277,10 +257,9 @@ export default function BroadcastsPage() {
                 <TableHead className="text-muted-foreground">Nome</TableHead>
                 <TableHead className="hidden text-muted-foreground md:table-cell">Modelo</TableHead>
                 <TableHead className="hidden text-right text-muted-foreground sm:table-cell">
-                  Recipients
+                  Destinatários
                 </TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">Entrega</TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">Lida</TableHead>
+                <TableHead className="hidden text-muted-foreground lg:table-cell">Respondido</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="hidden text-muted-foreground sm:table-cell">Data</TableHead>
               </TableRow>
@@ -305,16 +284,9 @@ export default function BroadcastsPage() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <RateCell
-                        value={broadcast.delivered_count}
+                        value={broadcast.replied_count}
                         total={broadcast.total_recipients}
-                        color="bg-primary"
-                      />
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <RateCell
-                        value={broadcast.read_count}
-                        total={broadcast.total_recipients}
-                        color="bg-blue-500"
+                        color="bg-indigo-500"
                       />
                     </TableCell>
                     <TableCell>
