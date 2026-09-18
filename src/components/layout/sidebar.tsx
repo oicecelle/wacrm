@@ -188,7 +188,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     <>
       <button
         type="button"
-        aria-label="Close menu"
+        aria-label="Fechar menu"
         onClick={onClose}
         className={cn(
           "fixed inset-0 z-30 bg-background/70 backdrop-blur-sm transition-opacity lg:hidden",
@@ -230,7 +230,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label="Fechar menu"
             className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
           >
             <X className="h-5 w-5" />

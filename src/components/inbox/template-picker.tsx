@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import type { MessageTemplate } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,7 @@ export function TemplatePicker({
   onOpenChange,
   onSelect,
 }: TemplatePickerProps) {
+  const { profile } = useAuth();
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MessageTemplate | null>(null);
@@ -86,30 +88,36 @@ export function TemplatePicker({
   const [buttonParams, setButtonParams] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !profile?.account_id) return;
 
     let cancelled = false;
     (async () => {
       setLoading(true);
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
 
-      if (!user) {
-        if (!cancelled) {
-          setTemplates([]);
-          setLoading(false);
-        }
-        return;
-      }
+      // Meta-approved-only makes no sense for a Uazapi-connected
+      // instance — there's no approval pipeline on that path. Same
+      // provider check as the broadcast wizard's template picker.
+      const { data: config } = await supabase
+        .from("whatsapp_config")
+        .select("provider_type")
+        .eq("account_id", profile.account_id)
+        .maybeSingle();
+      const provider = (config?.provider_type as "meta" | "uazapi" | undefined) ?? "uazapi";
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("message_templates")
         .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "APPROVED")
+        .eq("account_id", profile.account_id)
         .order("created_at", { ascending: false });
+
+      if (provider === "meta") {
+        query = query.eq("status", "APPROVED");
+      } else {
+        query = query.not("status", "in", "(REJECTED,DISABLED)");
+      }
+
+      const { data, error } = await query;
 
       if (cancelled) return;
       if (error) {
@@ -124,7 +132,7 @@ export function TemplatePicker({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, profile?.account_id]);
 
   function resetSelection() {
     setSelected(null);
@@ -204,7 +212,7 @@ export function TemplatePicker({
               </div>
             ) : templates.length === 0 ? (
               <div className="rounded-md border border-border bg-background/50 p-6 text-center">
-                <p className="text-sm text-popover-foreground">No approved templates</p>
+                <p className="text-sm text-popover-foreground">Nenhum modelo disponível</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Approve a template in Meta WhatsApp Manager, then sync it
                   from Settings → Templates.
@@ -246,7 +254,7 @@ export function TemplatePicker({
         ) : (
           <div className="space-y-3">
             <div className="rounded-md border border-border bg-background/50 p-3">
-              <p className="mb-1 text-xs text-muted-foreground">Preview</p>
+              <p className="mb-1 text-xs text-muted-foreground">Prévia</p>
               <p className="whitespace-pre-wrap text-sm text-popover-foreground">
                 {renderBodyPreview(selected.body_text, params)}
               </p>
@@ -264,7 +272,7 @@ export function TemplatePicker({
                 <Input
                   value={headerText}
                   onChange={(e) => setHeaderText(e.target.value)}
-                  placeholder="Value for the header variable"
+                  placeholder="Valor da variável do cabeçalho"
                   className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
@@ -297,7 +305,7 @@ export function TemplatePicker({
                       [slot.index]: e.target.value,
                     }))
                   }
-                  placeholder="URL suffix value"
+                  placeholder="Sufixo da URL"
                   className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
                 <p className="text-[10px] text-muted-foreground break-all">
