@@ -146,6 +146,16 @@ export async function sendUazapiTextMessage(
 
 /**
  * Sets the webhook URL for a Uazapi instance to receive events.
+ *
+ * The `events` field must be sent as a plain string (comma-separated
+ * for multiple types), not an array — confirmed by inspecting this
+ * exact endpoint's own settings UI on a real instance ("Escutar
+ * eventos" is a single text input, placeholder 'coloque "messages"').
+ * The previous array payload was silently accepted by /webhook
+ * without erroring, but left the server's own Events field empty —
+ * meaning inbound messages were never actually pushed to our webhook,
+ * even though the URL and enabled flag saved correctly. That's why
+ * sending worked but nothing ever arrived in the inbox.
  */
 export async function setUazapiWebhook(
   baseUrl: string,
@@ -159,25 +169,21 @@ export async function setUazapiWebhook(
     'Content-Type': 'application/json',
   };
 
+  const webhookPayload = {
+    enabled: true,
+    url: webhookUrl,
+    events: 'messages',
+    excludeMessages: '',
+    addUrlEvents: false,
+    addUrlTypesMessages: false,
+  };
+
   // Attempt global webhook setting
   try {
     const res = await fetch(`${cleanUrl}/webhook`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        url: webhookUrl,
-        enabled: true,
-        events: [
-          'messages.upsert',
-          'messages.update',
-          'connection.update',
-          'send.message',
-          'MESSAGES_UPSERT',
-          'MESSAGES_UPDATE',
-          'CONNECTION_UPDATE',
-          'SEND_MESSAGE'
-        ]
-      }),
+      body: JSON.stringify(webhookPayload),
     });
 
     if (res.ok) return true;
@@ -192,9 +198,7 @@ export async function setUazapiWebhook(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        url: webhookUrl,
-      }),
+      body: JSON.stringify(webhookPayload),
     });
 
     if (res.ok) return true;
