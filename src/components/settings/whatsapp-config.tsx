@@ -342,6 +342,12 @@ export function WhatsAppConfig() {
         );
         console.log('[Uazapi] Resposta crua do status:', data.uazapi_raw_status);
       }
+      if (!data.webhook_configured) {
+        toast.warning(
+          'Não consegui confirmar a configuração do webhook na Uazapi — mensagens recebidas podem não chegar na caixa de entrada. Confira manualmente lá na Uazapi.',
+          { duration: 12000 },
+        );
+      }
       setUazapiTokenEdited(false);
       if (accountId) await fetchConfig(accountId);
     } catch (err) {
