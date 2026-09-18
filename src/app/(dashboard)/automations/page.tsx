@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-can";
 import type { Automation } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,7 @@ const FLOW_STATUS_COLORS: Record<FlowRow["status"], string> = {
 
 export default function AutomationsPage() {
   const router = useRouter();
+  const { accountId } = useAuth();
   const canCreate = useCan("send-messages");
   const [activeTab, setActiveTab] = useState<"rules" | "flows">("rules");
 
@@ -124,11 +126,13 @@ export default function AutomationsPage() {
   const [creatingFlow, setCreatingFlow] = useState(false);
 
   async function loadAutomations() {
+    if (!accountId) return;
     try {
       const supabase = createClient();
       const { data, error: fetchErr } = await supabase
         .from("automations")
         .select("*")
+        .eq("account_id", accountId)
         .order("created_at", { ascending: false });
       if (fetchErr) throw fetchErr;
       setAutomations((data ?? []) as Automation[]);
@@ -163,7 +167,8 @@ export default function AutomationsPage() {
   useEffect(() => {
     loadAutomations();
     loadFlows();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
 
   /* --- Automation Rules Actions --- */
   async function toggleActive(a: Automation, next: boolean) {
