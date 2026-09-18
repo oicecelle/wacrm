@@ -96,6 +96,25 @@ export default function BroadcastHistoryPage() {
     fetchBroadcasts();
   }, [fetchBroadcasts]);
 
+  // Live progress: while anything is actively sending, poll so the
+  // sent/failed count and progress bar move without a manual refresh.
+  // sent_count/failed_count update in the DB the instant the cron
+  // worker marks each recipient — this just needs to pull that in.
+  const anySending = useMemo(
+    () => broadcasts.some((b) => b.status === 'sending'),
+    [broadcasts],
+  );
+
+  useEffect(() => {
+    if (!anySending) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      fetchBroadcasts();
+      if (expandedId) loadRecipients(expandedId);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [anySending, fetchBroadcasts, expandedId]);
+
   const filtered = useMemo(() => {
     const allowedStatuses = TAB_STATUSES[tab];
     const q = searchQuery.trim().toLowerCase();
@@ -109,19 +128,14 @@ export default function BroadcastHistoryPage() {
     });
   }, [broadcasts, tab, searchQuery]);
 
-  async function toggleExpand(broadcast: Broadcast) {
-    if (expandedId === broadcast.id) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(broadcast.id);
+  async function loadRecipients(broadcastId: string) {
     setLoadingRecipients(true);
     try {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('broadcast_recipients')
         .select('id, status, error_message, contact:contacts(name, phone)')
-        .eq('broadcast_id', broadcast.id)
+        .eq('broadcast_id', broadcastId)
         .order('created_at', { ascending: true })
         .limit(500);
       if (error) throw error;
@@ -131,6 +145,15 @@ export default function BroadcastHistoryPage() {
     } finally {
       setLoadingRecipients(false);
     }
+  }
+
+  async function toggleExpand(broadcast: Broadcast) {
+    if (expandedId === broadcast.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(broadcast.id);
+    await loadRecipients(broadcast.id);
   }
 
   function openEdit(broadcast: Broadcast) {
@@ -358,8 +381,29 @@ export default function BroadcastHistoryPage() {
 
                   <div className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
                     <Users className="h-3.5 w-3.5" />
-                    {broadcast.total_recipients.toLocaleString()}
+                    {broadcast.status === 'sending'
+                      ? `${(broadcast.sent_count + broadcast.failed_count).toLocaleString()} / ${broadcast.total_recipients.toLocaleString()}`
+                      : broadcast.total_recipients.toLocaleString()}
+                    {broadcast.failed_count > 0 && (
+                      <span className="text-red-400">({broadcast.failed_count} falhou)</span>
+                    )}
                   </div>
+
+                  {broadcast.status === 'sending' && broadcast.total_recipients > 0 && (
+                    <div className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-muted sm:block">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            ((broadcast.sent_count + broadcast.failed_count) /
+                              broadcast.total_recipients) *
+                              100,
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <span
                     className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-medium ${status.classes}`}
