@@ -148,7 +148,8 @@ export default function ModelosPage() {
     try {
       const { data, error } = await supabase
         .from('system_message_templates')
-        .select('event_type, is_active, provider_type');
+        .select('event_type, is_active, provider_type')
+        .eq('account_id', accountId);
 
       if (error) throw error;
       setDbTemplates(data || []);
