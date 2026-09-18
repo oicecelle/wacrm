@@ -195,7 +195,7 @@ function LineSvg({
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         className="h-[240px] w-full"
         role="img"
-        aria-label="Conversations per day"
+        aria-label="Conversas por dia"
       >
         {/* Y-axis gridlines + labels */}
         {ticks.map((t) => {
