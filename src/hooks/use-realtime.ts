@@ -13,6 +13,14 @@ interface RealtimeEvent<T> {
 
 interface UseRealtimeOptions {
   channelName: string;
+  /** Filters the `conversations` postgres_changes subscription server-
+   *  side (Realtime supports simple column filters). `messages` has no
+   *  account_id column to filter by directly — cross-account safety
+   *  for that stream instead relies on the caller only acting on
+   *  conversation ids it already knows belong to the current account
+   *  (see inbox/page.tsx's hydrateConversation, which is itself
+   *  account-scoped). */
+  accountId?: string | null;
   onMessageEvent?: (event: RealtimeEvent<Message>) => void;
   onConversationEvent?: (event: RealtimeEvent<Conversation>) => void;
   enabled?: boolean;
@@ -20,6 +28,7 @@ interface UseRealtimeOptions {
 
 export function useRealtime({
   channelName,
+  accountId,
   onMessageEvent,
   onConversationEvent,
   enabled = true,
@@ -41,6 +50,14 @@ export function useRealtime({
 
   useEffect(() => {
     if (!enabled) return;
+    // `conversations` carries account_id directly, so Realtime can
+    // filter it server-side — nothing for a foreign account is even
+    // sent over the wire. `messages` has no account_id column (only
+    // conversation_id), so it can't be filtered the same way; safety
+    // for that stream instead relies on callers only acting on
+    // conversation ids already verified to belong to this account
+    // (see inbox/page.tsx's hydrateConversation).
+    if (!accountId) return;
 
     const supabase = createClient();
 
@@ -59,7 +76,7 @@ export function useRealtime({
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "conversations" },
+        { event: "*", schema: "public", table: "conversations", filter: `account_id=eq.${accountId}` },
         (payload) => {
           onConversationRef.current?.({
             eventType: payload.eventType as RealtimeEvent<Conversation>["eventType"],
@@ -79,7 +96,7 @@ export function useRealtime({
       channelRef.current = null;
       setIsConnected(false);
     };
-  }, [channelName, enabled]);
+  }, [channelName, enabled, accountId]);
 
   const unsubscribe = useCallback(() => {
     if (channelRef.current) {

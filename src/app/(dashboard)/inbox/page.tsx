@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import type { Conversation, Message, Contact, ConversationStatus } from "@/types";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ConversationList } from "@/components/inbox/conversation-list";
@@ -18,6 +19,7 @@ const CONTACT_PANEL_STORAGE_KEY = "wacrm:inbox:contact-panel-open";
 
 export default function InboxPage() {
   const router = useRouter();
+  const { accountId } = useAuth();
   const searchParams = useSearchParams();
   /**
    * `?c=<id>` deep-link support. Used when landing here from the
@@ -143,6 +145,7 @@ export default function InboxPage() {
   // Also self-heals if a realtime event was missed: callers can invoke
   // this whenever they reference a conversation id they don't recognise.
   const hydrateConversation = useCallback(async (convId: string) => {
+    if (!accountId) return;
     if (hydratingConvIdsRef.current.has(convId)) return;
     hydratingConvIdsRef.current.add(convId);
     try {
@@ -151,6 +154,7 @@ export default function InboxPage() {
         .from("conversations")
         .select("*, contact:contacts(*)")
         .eq("id", convId)
+        .eq("account_id", accountId)
         .maybeSingle();
       if (error) {
         // Supabase errors have non-enumerable properties — log fields
@@ -184,7 +188,7 @@ export default function InboxPage() {
     } finally {
       hydratingConvIdsRef.current.delete(convId);
     }
-  }, []);
+  }, [accountId]);
 
   // Check WhatsApp connection status on mount
   useEffect(() => {
@@ -357,6 +361,7 @@ export default function InboxPage() {
   // throttle) are simply lost. We need a way to catch up.
   const { isConnected } = useRealtime({
     channelName: "inbox-realtime",
+    accountId,
     onMessageEvent: handleMessageEvent,
     onConversationEvent: handleConversationEvent,
     enabled: true,
@@ -583,7 +588,8 @@ export default function InboxPage() {
       const { error } = await supabase
         .from("conversations")
         .update({ is_pinned: nextPinned })
-        .eq("id", conversationId);
+        .eq("id", conversationId)
+        .eq("account_id", accountId ?? "");
 
       if (error) {
         // Revert on error
@@ -596,7 +602,7 @@ export default function InboxPage() {
         console.error("Failed to pin conversation:", error);
       }
     },
-    [activeConversation]
+    [activeConversation, accountId]
   );
 
   // On mobile (<lg) we show a SINGLE pane — either the list or the

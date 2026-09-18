@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus } from "@/types";
 import { Search, ChevronDown, Pin, CheckCheck } from "lucide-react";
@@ -55,6 +56,7 @@ export function ConversationList({
   resyncToken = 0,
   onPinToggle,
 }: ConversationListProps) {
+  const { accountId } = useAuth();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,7 @@ export function ConversationList({
   });
 
   useEffect(() => {
+    if (!accountId) return;
     const supabase = createClient();
     let cancelled = false;
 
@@ -84,6 +87,7 @@ export function ConversationList({
       const { data, error } = await supabase
         .from("conversations")
         .select("*, contact:contacts(*)")
+        .eq("account_id", accountId)
         .order("is_pinned", { ascending: false })
         .order("last_message_at", { ascending: false, nullsFirst: false });
 
@@ -111,7 +115,7 @@ export function ConversationList({
     // `resyncToken` is included so the parent can force a refetch when
     // the realtime channel reconnects or the tab regains focus — catches
     // up on any events sent while the WS was disconnected or throttled.
-  }, [resyncToken]);
+  }, [resyncToken, accountId]);
 
   const filtered = useMemo(() => {
     let result = conversations;
