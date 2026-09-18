@@ -32,6 +32,7 @@ import {
   Download,
   ChevronDown,
   Trash2,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -394,6 +395,12 @@ export default function BroadcastDetailPage() {
       </div>
 
       <FunnelChart steps={funnelSteps} />
+      <p className="-mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5 shrink-0" />
+        A Uazapi (API não oficial) não confirma entrega/leitura diretamente — &quot;Entregue&quot; e
+        &quot;Lida&quot; só são detectados quando o contato responde, então tendem a ficar abaixo do
+        número real para quem recebeu mas não respondeu.
+      </p>
 
       {/* Recipients Table */}
       <div className="rounded-xl border border-border bg-card">
