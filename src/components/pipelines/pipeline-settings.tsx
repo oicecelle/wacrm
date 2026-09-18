@@ -127,14 +127,14 @@ export function PipelineSettings({
     setSaving(false);
 
     if (renameRes.error || stagesRes.error) {
-      toast.error("Failed to save pipeline");
+      toast.error("Falha ao salvar pipeline");
       return;
     }
 
     onOpenChange(false);
     onPipelinesChanged();
     onStagesChanged();
-    toast.success("Pipeline saved");
+    toast.success("Pipeline salvo");
   }
 
   async function handleAddStage() {
@@ -151,7 +151,7 @@ export function PipelineSettings({
       .select()
       .single();
     if (error || !data) {
-      toast.error("Failed to add stage");
+      toast.error("Falha ao adicionar etapa");
       return;
     }
     setLocalStages([...localStages, data as PipelineStage]);
@@ -166,7 +166,7 @@ export function PipelineSettings({
       .select("id", { count: "exact", head: true })
       .eq("stage_id", stageId);
     if (count && count > 0) {
-      toast.error("Move or delete deals in this stage first");
+      toast.error("Mova ou exclua os negócios dessa etapa primeiro");
       return;
     }
     const { error } = await supabase
@@ -174,7 +174,7 @@ export function PipelineSettings({
       .delete()
       .eq("id", stageId);
     if (error) {
-      toast.error("Failed to delete stage");
+      toast.error("Falha ao excluir etapa");
       return;
     }
     setLocalStages(localStages.filter((s) => s.id !== stageId));
@@ -189,19 +189,19 @@ export function PipelineSettings({
       .eq("id", pipeline.id);
     setDeleting(false);
     if (error) {
-      toast.error("Failed to delete pipeline");
+      toast.error("Falha ao excluir pipeline");
       return;
     }
     onOpenChange(false);
     onPipelinesChanged();
-    toast.success("Pipeline deleted");
+    toast.success("Pipeline excluído");
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-popover border-border max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-popover-foreground">Manage Pipeline</DialogTitle>
+          <DialogTitle className="text-popover-foreground">Gerenciar Pipeline</DialogTitle>
         </DialogHeader>
 
         {showDeleteConfirm ? (
@@ -239,7 +239,7 @@ export function PipelineSettings({
           <>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
-                <Label className="text-muted-foreground">Pipeline Name</Label>
+                <Label className="text-muted-foreground">Nome do Pipeline</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -248,7 +248,7 @@ export function PipelineSettings({
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-muted-foreground">Stages</Label>
+                <Label className="text-muted-foreground">Etapas</Label>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -304,7 +304,7 @@ export function PipelineSettings({
                   <Input
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
-                    placeholder="New stage name"
+                    placeholder="Nome da nova etapa"
                     className="border-border bg-muted text-sm text-foreground"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddStage();
@@ -396,7 +396,7 @@ function SortableStageRow({
         {...attributes}
         {...listeners}
         className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
-        aria-label="Drag to reorder"
+        aria-label="Arrastar para reordenar"
       >
         <GripVertical className="h-4 w-4" />
       </button>
@@ -435,7 +435,7 @@ function ColorSwatch({
         onClick={() => setOpen((v) => !v)}
         className="h-4 w-4 rounded-full border border-border"
         style={{ backgroundColor: value }}
-        aria-label="Change color"
+        aria-label="Mudar cor"
       />
       {open && (
         <>
