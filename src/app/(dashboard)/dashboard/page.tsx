@@ -46,7 +46,7 @@ import { ActivityFeed } from '@/components/dashboard/activity-feed'
 import { cn } from '@/lib/utils'
 
 export default function DashboardPage() {
-  const { defaultCurrency } = useAuth()
+  const { defaultCurrency, accountId } = useAuth()
   const [metrics, setMetrics] = useState<ClinicDashboardMetrics | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
@@ -68,33 +68,34 @@ export default function DashboardPage() {
   const [activityLoading, setActivityLoading] = useState(true)
 
   const loadAll = useCallback(() => {
+    if (!accountId) return
     const db = createClient()
 
-    void loadClinicDashboardMetrics(db)
+    void loadClinicDashboardMetrics(db, accountId)
       .then((m) => setMetrics(m))
       .catch((err) => console.error('[dashboard] clinic metrics failed:', err))
       .finally(() => setMetricsLoading(false))
 
-    void loadConversationsSeries(db, 30)
+    void loadConversationsSeries(db, 30, accountId)
       .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
       .catch((err) => console.error('[dashboard] series failed:', err))
       .finally(() => setSeriesLoading(false))
 
-    void loadPipelineDonut(db)
+    void loadPipelineDonut(db, accountId)
       .then((p) => setPipeline(p))
       .catch((err) => console.error('[dashboard] pipeline failed:', err))
       .finally(() => setPipelineLoading(false))
 
-    void loadResponseTime(db)
+    void loadResponseTime(db, accountId)
       .then((r) => setResponseTime(r))
       .catch((err) => console.error('[dashboard] response time failed:', err))
       .finally(() => setResponseTimeLoading(false))
 
-    void loadActivity(db, 50)
+    void loadActivity(db, accountId, 50)
       .then((a) => setActivity(a))
       .catch((err) => console.error('[dashboard] activity failed:', err))
       .finally(() => setActivityLoading(false))
-  }, [])
+  }, [accountId])
 
   useEffect(() => {
     loadAll()
@@ -104,14 +105,15 @@ export default function DashboardPage() {
     (r: 7 | 30 | 90) => {
       setRange(r)
       if (series[r] !== null) return
+      if (!accountId) return
       setSeriesLoading(true)
       const db = createClient()
-      loadConversationsSeries(db, r)
+      loadConversationsSeries(db, r, accountId)
         .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
         .catch((err) => console.error('[dashboard] series failed:', err))
         .finally(() => setSeriesLoading(false))
     },
-    [series],
+    [series, accountId],
   )
 
   const fmt = (v: number) => formatCurrency(v, defaultCurrency)
