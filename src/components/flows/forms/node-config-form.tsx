@@ -71,7 +71,7 @@ export function NodeConfigForm({
           allNodes={allNodes}
           currentKey={node.node_key}
           onChange={(v) => onUpdateConfig({ next_node_key: v })}
-          label="Advances to"
+          label="Avança para"
         />
       );
 
@@ -79,7 +79,7 @@ export function NodeConfigForm({
       return (
         <>
           <TextRow
-            label="Text sent to the customer"
+            label="Texto enviado ao cliente"
             value={(cfg as { text?: string }).text ?? ""}
             onChange={(v) => onUpdateConfig({ text: v })}
           />
@@ -88,7 +88,7 @@ export function NodeConfigForm({
             allNodes={allNodes}
             currentKey={node.node_key}
             onChange={(v) => onUpdateConfig({ next_node_key: v })}
-            label="Advances to"
+            label="Avança para"
           />
         </>
       );
@@ -129,7 +129,7 @@ export function NodeConfigForm({
       return (
         <>
           <TextRow
-            label="Prompt sent to the customer"
+            label="Pergunta enviada ao cliente"
             value={(cfg as { prompt_text?: string }).prompt_text ?? ""}
             onChange={(v) => onUpdateConfig({ prompt_text: v })}
             rows={2}
@@ -163,7 +163,7 @@ export function NodeConfigForm({
             allNodes={allNodes}
             currentKey={node.node_key}
             onChange={(v) => onUpdateConfig({ next_node_key: v })}
-            label="After capturing, advance to"
+            label="Após capturar, avança para"
           />
         </>
       );
@@ -256,7 +256,7 @@ function SendButtonsForm({
         ...buttons,
         {
           reply_id: `btn_${buttons.length + 1}`,
-          title: "Option",
+          title: "Opção",
           next_node_key: "",
         },
       ],
@@ -267,7 +267,7 @@ function SendButtonsForm({
   return (
     <>
       <TextRow
-        label="Body text"
+        label="Corpo do texto"
         value={cfg.text ?? ""}
         onChange={(v) => onUpdateConfig({ text: v })}
         rows={3}
@@ -456,7 +456,7 @@ function SendListForm({
   return (
     <>
       <TextRow
-        label="Body text"
+        label="Corpo do texto"
         value={cfg.text ?? ""}
         onChange={(v) => onUpdateConfig({ text: v })}
         rows={3}
@@ -498,7 +498,7 @@ function SendListForm({
                   size="sm"
                   onClick={() => removeSection(sIdx)}
                   className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                  aria-label="Remove section"
+                  aria-label="Remover seção"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -635,9 +635,9 @@ function ConditionForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="var">Captured variable</SelectItem>
-              <SelectItem value="tag">Contact has tag</SelectItem>
-              <SelectItem value="contact_field">Contact field</SelectItem>
+              <SelectItem value="var">Variável capturada</SelectItem>
+              <SelectItem value="tag">Contato possui a tag</SelectItem>
+              <SelectItem value="contact_field">Campo do contato</SelectItem>
               <SelectItem value="crm_status">Status do CRM (crm_stage)</SelectItem>
             </SelectContent>
           </Select>
@@ -645,12 +645,12 @@ function ConditionForm({
         <div className="md:col-span-2">
           <label className="mb-1 block text-xs text-muted-foreground">
             {subject === "var"
-              ? "var name"
+              ? "nome da variável"
               : subject === "tag"
                 ? "Tag"
                 : subject === "crm_status"
-                  ? "CRM Stage"
-                  : "Field"}
+                  ? "Etapa do CRM"
+                  : "Campo"}
           </label>
           {subject === "tag" && tags.length > 0 ? (
             <Select
@@ -709,7 +709,7 @@ function ConditionForm({
         )}
       >
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground">Operator</label>
+          <label className="mb-1 block text-xs text-muted-foreground">Operador</label>
           <Select
             value={operator}
             onValueChange={(v) =>
@@ -729,7 +729,7 @@ function ConditionForm({
         </div>
         {showValue && (
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">Value</label>
+            <label className="mb-1 block text-xs text-muted-foreground">Valor</label>
             <Input
               value={cfg.value ?? ""}
               onChange={(e) => onUpdateConfig({ value: e.target.value })}
@@ -786,7 +786,7 @@ function SetTagForm({
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground">Action</label>
+          <label className="mb-1 block text-xs text-muted-foreground">Ação</label>
           <Select
             value={cfg.mode ?? "add"}
             onValueChange={(v) =>
@@ -797,8 +797,8 @@ function SetTagForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="add">Add tag</SelectItem>
-              <SelectItem value="remove">Remove tag</SelectItem>
+              <SelectItem value="add">Adicionar tag</SelectItem>
+              <SelectItem value="remove">Remover tag</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -824,7 +824,7 @@ function SetTagForm({
             <Input
               value={cfg.tag_id ?? ""}
               onChange={(e) => onUpdateConfig({ tag_id: e.target.value })}
-              placeholder="Tag UUID"
+              placeholder="UUID da tag"
               className="bg-muted font-mono text-xs"
             />
           )}
@@ -835,7 +835,7 @@ function SetTagForm({
         allNodes={allNodes}
         currentKey={currentKey}
         onChange={(v) => onUpdateConfig({ next_node_key: v })}
-        label="Then advance to"
+        label="Depois avança para"
       />
     </>
   );
@@ -931,9 +931,9 @@ function SendMediaForm({
           media_url: publicUrl,
           filename: file.name,
         });
-        toast.success("File uploaded.");
+        toast.success("Arquivo enviado.");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Upload failed.";
+        const msg = err instanceof Error ? err.message : "Falha no envio do arquivo.";
         toast.error(msg);
       } finally {
         setUploading(false);
@@ -949,7 +949,7 @@ function SendMediaForm({
   return (
     <>
       <div>
-        <label className="mb-1 block text-xs text-muted-foreground">Media type</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Tipo de mídia</label>
         <Select
           value={mediaType}
           onValueChange={(v) => {
@@ -977,7 +977,7 @@ function SendMediaForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs text-muted-foreground">File</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Arquivo</label>
         {cfg.media_url ? (
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs">
             <Paperclip className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
@@ -994,7 +994,7 @@ function SendMediaForm({
               type="button"
               onClick={handleClear}
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Remove file"
+              aria-label="Remover arquivo"
               disabled={uploading}
             >
               <X className="h-3.5 w-3.5" />
@@ -1060,7 +1060,7 @@ function SendMediaForm({
         allNodes={allNodes}
         currentKey={currentKey}
         onChange={(v) => onUpdateConfig({ next_node_key: v })}
-        label="After sending, advance to"
+        label="Após enviar, avança para"
       />
     </>
   );
@@ -1103,7 +1103,7 @@ function SetCrmStatusForm({
         allNodes={allNodes}
         currentKey={currentKey}
         onChange={(v) => onUpdateConfig({ next_node_key: v })}
-        label="Then advance to"
+        label="Depois avança para"
       />
     </>
   );

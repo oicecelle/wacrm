@@ -458,7 +458,7 @@ function FlowCanvasInner() {
   if (rfNodes.length === 0) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-background text-sm text-muted-foreground">
-        <p>No nodes yet.</p>
+        <p>Nenhum nó ainda.</p>
         <CanvasAddNodeButton />
       </div>
     );
@@ -660,7 +660,7 @@ function CanvasAddNodeButton() {
     <DropdownMenu>
       <DropdownMenuTrigger
         className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-lg transition-colors hover:bg-muted"
-        aria-label="Add node"
+        aria-label="Adicionar nó"
       >
         <Plus className="h-3.5 w-3.5" />
         Add node

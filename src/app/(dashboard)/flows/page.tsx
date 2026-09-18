@@ -115,7 +115,7 @@ export default function FlowsPage() {
       } catch (err) {
         if (!cancelled) {
           console.error(err);
-          toast.error("Couldn't load flows.");
+          toast.error("Não foi possível carregar os fluxos.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -146,7 +146,7 @@ export default function FlowsPage() {
       router.push(`/flows/${json.flow.id}`);
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't create flow.");
+      toast.error("Não foi possível criar o fluxo.");
     } finally {
       setCreating(false);
     }
@@ -184,10 +184,10 @@ export default function FlowsPage() {
       const res = await fetch(`/api/flows/${flow.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
       setFlows((prev) => prev.filter((f) => f.id !== flow.id));
-      toast.success("Flow deleted.");
+      toast.success("Fluxo excluído.");
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't delete flow.");
+      toast.error("Não foi possível excluir o fluxo.");
     }
   }
 
@@ -204,7 +204,7 @@ export default function FlowsPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-foreground">Flows</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Fluxos</h1>
             <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
               Beta
             </span>
@@ -249,7 +249,7 @@ export default function FlowsPage() {
             sm-scoped 384px wins at every real desktop breakpoint. */}
         <DialogContent className="sm:max-w-4xl bg-popover text-popover-foreground">
           <DialogHeader>
-            <DialogTitle>Create a new flow</DialogTitle>
+            <DialogTitle>Criar um novo fluxo</DialogTitle>
             <DialogDescription className="text-muted-foreground">
               Start from a template or build from scratch.
             </DialogDescription>

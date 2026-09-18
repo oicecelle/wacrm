@@ -71,7 +71,7 @@ export function EditorHeader() {
             onChange={(e) =>
               setState((s) => ({ ...s, name: e.target.value }))
             }
-            placeholder="Flow name"
+            placeholder="Nome do fluxo"
             className="max-w-md bg-card text-lg font-semibold"
           />
           <StatusBadge status={state.status} />

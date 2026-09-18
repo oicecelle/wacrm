@@ -349,7 +349,7 @@ export function FlowEditorProvider({
         throw new Error(json.error ?? `Save failed: ${res.status}`);
       }
       setDirty(false);
-      toast.success("Saved.");
+      toast.success("Salvo.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Save failed";
       toast.error(msg);
@@ -362,7 +362,7 @@ export function FlowEditorProvider({
   const setStatus = useCallback(
     async (next: BuilderState["status"]) => {
       if (next === "active" && !canActivate) {
-        toast.error("Fix the issues below before activating.");
+        toast.error("Corrija os problemas abaixo antes de ativar.");
         return;
       }
       setActivating(true);

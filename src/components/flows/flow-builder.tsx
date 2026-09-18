@@ -169,8 +169,8 @@ export function FlowBuilder() {
 
         {state.nodes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-            Add a <strong>Start</strong> node, then a <strong>Send buttons</strong>
-            {" "}node, then a <strong>Handoff</strong> — that&apos;s the welcome-menu
+            Add a <strong>Início</strong> node, then a <strong>Enviar botões</strong>
+            {" "}node, then a <strong>Transferir</strong> — that&apos;s the welcome-menu
             shape from the brief.
           </div>
         ) : (
@@ -266,7 +266,7 @@ function TriggerPanel({
 }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold text-foreground">Trigger</h2>
+      <h2 className="mb-3 text-sm font-semibold text-foreground">Gatilho</h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs text-muted-foreground">When…</label>
@@ -575,7 +575,7 @@ function AddNodeButton({ onAdd }: { onAdd: (type: NodeType) => void }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-        aria-label="Add node"
+        aria-label="Adicionar nó"
       >
         <Plus className="h-3.5 w-3.5" />
         Add node
