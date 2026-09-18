@@ -488,19 +488,30 @@ export interface CreateDealStepConfig {
 }
 
 export interface WaitStepConfig {
-  amount: number;
-  unit: 'minutes' | 'hours' | 'days';
+  /** 'relative' (default, backward compatible): wait a fixed amount.
+   *  'until_window': hold until the next moment inside the given
+   *  business-hours window — the "message arrived at 7am, hold until
+   *  9am" case. */
+  mode?: 'relative' | 'until_window';
+  amount?: number;
+  unit?: 'minutes' | 'hours' | 'days';
+  /** mode 'until_window': "HH:mm-HH:mm", same format and semantics
+   *  (including overnight ranges) as the time_of_day condition. */
+  window?: string;
 }
 
 export type ConditionSubject =
   | 'contact_field'
   | 'tag_presence'
   | 'message_content'
-  | 'time_of_day';
+  | 'time_of_day'
+  | 'no_reply_since';
 
 export interface ConditionStepConfig {
   subject: ConditionSubject;
-  /** e.g. field name, tag id, substring, or "HH:mm-HH:mm" depending on subject */
+  /** e.g. field name, tag id, substring, or "HH:mm-HH:mm" depending on
+   *  subject. Unused for no_reply_since — it reads the automation's
+   *  own start time from context, nothing to configure. */
   operand?: string;
   /** For contact_field equals / message_content contains — comparison value */
   value?: string;

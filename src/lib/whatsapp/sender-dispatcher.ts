@@ -52,6 +52,34 @@ export function interpolateTemplateBody(bodyText: string, params: string[]): str
 }
 
 /**
+ * Named-variable interpolation for Uazapi templates — these skip
+ * Meta's review pipeline, so there's no positional {{1}}/{{2}}
+ * contract to satisfy; the body carries {{nome}}, {{servico}}, etc.
+ * directly. Shared by the broadcast cron worker and the automations
+ * engine so both send Uazapi templates the same way. Unmatched
+ * placeholders resolve to blank rather than leaking literal
+ * "{{x}}" template syntax to the recipient.
+ */
+export function interpolateNamedTemplateBody(bodyText: string, params: Record<string, string>): string {
+  return bodyText.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => params[key] ?? '');
+}
+
+/** Sorts named-variable keys back into Meta's positional order — "1",
+ *  "2", … first (numeric ascending), then any remaining keys
+ *  alphabetically. Used when a Meta-provider send receives the same
+ *  named Record<string,string> shape the rest of the app now uses. */
+export function namedParamsToPositional(params: Record<string, string>): string[] {
+  return Object.keys(params)
+    .sort((a, b) => {
+      const an = Number(a);
+      const bn = Number(b);
+      if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
+      return a.localeCompare(b);
+    })
+    .map((key) => params[key]);
+}
+
+/**
  * Routes a WhatsApp message to the configured provider (Meta or Uazapi).
  */
 export async function dispatchSendMessage(args: DispatchSendArgs): Promise<DispatchSendResult> {

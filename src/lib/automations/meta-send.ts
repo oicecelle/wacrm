@@ -5,7 +5,12 @@ import {
   phoneVariants,
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/phone-utils'
-import { dispatchSendMessage } from '@/lib/whatsapp/sender-dispatcher'
+import {
+  dispatchSendMessage,
+  interpolateNamedTemplateBody,
+  namedParamsToPositional,
+} from '@/lib/whatsapp/sender-dispatcher'
+import { sendUazapiTextMessage } from '@/lib/whatsapp/uazapi-api'
 import { supabaseAdmin } from './admin-client'
 
 interface SendTextArgs {
@@ -23,7 +28,12 @@ interface SendTemplateArgs {
   contactId: string
   templateName: string
   language?: string
-  params?: string[]
+  /** Name -> value, e.g. { nome: 'Maria', servico: 'Avaliação' } —
+   *  same shape the broadcast flow uses. Converted to Meta's
+   *  positional {{1}}/{{2}} order internally when the account's
+   *  provider is 'meta'; sent as-is (named substitution) for
+   *  'uazapi', which has no positional contract to satisfy. */
+  variables?: Record<string, string>
 }
 
 export async function engineSendText(args: SendTextArgs): Promise<{ whatsapp_message_id: string }> {
@@ -69,6 +79,36 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
 
   const attempt = async (phone: string): Promise<string> => {
     const isTemplate = input.kind === 'template'
+
+    // Uazapi templates skip Meta's review pipeline entirely, so there's
+    // no positional {{1}}/{{2}} contract — fill the named placeholders
+    // directly and send as plain text, same approach the broadcast
+    // cron worker uses. Meta keeps going through dispatchSendMessage's
+    // template path, which still expects positional params.
+    if (isTemplate && config.provider_type === 'uazapi') {
+      const tplArgs = input as SendTemplateArgs
+      const { data: templateRow } = await db
+        .from('message_templates')
+        .select('body_text')
+        .eq('account_id', input.accountId)
+        .eq('name', tplArgs.templateName)
+        .eq('language', tplArgs.language || 'pt_BR')
+        .maybeSingle()
+
+      if (!templateRow) throw new Error(`template not found: ${tplArgs.templateName}`)
+      if (!config.uazapi_token) throw new Error('Uazapi token not configured')
+
+      const text = interpolateNamedTemplateBody(templateRow.body_text, tplArgs.variables ?? {})
+      const result = await sendUazapiTextMessage(
+        config.uazapi_base_url || 'https://customix.uazapi.com',
+        config.uazapi_token,
+        phone,
+        text,
+      )
+      if (!result.success) throw new Error(result.error || 'Failed to dispatch message')
+      return result.messageId || ''
+    }
+
     const result = await dispatchSendMessage({
       config: {
         provider_type: config.provider_type,
@@ -83,7 +123,7 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
       content_text: isTemplate ? null : (input as SendTextArgs).text,
       template_name: isTemplate ? (input as SendTemplateArgs).templateName : null,
       template_language: isTemplate ? (input as SendTemplateArgs).language || 'en_US' : null,
-      template_params: isTemplate ? (input as SendTemplateArgs).params || [] : [],
+      template_params: isTemplate ? namedParamsToPositional((input as SendTemplateArgs).variables ?? {}) : [],
     })
 
     if (!result.success) {

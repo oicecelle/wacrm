@@ -1,40 +1,13 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { getEnv } from '@/lib/env'
-import { dispatchSendMessage } from '@/lib/whatsapp/sender-dispatcher'
+import {
+  dispatchSendMessage,
+  interpolateNamedTemplateBody,
+  namedParamsToPositional,
+} from '@/lib/whatsapp/sender-dispatcher'
 import { sendUazapiTextMessage } from '@/lib/whatsapp/uazapi-api'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
-
-/**
- * Fills `{{variableName}}` placeholders in a template body from a
- * name -> value map. Unmatched placeholders are left blank rather
- * than left literally as "{{x}}" in the sent message — a missing
- * value is better hidden than shown as template syntax to the
- * recipient.
- */
-function interpolateNamedBody(body: string, params: Record<string, string>): string {
-  return body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
-    return params[key] ?? ''
-  })
-}
-
-/**
- * Meta templates still use positional {{1}}, {{2}}… placeholders
- * (required by Meta's own template review format). Recipient params
- * are stored as a name -> value map either way, so for Meta we sort
- * numeric-looking keys back into positional order — same ordering
- * the old (pre-named-variables) broadcast flow used.
- */
-function toPositionalParams(params: Record<string, string>): string[] {
-  return Object.keys(params)
-    .sort((a, b) => {
-      const an = Number(a)
-      const bn = Number(b)
-      if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn
-      return a.localeCompare(b)
-    })
-    .map((key) => params[key])
-}
 
 // GET /api/cron/broadcasts
 // Protected by x-cron-secret header. Call this on a schedule (e.g. every
@@ -231,7 +204,7 @@ export async function GET(request: Request) {
               config.uazapi_base_url || 'https://customix.uazapi.com',
               config.uazapi_token,
               phone,
-              interpolateNamedBody(templateRow?.body_text ?? '', namedParams),
+              interpolateNamedTemplateBody(templateRow?.body_text ?? '', namedParams),
             )
           : await dispatchSendMessage({
               config,
@@ -239,7 +212,7 @@ export async function GET(request: Request) {
               messageType: 'template',
               template_name: broadcast.template_name,
               template_language: broadcast.template_language,
-              template_params: toPositionalParams(namedParams),
+              template_params: namedParamsToPositional(namedParams),
               templateRow,
             })
 

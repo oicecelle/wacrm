@@ -1149,35 +1149,64 @@ function StepEditor({
           </FieldBlock>
         </>
       )
-    case "wait":
+    case "wait": {
+      const mode = (cfg.mode as string) ?? "relative";
       return (
-        <div className="grid grid-cols-2 gap-2">
-          <FieldBlock label="Amount">
-            <Input
-              type="number"
-              min={1}
-              value={(cfg.amount as number) ?? 1}
-              onChange={(e) => set({ amount: Math.max(1, Number(e.target.value)) })}
-              className="bg-muted text-foreground"
-            />
-          </FieldBlock>
-          <FieldBlock label="Unit">
+        <div className="space-y-2">
+          <FieldBlock label="Modo">
             <select
-              value={(cfg.unit as string) ?? "hours"}
-              onChange={(e) => set({ unit: e.target.value })}
+              value={mode}
+              onChange={(e) => set({ mode: e.target.value })}
               className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
             >
-              <option value="minutes">Minutos</option>
-              <option value="hours">Horas</option>
-              <option value="days">Dias</option>
+              <option value="relative">Tempo fixo</option>
+              <option value="until_window">Até um horário (fila de atendimento)</option>
             </select>
           </FieldBlock>
+          {mode === "until_window" ? (
+            <FieldBlock label="Janela permitida">
+              <Input
+                placeholder="09:00-18:00"
+                value={(cfg.window as string) ?? ""}
+                onChange={(e) => set({ window: e.target.value })}
+                className="bg-muted text-foreground"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Se estiver fora desse horário, a automação espera até o próximo horário de
+                início da janela antes de continuar.
+              </p>
+            </FieldBlock>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <FieldBlock label="Quantidade">
+                <Input
+                  type="number"
+                  min={1}
+                  value={(cfg.amount as number) ?? 1}
+                  onChange={(e) => set({ amount: Math.max(1, Number(e.target.value)) })}
+                  className="bg-muted text-foreground"
+                />
+              </FieldBlock>
+              <FieldBlock label="Unidade">
+                <select
+                  value={(cfg.unit as string) ?? "hours"}
+                  onChange={(e) => set({ unit: e.target.value })}
+                  className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+                >
+                  <option value="minutes">Minutos</option>
+                  <option value="hours">Horas</option>
+                  <option value="days">Dias</option>
+                </select>
+              </FieldBlock>
+            </div>
+          )}
         </div>
-      )
+      );
+    }
     case "condition":
       return (
         <>
-          <FieldBlock label="Subject">
+          <FieldBlock label="Assunto">
             <select
               value={(cfg.subject as string) ?? "tag_presence"}
               onChange={(e) => set({ subject: e.target.value })}
@@ -1187,26 +1216,29 @@ function StepEditor({
               <option value="contact_field">Campo do contato</option>
               <option value="message_content">Conteúdo da mensagem</option>
               <option value="time_of_day">Horário do dia</option>
+              <option value="no_reply_since">Ainda sem resposta (desde o início da automação)</option>
             </select>
           </FieldBlock>
-          <FieldBlock label="Operand">
-            <Input
-              placeholder={
-                cfg.subject === "time_of_day"
-                  ? "HH:mm-HH:mm"
-                  : cfg.subject === "contact_field"
-                  ? "name / email / company"
-                  : cfg.subject === "tag_presence"
-                  ? "tag id"
-                  : ""
-              }
-              value={(cfg.operand as string) ?? ""}
-              onChange={(e) => set({ operand: e.target.value })}
-              className="bg-muted text-foreground"
-            />
-          </FieldBlock>
+          {cfg.subject !== "no_reply_since" && (
+            <FieldBlock label="Operando">
+              <Input
+                placeholder={
+                  cfg.subject === "time_of_day"
+                    ? "HH:mm-HH:mm"
+                    : cfg.subject === "contact_field"
+                    ? "name / email / company"
+                    : cfg.subject === "tag_presence"
+                    ? "tag id"
+                    : ""
+                }
+                value={(cfg.operand as string) ?? ""}
+                onChange={(e) => set({ operand: e.target.value })}
+                className="bg-muted text-foreground"
+              />
+            </FieldBlock>
+          )}
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
-            <FieldBlock label="Value">
+            <FieldBlock label="Valor">
               <Input
                 value={(cfg.value as string) ?? ""}
                 onChange={(e) => set({ value: e.target.value })}
@@ -1214,8 +1246,14 @@ function StepEditor({
               />
             </FieldBlock>
           )}
+          {cfg.subject === "no_reply_since" && (
+            <p className="text-xs text-muted-foreground">
+              Ramo &quot;sim&quot; segue quando o contato ainda não respondeu desde que essa
+              automação começou — use depois de uma etapa de espera para montar um follow-up.
+            </p>
+          )}
         </>
-      )
+      );
     case "send_webhook":
       return (
         <>

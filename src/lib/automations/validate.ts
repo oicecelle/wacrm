@@ -97,6 +97,15 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       }
       break
     case 'wait':
+      if (c.mode === 'until_window') {
+        if (!nonEmpty(c.window) || !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(String(c.window))) {
+          issues.push({
+            path: `${path}.window`,
+            message: 'wait window must be in the form HH:mm-HH:mm',
+          })
+        }
+        break
+      }
       if (typeof c.amount !== 'number' || !Number.isFinite(c.amount) || c.amount <= 0) {
         issues.push({ path: `${path}.amount`, message: 'wait amount must be greater than 0' })
       }
@@ -111,7 +120,10 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       if (!nonEmpty(c.subject)) {
         issues.push({ path: `${path}.subject`, message: 'condition subject is required' })
       }
-      if (!nonEmpty(c.operand)) {
+      // no_reply_since reads its anchor from context automatically —
+      // nothing for the user to configure, so it's exempt from the
+      // operand requirement every other subject has.
+      if (c.subject !== 'no_reply_since' && !nonEmpty(c.operand)) {
         issues.push({ path: `${path}.operand`, message: 'condition operand is required' })
       }
       break

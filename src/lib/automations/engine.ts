@@ -192,7 +192,15 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
   await executeStepsFrom({
     automation,
     contactId: input.contactId ?? null,
-    context: input.context ?? {},
+    // Anchors `no_reply_since` — evaluated by any later condition
+    // step as "has a customer message arrived after this moment".
+    // Carried through `context` across wait/resume, so it stays
+    // fixed at the run's actual start rather than resetting on each
+    // resume.
+    context: {
+      ...(input.context ?? {}),
+      vars: { ...input.context?.vars, automation_started_at: new Date().toISOString() },
+    },
     parentStepId: null,
     branch: null,
     startPosition: 0,
@@ -279,7 +287,10 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
         step_id: step.id,
         step_type: step.step_type,
         status: 'success',
-        detail: `waiting ${cfg.amount} ${cfg.unit}`,
+        detail:
+          cfg.mode === 'until_window' && cfg.window
+            ? `waiting until window ${cfg.window}`
+            : `waiting ${cfg.amount} ${cfg.unit}`,
       })
       status = 'partial'
       await appendResults(args.logId, results, status, errorMessage)
@@ -354,7 +365,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         contactId: args.contactId,
         text,
       })
-      return `sent via Meta (${whatsapp_message_id})`
+      return `sent (${whatsapp_message_id})`
     }
 
     case 'send_template': {
@@ -362,24 +373,11 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!args.contactId) throw new Error('send_template needs a contact')
       if (!cfg.template_name) throw new Error('send_template needs template_name')
       const conversationId = await resolveConversationId(args)
-      // Meta templates use positional {{1}}, {{2}}, … placeholders, so
-      // we MUST emit params in strict numeric order. Lexicographic sort
-      // of "1", "2", …, "10" yields "1", "10", "2", … which silently
-      // scrambles every template with ≥10 variables.
-      const params = cfg.variables
-        ? Object.keys(cfg.variables)
-            .sort((a, b) => {
-              const na = Number(a)
-              const nb = Number(b)
-              const aNum = Number.isFinite(na)
-              const bNum = Number.isFinite(nb)
-              if (aNum && bNum) return na - nb
-              if (aNum) return -1
-              if (bNum) return 1
-              return a.localeCompare(b)
-            })
-            .map((k) => String(cfg.variables![k]))
-        : []
+      // Named Record<string,string> travels through as-is now —
+      // meta-send.ts decides whether to keep it named (Uazapi) or
+      // convert to Meta's positional {{1}}/{{2}} order, since that
+      // decision depends on the account's configured provider, not
+      // anything the engine knows about here.
       const { whatsapp_message_id } = await engineSendTemplate({
         accountId: args.automation.account_id,
         userId: args.automation.user_id,
@@ -387,9 +385,9 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         contactId: args.contactId,
         templateName: cfg.template_name,
         language: cfg.language,
-        params,
+        variables: cfg.variables ?? {},
       })
-      return `template sent via Meta (${whatsapp_message_id})`
+      return `template sent (${whatsapp_message_id})`
     }
 
     case 'add_tag': {
@@ -626,26 +624,78 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
     case 'time_of_day': {
       // operand form "HH:mm-HH:mm" — true if now is within that window
       // (supports over-midnight ranges like "18:00-09:00").
-      const [from, to] = (cfg.operand ?? '').split('-')
-      if (!from || !to) return false
-      const now = new Date()
-      const mins = now.getHours() * 60 + now.getMinutes()
-      const parse = (s: string) => {
-        const [h, m] = s.split(':').map(Number)
-        return (h || 0) * 60 + (m || 0)
+      return isWithinWindow(cfg.operand ?? '', new Date())
+    }
+    case 'no_reply_since': {
+      // True = "still no reply" — i.e. no customer message has landed
+      // in the conversation since this automation run started. Pairs
+      // with a preceding `wait`: send a message, wait N hours, check
+      // this condition, and only the "yes" (no reply) branch sends
+      // the follow-up.
+      if (!args.contactId) return true
+      const anchor = args.context.vars?.automation_started_at as string | undefined
+      if (!anchor) return true
+      let conversationId: string
+      try {
+        conversationId = await resolveConversationId(args)
+      } catch {
+        return true // no conversation yet certainly means no reply
       }
-      const f = parse(from)
-      const t = parse(to)
-      return f <= t ? mins >= f && mins < t : mins >= f || mins < t
+      const { count } = await db
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('conversation_id', conversationId)
+        .eq('sender_type', 'customer')
+        .gt('created_at', anchor)
+      return (count ?? 0) === 0
     }
     default:
       return false
   }
 }
 
+/** Parses "HH:mm-HH:mm" into minutes-since-midnight bounds. Shared by
+ *  the time_of_day condition and the wait step's 'until_window' mode
+ *  — same window format and overnight-range handling either way. */
+function parseWindow(window: string): { from: number; to: number } | null {
+  const [from, to] = window.split('-')
+  if (!from || !to) return null
+  const parse = (s: string) => {
+    const [h, m] = s.split(':').map(Number)
+    return (h || 0) * 60 + (m || 0)
+  }
+  return { from: parse(from), to: parse(to) }
+}
+
+function isWithinWindow(window: string, now: Date): boolean {
+  const bounds = parseWindow(window)
+  if (!bounds) return false
+  const mins = now.getHours() * 60 + now.getMinutes()
+  return bounds.from <= bounds.to
+    ? mins >= bounds.from && mins < bounds.to
+    : mins >= bounds.from || mins < bounds.to
+}
+
+/** Milliseconds until `now` next falls inside `window` — 0 if it's
+ *  already inside. This is the "message arrived at 7am, hold the
+ *  follow-up until 9am" case: a wait step in 'until_window' mode
+ *  parks the run here instead of a fixed relative delay. */
+function msUntilWindowOpens(window: string, now: Date): number {
+  if (isWithinWindow(window, now)) return 0
+  const bounds = parseWindow(window)
+  if (!bounds) return 0
+  const nowMins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+  let deltaMins = bounds.from - nowMins
+  if (deltaMins < 0) deltaMins += 24 * 60 // window opens tomorrow
+  return Math.max(1_000, Math.round(deltaMins * 60_000))
+}
+
 function waitMs(cfg: WaitStepConfig): number {
+  if (cfg.mode === 'until_window' && cfg.window) {
+    return msUntilWindowOpens(cfg.window, new Date())
+  }
   const unitMs = cfg.unit === 'days' ? 86_400_000 : cfg.unit === 'hours' ? 3_600_000 : 60_000
-  return Math.max(1_000, cfg.amount * unitMs)
+  return Math.max(1_000, (cfg.amount ?? 0) * unitMs)
 }
 
 function interpolate(s: string, args: ExecuteArgs): string {
