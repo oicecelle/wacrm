@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { getEnv } from '@/lib/env'
-import {
-  dispatchSendMessage,
-  interpolateNamedTemplateBody,
-  namedParamsToPositional,
-} from '@/lib/whatsapp/sender-dispatcher'
-import { sendUazapiTextMessage } from '@/lib/whatsapp/uazapi-api'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
+import { sendOneBroadcastRecipient } from '@/lib/whatsapp/broadcast-sender'
 
 // GET /api/cron/broadcasts
 // Protected by x-cron-secret header. Call this on a schedule (e.g. every
@@ -172,73 +167,20 @@ export async function GET(request: Request) {
         params: Record<string, string>
         contact: { id: string; phone: string | null } | null
       }
-      const phone = recipient.contact?.phone
-      const namedParams =
-        recipient.params && typeof recipient.params === 'object' ? recipient.params : {}
 
-      if (!phone) {
-        await admin
-          .from('broadcast_recipients')
-          .update({ status: 'failed', error_message: 'Contact has no phone number' })
-          .eq('id', recipient.id)
-        summary.failed++
-        continue
-      }
-
-      if (config.provider_type === 'uazapi' && !config.uazapi_token) {
-        await admin
-          .from('broadcast_recipients')
-          .update({ status: 'failed', error_message: 'Instance has no Uazapi token configured' })
-          .eq('id', recipient.id)
-        summary.failed++
-        continue
-      }
-
-      // Uazapi templates aren't Meta-approved, so there's no fixed
-      // positional {{1}}/{{2}} contract to satisfy — send the body
-      // with named placeholders filled in directly, skipping
-      // dispatchSendMessage's Meta-shaped template path entirely.
-      const result =
-        config.provider_type === 'uazapi'
-          ? await sendUazapiTextMessage(
-              config.uazapi_base_url || 'https://customix.uazapi.com',
-              config.uazapi_token,
-              phone,
-              interpolateNamedTemplateBody(templateRow?.body_text ?? '', namedParams),
-            )
-          : await dispatchSendMessage({
-              config,
-              to: phone,
-              messageType: 'template',
-              template_name: broadcast.template_name,
-              template_language: broadcast.template_language,
-              template_params: namedParamsToPositional(namedParams),
-              templateRow,
-            })
-
-      if (result.success) {
-        await admin
-          .from('broadcast_recipients')
-          .update({
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            whatsapp_message_id: result.messageId ?? null,
-            error_message: null,
-          })
-          .eq('id', recipient.id)
-        summary.sent++
-      } else {
-        await admin
-          .from('broadcast_recipients')
-          .update({ status: 'failed', error_message: result.error ?? 'Unknown error' })
-          .eq('id', recipient.id)
-        summary.failed++
-      }
-
-      await admin
-        .from('broadcasts')
-        .update({ last_sent_at: new Date().toISOString() })
-        .eq('id', broadcast.id)
+      const result = await sendOneBroadcastRecipient(
+        admin,
+        broadcast,
+        {
+          id: recipient.id,
+          params: recipient.params,
+          phone: recipient.contact?.phone ?? null,
+        },
+        config,
+        templateRow,
+      )
+      if (result.success) summary.sent++
+      else summary.failed++
 
       const isLastInBatch = i === pending.length - 1
       if (!isLastInBatch && intervalMs < timeLeft()) {

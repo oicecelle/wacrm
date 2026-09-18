@@ -161,7 +161,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .from('contacts')
         .select('*')
         .eq('account_id', accountId);
-      if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
+      if (error) throw new Error(`Falha ao buscar contatos: ${error.message}`);
       contacts = data ?? [];
     } else if (
       audience.type === 'tags' &&
@@ -175,7 +175,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .in('tag_id', audience.tagIds);
 
       if (tagError)
-        throw new Error(`Failed to fetch contact tags: ${tagError.message}`);
+        throw new Error(`Falha ao buscar tags dos contatos: ${tagError.message}`);
 
       if (contactTags && contactTags.length > 0) {
         const uniqueContactIds = [
@@ -186,7 +186,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           .select('*')
           .eq('account_id', accountId)
           .in('id', uniqueContactIds);
-        if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
+        if (error) throw new Error(`Falha ao buscar contatos: ${error.message}`);
         contacts = data ?? [];
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
@@ -226,7 +226,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       }
 
       const { data, error } = await query;
-      if (error) throw new Error(`Failed to fetch filtered contacts: ${error.message}`);
+      if (error) throw new Error(`Falha ao buscar contatos filtrados: ${error.message}`);
       contacts = data ?? [];
     } else if (audience.type === 'csv' && audience.csvContacts) {
       contacts = await upsertCsvContacts(supabase, audience.csvContacts);
@@ -268,10 +268,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) {
-      throw new Error('You are not signed in.');
+      throw new Error('Sua sessão não está autenticada.');
     }
     if (!accountId) {
-      throw new Error('Your profile is not linked to an account.');
+      throw new Error('Seu perfil não está vinculado a uma conta.');
     }
 
     // De-duplicate by phone within the CSV (users can paste duplicates).
@@ -292,7 +292,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       .eq('account_id', accountId)
       .in('phone', phones);
     if (lookupErr) {
-      throw new Error(`Failed to look up CSV contacts: ${lookupErr.message}`);
+      throw new Error(`Falha ao buscar contatos da lista: ${lookupErr.message}`);
     }
 
     const byPhone = new Map<string, Contact>();
@@ -319,7 +319,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .insert(chunk)
         .select();
       if (insertErr) {
-        throw new Error(`Failed to create CSV contacts: ${insertErr.message}`);
+        throw new Error(`Falha ao criar contatos da lista: ${insertErr.message}`);
       }
       for (const c of (inserted ?? []) as Contact[]) {
         if (c.phone) byPhone.set(c.phone, c);
@@ -354,7 +354,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
     const { data: matches, error: matchErr } = await query;
     if (matchErr)
-      throw new Error(`Custom-field filter failed: ${matchErr.message}`);
+      throw new Error(`Falha no filtro de campo personalizado: ${matchErr.message}`);
 
     const contactIds = [...new Set((matches ?? []).map((m) => m.contact_id))];
     if (contactIds.length === 0) return [];
@@ -364,7 +364,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       .select('*')
       .eq('account_id', accountId)
       .in('id', contactIds);
-    if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
+    if (error) throw new Error(`Falha ao buscar contatos: ${error.message}`);
     return data ?? [];
   }
 
@@ -385,10 +385,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) {
-        throw new Error('You are not signed in.');
+        throw new Error('Sua sessão não está autenticada.');
       }
       if (!accountId) {
-        throw new Error('Your profile is not linked to an account.');
+        throw new Error('Seu perfil não está vinculado a uma conta.');
       }
 
       // ── Step 1: Resolve audience contacts ─────────────────────────
@@ -396,7 +396,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       const contacts = await resolveAudience(payload.audience);
 
       if (contacts.length === 0) {
-        throw new Error('No contacts found for this audience.');
+        throw new Error('Nenhum contato encontrado para essa audiência.');
       }
 
       // ── Step 2: Resolve per-contact variables + custom fields ──────
@@ -435,7 +435,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         }));
 
       if (apiRecipients.length === 0) {
-        throw new Error('None of the selected contacts have a phone number.');
+        throw new Error('Nenhum dos contatos selecionados tem número de telefone.');
       }
 
       // ── Step 3: Hand everything to the backend in one call ─────────
@@ -468,7 +468,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to schedule broadcast');
+        throw new Error(data.error || 'Falha ao agendar o disparo');
       }
 
       setProgress(100);

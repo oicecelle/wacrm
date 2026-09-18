@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
@@ -11,17 +11,19 @@ import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audien
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
 import { useBroadcastSending, AudienceConfig } from '@/hooks/use-broadcast-sending';
-import { Check } from 'lucide-react';
+import { Check, Loader2, Save } from 'lucide-react';
 
 const steps = [
-  { label: 'Template', key: 'template' },
-  { label: 'Audience', key: 'audience' },
-  { label: 'Personalize', key: 'personalize' },
-  { label: 'Send', key: 'send' },
+  { label: 'Modelo', key: 'template' },
+  { label: 'Audiência', key: 'audience' },
+  { label: 'Personalizar', key: 'personalize' },
+  { label: 'Enviar', key: 'send' },
 ] as const;
 
 export default function NewBroadcastPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get('draft');
   const { accountId } = useAuth();
   const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
 
@@ -35,6 +37,71 @@ export default function NewBroadcastPage() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [intervalSeconds, setIntervalSeconds] = useState(5);
+  const [savingDraft, setSavingDraft] = useState(false);
+
+  // Loading an existing draft (?draft=<id>) hydrates every field above
+  // from the saved row, so "Salvar rascunho" is a real round-trip —
+  // not just a one-way save with no way back in.
+  const [loadingDraft, setLoadingDraft] = useState(!!draftId);
+
+  useEffect(() => {
+    if (!draftId || !accountId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingDraft(true);
+      try {
+        const supabase = createClient();
+        const { data: broadcast, error } = await supabase
+          .from('broadcasts')
+          .select('*')
+          .eq('id', draftId)
+          .eq('account_id', accountId)
+          .maybeSingle();
+
+        if (error || !broadcast) {
+          toast.error('Rascunho não encontrado.');
+          router.push('/broadcasts/historico');
+          return;
+        }
+        if (cancelled) return;
+
+        setName(broadcast.name ?? '');
+        setVariables((broadcast.template_variables as typeof variables) ?? {});
+        setAudience(
+          (broadcast.audience_filter as AudienceConfig) ?? { type: 'all' },
+        );
+        setIntervalSeconds(broadcast.interval_seconds ?? 5);
+
+        if (broadcast.scheduled_at) {
+          // Local time components, not UTC — same fix applied to the
+          // histórico edit modal; toISOString() here would show a
+          // value shifted by the browser's UTC offset.
+          const d = new Date(broadcast.scheduled_at);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          setScheduledDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+          setScheduledTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+        }
+
+        if (broadcast.template_name) {
+          const { data: tpl } = await supabase
+            .from('message_templates')
+            .select('*')
+            .eq('account_id', accountId)
+            .eq('name', broadcast.template_name)
+            .eq('language', broadcast.template_language || 'pt_BR')
+            .maybeSingle();
+          if (!cancelled && tpl) setTemplate(tpl as MessageTemplate);
+        }
+
+        if (!cancelled) setCurrentStep(3); // land on review — everything's already filled in
+      } finally {
+        if (!cancelled) setLoadingDraft(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [draftId, accountId, router]);
 
   /** Combines the date+time pickers into an ISO string, or undefined
    *  ("send as soon as possible") when either is left blank. */
@@ -62,80 +129,119 @@ export default function NewBroadcastPage() {
         scheduledAt: scheduledAtIso,
         intervalSeconds,
       });
+
+      // A resumed draft becomes a real scheduled broadcast the moment
+      // it's sent — the draft row itself would otherwise linger
+      // alongside the new one as a dead duplicate.
+      if (draftId) {
+        const supabase = createClient();
+        await supabase.from('broadcasts').delete().eq('id', draftId);
+      }
+
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
       // Previously swallowed with console.error — the wizard would
       // just no-op, leaving the user confused. Surface the reason.
-      const message = err instanceof Error ? err.message : 'Broadcast failed';
+      const message = err instanceof Error ? err.message : 'Falha ao enviar o disparo';
       console.error('Broadcast failed:', err);
       toast.error(message);
     }
   }
 
   /**
-   * Writes a draft broadcast row — no recipients, no sending. The user
-   * can revisit it via the list page to finish the flow later. We
-   * don't persist the in-progress audience/variable config here
-   * because the current schema doesn't carry it past `audience_filter`
-   * and `template_variables`; those are enough for the user to
-   * recognize the draft but not to exactly round-trip into the wizard.
-   * A full resume-draft UX is a future polish.
+   * Writes (or updates, if resuming an existing one) a draft broadcast
+   * row — no recipients, no sending. The full audience config,
+   * variables, and schedule are persisted as-is so reopening the draft
+   * via /broadcasts/new?draft=<id> restores the wizard exactly where
+   * it was left.
    */
-  async function handleSaveDraft() {
+  const handleSaveDraft = useCallback(async () => {
     if (!template || !name.trim()) {
-      toast.error('Give the broadcast a name before saving a draft.');
+      toast.error('Dê um nome ao disparo antes de salvar o rascunho.');
       return;
     }
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) {
-      toast.error('Not signed in.');
-      return;
-    }
-    if (!accountId) {
-      toast.error('Your profile is not linked to an account.');
-      return;
-    }
+    setSavingDraft(true);
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) {
+        toast.error('Sessão não autenticada.');
+        return;
+      }
+      if (!accountId) {
+        toast.error('Seu perfil não está vinculado a uma conta.');
+        return;
+      }
 
-    const { error } = await supabase.from('broadcasts').insert({
-      user_id: user.id,
-      account_id: accountId,
-      name: name.trim(),
-      template_name: template.name,
-      template_language: template.language ?? 'en_US',
-      template_variables: variables,
-      audience_filter: {
-        type: audience.type,
-        tagIds: audience.tagIds,
-      },
-      status: 'draft',
-      total_recipients: 0,
-      sent_count: 0,
-      delivered_count: 0,
-      read_count: 0,
-      replied_count: 0,
-      failed_count: 0,
-    });
+      const payload = {
+        user_id: user.id,
+        account_id: accountId,
+        name: name.trim(),
+        template_name: template.name,
+        template_language: template.language ?? 'pt_BR',
+        template_variables: variables,
+        audience_filter: audience,
+        scheduled_at: scheduledAtIso ?? null,
+        interval_seconds: intervalSeconds,
+        status: 'draft' as const,
+      };
 
-    if (error) {
-      toast.error(`Failed to save draft: ${error.message}`);
-      return;
+      const { error } = draftId
+        ? await supabase.from('broadcasts').update(payload).eq('id', draftId).eq('account_id', accountId)
+        : await supabase.from('broadcasts').insert({
+            ...payload,
+            total_recipients: 0,
+            sent_count: 0,
+            delivered_count: 0,
+            read_count: 0,
+            replied_count: 0,
+            failed_count: 0,
+          });
+
+      if (error) {
+        toast.error(`Falha ao salvar rascunho: ${error.message}`);
+        return;
+      }
+      toast.success('Rascunho salvo — você pode continuar de onde parou pela aba Rascunhos no Histórico.');
+      router.push('/broadcasts/historico');
+    } finally {
+      setSavingDraft(false);
     }
-    toast.success('Draft saved');
-    router.push('/broadcasts');
+  }, [template, name, accountId, variables, audience, scheduledAtIso, intervalSeconds, draftId, router]);
+
+  if (loadingDraft) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Novo Disparo</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create and send a broadcast message to your contacts.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {draftId ? 'Continuar rascunho' : 'Novo Disparo'}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Crie e envie uma mensagem em massa para seus contatos.
+          </p>
+        </div>
+        {template && (
+          <button
+            onClick={handleSaveDraft}
+            disabled={savingDraft || isProcessing}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
+          >
+            {savingDraft ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Salvar rascunho
+          </button>
+        )}
       </div>
 
       {/* Step Indicator */}

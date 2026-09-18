@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -25,6 +26,8 @@ import {
   Copy,
   Users,
   Search,
+  PlayCircle,
+  Send,
 } from 'lucide-react';
 
 type StatusTab = 'sent' | 'failed' | 'scheduled' | 'all';
@@ -48,10 +51,13 @@ interface RecipientRow {
   id: string;
   status: string;
   error_message: string | null;
+  params: Record<string, string> | null;
+  contact_id: string | null;
   contact: { name: string | null; phone: string | null } | null;
 }
 
 export default function BroadcastHistoryPage() {
+  const router = useRouter();
   const { profile } = useAuth();
   const accountId = profile?.account_id;
   const [tab, setTab] = useState<StatusTab>('scheduled');
@@ -71,6 +77,13 @@ export default function BroadcastHistoryPage() {
   const [savingEdit, setSavingEdit] = useState(false);
 
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyRecipientId, setBusyRecipientId] = useState<string | null>(null);
+
+  const [editingRecipient, setEditingRecipient] = useState<RecipientRow | null>(null);
+  const [editRecipientName, setEditRecipientName] = useState('');
+  const [editRecipientPhone, setEditRecipientPhone] = useState('');
+  const [editRecipientParams, setEditRecipientParams] = useState<Record<string, string>>({});
+  const [savingRecipient, setSavingRecipient] = useState(false);
 
   const fetchBroadcasts = useCallback(async () => {
     if (!accountId) return;
@@ -134,7 +147,7 @@ export default function BroadcastHistoryPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('broadcast_recipients')
-        .select('id, status, error_message, contact:contacts(name, phone)')
+        .select('id, status, error_message, params, contact_id, contact:contacts(name, phone)')
         .eq('broadcast_id', broadcastId)
         .order('created_at', { ascending: true })
         .limit(500);
@@ -154,6 +167,69 @@ export default function BroadcastHistoryPage() {
     }
     setExpandedId(broadcast.id);
     await loadRecipients(broadcast.id);
+  }
+
+  function openEditRecipient(r: RecipientRow) {
+    setEditingRecipient(r);
+    setEditRecipientName(r.contact?.name ?? '');
+    setEditRecipientPhone(r.contact?.phone ?? '');
+    setEditRecipientParams({ ...(r.params ?? {}) });
+  }
+
+  async function saveRecipientEdit() {
+    if (!editingRecipient) return;
+    setSavingRecipient(true);
+    try {
+      const res = await fetch(`/api/broadcasts/recipients/${editingRecipient.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editRecipientName.trim() || undefined,
+          phone: editRecipientPhone.trim() || undefined,
+          params: editRecipientParams,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao salvar');
+      toast.success('Destinatário atualizado.');
+      setEditingRecipient(null);
+      if (expandedId) loadRecipients(expandedId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao salvar destinatário');
+    } finally {
+      setSavingRecipient(false);
+    }
+  }
+
+  async function cancelRecipient(r: RecipientRow) {
+    if (!confirm(`Cancelar o envio para ${r.contact?.name || r.contact?.phone || 'este contato'}?`)) return;
+    setBusyRecipientId(r.id);
+    try {
+      const res = await fetch(`/api/broadcasts/recipients/${r.id}/cancel`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao cancelar');
+      toast.success('Destinatário cancelado.');
+      if (expandedId) loadRecipients(expandedId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao cancelar destinatário');
+    } finally {
+      setBusyRecipientId(null);
+    }
+  }
+
+  async function sendNowRecipient(r: RecipientRow) {
+    setBusyRecipientId(r.id);
+    try {
+      const res = await fetch(`/api/broadcasts/recipients/${r.id}/send-now`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao enviar');
+      toast.success('Mensagem enviada.');
+      if (expandedId) loadRecipients(expandedId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao enviar destinatário');
+    } finally {
+      setBusyRecipientId(null);
+    }
   }
 
   function openEdit(broadcast: Broadcast) {
@@ -218,6 +294,24 @@ export default function BroadcastHistoryPage() {
       fetchBroadcasts();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha ao cancelar disparo');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function sendNowBroadcast(broadcast: Broadcast) {
+    if (!confirm(`Enviar "${broadcast.name}" agora, pulando o horário agendado?`)) {
+      return;
+    }
+    setBusyId(broadcast.id);
+    try {
+      const res = await fetch(`/api/broadcasts/${broadcast.id}/send-now`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao enviar agora');
+      toast.success('Disparo liberado — os envios começam na próxima execução do worker.');
+      fetchBroadcasts();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao enviar agora');
     } finally {
       setBusyId(null);
     }
@@ -412,6 +506,26 @@ export default function BroadcastHistoryPage() {
                   </span>
 
                   <div className="flex shrink-0 items-center gap-1">
+                    {broadcast.status === 'draft' && (
+                      <button
+                        onClick={() => router.push(`/broadcasts/new?draft=${broadcast.id}`)}
+                        title="Continuar editando"
+                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                      >
+                        <PlayCircle className="h-3.5 w-3.5" />
+                        Continuar
+                      </button>
+                    )}
+                    {broadcast.status === 'scheduled' && (
+                      <button
+                        onClick={() => sendNowBroadcast(broadcast)}
+                        title="Enviar agora"
+                        disabled={isBusy}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                      >
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     {canEditOrCancel && (
                       <>
                         <button
@@ -454,29 +568,78 @@ export default function BroadcastHistoryPage() {
                       <div className="max-h-72 space-y-1 overflow-y-auto">
                         {recipients.map((r) => {
                           const rStatus = getRecipientStatus(r.status);
+                          const isPending = r.status === 'pending';
+                          const isRecipientBusy = busyRecipientId === r.id;
+                          const varEntries = Object.entries(r.params ?? {}).filter(([, v]) => v?.trim());
                           return (
                             <div
                               key={r.id}
-                              className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs"
+                              className="rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs"
                             >
-                              <div className="min-w-0 truncate">
-                                <span className="font-medium text-foreground">
-                                  {r.contact?.name || '(sem nome)'}
-                                </span>{' '}
-                                <span className="text-muted-foreground">{r.contact?.phone || '—'}</span>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-2">
-                                {r.error_message && (
-                                  <span className="max-w-[220px] truncate text-red-400" title={r.error_message}>
-                                    {r.error_message}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0 truncate">
+                                  <span className="font-medium text-foreground">
+                                    {r.contact?.name || '(sem nome)'}
+                                  </span>{' '}
+                                  <span className="text-muted-foreground">{r.contact?.phone || '—'}</span>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-1.5">
+                                  {r.error_message && (
+                                    <span className="max-w-[180px] truncate text-red-400" title={r.error_message}>
+                                      {r.error_message}
+                                    </span>
+                                  )}
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${rStatus.classes}`}
+                                  >
+                                    {rStatus.label}
                                   </span>
-                                )}
-                                <span
-                                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${rStatus.classes}`}
-                                >
-                                  {rStatus.label}
-                                </span>
+                                  {isPending && (
+                                    <>
+                                      <button
+                                        onClick={() => openEditRecipient(r)}
+                                        title="Editar"
+                                        disabled={isRecipientBusy}
+                                        className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => sendNowRecipient(r)}
+                                        title="Enviar agora"
+                                        disabled={isRecipientBusy}
+                                        className="rounded p-1 text-muted-foreground hover:bg-background hover:text-primary"
+                                      >
+                                        {isRecipientBusy ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <Send className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                      <button
+                                        onClick={() => cancelRecipient(r)}
+                                        title="Cancelar"
+                                        disabled={isRecipientBusy}
+                                        className="rounded p-1 text-muted-foreground hover:bg-background hover:text-red-400"
+                                      >
+                                        <Ban className="h-3 w-3" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
+                              {varEntries.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {varEntries.map(([k, v]) => (
+                                    <span
+                                      key={k}
+                                      className="rounded bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                                    >
+                                      {`{{${k}}}: ${v}`}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -529,6 +692,55 @@ export default function BroadcastHistoryPage() {
             </Button>
             <Button onClick={saveEdit} disabled={savingEdit}>
               {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit recipient */}
+      <Dialog open={!!editingRecipient} onOpenChange={(open) => !open && setEditingRecipient(null)}>
+        <DialogContent className="border-border bg-popover sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">Editar destinatário</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Ajuste os dados e as variáveis desse contato antes do envio.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Nome</label>
+              <Input value={editRecipientName} onChange={(e) => setEditRecipientName(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Telefone</label>
+              <Input value={editRecipientPhone} onChange={(e) => setEditRecipientPhone(e.target.value)} />
+            </div>
+            {Object.keys(editRecipientParams).length > 0 && (
+              <div className="space-y-2">
+                <label className="block text-xs text-muted-foreground">Variáveis</label>
+                {Object.entries(editRecipientParams).map(([key, value]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="w-24 shrink-0 truncate font-mono text-xs text-muted-foreground">
+                      {`{{${key}}}`}
+                    </span>
+                    <Input
+                      value={value}
+                      onChange={(e) =>
+                        setEditRecipientParams((prev) => ({ ...prev, [key]: e.target.value }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRecipient(null)} className="border-border text-muted-foreground">
+              Cancelar
+            </Button>
+            <Button onClick={saveRecipientEdit} disabled={savingRecipient}>
+              {savingRecipient ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>

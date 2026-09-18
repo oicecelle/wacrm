@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const limit = checkRateLimit(`broadcast:${user.id}`, RATE_LIMITS.broadcast)
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const accountId = profile?.account_id as string | undefined
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Seu perfil não está vinculado a uma conta.' },
         { status: 403 },
       )
     }
@@ -88,14 +88,14 @@ export async function POST(request: Request) {
 
     if (!template_name) {
       return NextResponse.json(
-        { error: 'template_name is required' },
+        { error: 'O modelo é obrigatório.' },
         { status: 400 },
       )
     }
 
     if (!Array.isArray(recipients) || recipients.length === 0) {
       return NextResponse.json(
-        { error: '`recipients` must be a non-empty array' },
+        { error: 'A lista de destinatários não pode estar vazia.' },
         { status: 400 },
       )
     }
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            'WhatsApp not configured. Please connect an instance in Settings first.',
+            'WhatsApp não configurado. Conecte uma instância em Configurações primeiro.',
         },
         { status: 400 },
       )
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     if (validRecipients.length === 0) {
       return NextResponse.json(
         {
-          error: 'No valid recipients after validation.',
+          error: 'Nenhum destinatário válido após a validação.',
           invalid: invalidRecipients,
         },
         { status: 400 },
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
     const scheduledAt = scheduled_at ? new Date(scheduled_at) : new Date()
     if (Number.isNaN(scheduledAt.getTime())) {
       return NextResponse.json(
-        { error: 'Invalid scheduled_at value' },
+        { error: 'Data/horário de agendamento inválidos.' },
         { status: 400 },
       )
     }
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
 
       if (createContactsError) {
         return NextResponse.json(
-          { error: `Failed to create contacts for new recipients: ${createContactsError.message}` },
+          { error: `Falha ao criar contatos para os novos destinatários: ${createContactsError.message}` },
           { status: 500 },
         )
       }
@@ -228,7 +228,7 @@ export async function POST(request: Request) {
 
     if (broadcastError || !broadcast) {
       return NextResponse.json(
-        { error: `Failed to create broadcast: ${broadcastError?.message ?? 'unknown error'}` },
+        { error: `Falha ao criar o disparo: ${broadcastError?.message ?? 'erro desconhecido'}` },
         { status: 500 },
       )
     }
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
           .update({ status: 'failed', failed_count: validRecipients.length })
           .eq('id', broadcast.id)
         return NextResponse.json(
-          { error: `Failed to insert recipients: ${recipientError.message}` },
+          { error: `Falha ao adicionar os destinatários: ${recipientError.message}` },
           { status: 500 },
         )
       }
@@ -268,7 +268,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in WhatsApp broadcast POST:', error)
     return NextResponse.json(
-      { error: 'Failed to schedule broadcast' },
+      { error: 'Falha ao agendar o disparo.' },
       { status: 500 },
     )
   }
