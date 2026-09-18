@@ -505,7 +505,7 @@ export function PersonalizarModal({
                     <div className="space-y-3 p-4 border border-blue-900/40 bg-blue-950/10 rounded-2xl animate-in slide-in-from-top-1 duration-200">
                       <div className="flex items-center gap-1">
                         <Info className="h-3.5 w-3.5 text-blue-400" />
-                        <span className="text-xs font-bold text-blue-200">Meta API Config</span>
+                        <span className="text-xs font-bold text-blue-200">Configuração da API Meta</span>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
