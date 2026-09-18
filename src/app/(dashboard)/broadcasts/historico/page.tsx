@@ -308,7 +308,11 @@ export default function BroadcastHistoryPage() {
       const res = await fetch(`/api/broadcasts/${broadcast.id}/send-now`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Falha ao enviar agora');
-      toast.success('Disparo liberado — os envios começam na próxima execução do worker.');
+      toast.success(
+        data.remaining > 0
+          ? `${data.sent} enviados agora. Os ${data.remaining} restantes continuam pelo worker normal (a lista era grande demais pra terminar de uma vez).`
+          : `${data.sent} mensagens enviadas.`,
+      );
       fetchBroadcasts();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha ao enviar agora');

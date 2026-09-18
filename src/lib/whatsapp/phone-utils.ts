@@ -9,6 +9,25 @@ export function sanitizePhoneForMeta(phone: string): string {
 }
 
 /**
+ * Normalizes a Brazilian phone number the way a person actually types
+ * it — with parentheses, spaces, dashes, no country code — into the
+ * plain-digits, country-code-prefixed form WhatsApp needs. Strips all
+ * non-digits, then prepends "55" when the result looks like a bare
+ * Brazilian number (10 digits = DDD + 8-digit landline/old mobile, or
+ * 11 digits = DDD + 9-digit mobile) that doesn't already carry it.
+ * Numbers that are already longer (already has a country code) or
+ * shorter (not a real number) pass through unchanged — guessing wrong
+ * there would silently corrupt an already-valid number.
+ */
+export function normalizeBrazilianPhone(phone: string): string {
+  const digits = sanitizePhoneForMeta(phone)
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`
+  }
+  return digits
+}
+
+/**
  * Normalize phone number by removing all non-digit characters.
  * Used for comparing phone numbers in different formats.
  */

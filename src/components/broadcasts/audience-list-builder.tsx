@@ -4,10 +4,11 @@ import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { normalizeBrazilianPhone } from '@/lib/whatsapp/phone-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Search, Plus, X, Upload, ClipboardPaste, Trash2 } from 'lucide-react';
+import { Loader2, Search, Plus, X, Upload, ClipboardPaste, Trash2, Pencil } from 'lucide-react';
 import type { ManualContact } from '@/hooks/use-broadcast-sending';
 
 interface AudienceListBuilderProps {
@@ -31,6 +32,16 @@ function normalize(s: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+}
+
+/** "MARIA DE LOURDES DA SILVA" -> "Maria" — first word only, proper
+ *  case. Applied only to contacts typed/pasted/imported by hand; a
+ *  contact found via search is a real saved record and keeps
+ *  whatever name is already on file. */
+function firstNameCapitalized(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] ?? '';
+  if (!first) return '';
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
 function guessMapping(header: string, templateVariables: string[]): string {
@@ -120,8 +131,8 @@ export function AudienceListBuilder({
     if (!manualRow.phone.trim()) return;
     mergeContacts([
       {
-        phone: manualRow.phone.trim(),
-        name: manualRow.name.trim() || undefined,
+        phone: normalizeBrazilianPhone(manualRow.phone),
+        name: manualRow.name.trim() ? firstNameCapitalized(manualRow.name) : undefined,
         variables: Object.fromEntries(
           Object.entries(manualRow.variables).filter(([, v]) => v.trim() !== ''),
         ),
@@ -188,8 +199,8 @@ export function AudienceListBuilder({
           if (row[i]?.trim()) variables[key] = row[i].trim();
         }
         return {
-          phone,
-          name: nameCol >= 0 ? row[nameCol]?.trim() || undefined : undefined,
+          phone: normalizeBrazilianPhone(phone),
+          name: nameCol >= 0 && row[nameCol]?.trim() ? firstNameCapitalized(row[nameCol]) : undefined,
           variables,
         };
       })
@@ -225,6 +236,34 @@ export function AudienceListBuilder({
 
   function removeContact(phone: string) {
     onChange(contacts.filter((c) => c.phone !== phone));
+  }
+
+  // Editing a row already in the list — available right here, not
+  // just later in the personalize step, so a mistake spotted while
+  // still building the list doesn't require moving on first.
+  const [editingPhone, setEditingPhone] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ phone: string; name: string; variables: Record<string, string> }>({
+    phone: '',
+    name: '',
+    variables: {},
+  });
+
+  function startEdit(c: ManualContact) {
+    setEditingPhone(c.phone);
+    setEditDraft({ phone: c.phone, name: c.name ?? '', variables: { ...c.variables } });
+  }
+
+  function saveEdit(originalPhone: string) {
+    const newPhone = normalizeBrazilianPhone(editDraft.phone);
+    if (!newPhone) return;
+    onChange(
+      contacts.map((c) =>
+        c.phone === originalPhone
+          ? { phone: newPhone, name: editDraft.name.trim() || undefined, variables: editDraft.variables }
+          : c,
+      ),
+    );
+    setEditingPhone(null);
   }
 
   const variableFieldOptions = templateVariables.map((v) => ({
@@ -450,27 +489,89 @@ export function AudienceListBuilder({
         </div>
         {contacts.length > 0 && (
           <div className="max-h-56 space-y-1 overflow-y-auto">
-            {contacts.map((c) => (
-              <div
-                key={c.phone}
-                className="flex items-center justify-between rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs"
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span className="font-medium text-foreground">{c.name || '(sem nome)'}</span>
-                  <span className="text-muted-foreground">{c.phone}</span>
-                  {c.variables && Object.keys(c.variables).length > 0 && (
-                    <span className="truncate text-muted-foreground/70">
-                      {Object.entries(c.variables)
-                        .map(([k, v]) => `${k}: ${v}`)
-                        .join(' · ')}
-                    </span>
-                  )}
+            {contacts.map((c) => {
+              const isEditing = editingPhone === c.phone;
+              if (isEditing) {
+                return (
+                  <div key={c.phone} className="space-y-1.5 rounded-lg border border-border bg-muted/40 p-2">
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={editDraft.name}
+                        onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
+                        placeholder="Nome"
+                        className="h-7 text-xs"
+                      />
+                      <Input
+                        value={editDraft.phone}
+                        onChange={(e) => setEditDraft({ ...editDraft, phone: e.target.value })}
+                        placeholder="Telefone"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    {Object.keys(editDraft.variables).length > 0 && (
+                      <div className="space-y-1">
+                        {Object.entries(editDraft.variables).map(([k, v]) => (
+                          <div key={k} className="flex items-center gap-1.5">
+                            <span className="w-20 shrink-0 truncate font-mono text-[10px] text-muted-foreground">
+                              {`{{${k}}}`}
+                            </span>
+                            <Input
+                              value={v}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  variables: { ...editDraft.variables, [k]: e.target.value },
+                                })
+                              }
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-1.5">
+                      <Button size="sm" className="h-6 px-2 text-[11px]" onClick={() => saveEdit(c.phone)}>
+                        Salvar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => setEditingPhone(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={c.phone}
+                  className="flex items-center justify-between rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs"
+                >
+                  <div className="flex min-w-0 items-center gap-2 truncate">
+                    <span className="font-medium text-foreground">{c.name || '(sem nome)'}</span>
+                    <span className="text-muted-foreground">{c.phone}</span>
+                    {c.variables && Object.keys(c.variables).length > 0 && (
+                      <span className="truncate text-muted-foreground/70">
+                        {Object.entries(c.variables)
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join(' · ')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button onClick={() => startEdit(c)} className="text-muted-foreground hover:text-foreground">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => removeContact(c.phone)} className="text-muted-foreground hover:text-red-400">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => removeContact(c.phone)} className="shrink-0 text-muted-foreground hover:text-red-400">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

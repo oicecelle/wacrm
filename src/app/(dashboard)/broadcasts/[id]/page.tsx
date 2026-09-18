@@ -399,8 +399,8 @@ export default function BroadcastDetailPage() {
       <div className="rounded-xl border border-border bg-card">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-medium text-foreground">
-            Recipients ({filteredRecipients.length}
-            {statusFilter !== 'all' ? ` of ${recipients.length}` : ''})
+            Destinatários ({filteredRecipients.length}
+            {statusFilter !== 'all' ? ` de ${recipients.length}` : ''})
           </h2>
           <div className="flex items-center gap-2">
             <DropdownMenu>
@@ -415,7 +415,7 @@ export default function BroadcastDetailPage() {
               >
                 <Filter className="h-3.5 w-3.5" />
                 {statusFilter === 'all'
-                  ? 'All statuses'
+                  ? 'Todos os status'
                   : getRecipientStatus(statusFilter).label}
                 <ChevronDown className="h-3 w-3" />
               </DropdownMenuTrigger>
@@ -426,7 +426,7 @@ export default function BroadcastDetailPage() {
                     statusFilter === 'all' ? 'text-primary' : 'text-popover-foreground'
                   }
                 >
-                  All statuses
+                  Todos os status
                 </DropdownMenuItem>
                 {RECIPIENT_STATUSES.map((s) => (
                   <DropdownMenuItem
@@ -452,7 +452,7 @@ export default function BroadcastDetailPage() {
               className="border-border text-muted-foreground hover:bg-muted"
             >
               <Download className="h-3.5 w-3.5" />
-              Export CSV
+              Exportar CSV
             </Button>
           </div>
         </div>
