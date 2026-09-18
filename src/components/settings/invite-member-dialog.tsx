@@ -49,9 +49,9 @@ interface InviteMemberDialogProps {
 }
 
 const EXPIRY_OPTIONS: { value: string; label: string }[] = [
-  { value: '1', label: '1 day' },
-  { value: '7', label: '7 days' },
-  { value: '30', label: '30 days' },
+  { value: '1', label: '1 dia' },
+  { value: '7', label: '7 dias' },
+  { value: '30', label: '30 dias' },
 ];
 
 const ROLE_DESCRIPTIONS: Record<InviteRole, string> = {
@@ -206,7 +206,7 @@ export function InviteMemberDialog({
             </DialogHeader>
 
             <div className="space-y-3 py-2">
-              <Label className="text-muted-foreground">Invite link</Label>
+              <Label className="text-muted-foreground">Link de convite</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -270,7 +270,7 @@ export function InviteMemberDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-popover-foreground">Invite a teammate</DialogTitle>
+              <DialogTitle className="text-popover-foreground">Convidar um membro da equipe</DialogTitle>
               <DialogDescription className="text-muted-foreground">
                 Generate a one-time invite link. Share it via WhatsApp,
                 Slack, or any channel you like — no email service required.
@@ -279,7 +279,7 @@ export function InviteMemberDialog({
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Role</Label>
+                <Label className="text-muted-foreground">Função</Label>
                 <Select
                   value={role}
                   onValueChange={(v) => v && setRole(v as InviteRole)}
@@ -288,9 +288,9 @@ export function InviteMemberDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="agent">Agent</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="agent">Agente</SelectItem>
+                    <SelectItem value="viewer">Visualizador</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
@@ -299,7 +299,7 @@ export function InviteMemberDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Link valid for</Label>
+                <Label className="text-muted-foreground">Link válido por</Label>
                 <Select
                   value={expiry}
                   onValueChange={(v) => v && setExpiry(v)}

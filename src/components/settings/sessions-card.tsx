@@ -75,7 +75,7 @@ export function SessionsCard() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sign out everywhere?</DialogTitle>
+            <DialogTitle>Sair de todos os dispositivos?</DialogTitle>
             <DialogDescription>
               Every device logged into this account will be signed out and
               will need to log in again. You will be redirected to the login

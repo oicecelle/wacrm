@@ -178,9 +178,9 @@ interface Invitation {
 // Editable roles in the inline dropdown. Owner is never an option —
 // promotions go through the (deferred) Transfer Ownership flow.
 const EDITABLE_ROLES: { value: AccountRole; label: string; hint: string }[] = [
-  { value: 'admin', label: 'Admin', hint: 'Manage members + everything' },
-  { value: 'agent', label: 'Agent', hint: 'Use features; no settings' },
-  { value: 'viewer', label: 'Viewer', hint: 'Read-only across the app' },
+  { value: 'admin', label: 'Administrador', hint: 'Gerencia membros e tudo mais' },
+  { value: 'agent', label: 'Agente', hint: 'Usa as funcionalidades; sem acesso às configurações' },
+  { value: 'viewer', label: 'Visualizador', hint: 'Apenas leitura em todo o sistema' },
 ];
 
 // Per-role chip metadata (icon / label / colour) lives in the shared
@@ -643,7 +643,7 @@ export function MembersTab() {
                   No pending invitations.
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Click <span className="text-muted-foreground">Invite member</span>{' '}
+                  Click <span className="text-muted-foreground">Convidar membro</span>{' '}
                   above to generate a shareable link.
                 </p>
               </CardContent>

@@ -98,13 +98,13 @@ export function DealsSettings() {
       .update({ default_currency: selected })
       .eq("id", accountId);
     if (error) {
-      toast.error("Failed to save default currency");
+      toast.error("Falha ao salvar moeda padrão");
       setSaving(false);
       return;
     }
     await refreshProfile();
     setSaving(false);
-    toast.success("Default currency updated");
+    toast.success("Moeda padrão atualizada");
   }
 
   async function handleSaveFollowup() {
