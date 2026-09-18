@@ -52,6 +52,7 @@ import type {
   Tag as TagRecord,
 } from "@/types"
 import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 
 // ------------------------------------------------------------
@@ -188,28 +189,46 @@ function useResources(): AutomationResources {
 }
 
 function ResourcesProvider({ children }: { children: ReactNode }) {
+  const { accountId } = useAuth()
   const [tags, setTags] = useState<TagRecord[]>([])
   const [members, setMembers] = useState<AccountMember[]>([])
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
   const [customFields, setCustomFields] = useState<CustomField[]>([])
 
   useEffect(() => {
+    if (!accountId) return
     let cancelled = false
     const supabase = createClient()
 
-    // Tags, templates and custom fields come straight from the DB — RLS
-    // scopes them to the caller's account. Only APPROVED templates can
-    // actually be sent (anything else 400s at send time), matching the
-    // broadcast picker.
+    // Tags, templates and custom fields come straight from the DB —
+    // scoped explicitly by account_id (RLS alone isn't enough once a
+    // user belongs to more than one account — see the broadcasts/
+    // contacts fixes for the same pattern). Template approval status
+    // is only required on the Meta provider path; Uazapi has no
+    // review pipeline, so its templates are usable the moment
+    // they're saved — same rule the broadcast wizard's picker uses.
     void (async () => {
+      const { data: config } = await supabase
+        .from("whatsapp_config")
+        .select("provider_type")
+        .eq("account_id", accountId)
+        .maybeSingle()
+      const provider = (config?.provider_type as "meta" | "uazapi" | undefined) ?? "uazapi"
+
+      let templatesQuery = supabase
+        .from("message_templates")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("name")
+      templatesQuery =
+        provider === "meta"
+          ? templatesQuery.eq("status", "APPROVED")
+          : templatesQuery.not("status", "in", "(REJECTED,DISABLED)")
+
       const [tagsRes, templatesRes, customFieldsRes] = await Promise.all([
-        supabase.from("tags").select("*").order("name"),
-        supabase
-          .from("message_templates")
-          .select("*")
-          .eq("status", "APPROVED")
-          .order("name"),
-        supabase.from("custom_fields").select("*").order("field_name"),
+        supabase.from("tags").select("*").eq("account_id", accountId).order("name"),
+        templatesQuery,
+        supabase.from("custom_fields").select("*").eq("account_id", accountId).order("field_name"),
       ])
       if (cancelled) return
       setTags((tagsRes.data as TagRecord[] | null) ?? [])
@@ -234,7 +253,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [accountId])
 
   return (
     <ResourcesContext.Provider value={{ tags, members, templates, customFields }}>
@@ -381,13 +400,34 @@ function AgentSelect({
 function SendTemplateFields({
   templateName,
   language,
+  variables,
   onChange,
 }: {
   templateName: string
   language: string
-  onChange: (patch: { template_name: string; language: string }) => void
+  variables: Record<string, string>
+  onChange: (patch: { template_name: string; language: string; variables?: Record<string, string> }) => void
 }) {
   const { templates } = useResources()
+
+  // Named-variable inputs, one per placeholder the selected template
+  // actually declares (message_templates.variables, set when the
+  // template was created in Modelos > Templates de Campanha). Meta
+  // templates built before that column existed fall back to no
+  // fields here — their variables still work if set via API/import,
+  // just not editable from this picker yet.
+  const selected = templates.find(
+    (t) => t.name === templateName && (t.language ?? "pt_BR") === (language || "pt_BR"),
+  )
+  const varNames = selected?.variables ?? []
+
+  function setVariable(name: string, value: string) {
+    onChange({
+      template_name: templateName,
+      language,
+      variables: { ...variables, [name]: value },
+    })
+  }
 
   if (templates.length === 0) {
     return (
@@ -396,7 +436,7 @@ function SendTemplateFields({
           <Input
             value={templateName}
             onChange={(e) =>
-              onChange({ template_name: e.target.value, language })
+              onChange({ template_name: e.target.value, language, variables })
             }
             className="bg-muted text-foreground"
           />
@@ -405,7 +445,7 @@ function SendTemplateFields({
           <Input
             value={language}
             onChange={(e) =>
-              onChange({ template_name: templateName, language: e.target.value })
+              onChange({ template_name: templateName, language: e.target.value, variables })
             }
             className="bg-muted text-foreground"
           />
@@ -419,35 +459,64 @@ function SendTemplateFields({
   const toValue = (name: string, lang: string) => `${name}::${lang}`
   const current = templateName ? toValue(templateName, language) : ""
   const hasMatch = templates.some(
-    (t) => toValue(t.name, t.language ?? "en_US") === current,
+    (t) => toValue(t.name, t.language ?? "pt_BR") === current,
   )
 
   return (
-    <FieldBlock label="Modelo">
-      <select
-        value={current}
-        onChange={(e) => {
-          const [name, lang] = e.target.value.split("::")
-          onChange({ template_name: name ?? "", language: lang ?? "" })
-        }}
-        className={SELECT_CLASS}
-      >
-        <option value="">Select a template…</option>
-        {templates.map((t) => {
-          const lang = t.language ?? "en_US"
-          return (
-            <option key={t.id} value={toValue(t.name, lang)}>
-              {t.name} ({lang})
-            </option>
-          )
-        })}
+    <>
+      <FieldBlock label="Modelo">
+        <select
+          value={current}
+          onChange={(e) => {
+            const [name, lang] = e.target.value.split("::")
+            // Switching templates invalidates whatever variable values
+            // were typed for the previous one — start fresh rather than
+            // carrying over values under the wrong keys.
+            onChange({ template_name: name ?? "", language: lang ?? "", variables: {} })
+          }}
+          className={SELECT_CLASS}
+        >
+          <option value="">Selecione um modelo…</option>
+          {templates.map((t) => {
+            const lang = t.language ?? "pt_BR"
+            return (
+              <option key={t.id} value={toValue(t.name, lang)}>
+                {t.name} ({lang})
+              </option>
+            )
+          })}
+        </select>
         {current && !hasMatch && (
-          <option value={current}>
-            {templateName} ({language || "unknown"}) — not in approved list
-          </option>
+          <p className="mt-1 text-xs text-amber-500">
+            {templateName} ({language || "desconhecido"}) — não encontrado na lista
+          </p>
         )}
-      </select>
-    </FieldBlock>
+      </FieldBlock>
+
+      {varNames.length > 0 && (
+        <FieldBlock label="Variáveis do modelo">
+          <div className="space-y-2">
+            {varNames.map((name) => (
+              <div key={name} className="flex items-center gap-2">
+                <span className="w-28 shrink-0 truncate font-mono text-xs text-muted-foreground">
+                  {`{{${name}}}`}
+                </span>
+                <Input
+                  value={variables[name] ?? ""}
+                  onChange={(e) => setVariable(name, e.target.value)}
+                  placeholder={`ex: {{vars.${name}}} ou um valor fixo`}
+                  className="bg-muted text-foreground"
+                />
+              </div>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Pode digitar um valor fixo, ou usar {"{{message.text}}"} / {"{{vars.nome_da_variavel}}"} pra
+            puxar algo capturado antes nesse mesmo fluxo.
+          </p>
+        </FieldBlock>
+      )}
+    </>
   )
 }
 
@@ -1060,6 +1129,7 @@ function StepEditor({
         <SendTemplateFields
           templateName={(cfg.template_name as string) ?? ""}
           language={(cfg.language as string) ?? ""}
+          variables={(cfg.variables as Record<string, string>) ?? {}}
           onChange={(patch) => set(patch)}
         />
       )
