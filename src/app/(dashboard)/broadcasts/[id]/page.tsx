@@ -43,12 +43,17 @@ interface StatCardProps {
   total: number;
   icon: React.ReactNode;
   color: string;
+  onClick?: () => void;
 }
 
-function StatCard({ label, value, total, icon, color }: StatCardProps) {
+function StatCard({ label, value, total, icon, color, onClick }: StatCardProps) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <Tag
+      onClick={onClick}
+      className={`rounded-xl border border-border bg-card p-4 text-left ${onClick ? 'cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/40' : ''}`}
+    >
       <div className="flex items-center justify-between">
         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${color}`}>
           {icon}
@@ -57,7 +62,7 @@ function StatCard({ label, value, total, icon, color }: StatCardProps) {
       </div>
       <p className="mt-3 text-2xl font-bold text-foreground">{value.toLocaleString()}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
+    </Tag>
   );
 }
 
@@ -153,6 +158,8 @@ export default function BroadcastDetailPage() {
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showRepliedPanel, setShowRepliedPanel] = useState(false);
+  const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -219,6 +226,30 @@ export default function BroadcastDetailPage() {
     const csv = toCsv([header, ...rows]);
     const safeName = broadcast.name.replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
     downloadBlob(`broadcast-${safeName}-${broadcastId.slice(0, 8)}.csv`, csv);
+  }
+
+  async function openConversation(contactId: string) {
+    if (!broadcast) return;
+    setOpeningConversationId(contactId);
+    try {
+      const supabase = createClient();
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('account_id', broadcast.account_id)
+        .eq('contact_id', contactId)
+        .maybeSingle();
+
+      if (convError || !conversation) {
+        toast.error('Não encontrei a conversa desse contato.');
+        return;
+      }
+      router.push(`/inbox?c=${conversation.id}`);
+    } catch {
+      toast.error('Falha ao abrir a conversa.');
+    } finally {
+      setOpeningConversationId(null);
+    }
   }
 
   async function handleDelete() {
@@ -369,6 +400,7 @@ export default function BroadcastDetailPage() {
           total={broadcast.total_recipients}
           icon={<MessageCircle className="h-4 w-4" />}
           color="bg-indigo-500/10 text-indigo-400"
+          onClick={broadcast.replied_count > 0 ? () => setShowRepliedPanel(true) : undefined}
         />
         <StatCard
           label="Falhou"
@@ -497,6 +529,52 @@ export default function BroadcastDetailPage() {
           </div>
         )}
       </div>
+
+      {showRepliedPanel && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowRepliedPanel(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-border bg-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h3 className="font-semibold text-foreground">Quem respondeu</h3>
+              <button
+                onClick={() => setShowRepliedPanel(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="max-h-96 overflow-y-auto p-2">
+              {recipients
+                .filter((r) => r.status === 'replied')
+                .map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => r.contact_id && openConversation(r.contact_id)}
+                    disabled={!r.contact_id || openingConversationId === r.contact_id}
+                    className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-muted disabled:opacity-60"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {r.contact?.name || 'Sem nome'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{r.contact?.phone ?? '-'}</p>
+                    </div>
+                    {openingConversationId === r.contact_id ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                    ) : (
+                      <span className="shrink-0 text-xs text-primary">Abrir conversa →</span>
+                    )}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
