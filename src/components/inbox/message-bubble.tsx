@@ -48,7 +48,7 @@ function MediaUnavailable({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
       <ImageOff className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span>{label} unavailable</span>
+      <span>{label} indisponível</span>
     </div>
   );
 }
@@ -131,7 +131,7 @@ function MessageContent({ message }: { message: Message }) {
           {message.media_url ? (
             <MediaImage url={message.media_url} alt="Shared image" />
           ) : (
-            <MediaUnavailable label="Image" />
+            <MediaUnavailable label="Imagem" />
           )}
           {message.content_text && (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm">
@@ -151,7 +151,7 @@ function MessageContent({ message }: { message: Message }) {
               className="max-h-64 max-w-60 rounded-lg"
             />
           ) : (
-            <MediaUnavailable label="Video" />
+            <MediaUnavailable label="Vídeo" />
           )}
           {message.content_text && (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm">
@@ -167,14 +167,14 @@ function MessageContent({ message }: { message: Message }) {
           {message.media_url ? (
             <audio src={message.media_url} controls className="max-w-60" />
           ) : (
-            <MediaUnavailable label="Audio" />
+            <MediaUnavailable label="Áudio" />
           )}
         </div>
       );
 
     case "document":
       if (!message.media_url) {
-        return <MediaUnavailable label={message.content_text || "Document"} />;
+        return <MediaUnavailable label={message.content_text || "Documento"} />;
       }
       return (
         <a
@@ -185,7 +185,7 @@ function MessageContent({ message }: { message: Message }) {
         >
           <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
           <span className="truncate">
-            {message.content_text || "Document"}
+            {message.content_text || "Documento"}
           </span>
         </a>
       );
