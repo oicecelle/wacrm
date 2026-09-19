@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/use-auth"
 import type {
   Automation,
   AutomationLog,
@@ -28,6 +29,7 @@ export default function AutomationLogsPage({
 }) {
   const { id } = use(params)
   const router = useRouter()
+  const { accountId } = useAuth()
 
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [logs, setLogs] = useState<AutomationLog[] | null>(null)
@@ -35,6 +37,7 @@ export default function AutomationLogsPage({
   const [openLogId, setOpenLogId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!accountId) return
     async function load() {
       try {
         const supabase = createClient()
@@ -43,11 +46,13 @@ export default function AutomationLogsPage({
             .from("automations")
             .select("*")
             .eq("id", id)
+            .eq("account_id", accountId)
             .maybeSingle(),
           supabase
             .from("automation_logs")
             .select("*, contact:contacts(id, name, phone)")
             .eq("automation_id", id)
+            .eq("account_id", accountId)
             .order("created_at", { ascending: false })
             .limit(100),
         ])
@@ -56,11 +61,11 @@ export default function AutomationLogsPage({
         setAutomation(autRes.data as Automation | null)
         setLogs((logRes.data ?? []) as AutomationLog[])
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load logs")
+        setError(err instanceof Error ? err.message : "Falha ao carregar os registros")
       }
     }
     load()
-  }, [id])
+  }, [id, accountId])
 
   if (error) {
     return (
@@ -88,7 +93,7 @@ export default function AutomationLogsPage({
           type="button"
           onClick={() => router.push("/automations")}
           className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Back"
+          aria-label="Voltar"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -127,7 +132,7 @@ export default function AutomationLogsPage({
                   <StatusBadge status={log.status} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-foreground">
-                      {log.contact?.name ?? log.contact?.phone ?? "Unknown contact"}
+                      {log.contact?.name ?? log.contact?.phone ?? "Contato desconhecido"}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {log.trigger_event} · {log.steps_executed?.length ?? 0} step
