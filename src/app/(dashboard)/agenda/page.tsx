@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { AppointmentModal } from "@/components/ui/appointment-modal";
 import { AppointmentDetailModal } from "@/components/agenda/appointment-detail-modal";
@@ -25,6 +26,7 @@ import {
   Loader2Icon,
   FilterXIcon,
   CakeIcon,
+  ShieldAlertIcon,
   ClipboardList,
   AlertTriangle,
   ChevronDown,
@@ -76,6 +78,7 @@ export default function AgendaPage() {
     }
   }, []);
   const { accountId } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -626,6 +629,21 @@ export default function AgendaPage() {
       dotColor
     };
   };
+
+  if (!permsLoading && !hasPermission("view_agenda", "view")) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <ShieldAlertIcon className="h-10 w-10 text-neutral-400" />
+        <div>
+          <h2 className="text-sm font-bold text-neutral-800">Sem acesso à Agenda</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
+            de acesso.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

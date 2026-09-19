@@ -58,7 +58,7 @@ import { ContactForm } from '@/components/contacts/contact-form';
 import { ContactDetailView } from '@/components/contacts/contact-detail-view';
 import { ImportModal } from '@/components/contacts/import-modal';
 import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
-import { useCan } from '@/hooks/use-can';
+import { usePermissions } from '@/hooks/use-permissions';
 import { GatedButton } from '@/components/ui/gated-button';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -71,8 +71,9 @@ interface ContactWithTags extends Contact {
 export default function ContactsPage() {
   const supabase = createClient();
   const { accountId } = useAuth();
-  const canEdit = useCan('send-messages');
-  const canEditSettings = useCan('edit-settings');
+  const { hasPermission, loading: permsLoading } = usePermissions();
+  const canEdit = !permsLoading && hasPermission('edit_crm', 'edit');
+  const canEditSettings = !permsLoading && hasPermission('edit_crm', 'edit');
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);

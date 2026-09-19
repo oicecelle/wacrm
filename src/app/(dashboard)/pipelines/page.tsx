@@ -27,15 +27,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GitBranch, Plus, ChevronDown, Settings, AlertCircle, Clock, X, MessageSquare, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
-import { useCan } from "@/hooks/use-can";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
 import { FollowupQueue } from "@/components/pipelines/followup-queue";
 
-// Pipeline creation is admin-class (settings-tier write under
-// the new RLS); deal creation is operational and only requires
-// agent+. The two CTAs gate on different `useCan` capabilities,
-// not on different copy.
+// Both pipeline creation and deal creation gate on edit_crm — the
+// granular per-module permission, not the coarse 4-tier account role.
+// Owner/admin bypass automatically inside hasPermission().
 
 // Spec-defined seed — name and color per the product spec.
 const SPEC_DEFAULT_STAGES = [
@@ -49,8 +48,9 @@ const SPEC_DEFAULT_STAGES = [
 export default function PipelinesPage() {
   const supabase = createClient();
   const router = useRouter();
-  const canEditSettings = useCan("edit-settings");
-  const canCreateDeals = useCan("send-messages");
+  const { hasPermission, loading: permsLoading } = usePermissions();
+  const canEditSettings = !permsLoading && hasPermission("edit_crm", "edit");
+  const canCreateDeals = !permsLoading && hasPermission("edit_crm", "edit");
   const { accountId } = useAuth();
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
