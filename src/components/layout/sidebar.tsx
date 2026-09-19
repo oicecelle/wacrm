@@ -35,6 +35,7 @@ import {
   CalendarClock,
   Upload,
   Globe,
+  Link2,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -178,6 +179,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     { href: "/relatorios", label: "Relatórios", icon: TrendingUp },
     { href: "/comunicacao/importacao", label: "Migração", icon: Upload },
     { href: "/comunicacao/portal-config", label: "Configurar Portal", icon: Globe },
+    { href: "/comunicacao/link-bio", label: "Link na Bio", icon: Link2 },
   ];
 
   const bottomNavItems = [
