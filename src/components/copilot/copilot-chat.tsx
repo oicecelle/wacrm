@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import {
   SparklesIcon,
@@ -26,6 +27,12 @@ const SUGGESTIONS = [
 ];
 
 export function CopilotChat() {
+  // Temporarily hidden on Agenda — that page gets its own floating
+  // "+" button for quick appointment creation instead, and the two
+  // floating buttons would otherwise collide in the same corner.
+  const pathname = usePathname();
+  const hiddenOnThisPage = pathname?.startsWith("/agenda");
+
   const { accountId } = useAuth();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -101,6 +108,8 @@ export function CopilotChat() {
       handleSend();
     }
   };
+
+  if (hiddenOnThisPage) return null;
 
   if (!open) {
     return (
