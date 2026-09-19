@@ -123,14 +123,24 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "register_payment",
 ]
 
-const TRIGGER_OPTIONS: { value: AutomationTriggerType; label: string; hint: string }[] = [
+// "keyword_match:outbound" is a UI-only synthetic value — under the
+// hood it's still trigger_type 'keyword_match' with trigger_config.from
+// set to 'us', same as before. Splitting it into its own row here
+// (rather than a buried "message origin" sub-field inside the keyword
+// config) makes "trigger off what WE send" a first-class, equally
+// visible choice next to "trigger off what the patient sends" —
+// nothing about the engine, the webhook, or the stored data changes.
+const KEYWORD_OUTBOUND_UI_VALUE = "keyword_match:outbound"
+
+const TRIGGER_OPTIONS: { value: string; label: string; hint: string }[] = [
   { value: "new_message_received", label: "Nova Mensagem Recebida", hint: "Qualquer mensagem enviada pelo paciente" },
   {
     value: "first_inbound_message",
     label: "Primeiro Contato do Paciente",
     hint: "Primeira vez que o paciente entra em contato",
   },
-  { value: "keyword_match", label: "Palavra-Chave Específica", hint: "Mensagem contendo palavras-chave (ex: 'agendar', 'valor')" },
+  { value: "keyword_match", label: "Palavra-Chave Específica (do Paciente)", hint: "Mensagem do paciente contendo palavras-chave (ex: 'agendar', 'valor')" },
+  { value: KEYWORD_OUTBOUND_UI_VALUE, label: "Mensagem Enviada por Nós", hint: "Mensagem que a própria clínica manda, contendo um texto específico (ex: confirmação de agendamento, de pagamento)" },
   { value: "new_contact_created", label: "Novo Contato Criado", hint: "Quando um novo paciente entra no sistema" },
   { value: "tag_added", label: "Tag Adicionada", hint: "Quando uma etiqueta é atribuída ao paciente" },
 ]
@@ -732,6 +742,23 @@ function TriggerCard({
   onConfigChange: (c: Record<string, unknown>) => void
 }) {
   const [open, setOpen] = useState(false)
+  // See KEYWORD_OUTBOUND_UI_VALUE above — collapses (type, config.from)
+  // into the single synthetic value the dropdown actually shows.
+  const displayValue =
+    type === "keyword_match" && config?.from === "us" ? KEYWORD_OUTBOUND_UI_VALUE : type
+
+  function handleSelect(value: string) {
+    if (value === KEYWORD_OUTBOUND_UI_VALUE) {
+      onTypeChange("keyword_match")
+      onConfigChange({ ...config, from: "us" })
+    } else if (value === "keyword_match") {
+      onTypeChange("keyword_match")
+      onConfigChange({ ...config, from: "lead" })
+    } else {
+      onTypeChange(value as AutomationTriggerType)
+    }
+  }
+
   return (
     // Card width: full on mobile, fixed 320px on sm+. The canvas wrapper
     // (max-w-2xl + px-4) keeps this tidy on tablet/desktop.
@@ -748,7 +775,7 @@ function TriggerCard({
           <div className="min-w-0 flex-1">
             <div className="text-[11px] uppercase tracking-wide text-blue-300">Gatilho</div>
             <div className="truncate text-sm font-medium text-foreground">
-              {TRIGGER_OPTIONS.find((o) => o.value === type)?.label ?? type}
+              {TRIGGER_OPTIONS.find((o) => o.value === displayValue)?.label ?? type}
             </div>
           </div>
           <ChevronDown
@@ -762,8 +789,8 @@ function TriggerCard({
                 Tipo de gatilho
               </label>
               <select
-                value={type}
-                onChange={(e) => onTypeChange(e.target.value as AutomationTriggerType)}
+                value={displayValue}
+                onChange={(e) => handleSelect(e.target.value)}
                 className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
               >
                 {TRIGGER_OPTIONS.map((o) => (
@@ -773,7 +800,7 @@ function TriggerCard({
                 ))}
               </select>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {TRIGGER_OPTIONS.find((o) => o.value === type)?.hint}
+                {TRIGGER_OPTIONS.find((o) => o.value === displayValue)?.hint}
               </p>
             </div>
             {type === "keyword_match" && (
@@ -879,24 +906,6 @@ function KeywordMatchConfig({
           <option value="contains">Contém</option>
           <option value="exact">Exato</option>
         </select>
-      </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Origem da mensagem
-        </label>
-        <select
-          value={config?.from ?? "lead"}
-          onChange={(e) => onChange({ ...config, from: e.target.value as "lead" | "us" | "any" })}
-          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
-        >
-          <option value="lead">Mensagem do paciente</option>
-          <option value="us">Mensagem da clínica</option>
-          <option value="any">Qualquer uma das duas</option>
-        </select>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Escolha &quot;da clínica&quot; para gatilhos como confirmar agendamento, registrar
-          pagamento ou mudar etapa a partir do que a própria equipe escreve.
-        </p>
       </div>
     </div>
   )
