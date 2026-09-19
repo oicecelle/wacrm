@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   TrendingUpIcon,
   UsersIcon,
@@ -21,6 +22,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   AlertTriangleIcon,
+  ShieldAlertIcon,
   FileTextIcon,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,6 +40,7 @@ const fmt = (v: number) =>
 export default function RelatoriosPage() {
   const supabase = createClient();
   const { accountId } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -411,6 +414,21 @@ export default function RelatoriosPage() {
     return (
       <div className="flex items-center justify-center py-20 min-h-[300px]">
         <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!permsLoading && !hasPermission("view_relatorios", "view")) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <ShieldAlertIcon className="h-10 w-10 text-muted-foreground" />
+        <div>
+          <h2 className="text-sm font-bold text-foreground">Sem acesso a Relatórios</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
+            de acesso.
+          </p>
+        </div>
       </div>
     );
   }

@@ -3,12 +3,14 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   FileTextIcon,
   SendIcon,
   CheckCircle2Icon,
   ClockIcon,
   XCircleIcon,
+  ShieldAlertIcon,
   SearchIcon,
   Loader2Icon,
   CopyIcon,
@@ -101,6 +103,7 @@ function interpolateVars(text: string, patient: Patient | null): string {
 export default function DocumentosPage() {
   const supabase = createClient();
   const { profile, accountId } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
 
   /* Tab state */
   type TabId = "history" | "novo" | "modelos";
@@ -480,6 +483,21 @@ export default function DocumentosPage() {
   const filteredPatients = patients.filter((p) =>
     p.name.toLowerCase().includes(patientSearch.toLowerCase())
   );
+
+  if (!permsLoading && !hasPermission("view_documentos", "view")) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <ShieldAlertIcon className="h-10 w-10 text-neutral-400" />
+        <div>
+          <h2 className="text-sm font-bold text-neutral-800">Sem acesso a Documentos</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
+            de acesso.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-left">
