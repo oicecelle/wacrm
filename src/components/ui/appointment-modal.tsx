@@ -459,8 +459,13 @@ export function AppointmentModal({
         const mergedMap = new Map();
         (ptsData || []).forEach(p => mergedMap.set(p.id, p));
         (ctsData || []).forEach(c => {
-          if (c.name && !mergedMap.has(c.id)) {
-            mergedMap.set(c.id, { id: c.id, name: c.name, phone: c.phone, email: c.email });
+          // Previously required c.name to be truthy, which silently
+          // dropped freshly-created leads that haven't been named
+          // yet — exactly the contacts someone is most likely to be
+          // booking a first appointment for. Falls back to phone so
+          // they're still selectable.
+          if (!mergedMap.has(c.id)) {
+            mergedMap.set(c.id, { id: c.id, name: c.name || c.phone || "Contato sem nome", phone: c.phone, email: c.email });
           }
         });
         const mergedList = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
