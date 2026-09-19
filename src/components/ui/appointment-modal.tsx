@@ -839,6 +839,7 @@ export function AppointmentModal({
         const { data: templates } = await supabase
           .from("document_templates")
           .select("id, name, type")
+          .or(`account_id.is.null,account_id.eq.${clinicId}`)
           .order("name");
         setDocTemplates(templates || []);
 
@@ -1235,7 +1236,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             tag: appointmentTag || null,
             tag_color: appointmentTag ? appointmentTagColor : null,
           })
-          .eq("id", appointmentId);
+          .eq("id", appointmentId)
+          .eq("clinic_id", clinicId);
 
         if (updateErr) throw updateErr;
 
@@ -1408,7 +1410,8 @@ Qualquer dúvida, estou à disposição! 😊`;
       const { error: deleteErr } = await supabase
         .from("appointments")
         .delete()
-        .eq("id", appointmentId);
+        .eq("id", appointmentId)
+        .eq("clinic_id", clinicId);
 
       if (deleteErr) throw deleteErr;
 
