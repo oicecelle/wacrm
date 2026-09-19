@@ -21,6 +21,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   AlertTriangleIcon,
+  FileTextIcon,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export default function RelatoriosPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [procedures, setProcedures] = useState<any[]>([]);
   const [deals, setDeals] = useState<any[]>([]);
+  const [quotes, setQuotes] = useState<any[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
 
@@ -89,7 +91,7 @@ export default function RelatoriosPage() {
 
     try {
       // 1. Fetch raw datasets for processing
-      const [conRes, appRes, procRes, dealsRes, timelineRes, profsRes, configRes] = await Promise.all([
+      const [conRes, appRes, procRes, dealsRes, timelineRes, profsRes, configRes, quotesRes] = await Promise.all([
         supabase.from("contacts").select("*").eq("account_id", accountId),
         supabase.from("appointments").select("*").eq("clinic_id", accountId),
         supabase.from("procedures").select("*").eq("clinic_id", accountId),
@@ -97,6 +99,7 @@ export default function RelatoriosPage() {
         supabase.from("contact_timeline").select("*").eq("account_id", accountId),
         supabase.from("profiles").select("user_id, full_name").eq("account_id", accountId),
         supabase.from("whatsapp_config").select("id, source_rules, metric_reports_config").limit(1).maybeSingle(),
+        supabase.from("quotes").select("*").eq("account_id", accountId),
       ]);
 
       if (conRes.error) throw conRes.error;
@@ -112,6 +115,7 @@ export default function RelatoriosPage() {
       setDeals(dealsRes.data || []);
       setTimelineEvents(timelineRes.data || []);
       setProfessionals(profsRes.data || []);
+      setQuotes(quotesRes.data || []);
 
       // Config & Source rules settings
       if (configRes.data) {
@@ -364,6 +368,22 @@ export default function RelatoriosPage() {
       })
       .slice(0, 5);
 
+    // Quotes (Orçamentos) sent/accepted in the filtered period — same
+    // date range as everything else on this page, via sent_at.
+    const filteredQuotes = quotes.filter((q) => {
+      if (!q.sent_at) return false;
+      const qDate = new Date(q.sent_at);
+      return qDate >= start && qDate <= end;
+    });
+    const quotesSent = filteredQuotes.length;
+    const quotesAccepted = filteredQuotes.filter((q) => q.status === "accepted").length;
+    const quotesRejected = filteredQuotes.filter((q) => q.status === "rejected").length;
+    const quotesPotentialValue = filteredQuotes.reduce((s, q) => s + (Number(q.total_value) || 0), 0);
+    const quotesAcceptedValue = filteredQuotes
+      .filter((q) => q.status === "accepted")
+      .reduce((s, q) => s + (Number(q.total_value) || 0), 0);
+    const quotesConversionRate = quotesSent > 0 ? Math.round((quotesAccepted / quotesSent) * 100) : 0;
+
     return {
       leadCount: filteredLeads.length,
       apptCount: filteredAppts.length,
@@ -376,6 +396,12 @@ export default function RelatoriosPage() {
       bookingsByProc,
       campaignsPerformance,
       successFollowups,
+      quotesSent,
+      quotesAccepted,
+      quotesRejected,
+      quotesPotentialValue,
+      quotesAcceptedValue,
+      quotesConversionRate,
     };
   };
 
@@ -548,6 +574,52 @@ export default function RelatoriosPage() {
                 <p className="text-xl font-bold mt-1 text-emerald-500">{metrics.rescues} resgates</p>
               </div>
               <TrendingUpIcon className="h-7 w-7 text-emerald-500/25" />
+            </div>
+          </div>
+
+          {/* Orçamentos */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Orçamentos</h3>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Enviados</span>
+                  <FileTextIcon className="h-4 w-4 text-blue-500" />
+                </div>
+                <p className="text-2xl font-black text-foreground">{metrics.quotesSent}</p>
+                <p className="text-[10px] text-muted-foreground">No período</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Aceitos</span>
+                  <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
+                </div>
+                <p className="text-2xl font-black text-foreground">{metrics.quotesAccepted}</p>
+                <p className="text-[10px] text-muted-foreground">{metrics.quotesConversionRate}% de conversão</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Recusados</span>
+                  <XCircleIcon className="h-4 w-4 text-rose-500" />
+                </div>
+                <p className="text-2xl font-black text-foreground">{metrics.quotesRejected}</p>
+                <p className="text-[10px] text-muted-foreground">No período</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Valor Potencial</span>
+                  <DollarSignIcon className="h-4 w-4 text-amber-500" />
+                </div>
+                <p className="text-lg font-black text-foreground">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(metrics.quotesPotentialValue)}
+                </p>
+                <p className="text-[10px] text-emerald-600">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(metrics.quotesAcceptedValue)} aceito
+                </p>
+              </div>
             </div>
           </div>
 
