@@ -761,7 +761,7 @@ function TriggerCard({
             )}
             {type === "time_based" && (
               <Input
-                placeholder="Cron expression or HH:mm"
+                placeholder="Expressão cron ou HH:mm"
                 value={(config.schedule as string) ?? ""}
                 onChange={(e) =>
                   onConfigChange({ ...config, schedule: e.target.value })
@@ -817,7 +817,7 @@ function KeywordMatchConfig({
     <div className="space-y-2">
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Keywords (comma-separated)
+          Palavras-chave (separadas por vírgula)
         </label>
         <Input
           value={draft}
@@ -829,13 +829,13 @@ function KeywordMatchConfig({
               commit()
             }
           }}
-          placeholder="e.g. pricing, demo request, talk to sales"
+          placeholder="ex: preço, agendar avaliação, falar com atendente"
           className="bg-muted text-foreground"
         />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Match type
+          Tipo de correspondência
         </label>
         <select
           value={config?.match_type ?? "contains"}
@@ -954,7 +954,7 @@ function StepRenderer({
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                {isCondition ? "Condition" : step.step_type === "wait" ? "Wait" : "Action"}
+                {isCondition ? "Condição" : step.step_type === "wait" ? "Espera" : "Ação"}
               </div>
               <div className="truncate text-sm font-medium text-foreground">{meta.label}</div>
               <div className="truncate text-[11px] text-muted-foreground">{previewFor(step)}</div>
@@ -975,7 +975,7 @@ function StepRenderer({
                     variant="ghost"
                     size="icon"
                     disabled={index === 0}
-                    aria-label="Move up"
+                    aria-label="Mover para cima"
                     onClick={() => props.moveStepAt(path, -1)}
                   >
                     <ArrowUp className="h-4 w-4" />
@@ -984,7 +984,7 @@ function StepRenderer({
                     variant="ghost"
                     size="icon"
                     disabled={index === total - 1}
-                    aria-label="Move down"
+                    aria-label="Mover para baixo"
                     onClick={() => props.moveStepAt(path, 1)}
                   >
                     <ArrowDown className="h-4 w-4" />
@@ -1080,7 +1080,7 @@ function AddButton({ onPick }: { onPick: (t: AutomationStepType) => void }) {
       <DropdownMenu>
         <DropdownMenuTrigger
           className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary data-[popup-open]:border-primary data-[popup-open]:bg-primary/20 data-[popup-open]:text-primary"
-          aria-label="Add step"
+          aria-label="Adicionar etapa"
         >
           <Plus className="h-4 w-4" />
         </DropdownMenuTrigger>
@@ -1122,11 +1122,11 @@ function StepEditor({
   switch (step.step_type) {
     case "send_message":
       return (
-        <FieldBlock label="Message text">
+        <FieldBlock label="Texto da mensagem">
           <Textarea
             value={(cfg.text as string) ?? ""}
             onChange={(e) => set({ text: e.target.value })}
-            placeholder="Hi! Thanks for reaching out…"
+            placeholder="Olá! Obrigado por entrar em contato…"
             className="min-h-24 bg-muted text-foreground"
           />
         </FieldBlock>
@@ -1153,7 +1153,7 @@ function StepEditor({
     case "assign_conversation":
       return (
         <>
-          <FieldBlock label="Mode">
+          <FieldBlock label="Modo">
             <select
               value={(cfg.mode as string) ?? "round_robin"}
               onChange={(e) => set({ mode: e.target.value })}
@@ -1164,7 +1164,7 @@ function StepEditor({
             </select>
           </FieldBlock>
           {cfg.mode === "specific" && (
-            <FieldBlock label="Agent">
+            <FieldBlock label="Agente">
               <AgentSelect
                 value={(cfg.agent_id as string) ?? ""}
                 onChange={(v) => set({ agent_id: v })}
@@ -1303,9 +1303,9 @@ function StepEditor({
                   cfg.subject === "time_of_day"
                     ? "HH:mm-HH:mm"
                     : cfg.subject === "contact_field"
-                    ? "name / email / company"
+                    ? "nome / e-mail / empresa"
                     : cfg.subject === "tag_presence"
-                    ? "tag id"
+                    ? "ID da tag"
                     : ""
                 }
                 value={(cfg.operand as string) ?? ""}
@@ -1379,15 +1379,15 @@ function FieldBlock({
 function previewFor(step: BuilderStep): string {
   switch (step.step_type) {
     case "send_message":
-      return (step.step_config.text as string) || "no text yet"
+      return (step.step_config.text as string) || "sem texto ainda"
     case "send_template":
-      return (step.step_config.template_name as string) || "pick a template"
+      return (step.step_config.template_name as string) || "escolher um modelo"
     case "wait":
       return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
     case "condition":
       return `when ${step.step_config.subject ?? "?"}`
     case "send_webhook":
-      return (step.step_config.url as string) || "no url"
+      return (step.step_config.url as string) || "sem URL"
     default:
       return ""
   }
