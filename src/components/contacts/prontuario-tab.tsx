@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 import {
   PlusIcon,
   Loader2Icon,
@@ -88,11 +89,11 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao enviar solicitação');
-      alert('Solicitação de ciente enviada com sucesso ao WhatsApp!');
+      toast.success('Solicitação de ciência enviada com sucesso ao WhatsApp!');
       await loadRecords();
     } catch (err: any) {
       console.error(err);
-      alert('Erro ao solicitar ciência: ' + err.message);
+      toast.error('Erro ao solicitar ciência: ' + err.message);
     } finally {
       setRequestingCienteId(null);
     }
@@ -132,7 +133,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
     if (!accountId || !user) return;
 
     if (formType === "note" && !formContent.trim() && !formTitle.trim()) {
-      alert("Escreva pelo menos um título ou conteúdo para a anotação.");
+      toast.error("Escreva pelo menos um título ou conteúdo para a anotação.");
       return;
     }
 
@@ -180,7 +181,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
       await loadRecords();
     } catch (err: any) {
       console.error("Error saving record:", err);
-      alert("Erro ao salvar: " + err.message);
+      toast.error("Erro ao salvar: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -188,7 +189,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Remover este registro do prontuário?")) return;
-    await supabase.from("patient_records").delete().eq("id", id);
+    await supabase.from("patient_records").delete().eq("id", id).eq("patient_id", patientId);
     setRecords((prev) => prev.filter((r) => r.id !== id));
   };
 

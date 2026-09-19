@@ -237,7 +237,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
 
   const handleDeletePhoto = async (id: string) => {
     if (!confirm("Remover esta foto de evolução?")) return;
-    const { error } = await supabase.from("patient_records").delete().eq("id", id);
+    const { error } = await supabase.from("patient_records").delete().eq("id", id).eq("patient_id", patientId);
     if (!error) {
       setPhotos((prev) => prev.filter((p) => p.id !== id));
       if (selectedPhotoA === id) setSelectedPhotoA(null);
