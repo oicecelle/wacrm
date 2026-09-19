@@ -155,7 +155,7 @@ function RoundedDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled}
-        className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
+        className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
       >
         <span>{displayValue}</span>
         <CalendarDaysIcon className="h-4 w-4 text-neutral-400 shrink-0" />
@@ -2091,7 +2091,7 @@ Qualquer dúvida, estou à disposição! 😊`;
         <button
           type="button"
           onClick={() => setIsStaffDropdownOpen(!isStaffDropdownOpen)}
-          className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-10"
+          className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9"
           disabled={saving}
         >
           {selectedStaffObj ? (
@@ -2154,7 +2154,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           /* Simplified modal layout for blocks and events */
           <div className="space-y-4 text-left">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-neutral-900">
+              <DialogTitle className="text-base font-bold text-neutral-900">
                 {apptType === "evento" ? "Criar Novo Evento" : "Criar Bloqueio de Agenda"}
               </DialogTitle>
               <DialogDescription className="text-sm text-neutral-500">
@@ -2181,7 +2181,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   value={procedureName}
                   onChange={(e) => setProcedureName(e.target.value)}
                   placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
-                  className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                 />
               </div>
 
@@ -2214,7 +2214,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setStartTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2235,7 +2235,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setEndTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2321,7 +2321,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             /* Sub-view: Register New Patient */
             <div className="space-y-4 text-left">
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-neutral-900">Cadastrar Novo Paciente</DialogTitle>
+                <DialogTitle className="text-base font-bold text-neutral-900">Cadastrar Novo Paciente</DialogTitle>
                 <DialogDescription className="text-sm text-neutral-500">
                   Preencha os dados do paciente para cadastrá-lo e iniciar o agendamento.
                 </DialogDescription>
@@ -2344,7 +2344,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     onChange={(e) => setNewPatientName(e.target.value)}
                     required
                     disabled={savingNewPatient}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2358,7 +2358,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     onChange={(e) => setNewPatientPhone(e.target.value)}
                     required
                     disabled={savingNewPatient}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2371,7 +2371,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     value={newPatientEmail}
                     onChange={(e) => setNewPatientEmail(e.target.value)}
                     disabled={savingNewPatient}
-                    className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2409,7 +2409,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             /* Initial view: Patient Picker / Search */
             <div className="space-y-4 text-left">
               <DialogHeader>
-                <DialogTitle className="text-xl font-black text-neutral-900">Novo Agendamento</DialogTitle>
+                <DialogTitle className="text-base font-black text-neutral-900">Novo Agendamento</DialogTitle>
               </DialogHeader>
 
               {/* Type Tabs */}
@@ -2501,7 +2501,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       value={procedureName}
                       onChange={(e) => setProcedureName(e.target.value)}
                       placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
-                      className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                     />
                   </div>
                   <div className="space-y-1">
@@ -2531,7 +2531,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setStartTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2552,7 +2552,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setEndTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2571,7 +2571,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     <select
                       value={recurrence}
                       onChange={(e) => setRecurrence(e.target.value as any)}
-                      className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="none">Não se repete</option>
                       <option value="daily">Diariamente</option>
@@ -2644,7 +2644,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       placeholder="Digite nome, e-mail ou telefone..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="rounded-xl border-neutral-200 pl-10 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="rounded-xl border-neutral-200 pl-10 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
 
@@ -2697,7 +2697,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             <header className="bg-white text-neutral-800 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
-                <div className="h-14 w-14 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-lg font-black shadow-md shrink-0">
+                <div className="h-12 w-12 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-base font-black shadow-md shrink-0">
                   {firstName.charAt(0).toUpperCase()}
                   {lastName.charAt(0).toUpperCase()}
                 </div>
@@ -2860,7 +2860,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => handleSelectProcedure(val || "")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o procedimento..." />
                               </SelectTrigger>
                               <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2888,7 +2888,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione a sala...">
                                   {roomId ? rooms.find((r) => r.id === roomId)?.name ?? "Nenhuma" : "Nenhuma"}
                                 </SelectValue>
@@ -2931,7 +2931,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 onValueChange={(val) => handleSelectStartTime(val || "09:00")}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2953,7 +2953,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 }}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
@@ -2978,7 +2978,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 max={480}
                                 value={procedureDuration}
                                 onChange={(e) => handleDurationChange(Number(e.target.value))}
-                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                                className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
                               />
                             </div>
                             <div className="space-y-1 text-left">
@@ -2989,7 +2989,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={procedureValue}
                                 onChange={(e) => setProcedureValue(e.target.value)}
                                 placeholder="0,00"
-                                className="rounded-xl border-neutral-200 h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                                className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
                               />
                             </div>
                           </div>
@@ -3002,7 +3002,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRecurrence(val as any)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione">
                                   {
                                     {
@@ -3049,7 +3049,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setStatus(val || "provisional")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o status" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl bg-white border border-neutral-200">
