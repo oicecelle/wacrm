@@ -14,6 +14,33 @@ function supabaseAdmin() {
   return _adminClient;
 }
 
+// Surfaces a client-initiated portal action (booked/rescheduled/
+// cancelled) to the clinic — reuses system_alerts, the same table
+// the dashboard's top banner already polls every 5 minutes, so no
+// new UI plumbing is needed for the clinic to actually see this.
+async function notifyClinicOfPortalAction(
+  db: any,
+  clinicId: string,
+  patientId: string,
+  actionLabel: string,
+  when: Date,
+) {
+  try {
+    const { data: patient } = await db.from('contacts').select('name').eq('id', patientId).maybeSingle();
+    const patientName = patient?.name || 'Um paciente';
+    await db.from('system_alerts').insert({
+      clinic_id: clinicId,
+      severity: 'info',
+      title: 'Ação no Portal do Paciente',
+      message: `${patientName} ${actionLabel} pelo portal, para ${when.toLocaleString('pt-BR')}.`,
+    });
+  } catch (err) {
+    // Never let a notification failure block the actual booking/
+    // cancel/reschedule the patient is waiting on.
+    console.error('[portal/appointment] Failed to notify clinic:', err);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // 1. Authenticate patient token
@@ -99,12 +126,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Data não informada' }, { status: 400 });
       }
 
-      // Get all staff profiles in the clinic
+      // Get all active staff in the clinic — appointments.professional_id
+      // references clinic_users.id, not profiles.id, and profiles has
+      // no clinic_id/status columns at all (this query always returned
+      // nothing before, so online booking never actually had anyone to
+      // book with).
       const { data: staff } = await db
-        .from('profiles')
+        .from('clinic_users')
         .select('id, name')
         .eq('clinic_id', session.clinicId)
-        .eq('status', 'active');
+        .eq('is_active', true);
 
       if (!staff || staff.length === 0) {
         return NextResponse.json({ slots: [] });
@@ -194,7 +225,61 @@ export async function POST(request: Request) {
         },
       });
 
+      await notifyClinicOfPortalAction(db, session.clinicId, session.patientId, 'agendou uma consulta', startObj);
+
       return NextResponse.json({ success: true, appointmentId: newAppt.id });
+
+    } else if (action === 'reschedule') {
+      if (!portalConfig.enabled_rescheduling) {
+        return NextResponse.json({ error: 'Remarcação online desativada pela clínica' }, { status: 403 });
+      }
+      if (!appointmentId || !slot) {
+        return NextResponse.json({ error: 'Agendamento ou novo horário não informados' }, { status: 400 });
+      }
+
+      const { data: existingForReschedule } = await db
+        .from('appointments')
+        .select('id, start_time, end_time')
+        .eq('id', appointmentId)
+        .eq('patient_id', session.patientId)
+        .maybeSingle();
+
+      if (!existingForReschedule) {
+        return NextResponse.json({ error: 'Agendamento inválido ou não pertencente a este paciente' }, { status: 404 });
+      }
+
+      const newStart = new Date(slot);
+      const durationMs =
+        new Date(existingForReschedule.end_time).getTime() - new Date(existingForReschedule.start_time).getTime();
+      const newEnd = new Date(newStart.getTime() + (durationMs > 0 ? durationMs : 60 * 60 * 1000));
+
+      const { error: rescheduleErr } = await db
+        .from('appointments')
+        .update({
+          start_time: newStart.toISOString(),
+          end_time: newEnd.toISOString(),
+          status: 'provisional',
+          ...(professionalId ? { professional_id: professionalId } : {}),
+        })
+        .eq('id', appointmentId);
+
+      if (rescheduleErr) throw rescheduleErr;
+
+      await db.from('patient_timeline').insert({
+        patient_id: session.patientId,
+        event_type: 'appointment_rescheduled',
+        title: 'Consulta Remarcada pelo Paciente',
+        payload: {
+          appointment_id: appointmentId,
+          previous_start_time: existingForReschedule.start_time,
+          new_start_time: newStart.toISOString(),
+          origin: 'portal',
+        },
+      });
+
+      await notifyClinicOfPortalAction(db, session.clinicId, session.patientId, 'remarcou uma consulta', newStart);
+
+      return NextResponse.json({ success: true });
 
     } else if (action === 'cancel') {
       if (!portalConfig.enabled_cancellation) {
@@ -236,6 +321,8 @@ export async function POST(request: Request) {
           origin: 'portal',
         },
       });
+
+      await notifyClinicOfPortalAction(db, session.clinicId, session.patientId, 'cancelou uma consulta', new Date(existingAppt.start_time));
 
       return NextResponse.json({ success: true });
     }
