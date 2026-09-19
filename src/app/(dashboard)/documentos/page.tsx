@@ -39,6 +39,7 @@ interface DBDocument {
   signed_at: string | null;
   sent_at: string | null;
   viewed_at: string | null;
+  pdf_url?: string | null;
   patient_name: string;
   phone?: string;
   content?: { text?: string; body?: string } | null;
@@ -126,6 +127,8 @@ export default function DocumentosPage() {
   const [customContent, setCustomContent] = useState("");
   const [customType, setCustomType] = useState("contrato");
   const [addCustom, setAddCustom] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   /* Preview */
   const [previewDoc, setPreviewDoc] = useState<{ title: string; content: string } | null>(null);
@@ -151,7 +154,7 @@ export default function DocumentosPage() {
     try {
       const { data: docs, error: docsErr } = await supabase
         .from("documents")
-        .select(`id, title, type, status, patient_id, public_token, created_at, signed_at, sent_at, viewed_at, content, patients (name, phone)`)
+        .select(`id, title, type, status, patient_id, public_token, created_at, signed_at, sent_at, viewed_at, pdf_url, content, patients (name, phone)`)
         .eq("clinic_id", accountId)
         .order("created_at", { ascending: false });
 
@@ -169,6 +172,7 @@ export default function DocumentosPage() {
           signed_at: d.signed_at,
           sent_at: d.sent_at,
           viewed_at: d.viewed_at,
+          pdf_url: d.pdf_url,
           patient_name: (d.patients as any)?.name || "Paciente Removido",
           phone: (d.patients as any)?.phone || "",
           content: d.content as any,
@@ -233,8 +237,9 @@ export default function DocumentosPage() {
         type: tmpl.type,
         content: interpolateVars(raw, selectedPatient),
         template_id: tmpl.id,
+        pdf_url: "",
       };
-    }).filter(Boolean) as { title: string; type: string; content: string; template_id: string }[];
+    }).filter(Boolean) as { title: string; type: string; content: string; template_id: string; pdf_url: string }[];
 
     if (addCustom && customTitle.trim() && customContent.trim()) {
       fromTemplates.push({
@@ -242,13 +247,52 @@ export default function DocumentosPage() {
         type: customType,
         content: interpolateVars(customContent, selectedPatient),
         template_id: "",
+        pdf_url: "",
+      });
+    }
+
+    if (pdfUrl && customTitle.trim()) {
+      fromTemplates.push({
+        title: customTitle.trim(),
+        type: customType,
+        content: "",
+        template_id: "",
+        pdf_url: pdfUrl,
       });
     }
 
     return fromTemplates;
-  }, [selectedTemplateIds, templates, selectedPatient, addCustom, customTitle, customContent, customType]);
+  }, [selectedTemplateIds, templates, selectedPatient, addCustom, customTitle, customContent, customType, pdfUrl]);
 
   /* ── Handlers ── */
+  const handleUploadPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !accountId) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Escolha um arquivo PDF.");
+      return;
+    }
+    setUploadingPdf(true);
+    try {
+      const path = `${accountId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+      const { error: uploadError } = await supabase.storage
+        .from("documentos")
+        .upload(path, file, { cacheControl: "3600", upsert: true, contentType: "application/pdf" });
+      if (uploadError) throw new Error(uploadError.message);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("documentos").getPublicUrl(path);
+      setPdfUrl(publicUrl);
+      if (!customTitle.trim()) setCustomTitle(file.name.replace(/\.pdf$/i, ""));
+      toast.success("PDF enviado com sucesso.");
+    } catch (err: any) {
+      toast.error("Erro ao enviar o PDF: " + err.message);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
   const handleCopyLink = (token: string | null) => {
     if (!token) return;
     const url = `${window.location.origin}/portal/documento/${token}`;
@@ -301,7 +345,8 @@ export default function DocumentosPage() {
           sent_via: "whatsapp",
           sent_at: new Date().toISOString(),
           public_token: token,
-          content: { text: doc.content },
+          content: doc.pdf_url ? {} : { text: doc.content },
+          pdf_url: doc.pdf_url || null,
         });
         if (insertErr) throw insertErr;
 
@@ -332,6 +377,7 @@ export default function DocumentosPage() {
       setAddCustom(false);
       setCustomContent("");
       setCustomTitle("");
+      setPdfUrl("");
       loadDocuments();
       toast.success("Documento(s) enviado(s) com sucesso!");
       setTimeout(() => {
@@ -925,13 +971,53 @@ export default function DocumentosPage() {
               </div>
             )}
             
-            {!addCustom && !customContent && (
-              <button
-                onClick={() => setAddCustom(true)}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline block bg-transparent border-0 cursor-pointer"
-              >
-                + Escrever ou colar termo manualmente
-              </button>
+            {!addCustom && !customContent && !pdfUrl && (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setAddCustom(true)}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline block bg-transparent border-0 cursor-pointer"
+                >
+                  + Escrever ou colar termo manualmente
+                </button>
+                <span className="text-neutral-300 text-xs">ou</span>
+                <label className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer flex items-center gap-1.5">
+                  {uploadingPdf ? (
+                    <><Loader2Icon className="h-3.5 w-3.5 animate-spin" /> Enviando...</>
+                  ) : (
+                    "+ Enviar um PDF pronto"
+                  )}
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleUploadPdf}
+                    disabled={uploadingPdf}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+
+            {pdfUrl && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-700 underline truncate">
+                    📄 {customTitle || "PDF enviado"} — ver arquivo
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setPdfUrl("")}
+                    className="text-xs font-bold text-neutral-400 hover:text-red-500 shrink-0"
+                  >
+                    Remover
+                  </button>
+                </div>
+                <input
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="Título do documento"
+                  className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
             )}
           </div>
 

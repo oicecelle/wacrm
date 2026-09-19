@@ -348,11 +348,19 @@ export default function DocumentSigningPortalPage() {
                 <ShieldCheckIcon className="h-4 w-4 text-blue-600" />
                 Conteúdo do Documento para Revisão
               </div>
-              <div className="p-6 overflow-y-auto max-h-[360px] leading-relaxed text-xs text-slate-700 font-sans space-y-4 whitespace-pre-wrap select-none text-justify">
-                {documentText || (
-                  <span className="text-slate-400 italic">Carregando conteúdo do documento...</span>
-                )}
-              </div>
+              {document.pdf_url ? (
+                <iframe
+                  src={document.pdf_url}
+                  title={document.title || "Documento"}
+                  className="w-full h-[420px] border-0"
+                />
+              ) : (
+                <div className="p-6 overflow-y-auto max-h-[360px] leading-relaxed text-xs text-slate-700 font-sans space-y-4 whitespace-pre-wrap select-none text-justify">
+                  {documentText || (
+                    <span className="text-slate-400 italic">Carregando conteúdo do documento...</span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Signature area */}

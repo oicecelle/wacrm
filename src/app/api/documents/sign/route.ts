@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const admin = supabaseAdmin()
     const { data: doc } = await admin
       .from('documents')
-      .select('id, patient_id, title, content, status')
+      .select('id, patient_id, title, content, status, pdf_url')
       .eq('public_token', token)
       .maybeSingle()
 
@@ -52,15 +52,23 @@ export async function POST(request: Request) {
     const originalContent =
       typeof doc.content === 'object' && doc.content !== null ? doc.content : { text: doc.content || '' }
 
-    // A real SHA-256 of the exact text the patient was shown and
-    // agreed to — ties the signature to that specific content, so
-    // any later edit to the stored document would produce a
-    // different hash and be detectable. Computed over the text/body
-    // the portal actually rendered, not the whole content object
-    // (which also carries fields like the signature image itself,
-    // which don't exist yet at signing time).
-    const bodyForHash = String((originalContent as Record<string, unknown>).text ?? (originalContent as Record<string, unknown>).body ?? '')
-    const contentHash = createHash('sha256').update(bodyForHash, 'utf8').digest('hex')
+    // A real SHA-256 of the exact content the patient was shown and
+    // agreed to — ties the signature to that specific version, so any
+    // later edit would produce a different hash and be detectable.
+    // For a PDF-based document, that's the file's own bytes (fetched
+    // from storage); for a text-based one, the rendered body — either
+    // way it's the actual thing rendered on screen, not the whole
+    // content object (which also carries fields like the signature
+    // image itself, which don't exist yet at signing time).
+    let contentHash: string
+    if (doc.pdf_url) {
+      const pdfRes = await fetch(doc.pdf_url)
+      const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer())
+      contentHash = createHash('sha256').update(pdfBuffer).digest('hex')
+    } else {
+      const bodyForHash = String((originalContent as Record<string, unknown>).text ?? (originalContent as Record<string, unknown>).body ?? '')
+      contentHash = createHash('sha256').update(bodyForHash, 'utf8').digest('hex')
+    }
 
     const { error: updateErr } = await admin
       .from('documents')
