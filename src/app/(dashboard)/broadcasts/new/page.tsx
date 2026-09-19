@@ -11,7 +11,7 @@ import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audien
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
 import { useBroadcastSending, AudienceConfig } from '@/hooks/use-broadcast-sending';
-import { Check, Loader2, Save } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 
 const steps = [
   { label: 'Modelo', key: 'template' },
@@ -156,10 +156,14 @@ export default function NewBroadcastPage() {
    * it was left.
    */
   const handleSaveDraft = useCallback(async () => {
-    if (!template || !name.trim()) {
-      toast.error('Dê um nome ao disparo antes de salvar o rascunho.');
+    if (!template) {
+      toast.error('Escolha um modelo antes de salvar o rascunho.');
       return;
     }
+    // Name is only entered in step 4 — auto-name the draft when saving
+    // earlier so "salvar rascunho" works right from step 1 instead of
+    // forcing a detour to type a name first.
+    const draftName = name.trim() || `Rascunho — ${template.name} — ${new Date().toLocaleDateString('pt-BR')}`;
     setSavingDraft(true);
     try {
       const supabase = createClient();
@@ -179,7 +183,7 @@ export default function NewBroadcastPage() {
       const payload = {
         user_id: user.id,
         account_id: accountId,
-        name: name.trim(),
+        name: draftName,
         template_name: template.name,
         template_language: template.language ?? 'pt_BR',
         template_variables: variables,
@@ -223,25 +227,13 @@ export default function NewBroadcastPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {draftId ? 'Continuar rascunho' : 'Novo Disparo'}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crie e envie uma mensagem em massa para seus contatos.
-          </p>
-        </div>
-        {template && (
-          <button
-            onClick={handleSaveDraft}
-            disabled={savingDraft || isProcessing}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
-          >
-            {savingDraft ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            Salvar rascunho
-          </button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">
+          {draftId ? 'Continuar rascunho' : 'Novo Disparo'}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Crie e envie uma mensagem em massa para seus contatos.
+        </p>
       </div>
 
       {/* Step Indicator */}
@@ -299,6 +291,8 @@ export default function NewBroadcastPage() {
               onSelect={setTemplate}
               onNext={() => setCurrentStep(1)}
               onBack={() => router.push('/broadcasts')}
+              onSaveDraft={handleSaveDraft}
+              savingDraft={savingDraft}
             />
           )}
           {currentStep === 1 && (
@@ -308,6 +302,8 @@ export default function NewBroadcastPage() {
               template={template}
               onNext={() => setCurrentStep(2)}
               onBack={() => setCurrentStep(0)}
+              onSaveDraft={handleSaveDraft}
+              savingDraft={savingDraft}
             />
           )}
           {currentStep === 2 && template && (
@@ -325,6 +321,8 @@ export default function NewBroadcastPage() {
               onIntervalSecondsChange={setIntervalSeconds}
               onNext={() => setCurrentStep(3)}
               onBack={() => setCurrentStep(1)}
+              onSaveDraft={handleSaveDraft}
+              savingDraft={savingDraft}
             />
           )}
           {currentStep === 3 && template && (

@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, Eye, Loader2, Pencil, X, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, Loader2, Pencil, X, Check, Save } from 'lucide-react';
 import type { AudienceConfig, ManualContact } from '@/hooks/use-broadcast-sending';
 
 type VariableType = 'static' | 'field' | 'custom_field';
@@ -38,6 +38,8 @@ interface Step3Props {
   onIntervalSecondsChange: (value: number) => void;
   onNext: () => void;
   onBack: () => void;
+  onSaveDraft?: () => void;
+  savingDraft?: boolean;
 }
 
 const contactFields = [
@@ -82,6 +84,8 @@ export function Step3Personalize({
   onIntervalSecondsChange,
   onNext,
   onBack,
+  onSaveDraft,
+  savingDraft,
 }: Step3Props) {
   const { profile } = useAuth();
   const accountId = profile?.account_id;
@@ -563,14 +567,27 @@ export function Step3Personalize({
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
-        <Button
-          onClick={onNext}
-          disabled={unmappedKeys.length > 0}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          Próximo
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {onSaveDraft && (
+            <Button
+              variant="outline"
+              onClick={onSaveDraft}
+              disabled={savingDraft}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {savingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Salvar rascunho
+            </Button>
+          )}
+          <Button
+            onClick={onNext}
+            disabled={unmappedKeys.length > 0}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            Próximo
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

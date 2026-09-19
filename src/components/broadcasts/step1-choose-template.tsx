@@ -17,7 +17,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Loader2, FileText, ArrowRight, Plus } from 'lucide-react';
+import { Loader2, FileText, ArrowRight, Plus, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 const categoryColors: Record<string, string> = {
@@ -50,9 +50,11 @@ interface Step1Props {
   onSelect: (template: MessageTemplate) => void;
   onNext: () => void;
   onBack: () => void;
+  onSaveDraft?: () => void;
+  savingDraft?: boolean;
 }
 
-export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack }: Step1Props) {
+export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack, onSaveDraft, savingDraft }: Step1Props) {
   const { profile } = useAuth();
   const { providerType } = useWhatsappProvider(profile?.account_id);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -245,14 +247,27 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
         <Button variant="outline" onClick={onBack} className="border-border text-muted-foreground">
           Voltar
         </Button>
-        <Button
-          onClick={onNext}
-          disabled={!selectedTemplate}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          Próximo
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {onSaveDraft && selectedTemplate && (
+            <Button
+              variant="outline"
+              onClick={onSaveDraft}
+              disabled={savingDraft}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {savingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Salvar rascunho
+            </Button>
+          )}
+          <Button
+            onClick={onNext}
+            disabled={!selectedTemplate}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            Próximo
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
