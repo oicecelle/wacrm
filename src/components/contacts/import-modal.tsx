@@ -173,7 +173,7 @@ export function ImportModal({
 
     if (rows.length === 0) {
       toast.error(
-        'No valid rows found. Ensure CSV has a "phone" column header.'
+        'Nenhuma linha válida encontrada. Verifique se o CSV tem uma coluna "phone" (telefone).'
       );
       setParsedRows([]);
       setHasTagsColumn(false);
@@ -212,9 +212,9 @@ export function ImportModal({
         data: { session },
       } = await supabase.auth.getSession();
       const user = session?.user;
-      if (!user) throw new Error('Not authenticated');
+      if (!user) throw new Error('Não autenticado');
       if (!accountId)
-        throw new Error('Your profile is not linked to an account.');
+        throw new Error('Seu perfil não está vinculado a uma conta.');
 
       let imported = 0;
       let skipped = 0;
@@ -342,13 +342,13 @@ export function ImportModal({
       setResult({ imported, skipped, failed, tagsAssigned });
       if (imported > 0) {
         toast.success(
-          `${imported} contact${imported !== 1 ? 's' : ''} imported`
+          `${imported} contato${imported !== 1 ? 's' : ''} importado${imported !== 1 ? 's' : ''}`
         );
         onImported();
       }
       if (tagsAssigned > 0) {
         toast.success(
-          `${tagsAssigned} tag assignment${tagsAssigned !== 1 ? 's' : ''} applied`
+          `${tagsAssigned} tag${tagsAssigned !== 1 ? 's' : ''} aplicada${tagsAssigned !== 1 ? 's' : ''}`
         );
       }
       if (skippedNames.length > 0) {
@@ -356,19 +356,19 @@ export function ImportModal({
         const more =
           skippedNames.length > 3 ? ` (+${skippedNames.length - 3} more)` : '';
         toast.info(
-          `Unknown tags skipped (create them in Settings first): ${sample}${more}`
+          `Tags desconhecidas ignoradas (crie-as primeiro em Configurações): ${sample}${more}`
         );
       }
       if (skipped > 0) {
-        toast.info(`${skipped} duplicate${skipped !== 1 ? 's' : ''} skipped`);
+        toast.info(`${skipped} duplicado${skipped !== 1 ? 's' : ''} ignorado${skipped !== 1 ? 's' : ''}`);
       }
       if (failed > 0) {
         toast.error(
-          `${failed} contact${failed !== 1 ? 's' : ''} failed to import`
+          `${failed} contato${failed !== 1 ? 's' : ''} falhou ao importar`
         );
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Import failed';
+      const message = err instanceof Error ? err.message : 'Falha na importação';
       toast.error(message);
     } finally {
       setImporting(false);
@@ -627,7 +627,7 @@ export function ImportModal({
             onClick={() => handleOpenChange(false)}
             className="border-border text-muted-foreground hover:bg-muted"
           >
-            {result ? 'Close' : 'Cancel'}
+            {result ? 'Fechar' : 'Cancelar'}
           </Button>
           {!result && (
             <Button
