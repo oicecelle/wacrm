@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Camera } from 'lucide-react';
 
 interface ContactFormProps {
   open: boolean;
@@ -52,6 +52,11 @@ export function ContactForm({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [gender, setGender] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Duplicate-phone detection for NEW contacts. `exact` (same digits)
@@ -73,6 +78,10 @@ export function ContactForm({
       setPhone(contact?.phone ?? '');
       setEmail(contact?.email ?? '');
       setCompany(contact?.company ?? '');
+      setCpf(contact?.cpf ?? '');
+      setBirthday(contact?.birthday ?? '');
+      setGender(contact?.gender ?? '');
+      setAvatarUrl(contact?.avatar_url ?? '');
       setSelectedTagIds(contactTags.map((ct) => ct.tag_id));
       setDupMatch(null);
       fetchTags();
@@ -102,13 +111,42 @@ export function ContactForm({
   }
 
   async function fetchTags() {
+    if (!accountId) return;
     setLoadingTags(true);
     const { data } = await supabase
       .from('tags')
       .select('*')
+      .eq('account_id', accountId)
       .order('name');
     if (data) setTags(data);
     setLoadingTags(false);
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !accountId) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Escolha um arquivo de imagem.');
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const path = `contacts/${accountId}/${contact?.id ?? 'new'}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { cacheControl: '3600', upsert: true, contentType: file.type });
+      if (uploadError) throw new Error(uploadError.message);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('avatars').getPublicUrl(path);
+      setAvatarUrl(publicUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao enviar a foto.');
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
   function toggleTag(tagId: string) {
@@ -154,6 +192,10 @@ export function ContactForm({
             phone: phone.trim(),
             email: email.trim() || null,
             company: company.trim() || null,
+            cpf: cpf.trim() || null,
+            birthday: birthday || null,
+            gender: gender || null,
+            avatar_url: avatarUrl || null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', contactId);
@@ -168,6 +210,10 @@ export function ContactForm({
             phone: phone.trim(),
             email: email.trim() || null,
             company: company.trim() || null,
+            cpf: cpf.trim() || null,
+            birthday: birthday || null,
+            gender: gender || null,
+            avatar_url: avatarUrl || null,
           })
           .select('id')
           .single();
@@ -232,6 +278,37 @@ export function ContactForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex justify-center">
+            <label
+              htmlFor="cf-avatar"
+              className="group relative flex size-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border bg-muted"
+            >
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <span className="text-lg font-semibold text-muted-foreground">
+                  {(name || '?').charAt(0).toUpperCase()}
+                </span>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                {uploadingAvatar ? (
+                  <Loader2 className="size-4 animate-spin text-white" />
+                ) : (
+                  <Camera className="size-4 text-white" />
+                )}
+              </div>
+              <input
+                id="cf-avatar"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                disabled={uploadingAvatar}
+                className="sr-only"
+              />
+            </label>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="cf-name" className="text-muted-foreground">
               Nome
@@ -305,6 +382,50 @@ export function ContactForm({
               placeholder="cliente@exemplo.com"
               className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="cf-cpf" className="text-muted-foreground">
+                CPF
+              </Label>
+              <Input
+                id="cf-cpf"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                placeholder="000.000.000-00"
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-birthday" className="text-muted-foreground">
+                Data de nascimento
+              </Label>
+              <Input
+                id="cf-birthday"
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                className="bg-muted border-border text-foreground"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cf-gender" className="text-muted-foreground">
+              Sexo
+            </Label>
+            <select
+              id="cf-gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground"
+            >
+              <option value="">Não informado</option>
+              <option value="female">Feminino</option>
+              <option value="male">Masculino</option>
+              <option value="other">Outro</option>
+            </select>
           </div>
 
           <div className="space-y-2">

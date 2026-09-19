@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Phone,
@@ -489,6 +489,7 @@ export function ContactDetailView({
             <DialogHeader className="p-4 border-b border-border/50">
               <div className="flex items-center gap-3">
                 <Avatar className="size-12 bg-muted border border-border">
+                  {contact.avatar_url && <AvatarImage src={contact.avatar_url} alt="" />}
                   <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                     {getInitials(contact.name)}
                   </AvatarFallback>
@@ -523,6 +524,22 @@ export function ContactDetailView({
                       <span className="flex items-center gap-1">
                         <Building2 className="size-3" />
                         {contact.company}
+                      </span>
+                    )}
+                    {contact.cpf && (
+                      <span className="flex items-center gap-1">
+                        CPF: {contact.cpf}
+                      </span>
+                    )}
+                    {contact.birthday && (
+                      <span className="flex items-center gap-1">
+                        <CalendarIcon className="size-3" />
+                        {new Date(contact.birthday + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
+                    {contact.gender && (
+                      <span className="flex items-center gap-1">
+                        {{ male: 'Masculino', female: 'Feminino', other: 'Outro' }[contact.gender]}
                       </span>
                     )}
                   </div>
