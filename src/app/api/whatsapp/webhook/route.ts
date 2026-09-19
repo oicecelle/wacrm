@@ -731,6 +731,7 @@ async function processMessage(
       context: {
         message_text: inboundText,
         conversation_id: conversation.id,
+        message_direction: 'lead',
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err))
   }

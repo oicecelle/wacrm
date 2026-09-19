@@ -428,6 +428,7 @@ export async function POST(request: Request) {
           context: {
             message_text: contentText,
             conversation_id: conversation.id,
+            message_direction: 'lead',
           },
         }).catch((err) => console.error('[uazapi-webhook] Automations dispatch failed:', err))
       }
@@ -439,6 +440,24 @@ export async function POST(request: Request) {
         accountId,
         messageId
       ).catch((err) => console.error('[uazapi-webhook] AI Analysis trigger failed:', err))
+    } else if (fromMe && !isGroup) {
+      // The clinic's own outbound messages never used to trigger
+      // anything — keyword_match automations configured with
+      // from: 'us' (e.g. "we just confirmed an appointment") need
+      // this side covered too, since the confirming text is
+      // something the CLINIC typed, not the patient. Flows and AI
+      // analysis stay customer-only; they're about reacting to what
+      // the patient says, not what we say.
+      runAutomationsForTrigger({
+        accountId,
+        triggerType: 'keyword_match',
+        contactId: contactRecord.id,
+        context: {
+          message_text: contentText,
+          conversation_id: conversation.id,
+          message_direction: 'us',
+        },
+      }).catch((err) => console.error('[uazapi-webhook] Automations dispatch (outbound) failed:', err))
     }
 
     return NextResponse.json({ status: 'success', messageId })

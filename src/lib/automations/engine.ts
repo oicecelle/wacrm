@@ -12,10 +12,14 @@ import type {
   UpdateContactFieldStepConfig,
   WaitStepConfig,
   CreateDealStepConfig,
+  CreateAppointmentStepConfig,
+  UpdateAppointmentStatusStepConfig,
+  RegisterPaymentStepConfig,
   AssignConversationStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
+import { extractFromTemplate, combineDateAndTime } from './template-extract'
 
 // ------------------------------------------------------------
 // Public API
@@ -24,6 +28,12 @@ import { engineSendText, engineSendTemplate } from './meta-send'
 export interface AutomationContext {
   /** Raw message text, for keyword_match + message_content conditions. */
   message_text?: string
+  /** Which side sent the triggering message — 'lead' (the contact) or
+   *  'us' (the clinic's own outbound message). Needed for keyword_match
+   *  triggers configured with a `from` filter, and for the message
+   *  {{placeholders}} extraction used by create_appointment /
+   *  update_appointment_status / register_payment steps. */
+  message_direction?: 'lead' | 'us'
   /** Conversation the event belongs to, if any. */
   conversation_id?: string
   /** Arbitrary variables accumulated during execution. */
@@ -532,6 +542,186 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       return 'deal created'
     }
 
+    case 'create_appointment': {
+      const cfg = step.step_config as CreateAppointmentStepConfig
+      if (!args.contactId) throw new Error('create_appointment needs a contact')
+      if (!cfg.template) throw new Error('create_appointment needs a template')
+
+      const messageText = args.context.message_text ?? ''
+      const fields = extractFromTemplate(cfg.template, messageText)
+      if (!fields) return 'message did not match the configured template — skipped'
+
+      const startTime = combineDateAndTime(fields)
+      if (!startTime) return 'could not parse a date from the message — skipped'
+
+      const durationMs = (cfg.duration_minutes ?? 60) * 60_000
+      const endTime = new Date(startTime.getTime() + durationMs)
+      const serviceName = fields.raw.servico || fields.raw.procedimento || 'Consulta'
+
+      const { data: newAppt, error: apptErr } = await db
+        .from('appointments')
+        .insert({
+          clinic_id: args.automation.account_id,
+          patient_id: args.contactId,
+          professional_id: null,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          status: 'provisional',
+          type: serviceName,
+          notes: `Criado automaticamente a partir da mensagem: "${messageText}"`,
+        })
+        .select('id')
+        .single()
+
+      if (apptErr) throw new Error(`failed to create appointment: ${apptErr.message}`)
+
+      await db.from('contact_timeline').insert({
+        account_id: args.automation.account_id,
+        contact_id: args.contactId,
+        event_type: 'appointment',
+        title: '⚙️ Automação — Agendamento criado',
+        description: `${serviceName} agendado para ${startTime.toLocaleString('pt-BR')}`,
+        metadata: { by: 'automation', automation_id: args.automation.id, appointment_id: newAppt.id },
+      })
+
+      return `appointment created for ${startTime.toLocaleString('pt-BR')}`
+    }
+
+    case 'update_appointment_status': {
+      const cfg = step.step_config as UpdateAppointmentStatusStepConfig
+      if (!args.contactId) throw new Error('update_appointment_status needs a contact')
+
+      const selector = cfg.appointment_selector ?? 'next_upcoming'
+      let query = db
+        .from('appointments')
+        .select('id, start_time')
+        .eq('clinic_id', args.automation.account_id)
+        .eq('patient_id', args.contactId)
+        .neq('status', 'cancelled')
+
+      query =
+        selector === 'most_recent'
+          ? query.order('created_at', { ascending: false })
+          : query.gte('start_time', new Date().toISOString()).order('start_time', { ascending: true })
+
+      const { data: targetAppt } = await query.limit(1).maybeSingle()
+      if (!targetAppt) return 'no matching appointment found — skipped'
+
+      if (cfg.action === 'confirm') {
+        await db.from('appointments').update({ status: 'confirmed' }).eq('id', targetAppt.id)
+        await db.from('contact_timeline').insert({
+          account_id: args.automation.account_id,
+          contact_id: args.contactId,
+          event_type: 'appointment',
+          title: '⚙️ Automação — Agendamento confirmado',
+          description: 'Confirmado via WhatsApp.',
+          metadata: { by: 'automation', automation_id: args.automation.id, appointment_id: targetAppt.id },
+        })
+        return `appointment ${targetAppt.id} confirmed`
+      }
+
+      if (cfg.action === 'cancel') {
+        await db
+          .from('appointments')
+          .update({ status: 'cancelled', notes: 'Cancelado via WhatsApp (automação).' })
+          .eq('id', targetAppt.id)
+        await db.from('contact_timeline').insert({
+          account_id: args.automation.account_id,
+          contact_id: args.contactId,
+          event_type: 'appointment_cancelled',
+          title: '⚙️ Automação — Agendamento cancelado',
+          description: 'Cancelado via WhatsApp.',
+          metadata: { by: 'automation', automation_id: args.automation.id, appointment_id: targetAppt.id },
+        })
+        return `appointment ${targetAppt.id} cancelled`
+      }
+
+      if (cfg.action === 'no_show') {
+        await db.from('appointments').update({ status: 'no_show' }).eq('id', targetAppt.id)
+        await db.from('contact_timeline').insert({
+          account_id: args.automation.account_id,
+          contact_id: args.contactId,
+          event_type: 'appointment',
+          title: '⚙️ Automação — Sem retorno',
+          description: 'O paciente não respondeu à confirmação dentro do prazo.',
+          metadata: { by: 'automation', automation_id: args.automation.id, appointment_id: targetAppt.id },
+        })
+        return `appointment ${targetAppt.id} marked no_show`
+      }
+
+      // action === 'reschedule'
+      if (!cfg.template) throw new Error('update_appointment_status (reschedule) needs a template')
+      const messageText = args.context.message_text ?? ''
+      const fields = extractFromTemplate(cfg.template, messageText)
+      if (!fields) return 'message did not match the configured template — skipped'
+      const newStart = combineDateAndTime(fields)
+      if (!newStart) return 'could not parse a new date from the message — skipped'
+
+      const originalDuration = targetAppt.start_time
+        ? 60 * 60_000 // appointments row here only selected start_time; keep it simple at 1h
+        : 60 * 60_000
+      const newEnd = new Date(newStart.getTime() + originalDuration)
+
+      await db
+        .from('appointments')
+        .update({
+          start_time: newStart.toISOString(),
+          end_time: newEnd.toISOString(),
+          status: 'provisional',
+        })
+        .eq('id', targetAppt.id)
+
+      await db.from('contact_timeline').insert({
+        account_id: args.automation.account_id,
+        contact_id: args.contactId,
+        event_type: 'appointment_rescheduled',
+        title: '⚙️ Automação — Agendamento remarcado',
+        description: `Novo horário: ${newStart.toLocaleString('pt-BR')}`,
+        metadata: { by: 'automation', automation_id: args.automation.id, appointment_id: targetAppt.id },
+      })
+      return `appointment ${targetAppt.id} rescheduled to ${newStart.toLocaleString('pt-BR')}`
+    }
+
+    case 'register_payment': {
+      const cfg = step.step_config as RegisterPaymentStepConfig
+      if (!args.contactId) throw new Error('register_payment needs a contact')
+      if (!cfg.template) throw new Error('register_payment needs a template')
+
+      const messageText = args.context.message_text ?? ''
+      const fields = extractFromTemplate(cfg.template, messageText)
+      if (!fields || fields.valor === undefined) {
+        return 'message did not match the configured template, or no value found — skipped'
+      }
+
+      const { data: newTx, error: txErr } = await db
+        .from('financial_transactions')
+        .insert({
+          clinic_id: args.automation.account_id,
+          patient_id: args.contactId,
+          date: new Date().toISOString().slice(0, 10),
+          description: `${cfg.category || 'Pagamento'} via WhatsApp (automação)`,
+          category: cfg.category || 'Sinal',
+          method: 'pix',
+          type: 'sinal',
+          value: fields.valor,
+          status: 'paid',
+        })
+        .select('id')
+        .single()
+
+      if (txErr) throw new Error(`failed to register payment: ${txErr.message}`)
+
+      await db.from('contact_timeline').insert({
+        account_id: args.automation.account_id,
+        contact_id: args.contactId,
+        event_type: 'payment',
+        title: '⚙️ Automação — Pagamento registrado',
+        description: `R$ ${fields.valor.toFixed(2)} registrado no caixa.`,
+        metadata: { by: 'automation', automation_id: args.automation.id, transaction_id: newTx.id },
+      })
+      return `payment of ${fields.valor} registered`
+    }
+
     case 'send_webhook': {
       const cfg = step.step_config as SendWebhookStepConfig
       if (!cfg.url) throw new Error('send_webhook needs url')
@@ -590,6 +780,15 @@ function triggerMatches(automation: Automation, ctx: AutomationContext | undefin
   if (automation.trigger_type !== 'keyword_match') return true
   const cfg = automation.trigger_config as KeywordMatchTriggerConfig
   if (!cfg?.keywords || cfg.keywords.length === 0) return false
+
+  // 'from' defaults to 'lead' for automations saved before this field
+  // existed — matches the only behavior this trigger had until now
+  // (it only ever ran on inbound/customer messages).
+  const wantedDirection = cfg.from ?? 'lead'
+  if (wantedDirection !== 'any' && ctx?.message_direction && wantedDirection !== ctx.message_direction) {
+    return false
+  }
+
   const text = (ctx?.message_text ?? '').toString()
   if (!text) return false
   const haystack = cfg.case_sensitive ? text : text.toLowerCase()

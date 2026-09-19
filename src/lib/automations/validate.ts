@@ -96,6 +96,32 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.title`, message: 'title is required' })
       }
       break
+    case 'create_appointment':
+      if (!nonEmpty(c.template)) {
+        issues.push({ path: `${path}.template`, message: 'message template is required' })
+      } else if (!String(c.template).includes('{{data}}')) {
+        issues.push({ path: `${path}.template`, message: 'template must include {{data}}' })
+      }
+      break
+    case 'update_appointment_status':
+      if (!nonEmpty(c.action)) {
+        issues.push({ path: `${path}.action`, message: 'action is required' })
+      }
+      if (c.action === 'reschedule') {
+        if (!nonEmpty(c.template)) {
+          issues.push({ path: `${path}.template`, message: 'message template is required for reschedule' })
+        } else if (!String(c.template).includes('{{data}}')) {
+          issues.push({ path: `${path}.template`, message: 'template must include {{data}}' })
+        }
+      }
+      break
+    case 'register_payment':
+      if (!nonEmpty(c.template)) {
+        issues.push({ path: `${path}.template`, message: 'message template is required' })
+      } else if (!String(c.template).includes('{{valor}}')) {
+        issues.push({ path: `${path}.template`, message: 'template must include {{valor}}' })
+      }
+      break
     case 'wait':
       if (c.mode === 'until_window') {
         if (!nonEmpty(c.window) || !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(String(c.window))) {

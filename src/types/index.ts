@@ -419,6 +419,9 @@ export type AutomationStepType =
   | 'assign_conversation'
   | 'update_contact_field'
   | 'create_deal'
+  | 'create_appointment'
+  | 'update_appointment_status'
+  | 'register_payment'
   | 'wait'
   | 'condition'
   | 'send_webhook'
@@ -430,6 +433,13 @@ export interface KeywordMatchTriggerConfig {
   keywords: string[];
   match_type: 'exact' | 'contains';
   case_sensitive?: boolean;
+  /** Which side must have sent the matching message. 'lead' (default,
+   *  backward compatible with automations saved before this existed)
+   *  = the contact; 'us' = the clinic's own outbound message —
+   *  needed for triggers like "we just confirmed an appointment" that
+   *  fire off what the clinic typed, not what the patient sent.
+   *  'any' matches regardless of direction. */
+  from?: 'lead' | 'us' | 'any';
 }
 
 export interface TagTriggerConfig {
@@ -488,6 +498,45 @@ export interface CreateDealStepConfig {
   value?: number;
 }
 
+/**
+ * Shared template-extraction convention for the three step configs
+ * below: `template` is matched against the triggering message text,
+ * with literal text matched exactly (case/space-insensitive) and
+ * `{{placeholders}}` capturing the parts that vary. Each placeholder
+ * is parsed by what it's named:
+ *  - {{data}}   → date, "DD/MM" or "DD/MM/YYYY"
+ *  - {{hora}}   → time, "HH:mm", "HHhmm", or "10h"
+ *  - {{valor}}  → a monetary amount (digits with , or . as decimal)
+ *  - anything else → captured as free text
+ * Example: "agendamos sua {{servico}} para o dia {{data}} às {{hora}}"
+ */
+export interface CreateAppointmentStepConfig {
+  template: string;
+  /** Minutes for the appointment when the template has no separate
+   *  end time — defaults to 60. */
+  duration_minutes?: number;
+}
+
+export interface UpdateAppointmentStatusStepConfig {
+  action: 'confirm' | 'cancel' | 'reschedule' | 'no_show';
+  /** Which of the contact's appointments to act on, since a short
+   *  confirmation/cancellation message never names one by id.
+   *  'next_upcoming' (default): the soonest one still ahead of now.
+   *  'most_recent': the last one created — useful right after a
+   *  same-session booking. */
+  appointment_selector?: 'next_upcoming' | 'most_recent';
+  /** Only used for action: 'reschedule' — same template convention as
+   *  CreateAppointmentStepConfig, to pull the new date/time. */
+  template?: string;
+}
+
+export interface RegisterPaymentStepConfig {
+  /** Must include {{valor}}. Example: "recebemos o pagamento do seu
+   *  sinal de {{valor}} reais" */
+  template: string;
+  category?: string;
+}
+
 export interface WaitStepConfig {
   /** 'relative' (default, backward compatible): wait a fixed amount.
    *  'until_window': hold until the next moment inside the given
@@ -531,6 +580,9 @@ export type AutomationStepConfig =
   | AssignConversationStepConfig
   | UpdateContactFieldStepConfig
   | CreateDealStepConfig
+  | CreateAppointmentStepConfig
+  | UpdateAppointmentStatusStepConfig
+  | RegisterPaymentStepConfig
   | WaitStepConfig
   | ConditionStepConfig
   | SendWebhookStepConfig

@@ -30,6 +30,9 @@ import {
   Loader2,
   ArrowDown,
   ArrowUp,
+  CalendarPlus,
+  CalendarCheck,
+  Banknote,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -97,6 +100,9 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   assign_conversation: { label: "Criar tarefa / Atribuir", icon: UserCheck, border: "border-l-purple-600" },
   update_contact_field: { label: "Mudar status / etapa", icon: PencilLine, border: "border-l-blue-600" },
   create_deal: { label: "Criar negócio", icon: Briefcase, border: "border-l-emerald-600" },
+  create_appointment: { label: "Criar agendamento", icon: CalendarPlus, border: "border-l-teal-600" },
+  update_appointment_status: { label: "Atualizar status do agendamento", icon: CalendarCheck, border: "border-l-teal-600" },
+  register_payment: { label: "Registrar pagamento", icon: Banknote, border: "border-l-green-600" },
   wait: { label: "Aguardar", icon: Hourglass, border: "border-l-neutral-400" },
   condition: { label: "Condição (Se / Senão)", icon: GitBranch, border: "border-l-amber-500" },
   send_webhook: { label: "Enviar Webhook", icon: Webhook, border: "border-l-neutral-600" },
@@ -110,6 +116,9 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "add_tag",
   "assign_conversation",
   "create_deal",
+  "create_appointment",
+  "update_appointment_status",
+  "register_payment",
 ]
 
 const TRIGGER_OPTIONS: { value: AutomationTriggerType; label: string; hint: string }[] = [
@@ -138,7 +147,7 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
     case "send_message":
       return { text: "" }
     case "send_template":
-      return { template_name: "", language: "en_US" }
+      return { template_name: "", language: "pt_BR" }
     case "add_tag":
     case "remove_tag":
       return { tag_id: "" }
@@ -148,6 +157,12 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { field: "name", value: "" }
     case "create_deal":
       return { pipeline_id: "", stage_id: "", title: "", value: 0 }
+    case "create_appointment":
+      return { template: "", duration_minutes: 60 }
+    case "update_appointment_status":
+      return { action: "confirm", appointment_selector: "next_upcoming" }
+    case "register_payment":
+      return { template: "", category: "Sinal" }
     case "wait":
       return { amount: 1, unit: "hours" }
     case "condition":
@@ -846,6 +861,24 @@ function KeywordMatchConfig({
           <option value="exact">Exato</option>
         </select>
       </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          Origem da mensagem
+        </label>
+        <select
+          value={config?.from ?? "lead"}
+          onChange={(e) => onChange({ ...config, from: e.target.value as "lead" | "us" | "any" })}
+          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
+        >
+          <option value="lead">Mensagem do paciente</option>
+          <option value="us">Mensagem da clínica</option>
+          <option value="any">Qualquer uma das duas</option>
+        </select>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Escolha &quot;da clínica&quot; para gatilhos como confirmar agendamento, registrar
+          pagamento ou mudar etapa a partir do que a própria equipe escreve.
+        </p>
+      </div>
     </div>
   )
 }
@@ -1226,6 +1259,106 @@ function StepEditor({
           </FieldBlock>
         </>
       )
+    case "create_appointment":
+      return (
+        <>
+          <FieldBlock label="Mensagem-modelo">
+            <Textarea
+              value={(cfg.template as string) ?? ""}
+              onChange={(e) => set({ template: e.target.value })}
+              placeholder="agendamos sua {{servico}} para o dia {{data}} às {{hora}}"
+              className="bg-muted text-foreground"
+              rows={3}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Escreva a mensagem exatamente como a clínica costuma mandar, trocando as partes que
+              mudam por <code className="font-mono">{"{{data}}"}</code>,{" "}
+              <code className="font-mono">{"{{hora}}"}</code> e{" "}
+              <code className="font-mono">{"{{servico}}"}</code>. Formatos aceitos: data{" "}
+              <code className="font-mono">19/09</code> ou <code className="font-mono">19/09/2026</code>;
+              hora <code className="font-mono">10h</code> ou <code className="font-mono">10:30</code>.
+            </p>
+          </FieldBlock>
+          <FieldBlock label="Duração (minutos)">
+            <Input
+              type="number"
+              min={5}
+              value={(cfg.duration_minutes as number) ?? 60}
+              onChange={(e) => set({ duration_minutes: Math.max(5, Number(e.target.value)) })}
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+        </>
+      )
+    case "update_appointment_status": {
+      const action = (cfg.action as string) ?? "confirm"
+      return (
+        <>
+          <FieldBlock label="O que fazer">
+            <select
+              value={action}
+              onChange={(e) => set({ action: e.target.value })}
+              className={SELECT_CLASS}
+            >
+              <option value="confirm">Confirmar</option>
+              <option value="cancel">Cancelar</option>
+              <option value="reschedule">Remarcar</option>
+              <option value="no_show">Marcar como sem retorno</option>
+            </select>
+          </FieldBlock>
+          <FieldBlock label="Qual agendamento">
+            <select
+              value={(cfg.appointment_selector as string) ?? "next_upcoming"}
+              onChange={(e) => set({ appointment_selector: e.target.value })}
+              className={SELECT_CLASS}
+            >
+              <option value="next_upcoming">O próximo agendamento futuro</option>
+              <option value="most_recent">O último criado</option>
+            </select>
+          </FieldBlock>
+          {action === "reschedule" && (
+            <FieldBlock label="Mensagem-modelo com o novo horário">
+              <Textarea
+                value={(cfg.template as string) ?? ""}
+                onChange={(e) => set({ template: e.target.value })}
+                placeholder="ok, remarcado para o dia {{data}} às {{hora}}"
+                className="bg-muted text-foreground"
+                rows={3}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Mesma convenção de <code className="font-mono">{"{{data}}"}</code> /{" "}
+                <code className="font-mono">{"{{hora}}"}</code> do agendamento.
+              </p>
+            </FieldBlock>
+          )}
+        </>
+      )
+    }
+    case "register_payment":
+      return (
+        <>
+          <FieldBlock label="Mensagem-modelo">
+            <Textarea
+              value={(cfg.template as string) ?? ""}
+              onChange={(e) => set({ template: e.target.value })}
+              placeholder="recebemos o pagamento do seu sinal de {{valor}} reais"
+              className="bg-muted text-foreground"
+              rows={3}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Precisa ter <code className="font-mono">{"{{valor}}"}</code> na frase — é dali que o
+              valor é extraído e lançado no financeiro.
+            </p>
+          </FieldBlock>
+          <FieldBlock label="Categoria no financeiro">
+            <Input
+              value={(cfg.category as string) ?? "Sinal"}
+              onChange={(e) => set({ category: e.target.value })}
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+        </>
+      )
     case "wait": {
       const mode = (cfg.mode as string) ?? "relative";
       return (
@@ -1382,10 +1515,23 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.text as string) || "sem texto ainda"
     case "send_template":
       return (step.step_config.template_name as string) || "escolher um modelo"
+    case "create_appointment":
+      return (step.step_config.template as string) || "sem mensagem-modelo ainda"
+    case "update_appointment_status": {
+      const labels: Record<string, string> = {
+        confirm: "Confirmar",
+        cancel: "Cancelar",
+        reschedule: "Remarcar",
+        no_show: "Sem retorno",
+      }
+      return labels[step.step_config.action as string] ?? "?"
+    }
+    case "register_payment":
+      return (step.step_config.template as string) || "sem mensagem-modelo ainda"
     case "wait":
       return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
     case "condition":
-      return `when ${step.step_config.subject ?? "?"}`
+      return `quando ${step.step_config.subject ?? "?"}`
     case "send_webhook":
       return (step.step_config.url as string) || "sem URL"
     default:
