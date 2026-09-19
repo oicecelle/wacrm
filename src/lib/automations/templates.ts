@@ -6,10 +6,10 @@ import type {
 } from '@/types'
 
 export type TemplateSlug =
-  | 'welcome_message'
-  | 'out_of_office'
-  | 'lead_qualifier'
+  | 'appointment_confirmation'
   | 'follow_up_reminder'
+  | 'send_template_on_keyword'
+  | 'mark_lead_hot'
 
 export interface TemplateStepSeed {
   step_type: AutomationStepType
@@ -29,86 +29,27 @@ export interface AutomationTemplateDefinition {
 }
 
 export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefinition> = {
-  welcome_message: {
-    slug: 'welcome_message',
-    name: 'Welcome Message',
-    description: 'Auto-reply to first-time contacts with a greeting.',
-    // first_inbound_message (added in PR #33) catches both brand-new
-    // contacts AND manually-added/imported contacts on their first-ever
-    // reply, which is what a user setting up a "welcome" automation
-    // almost always wants. new_contact_created would miss the
-    // manually-imported case.
-    trigger_type: 'first_inbound_message',
-    trigger_config: {},
-    steps: [
-      {
-        step_type: 'send_message',
-        step_config: {
-          text: "Hi! 👋 Thanks for reaching out. We'll get back to you shortly.",
-        },
-      },
-      {
-        step_type: 'add_tag',
-        step_config: { tag_id: '' },
-      },
-    ],
-  },
-  out_of_office: {
-    slug: 'out_of_office',
-    name: 'Out of Office',
-    description: 'Auto-reply during off-hours so nobody is left waiting.',
-    trigger_type: 'new_message_received',
-    trigger_config: {},
-    steps: [
-      {
-        step_type: 'condition',
-        step_config: {
-          subject: 'time_of_day',
-          operand: '18:00-09:00',
-        },
-      },
-      {
-        step_type: 'send_message',
-        step_config: {
-          text:
-            "Thanks for your message! Our team is offline right now (9am–6pm) and will reply first thing tomorrow.",
-        },
-        parent_index: 0,
-        branch: 'yes',
-      },
-    ],
-  },
-  lead_qualifier: {
-    slug: 'lead_qualifier',
-    name: 'Lead Qualifier',
-    description: 'Ask qualification questions to filter inbound leads.',
+  appointment_confirmation: {
+    slug: 'appointment_confirmation',
+    name: 'Confirmar Agendamento',
+    description: 'Quando o paciente responde "sim"/"confirmo", marca o próximo agendamento como confirmado sozinho.',
     trigger_type: 'keyword_match',
     trigger_config: {
-      keywords: ['pricing', 'quote', 'buy'],
+      keywords: ['sim', 'confirmo', 'confirmado', 'confirmar'],
       match_type: 'contains',
+      from: 'lead',
     },
     steps: [
       {
-        step_type: 'send_message',
-        step_config: {
-          text:
-            "Great — happy to help with pricing! Quick question: roughly how many seats are you looking for?",
-        },
-      },
-      {
-        step_type: 'wait',
-        step_config: { amount: 10, unit: 'minutes' },
-      },
-      {
-        step_type: 'assign_conversation',
-        step_config: { mode: 'round_robin' },
+        step_type: 'update_appointment_status',
+        step_config: { action: 'confirm', appointment_selector: 'next_upcoming' },
       },
     ],
   },
   follow_up_reminder: {
     slug: 'follow_up_reminder',
-    name: 'Follow-up Reminder',
-    description: 'Send a nudge if a contact has not replied within 24 hours.',
+    name: 'Follow-up Sem Resposta',
+    description: 'Se o contato não responder em 24h, manda uma mensagem de retomada automaticamente.',
     trigger_type: 'new_message_received',
     trigger_config: {},
     steps: [
@@ -119,9 +60,42 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
       {
         step_type: 'send_message',
         step_config: {
-          text:
-            "Just circling back — did you have any other questions for us? Happy to help!",
+          text: 'Oi! Passando aqui pra saber se ficou alguma dúvida. Estou à disposição! 😊',
         },
+      },
+    ],
+  },
+  send_template_on_keyword: {
+    slug: 'send_template_on_keyword',
+    name: 'Enviar Modelo por Palavra-Chave',
+    description: 'Quando o paciente demonstra interesse (ex: "orçamento", "preço"), já envia um modelo automático — sem precisar disparar manualmente.',
+    trigger_type: 'keyword_match',
+    trigger_config: {
+      keywords: ['orçamento', 'preço', 'valor'],
+      match_type: 'contains',
+      from: 'lead',
+    },
+    steps: [
+      {
+        step_type: 'send_template',
+        step_config: { template_name: '', language: 'pt_BR' },
+      },
+    ],
+  },
+  mark_lead_hot: {
+    slug: 'mark_lead_hot',
+    name: 'Marcar Lead Como Quente',
+    description: 'Quando o paciente usa palavras de urgência (ex: "quero agora", "hoje mesmo"), marca o negócio como quente no funil automaticamente.',
+    trigger_type: 'keyword_match',
+    trigger_config: {
+      keywords: ['quero agora', 'hoje mesmo', 'urgente'],
+      match_type: 'contains',
+      from: 'lead',
+    },
+    steps: [
+      {
+        step_type: 'update_deal_field',
+        step_config: { field: 'temperature', value: 'hot' },
       },
     ],
   },

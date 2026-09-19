@@ -11,10 +11,10 @@ import {
   Pencil,
   Trash2,
   FileText,
-  MessageCircle,
-  Clock,
-  Users,
   PhoneCall,
+  CalendarCheck,
+  Send,
+  Flame,
   Loader2,
   Workflow,
   HelpCircle,
@@ -51,17 +51,17 @@ import { triggerMeta, formatRelative } from "@/lib/automations/trigger-meta";
 import { cn } from "@/lib/utils";
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
-  "welcome_message",
-  "out_of_office",
-  "lead_qualifier",
+  "appointment_confirmation",
   "follow_up_reminder",
+  "send_template_on_keyword",
+  "mark_lead_hot",
 ];
 
 const TEMPLATE_ICON: Record<TemplateSlug, typeof Zap> = {
-  welcome_message: MessageCircle,
-  out_of_office: Clock,
-  lead_qualifier: Users,
+  appointment_confirmation: CalendarCheck,
   follow_up_reminder: PhoneCall,
+  send_template_on_keyword: Send,
+  mark_lead_hot: Flame,
 };
 
 /* ─── Flows interfaces ─────────────────────────────────────── */
