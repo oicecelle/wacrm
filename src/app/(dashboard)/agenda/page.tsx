@@ -646,9 +646,17 @@ export default function AgendaPage() {
         {/* Mini Calendar (Month selector + cells) */}
         <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-neutral-800 capitalize">
-              {monthNames[pickerMonth]} {pickerYear}
-            </span>
+            <button
+              type="button"
+              onClick={() => setIsMiniCalendarExpanded(!isMiniCalendarExpanded)}
+              className="flex items-center gap-1.5 text-sm font-bold text-neutral-800 hover:text-blue-600 transition-colors capitalize"
+              title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
+            >
+              <span>{monthNames[pickerMonth]} {pickerYear}</span>
+              <span className="text-[9px] font-extrabold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
+                {isMiniCalendarExpanded ? "Mês" : "Semana"}
+              </span>
+            </button>
             <div className="flex gap-0.5">
               <button
                 onClick={handlePickerPrevMonth}
@@ -672,7 +680,7 @@ export default function AgendaPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-xs">
-            {miniCalendarCells.map((cellDate, cellIdx) => {
+            {(isMiniCalendarExpanded ? miniCalendarCells : weekDates).map((cellDate, cellIdx) => {
               const isSelected = cellDate.toDateString() === selectedDate.toDateString();
               const isToday = cellDate.toDateString() === new Date().toDateString();
               const isCurrentMonth = cellDate.getMonth() === pickerMonth;
