@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
   PlusIcon,
@@ -10,6 +11,7 @@ import {
   TrendingDownIcon,
   DollarSignIcon,
   AlertTriangleIcon,
+  ShieldAlert,
   MessageSquareIcon,
   ArrowUpRightIcon,
   ArrowDownRightIcon,
@@ -427,6 +429,7 @@ const MOCK_PROFESSIONALS = [
 export default function FinanceiroPage() {
   const supabase = createClient();
   const { accountId, profile } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
   const [activeTab, setActiveTab] = useState<"ledger" | "contas" | "pacotes" | "comissoes" | "previsibilidade" | "dre">("ledger");
   const [typeFilter, setTypeFilter] = useState<TxType | "all">("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -814,6 +817,21 @@ export default function FinanceiroPage() {
     { label: "(-) Custos Fixos (aluguel, salários)", value: -despesa, type: "cost" as const },
     { label: "Lucro Líquido", value: lucro, type: "result" as const },
   ];
+
+  if (!permsLoading && !hasPermission("view_financeiro", "view")) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <ShieldAlert className="h-10 w-10 text-muted-foreground" />
+        <div>
+          <h2 className="text-sm font-bold text-foreground">Sem acesso ao Financeiro</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
+            de acesso.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-left">
