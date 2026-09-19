@@ -28,6 +28,7 @@ import {
   Search,
   PlayCircle,
   Send,
+  RotateCw,
 } from 'lucide-react';
 
 type StatusTab = 'sent' | 'failed' | 'scheduled' | 'all';
@@ -321,6 +322,30 @@ export default function BroadcastHistoryPage() {
     }
   }
 
+  async function retryFailedBroadcast(broadcast: Broadcast) {
+    if (!confirm(`Tentar reenviar as ${broadcast.failed_count} mensagens que falharam em "${broadcast.name}"?`)) {
+      return;
+    }
+    setBusyId(broadcast.id);
+    try {
+      const res = await fetch(`/api/broadcasts/${broadcast.id}/retry-failed`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao reenviar');
+      toast.success(
+        data.remaining > 0
+          ? `${data.sent} reenviados com sucesso. ${data.remaining} continuam pelo worker normal.`
+          : data.sent > 0
+            ? `${data.sent} reenviados com sucesso.`
+            : 'Nenhum reenvio teve sucesso — confira os erros individuais.',
+      );
+      fetchBroadcasts();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao reenviar');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function duplicateBroadcast(broadcast: Broadcast) {
     setBusyId(broadcast.id);
     try {
@@ -530,6 +555,16 @@ export default function BroadcastHistoryPage() {
                         {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                       </button>
                     )}
+                    {broadcast.failed_count > 0 && (
+                      <button
+                        onClick={() => retryFailedBroadcast(broadcast)}
+                        title={`Reenviar as ${broadcast.failed_count} que falharam`}
+                        disabled={isBusy}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                      >
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     {canEditOrCancel && (
                       <>
                         <button
@@ -573,6 +608,7 @@ export default function BroadcastHistoryPage() {
                         {recipients.map((r) => {
                           const rStatus = getRecipientStatus(r.status);
                           const isPending = r.status === 'pending';
+                          const isFailed = r.status === 'failed';
                           const isRecipientBusy = busyRecipientId === r.id;
                           const varEntries = Object.entries(r.params ?? {}).filter(([, v]) => v?.trim());
                           return (
@@ -598,6 +634,20 @@ export default function BroadcastHistoryPage() {
                                   >
                                     {rStatus.label}
                                   </span>
+                                  {isFailed && (
+                                    <button
+                                      onClick={() => sendNowRecipient(r)}
+                                      title="Tentar reenviar"
+                                      disabled={isRecipientBusy}
+                                      className="rounded p-1 text-muted-foreground hover:bg-background hover:text-primary"
+                                    >
+                                      {isRecipientBusy ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <RotateCw className="h-3 w-3" />
+                                      )}
+                                    </button>
+                                  )}
                                   {isPending && (
                                     <>
                                       <button

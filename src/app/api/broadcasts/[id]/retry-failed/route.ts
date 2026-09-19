@@ -4,24 +4,10 @@ import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { sendOneBroadcastRecipient } from '@/lib/whatsapp/broadcast-sender'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
 
-// "Enviar agora" for a whole waiting/in-progress broadcast. Sends
-// every still-pending recipient right here in this request, but still
-// respects the broadcast's configured interval_seconds between each
-// one — sending everything with zero delay risks the number getting
-// flagged/banned by WhatsApp, which defeats the point of pacing in
-// the first place. "Enviar agora" means "start right now, don't wait
-// for the scheduled time" — not "ignore the pacing entirely".
-//
-// An earlier version of this route only reset scheduled_at/last_sent_at
-// and left delivery to the next cron tick — but the cron worker's own
-// pacing logic (see /api/cron/broadcasts) still only releases one
-// interval's worth of recipients per tick, so from the user's side
-// "enviar agora" appeared to send just one message and stop. This
-// version processes the whole pending list synchronously instead,
-// bounded by the same kind of time budget the cron uses so a very
-// large list (or a long interval) degrades gracefully — finishes what
-// it can within the budget, the cron picks up the rest on its normal
-// schedule at the same pace — rather than timing out.
+// Retries every recipient currently at status='failed' for this
+// broadcast — same pacing as send-now (respects interval_seconds
+// between each attempt) and the same time-budget/paging shape, just
+// scoped to the failed subset instead of the pending one.
 export const maxDuration = 60
 const TIME_BUDGET_MS = 50_000
 
@@ -61,18 +47,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (fetchError || !broadcast) {
       return NextResponse.json({ error: 'Disparo não encontrado.' }, { status: 404 })
     }
-    if (!['scheduled', 'sending'].includes(broadcast.status)) {
-      return NextResponse.json(
-        { error: 'Só é possível enviar agora um disparo agendado ou em andamento.' },
-        { status: 400 },
-      )
-    }
 
     const intervalMs = Math.max(1, broadcast.interval_seconds ?? 5) * 1000
-
     const admin = supabaseAdmin()
-
-    await admin.from('broadcasts').update({ status: 'sending' }).eq('id', id)
 
     const { data: config } = await admin
       .from('whatsapp_config')
@@ -95,31 +72,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const startedAt = Date.now()
     const summary = { sent: 0, failed: 0, remaining: 0 }
 
-    // Paged so a very large list doesn't need to fit in memory at once.
     const PAGE = 200
     let keepGoing = true
     let isFirstSend = true
     while (keepGoing && Date.now() - startedAt < TIME_BUDGET_MS) {
-      const { data: pending } = await admin
+      const { data: failedBatch } = await admin
         .from('broadcast_recipients')
         .select('id, params, contact:contacts(phone)')
         .eq('broadcast_id', id)
-        .eq('status', 'pending')
+        .eq('status', 'failed')
         .order('created_at', { ascending: true })
         .limit(PAGE)
 
-      if (!pending || pending.length === 0) {
+      if (!failedBatch || failedBatch.length === 0) {
         keepGoing = false
         break
       }
 
-      for (const recipient of pending) {
+      for (const recipient of failedBatch) {
         if (Date.now() - startedAt >= TIME_BUDGET_MS) break
 
-        // Same pacing the scheduled cron uses — wait the configured
-        // interval before every send except the very first one in
-        // this run, so back-to-back "enviar agora" clicks don't
-        // double up on the wait.
         if (!isFirstSend && intervalMs < TIME_BUDGET_MS - (Date.now() - startedAt)) {
           await sleep(intervalMs)
         }
@@ -137,41 +109,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         else summary.failed++
       }
 
-      if (pending.length < PAGE) keepGoing = false
+      // Re-querying status='failed' each pass naturally excludes rows
+      // that just succeeded, so this loop converges even without a
+      // separate "processed" marker.
+      if (failedBatch.length < PAGE) keepGoing = false
     }
 
-    const { count: stillPending } = await admin
+    const { count: stillFailed } = await admin
       .from('broadcast_recipients')
       .select('id', { count: 'exact', head: true })
       .eq('broadcast_id', id)
-      .eq('status', 'pending')
-    summary.remaining = stillPending ?? 0
+      .eq('status', 'failed')
+    summary.remaining = stillFailed ?? 0
 
-    if (summary.remaining === 0) {
-      const { count: failedCount } = await admin
-        .from('broadcast_recipients')
-        .select('id', { count: 'exact', head: true })
-        .eq('broadcast_id', id)
-        .eq('status', 'failed')
-      const { count: totalCount } = await admin
-        .from('broadcast_recipients')
-        .select('id', { count: 'exact', head: true })
-        .eq('broadcast_id', id)
-      const finalStatus = totalCount && failedCount === totalCount ? 'failed' : 'sent'
-      await admin.from('broadcasts').update({ status: finalStatus, last_sent_at: new Date().toISOString() }).eq('id', id)
-    } else {
-      // Time budget ran out with recipients still pending — leave it
-      // 'sending' so the cron worker finishes the rest on its normal
-      // schedule instead of getting stuck.
-      await admin
-        .from('broadcasts')
-        .update({ last_sent_at: new Date().toISOString() })
-        .eq('id', id)
-    }
+    await admin.from('broadcasts').update({ last_sent_at: new Date().toISOString() }).eq('id', id)
 
     return NextResponse.json({ success: true, ...summary })
   } catch (err) {
-    console.error('Error in broadcasts/[id]/send-now:', err)
-    return NextResponse.json({ error: 'Falha ao enviar agora.' }, { status: 500 })
+    console.error('Error in broadcasts/[id]/retry-failed:', err)
+    return NextResponse.json({ error: 'Falha ao reenviar.' }, { status: 500 })
   }
 }
