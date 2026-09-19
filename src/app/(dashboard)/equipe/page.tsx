@@ -11,6 +11,7 @@ import {
   Loader2Icon,
   XIcon,
   SendIcon,
+  LinkIcon,
   CheckCircle2Icon,
   ClockIcon,
   ShieldIcon,
@@ -26,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InviteMemberDialog } from "@/components/settings/invite-member-dialog";
 
 /* ─── Types ──────────────────────────────────────────────── */
 type Role = "admin" | "professional" | "receptionist" | "marketing" | "financial" | "traffic_manager" | "commercial";
@@ -155,6 +157,7 @@ export default function EquipePage() {
 
   // Invite modal state
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isLinkInviteOpen, setIsLinkInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("professional");
   const [inviteName, setInviteName] = useState("");
@@ -421,13 +424,22 @@ export default function EquipePage() {
           <h1 className="text-2xl font-black tracking-tight text-neutral-900">Equipe & Comissões</h1>
           <p className="text-sm text-neutral-500">Convide colaboradores, configure permissões e acompanhe comissões.</p>
         </div>
-        <button
-          onClick={() => setIsInviteOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2.5 text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <SendIcon className="h-4 w-4" />
-          Convidar por E-mail
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsLinkInviteOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white text-neutral-700 px-4 py-2.5 text-xs font-black hover:bg-neutral-50 transition-colors shadow-sm"
+          >
+            <LinkIcon className="h-4 w-4" />
+            Convidar por Link
+          </button>
+          <button
+            onClick={() => setIsInviteOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2.5 text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <SendIcon className="h-4 w-4" />
+            Convidar por E-mail
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -607,6 +619,12 @@ export default function EquipePage() {
           </table>
         </div>
       )}
+
+      <InviteMemberDialog
+        open={isLinkInviteOpen}
+        onOpenChange={setIsLinkInviteOpen}
+        onCreated={loadTeam}
+      />
 
       {/* ═══ INVITE MODAL ════════════════════════════════════════ */}
       {isInviteOpen && (
