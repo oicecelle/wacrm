@@ -1342,6 +1342,39 @@ Qualquer dúvida, estou à disposição! 😊`;
             },
           });
 
+          // A patient who just got an appointment booked effectively
+          // accepted whatever quote led them here — even when they
+          // never clicked "aprovar" on the portal link themselves
+          // (agreed over a call, in person, etc). Only touches a
+          // quote still sitting at 'sent' — already-accepted/rejected
+          // ones, or ones with no clinic follow-through yet, are left
+          // alone.
+          const { data: pendingQuote } = await supabase
+            .from("quotes")
+            .select("id, total_value")
+            .eq("contact_id", patientId)
+            .eq("account_id", clinicId)
+            .eq("status", "sent")
+            .order("sent_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (pendingQuote) {
+            await supabase
+              .from("quotes")
+              .update({ status: "accepted", responded_at: new Date().toISOString() })
+              .eq("id", pendingQuote.id);
+
+            await supabase.from("contact_timeline").insert({
+              account_id: clinicId,
+              contact_id: patientId,
+              event_type: "quote_accepted",
+              title: `Orçamento aceito — agendamento criado`,
+              description: `Orçamento de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pendingQuote.total_value)} marcado como aceito automaticamente após o agendamento.`,
+              metadata: { quote_id: pendingQuote.id, appointment_id: newAppt.id },
+            });
+          }
+
           // Trigger created notification via API (only if toggle is enabled)
           if (newAppt?.id && sendWa) {
             const professionalName = staff.find((s) => s.id === professionalId)?.name || "";
