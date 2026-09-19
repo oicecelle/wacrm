@@ -2889,7 +2889,9 @@ Qualquer dúvida, estou à disposição! 😊`;
                               disabled={saving}
                             >
                               <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                                <SelectValue placeholder="Selecione a sala..." />
+                                <SelectValue placeholder="Selecione a sala...">
+                                  {roomId ? rooms.find((r) => r.id === roomId)?.name ?? "Nenhuma" : "Nenhuma"}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
                                 <SelectItem value="none" className="rounded-lg text-xs">Nenhuma</SelectItem>
@@ -3001,7 +3003,18 @@ Qualquer dúvida, estou à disposição! 😊`;
                               disabled={saving}
                             >
                               <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-10 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                                <SelectValue placeholder="Selecione" />
+                                <SelectValue placeholder="Selecione">
+                                  {
+                                    {
+                                      none: "Não se repete",
+                                      daily: "Diariamente",
+                                      weekly: "Semanalmente",
+                                      biweekly: "Quinzenalmente",
+                                      monthly: "Mensalmente",
+                                      custom: "Personalizado...",
+                                    }[recurrence || "none"]
+                                  }
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent className="rounded-xl bg-white border border-neutral-200">
                                 <SelectItem value="none" className="rounded-lg text-xs">Não se repete</SelectItem>
