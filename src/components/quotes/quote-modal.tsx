@@ -72,7 +72,8 @@ Preparei um orçamento especial para você:
 💰 *Total: {{total}}*
 {{condicao}}
 
-Este orçamento é válido por 7 dias.
+📤 Enviado em: {{data_envio}}
+Este orçamento é válido até {{validade}}.
 Qualquer dúvida, estou à disposição! 😊`;
 
 /* ─── Component ──────────────────────────────────────────── */
@@ -93,6 +94,7 @@ export function QuoteModal({
   const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
   const [discountValue, setDiscountValue] = useState("0");
   const [specialCondition, setSpecialCondition] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [resolvedContactId, setResolvedContactId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -183,6 +185,7 @@ export function QuoteModal({
       setItems([]);
       setDiscountValue("0");
       setSpecialCondition("");
+      setPaymentMethod("");
       setExpiresAt("");
       setResolvedContactId(null);
       setStep("build");
@@ -239,19 +242,27 @@ export function QuoteModal({
       `• ${i.name}${i.quantity > 1 ? ` (x${i.quantity})` : ""} — ${fmt(i.total_price)}`
     ).join("\n");
 
-    const condText = specialCondition
-      ? `\n✅ *Condição especial:* ${specialCondition}`
-      : "";
+    const condParts = [
+      specialCondition ? `✅ *Condição especial:* ${specialCondition}` : "",
+      paymentMethod ? `💳 *Forma de pagamento:* ${paymentMethod}` : "",
+    ].filter(Boolean);
+    const condText = condParts.length > 0 ? `\n${condParts.join("\n")}` : "";
 
-    const validityText = expiresAt
-      ? `\n📅 *Validade:* ${new Date(expiresAt + "T12:00:00").toLocaleDateString("pt-BR")}`
-      : "";
+    // Defaults to 7 days out when no explicit validity was set — same
+    // default the old hardcoded "válido por 7 dias" text implied,
+    // just now reflected as a real date instead of a fixed phrase.
+    const expiryDate = expiresAt
+      ? new Date(expiresAt + "T12:00:00")
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const sentDate = new Date();
 
     let msg = DEFAULT_TEMPLATE
       .replace("{{nome}}", contactName || "cliente")
       .replace("{{itens}}", itemsText)
       .replace("{{total}}", fmt(total))
-      .replace("{{condicao}}", condText + validityText);
+      .replace("{{condicao}}", condText)
+      .replace("{{data_envio}}", sentDate.toLocaleDateString("pt-BR"))
+      .replace("{{validade}}", expiryDate.toLocaleDateString("pt-BR"));
 
     if (discountAmount > 0) {
       msg = msg.replace("💰", `🎁 *Desconto:* -${fmt(discountAmount)}\n💰`);
@@ -274,6 +285,7 @@ export function QuoteModal({
       discount_value: discountAmount,
       discount_type: discountType,
       special_condition: specialCondition || null,
+      payment_method: paymentMethod || null,
       message_text: messageText,
       expires_at: expiresAt || null,
       sent_at: status === "sent" ? new Date().toISOString() : null,
@@ -306,27 +318,27 @@ export function QuoteModal({
     }
     setSending(true);
     try {
-      const quoteId = await saveQuote("sent");
+      // Saved as a draft first — only flipped to "sent" by the send
+      // route itself, and only once the WhatsApp dispatch actually
+      // succeeds. Marking it sent before confirming delivery would
+      // misrepresent a failed send as a successful one.
+      const quoteId = await saveQuote("draft");
       if (!quoteId) throw new Error("Falha ao salvar orçamento");
 
-      // Generate the public portal quote link
       const portalLink = `${window.location.origin}/portal/orcamento/${quoteId}`;
       const finalMessage = `${messageText}\n\n🔗 Visualize e aprove seu orçamento clicando aqui:\n${portalLink}`;
 
-      // Update message_text with the link
-      await supabase
-        .from("quotes")
-        .update({ message_text: finalMessage })
-        .eq("id", quoteId);
+      const res = await fetch("/api/quotes/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quote_id: quoteId, message_text: finalMessage }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha ao enviar pelo WhatsApp.");
 
       if (onQuoteCreated) onQuoteCreated(quoteId);
 
-      // Open WhatsApp with the final link-augmented message
-      const phone = contactPhone.replace(/\D/g, "");
-      const waUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(finalMessage)}`;
-      window.open(waUrl, "_blank");
-
-      toast.success("Orçamento registrado e WhatsApp aberto!");
+      toast.success(`Orçamento enviado para ${contactName} pelo WhatsApp!`);
       onClose();
     } catch (err: unknown) {
       toast.error("Erro: " + (err instanceof Error ? err.message : ""));
@@ -518,6 +530,24 @@ export function QuoteModal({
                       onChange={(e) => setSpecialCondition(e.target.value)}
                       className="h-8 text-xs"
                     />
+                  </div>
+
+                  {/* Payment method */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Forma de pagamento (opcional)</Label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full rounded-xl border border-neutral-200 h-8 px-3 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    >
+                      <option value="">Não especificar</option>
+                      <option value="Pix">Pix</option>
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Cartão de crédito">Cartão de crédito</option>
+                      <option value="Cartão de débito">Cartão de débito</option>
+                      <option value="Boleto">Boleto</option>
+                      <option value="Transferência">Transferência</option>
+                    </select>
                   </div>
 
                   {/* Validity */}
