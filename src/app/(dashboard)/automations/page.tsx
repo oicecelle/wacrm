@@ -24,7 +24,7 @@ import {
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useCan } from "@/hooks/use-can";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { Automation } from "@/types";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -108,7 +108,8 @@ const FLOW_STATUS_COLORS: Record<FlowRow["status"], string> = {
 export default function AutomationsPage() {
   const router = useRouter();
   const { accountId } = useAuth();
-  const canCreate = useCan("send-messages");
+  const { hasPermission, loading: permsLoading } = usePermissions();
+  const canCreate = !permsLoading && hasPermission("configurar_marketing", "edit");
   const [activeTab, setActiveTab] = useState<"rules" | "flows">("rules");
 
   /* --- Automation Rules state --- */

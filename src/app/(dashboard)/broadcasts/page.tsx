@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Radio, Plus, Loader2 } from 'lucide-react';
-import { useCan } from '@/hooks/use-can';
+import { usePermissions } from '@/hooks/use-permissions';
 import { GatedButton } from '@/components/ui/gated-button';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 
@@ -61,7 +61,8 @@ export default function BroadcastsPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const accountId = profile?.account_id;
-  const canCreate = useCan('send-messages');
+  const { hasPermission, loading: permsLoading } = usePermissions();
+  const canCreate = !permsLoading && hasPermission('configurar_marketing', 'edit');
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -81,7 +81,7 @@ const DEFAULT_PERMISSIONS: Record<Role, Record<string, boolean>> = {
   receptionist: {
     view_crm: true, edit_crm: true, view_agenda: true, edit_agenda: true,
     view_financeiro: false, edit_financeiro: false, view_documentos: true,
-    generate_documentos: true, view_relatorios: false, configurar_marketing: false,
+    generate_documentos: true, view_relatorios: false, configurar_marketing: true,
     gerenciar_equipe: false, acessar_configuracoes: false,
   },
   marketing: {
