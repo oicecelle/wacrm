@@ -479,7 +479,17 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         return `custom field updated`
       }
 
-      const allowed = new Set(['name', 'email', 'company'])
+      const allowed = new Set([
+        'name',
+        'email',
+        'company',
+        'source',
+        'interest',
+        'crm_stage',
+        'temperature',
+        'main_objection',
+        'next_action',
+      ])
       if (!allowed.has(cfg.field)) {
         return `field ${cfg.field} not writable from automations`
       }

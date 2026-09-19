@@ -53,6 +53,7 @@ import type {
 } from "@/types"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/use-auth"
+import { useWhatsappProvider } from "@/hooks/use-whatsapp-provider"
 import { cn } from "@/lib/utils"
 
 // ------------------------------------------------------------
@@ -190,6 +191,7 @@ function useResources(): AutomationResources {
 
 function ResourcesProvider({ children }: { children: ReactNode }) {
   const { accountId } = useAuth()
+  const { providerType } = useWhatsappProvider(accountId)
   const [tags, setTags] = useState<TagRecord[]>([])
   const [members, setMembers] = useState<AccountMember[]>([])
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
@@ -207,13 +209,10 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
     // is only required on the Meta provider path; Uazapi has no
     // review pipeline, so its templates are usable the moment
     // they're saved — same rule the broadcast wizard's picker uses.
+    // (provider comes from the shared, cached useWhatsappProvider
+    // hook above — no need to fetch whatsapp_config again here.)
     void (async () => {
-      const { data: config } = await supabase
-        .from("whatsapp_config")
-        .select("provider_type")
-        .eq("account_id", accountId)
-        .maybeSingle()
-      const provider = (config?.provider_type as "meta" | "uazapi" | undefined) ?? "uazapi"
+      const provider = providerType
 
       let templatesQuery = supabase
         .from("message_templates")
@@ -253,7 +252,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [accountId])
+  }, [accountId, providerType])
 
   return (
     <ResourcesContext.Provider value={{ tags, members, templates, customFields }}>
@@ -338,6 +337,14 @@ function ContactFieldSelect({
       <option value="name">Nome</option>
       <option value="email">E-mail</option>
       <option value="company">Empresa</option>
+      <optgroup label="Qualificação do lead">
+        <option value="source">Origem</option>
+        <option value="interest">Interesse</option>
+        <option value="crm_stage">Etapa no CRM</option>
+        <option value="temperature">Temperatura (hot / warm / cold)</option>
+        <option value="main_objection">Principal objeção</option>
+        <option value="next_action">Próxima ação</option>
+      </optgroup>
       {customFields.length > 0 && (
         <optgroup label="Campos personalizados">
           {customFields.map((f) => (
@@ -348,7 +355,7 @@ function ContactFieldSelect({
         </optgroup>
       )}
       {customValue && !knownCustom && (
-        <option value={customValue}>{customValue} (unknown field)</option>
+        <option value={customValue}>{customValue} (campo desconhecido)</option>
       )}
     </select>
   )
@@ -1169,17 +1176,17 @@ function StepEditor({
     case "update_contact_field":
       return (
         <>
-          <FieldBlock label="Field">
+          <FieldBlock label="Campo">
             <ContactFieldSelect
               value={(cfg.field as string) ?? "name"}
               onChange={(v) => set({ field: v })}
             />
           </FieldBlock>
-          <FieldBlock label="Value">
+          <FieldBlock label="Valor">
             <Input
               value={(cfg.value as string) ?? ""}
               onChange={(e) => set({ value: e.target.value })}
-              placeholder="Text or {{ vars.x }} / {{ message.text }}"
+              placeholder="Texto fixo ou {{ vars.x }} / {{ message.text }}"
               className="bg-muted text-foreground"
             />
           </FieldBlock>
@@ -1188,28 +1195,28 @@ function StepEditor({
     case "create_deal":
       return (
         <>
-          <FieldBlock label="Pipeline id">
+          <FieldBlock label="ID do pipeline">
             <Input
               value={(cfg.pipeline_id as string) ?? ""}
               onChange={(e) => set({ pipeline_id: e.target.value })}
               className="bg-muted text-foreground"
             />
           </FieldBlock>
-          <FieldBlock label="Stage id">
+          <FieldBlock label="ID da etapa">
             <Input
               value={(cfg.stage_id as string) ?? ""}
               onChange={(e) => set({ stage_id: e.target.value })}
               className="bg-muted text-foreground"
             />
           </FieldBlock>
-          <FieldBlock label="Title">
+          <FieldBlock label="Título">
             <Input
               value={(cfg.title as string) ?? ""}
               onChange={(e) => set({ title: e.target.value })}
               className="bg-muted text-foreground"
             />
           </FieldBlock>
-          <FieldBlock label="Value">
+          <FieldBlock label="Valor">
             <Input
               type="number"
               value={(cfg.value as number) ?? 0}

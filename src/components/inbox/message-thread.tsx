@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useWhatsappProvider } from "@/hooks/use-whatsapp-provider";
 import { usePresence } from "@/hooks/use-presence";
 import { PresenceDot } from "@/components/presence/presence-dot";
 import { presenceLabel } from "@/lib/presence";
@@ -165,7 +166,7 @@ export function MessageThread({
   contactPanelOpen,
   onToggleContactPanel,
 }: MessageThreadProps) {
-  const { user } = useAuth();
+  const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -246,30 +247,12 @@ export function MessageThread({
     };
   }, []);
 
-  const [providerType, setProviderType] = useState<string>("meta");
+  const { providerType } = useWhatsappProvider(accountId);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const supabase = createClient();
-    supabase
-      .from("profiles")
-      .select("account_id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data: profile }) => {
-        if (!profile?.account_id) return;
-        supabase
-          .from("whatsapp_config")
-          .select("provider_type")
-          .eq("account_id", profile.account_id)
-          .maybeSingle()
-          .then(({ data }) => {
-            if (data?.provider_type) {
-              setProviderType(data.provider_type);
-            }
-          });
-      });
-  }, [user?.id]);
+  // Provider type comes from the shared, cached useWhatsappProvider hook
+  // above — this used to do its own profiles + whatsapp_config fetch on
+  // every mount, duplicating what several other components on the same
+  // page also fetch independently.
 
   // 24-hour session timer
   const sessionInfo = useMemo(() => {
@@ -295,11 +278,11 @@ export function MessageThread({
     const hoursLeft = 24 - hoursSince;
     const remaining =
       hoursLeft >= 1
-        ? `${Math.floor(hoursLeft)}h remaining`
-        : `${Math.floor(hoursLeft * 60)}m remaining`;
+        ? `${Math.floor(hoursLeft)}h restantes`
+        : `${Math.floor(hoursLeft * 60)}min restantes`;
 
     return { expired, remaining };
-  }, [messages]);
+  }, [messages, providerType]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause

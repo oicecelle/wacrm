@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useWhatsappProvider } from '@/hooks/use-whatsapp-provider';
 import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,10 +54,10 @@ interface Step1Props {
 
 export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack }: Step1Props) {
   const { profile } = useAuth();
+  const { providerType } = useWhatsappProvider(profile?.account_id);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [providerType, setProviderType] = useState<'meta' | 'uazapi' | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -72,12 +73,9 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
       // whether templates still need Meta's "Approved" status. Uazapi
       // instances send plain text through an unofficial API — there's
       // no approval pipeline, so every saved template is usable.
-      const { data: config } = await supabase
-        .from('whatsapp_config')
-        .select('provider_type')
-        .maybeSingle();
-      const provider = (config?.provider_type as 'meta' | 'uazapi' | undefined) ?? 'uazapi';
-      setProviderType(provider);
+      // (providerType itself comes from the shared, cached
+      // useWhatsappProvider hook above.)
+      const provider = providerType;
 
       let query = supabase
         .from('message_templates')
@@ -106,7 +104,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   useEffect(() => {
     if (profile?.account_id) fetchTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.account_id]);
+  }, [profile?.account_id, providerType]);
 
   function insertVariable(key: string) {
     setNewBody((prev) => `${prev}{{${key}}}`);
