@@ -31,6 +31,7 @@ export default function PatientPortalDashboardPage() {
   const [patient, setPatient] = useState<any | null>(null);
   const [packages, setPackages] = useState<any[]>([]);
   const [evolutions, setEvolutions] = useState<any[]>([]);
+  const [photos, setPhotos] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [bannerIndex, setBannerIndex] = useState(0);
 
@@ -67,6 +68,7 @@ export default function PatientPortalDashboardPage() {
         setPortalSettings(data.settings || {});
         setPackages(data.packages || []);
         setEvolutions(data.evolutions || []);
+        setPhotos(data.photos || []);
         setDocuments(data.documents || []);
       } else {
         toast.error(data.error || 'Erro ao carregar dados');
@@ -561,32 +563,46 @@ export default function PatientPortalDashboardPage() {
         </div>
       )}
 
+
+
+
       {/* TAB: EVOLUÇÕES CLÍNICAS + FOTOS */}
       {activeTab === 'evolucoes' && (
-        <div className="space-y-4 text-left">
-          <h3 className="text-xs font-black text-neutral-400 uppercase tracking-wider">Minhas Evoluções</h3>
-          {evolutions.length === 0 ? (
-            <p className="text-xs text-neutral-500">Nenhuma evolução compartilhada pela clínica até o momento.</p>
-          ) : (
-            <div className="space-y-3">
-              {evolutions.map((evo) => (
-                <div key={evo.id} className="border p-4 rounded-2xl bg-white shadow-xs space-y-2">
-                  <p className="text-[10px] font-bold text-neutral-400">
-                    {new Date(evo.created_at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
-                  <p className="text-xs text-neutral-700 leading-relaxed">{evo.content}</p>
-                  {(evo.photos || []).length > 0 && (
-                    <div className="flex gap-2 overflow-x-auto pt-1">
-                      {evo.photos.map((url: string, i: number) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={url} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="space-y-6 text-left">
+          <div className="space-y-3">
+            <h3 className="text-xs font-black text-neutral-400 uppercase tracking-wider">Minhas Evoluções</h3>
+            {evolutions.length === 0 ? (
+              <p className="text-xs text-neutral-500">Nenhuma evolução compartilhada pela clínica até o momento.</p>
+            ) : (
+              <div className="space-y-3">
+                {evolutions.map((evo) => (
+                  <div key={evo.id} className="border p-4 rounded-2xl bg-white shadow-xs space-y-2">
+                    <p className="text-[10px] font-bold text-neutral-400">
+                      {new Date(evo.created_at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    <p className="text-xs text-neutral-700 leading-relaxed">{evo.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-xs font-black text-neutral-400 uppercase tracking-wider">Fotos de Acompanhamento</h3>
+            {photos.length === 0 ? (
+              <p className="text-xs text-neutral-500">Nenhuma foto de acompanhamento anexada ainda.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {photos.map((p) => (
+                  <div key={p.id} className="space-y-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.payload?.url} alt="" className="aspect-square w-full rounded-xl object-cover" />
+                    <p className="text-[9px] text-neutral-400">{new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -121,13 +121,24 @@ export async function POST(request: Request) {
         .eq('patient_id', session.patientId)
         .order('created_at', { ascending: false });
 
-      // 6. Clinical evolutions (notes + photos) — patient-facing view
-      // only ever shows ones the clinic marked as shared.
+      // 6. Clinical evolutions (notes) — patient-facing view only ever
+      // shows ones the clinic marked as shared.
       const { data: evolutions } = await db
         .from('clinical_evolutions')
-        .select('id, created_at, content, photos, shared')
+        .select('id, created_at, content, shared')
         .eq('patient_id', session.patientId)
         .eq('shared', true)
+        .order('created_at', { ascending: false });
+
+      // Progress photos live as their own patient_timeline events
+      // (event_type 'emr_photo'), not attached to a specific
+      // evolution note — same source the clinic's own "Fotos de
+      // Acompanhamento" section already reads from.
+      const { data: photoEvents } = await db
+        .from('patient_timeline')
+        .select('id, created_at, payload')
+        .eq('patient_id', session.patientId)
+        .eq('event_type', 'emr_photo')
         .order('created_at', { ascending: false });
 
       // 7. Documents — real signing status + link to the actual
@@ -145,6 +156,7 @@ export async function POST(request: Request) {
         clinic: clinicData || null,
         packages: packages || [],
         evolutions: evolutions || [],
+        photos: photoEvents || [],
         documents: documents || [],
       });
 
