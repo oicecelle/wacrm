@@ -614,7 +614,7 @@ async function fetchMetricsForPeriod(db: any, accountId: string, startIso: strin
   ] = await Promise.all([
     db.from('contacts').select('id', { count: 'exact', head: true }).eq('account_id', accountId).eq('contact_type', 'lead').gte('created_at', startIso).lte('created_at', endIso),
     db.from('contact_timeline').select('id', { count: 'exact', head: true }).eq('account_id', accountId).eq('event_type', 'payment').gte('created_at', startIso).lte('created_at', endIso),
-    db.from('messages').select('id', { count: 'exact', head: true }).eq('sender_type', 'bot').gte('created_at', startIso).lte('created_at', endIso),
+    db.from('messages').select('id, conversations!inner(account_id)', { count: 'exact', head: true }).eq('sender_type', 'bot').eq('conversations.account_id', accountId).gte('created_at', startIso).lte('created_at', endIso),
     db.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', accountId).gte('created_at', startIso).lte('created_at', endIso),
     db.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', accountId).eq('status', 'confirmed').gte('created_at', startIso).lte('created_at', endIso),
     db.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', accountId).eq('status', 'attended').gte('created_at', startIso).lte('created_at', endIso),

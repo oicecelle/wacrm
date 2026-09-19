@@ -192,7 +192,11 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   onValueChange={(val) => setSelectedPatientId(val === "none" || val === null ? "" : val)}
                 >
                   <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    <SelectValue placeholder="Selecione o paciente..." />
+                    <SelectValue placeholder="Selecione o paciente...">
+                      {selectedPatientId
+                        ? patients.find((p) => p.id === selectedPatientId)?.name ?? "Selecione o paciente..."
+                        : "Selecione o paciente..."}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
                     <SelectItem value="none" className="rounded-lg text-xs">Selecione o paciente...</SelectItem>
@@ -213,7 +217,11 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   onValueChange={(val) => setSelectedStaffId(val === "none" || val === null ? "" : val)}
                 >
                   <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    <SelectValue placeholder="Qualquer profissional..." />
+                    <SelectValue placeholder="Qualquer profissional...">
+                      {selectedStaffId
+                        ? staff.find((s) => s.user_id === selectedStaffId)?.name ?? "Qualquer profissional..."
+                        : "Qualquer profissional..."}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
                     <SelectItem value="none" className="rounded-lg text-xs">Qualquer profissional...</SelectItem>

@@ -647,7 +647,7 @@ export default function AgendaPage() {
         <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-neutral-800 capitalize">
-              {monthNames[pickerMonth].toLowerCase()} de {pickerYear}
+              {monthNames[pickerMonth]} {pickerYear}
             </span>
             <div className="flex gap-0.5">
               <button
@@ -819,7 +819,7 @@ export default function AgendaPage() {
                 className="flex items-center gap-1.5 text-sm font-bold text-neutral-800 hover:text-blue-600 transition-colors capitalize"
                 title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
               >
-                <span>{monthNames[pickerMonth].toLowerCase()} de {pickerYear}</span>
+                <span>{monthNames[pickerMonth]} {pickerYear}</span>
                 <span className="text-[9px] font-extrabold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
                   {isMiniCalendarExpanded ? "Mês" : "Semana"}
                 </span>

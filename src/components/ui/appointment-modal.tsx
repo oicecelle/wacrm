@@ -2709,12 +2709,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                         <BadgeAlertIcon className="h-3 w-3" />
                         {pendingDocsCount} Assinatura{pendingDocsCount > 1 ? "s" : ""} Pendente{pendingDocsCount > 1 ? "s" : ""}
                       </span>
-                    ) : (
+                    ) : patientDocs.length > 0 ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] text-emerald-600 font-bold border border-emerald-500/20">
                         <CheckCircle2Icon className="h-3 w-3" />
                         Tudo Assinado
                       </span>
-                    )}
+                    ) : null}
 
                     {/* Appointment Status Badge */}
                     <span 
