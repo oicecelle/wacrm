@@ -634,7 +634,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           body?.issues?.[0]
         if (firstIssue?.message) {
           toast.error(firstIssue.message, {
-            description: firstIssue.path ? `at ${firstIssue.path}` : undefined,
+            description: firstIssue.path ? `em ${firstIssue.path}` : undefined,
           })
         } else {
           toast.error(body?.error ?? "Falha ao salvar")
