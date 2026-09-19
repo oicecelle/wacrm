@@ -25,6 +25,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /* ─── Types ──────────────────────────────────────────────── */
+/** One line of a (possibly split) payment arrangement — e.g. "Sinal
+ *  — Pix — R$200" plus "Restante em 3x — Cartão de crédito". Several
+ *  lines together describe entrada/sinal/parcelamento/mixed methods
+ *  on the same quote; a single line with no value is just "pay this
+ *  way", the simple case. */
+interface PaymentLine {
+  label: string;
+  method: string;
+  value: string;
+}
+
+const PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão de crédito", "Cartão de débito", "Boleto", "Transferência"];
+
 interface QuoteItem {
   item_type: "procedure" | "package";
   item_id: string | null;
@@ -94,7 +107,7 @@ export function QuoteModal({
   const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
   const [discountValue, setDiscountValue] = useState("0");
   const [specialCondition, setSpecialCondition] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
   const [expiresAt, setExpiresAt] = useState("");
   const [resolvedContactId, setResolvedContactId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -185,7 +198,7 @@ export function QuoteModal({
       setItems([]);
       setDiscountValue("0");
       setSpecialCondition("");
-      setPaymentMethod("");
+      setPaymentLines([]);
       setExpiresAt("");
       setResolvedContactId(null);
       setStep("build");
@@ -236,15 +249,42 @@ export function QuoteModal({
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  /* ─── Payment plan (entrada, sinal, parcelas, formas mescladas) ─── */
+  const addPaymentLine = () => {
+    setPaymentLines((prev) => [...prev, { label: prev.length === 0 ? "À vista" : "", method: "Pix", value: "" }]);
+  };
+
+  const updatePaymentLine = (idx: number, patch: Partial<PaymentLine>) => {
+    setPaymentLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  };
+
+  const removePaymentLine = (idx: number) => {
+    setPaymentLines((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const paymentLinesTotal = paymentLines.reduce((s, l) => s + (parseFloat(l.value.replace(",", ".")) || 0), 0);
+
   /* ─── Generate WhatsApp message ───────────────────────────── */
   const buildMessage = () => {
     const itemsText = items.map((i) =>
       `• ${i.name}${i.quantity > 1 ? ` (x${i.quantity})` : ""} — ${fmt(i.total_price)}`
     ).join("\n");
 
+    const paymentText =
+      paymentLines.length > 0
+        ? paymentLines
+            .filter((l) => l.label.trim() || l.method)
+            .map((l) => {
+              const val = parseFloat(l.value.replace(",", ".")) || 0;
+              const label = l.label.trim() || l.method;
+              return `   ◦ ${label}${l.method && l.label.trim() ? ` (${l.method})` : ""}${val > 0 ? ` — ${fmt(val)}` : ""}`;
+            })
+            .join("\n")
+        : "";
+
     const condParts = [
       specialCondition ? `✅ *Condição especial:* ${specialCondition}` : "",
-      paymentMethod ? `💳 *Forma de pagamento:* ${paymentMethod}` : "",
+      paymentText ? `💳 *Forma de pagamento:*\n${paymentText}` : "",
     ].filter(Boolean);
     const condText = condParts.length > 0 ? `\n${condParts.join("\n")}` : "";
 
@@ -285,7 +325,7 @@ export function QuoteModal({
       discount_value: discountAmount,
       discount_type: discountType,
       special_condition: specialCondition || null,
-      payment_method: paymentMethod || null,
+      payment_plan: paymentLines.filter((l) => l.label.trim() || l.method),
       message_text: messageText,
       expires_at: expiresAt || null,
       sent_at: status === "sent" ? new Date().toISOString() : null,
@@ -532,22 +572,63 @@ export function QuoteModal({
                     />
                   </div>
 
-                  {/* Payment method */}
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Forma de pagamento (opcional)</Label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full rounded-xl border border-neutral-200 h-8 px-3 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                    >
-                      <option value="">Não especificar</option>
-                      <option value="Pix">Pix</option>
-                      <option value="Dinheiro">Dinheiro</option>
-                      <option value="Cartão de crédito">Cartão de crédito</option>
-                      <option value="Cartão de débito">Cartão de débito</option>
-                      <option value="Boleto">Boleto</option>
-                      <option value="Transferência">Transferência</option>
-                    </select>
+                  {/* Payment plan — entrada, sinal, parcelas, formas mescladas */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-bold text-neutral-500 uppercase">Forma de pagamento (opcional)</Label>
+                      <button
+                        type="button"
+                        onClick={addPaymentLine}
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-0.5"
+                      >
+                        <PlusIcon className="h-3 w-3" /> Adicionar linha
+                      </button>
+                    </div>
+                    {paymentLines.length === 0 && (
+                      <p className="text-[10px] text-neutral-400 italic">
+                        Ex: sinal + parcelas, ou uma forma só. Adicione uma ou mais linhas.
+                      </p>
+                    )}
+                    <div className="space-y-1.5">
+                      {paymentLines.map((line, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5">
+                          <Input
+                            placeholder="Ex: Sinal, 1ª parcela, À vista..."
+                            value={line.label}
+                            onChange={(e) => updatePaymentLine(idx, { label: e.target.value })}
+                            className="h-8 text-xs flex-1 min-w-0"
+                          />
+                          <select
+                            value={line.method}
+                            onChange={(e) => updatePaymentLine(idx, { method: e.target.value })}
+                            className="h-8 rounded-md border border-neutral-200 bg-white px-1.5 text-xs shrink-0 w-[92px]"
+                          >
+                            {PAYMENT_METHODS.map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                          <Input
+                            placeholder="R$"
+                            value={line.value}
+                            onChange={(e) => updatePaymentLine(idx, { value: e.target.value })}
+                            className="h-8 text-xs w-16 shrink-0"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePaymentLine(idx)}
+                            className="text-rose-400 hover:text-rose-600 shrink-0"
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {paymentLines.length > 0 && paymentLinesTotal > 0 && (
+                      <p className={`text-[10px] font-bold ${Math.abs(paymentLinesTotal - total) < 0.01 ? "text-emerald-600" : "text-amber-600"}`}>
+                        Soma das linhas com valor: {fmt(paymentLinesTotal)}
+                        {Math.abs(paymentLinesTotal - total) >= 0.01 && ` (total do orçamento: ${fmt(total)})`}
+                      </p>
+                    )}
                   </div>
 
                   {/* Validity */}
