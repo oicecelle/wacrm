@@ -2,8 +2,10 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ShieldAlert } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
+import { usePermissions } from '@/hooks/use-permissions';
 import { useTheme } from '@/hooks/use-theme';
 import { SettingsRail } from '@/components/settings/settings-rail';
 import { SettingsOverview } from '@/components/settings/settings-overview';
@@ -27,6 +29,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { defaultCurrency } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
   const { mode } = useTheme();
 
   // The URL (`?tab=`) is the single source of truth for the active
@@ -66,6 +69,21 @@ export default function SettingsPage() {
     google: <GoogleCalendarPanel />,
     reminders: <RemindersPanel />,
   };
+
+  if (!permsLoading && !hasPermission("acessar_configuracoes", "view")) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <ShieldAlert className="h-10 w-10 text-muted-foreground" />
+        <div>
+          <h2 className="text-sm font-bold text-foreground">Sem acesso a Configurações</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
+            de acesso.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

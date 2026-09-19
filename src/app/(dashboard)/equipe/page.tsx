@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
   PlusIcon,
@@ -11,6 +12,7 @@ import {
   Loader2Icon,
   XIcon,
   SendIcon,
+  ShieldAlertIcon,
   LinkIcon,
   CheckCircle2Icon,
   ClockIcon,
@@ -145,6 +147,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
 export default function EquipePage() {
   const supabase = createClient();
   const { accountId } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -412,6 +415,21 @@ export default function EquipePage() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!permsLoading && !hasPermission("gerenciar_equipe", "view")) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+        <ShieldAlertIcon className="h-10 w-10 text-neutral-400" />
+        <div>
+          <h2 className="text-sm font-bold text-neutral-800">Sem acesso à Equipe</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
+            de acesso.
+          </p>
+        </div>
       </div>
     );
   }
