@@ -239,7 +239,8 @@ export function DealForm({
       const { error } = await supabase
         .from("deals")
         .update(payload)
-        .eq("id", deal.id);
+        .eq("id", deal.id)
+        .eq("account_id", accountId ?? "");
       if (error) {
         toast.error("Falha ao salvar negócio");
         setSaving(false);
@@ -271,7 +272,7 @@ export function DealForm({
     }
 
     setSaving(false);
-    toast.success(deal ? "Deal updated" : "Deal created");
+    toast.success(deal ? "Negócio atualizado" : "Negócio criado");
     onOpenChange(false);
     onSaved();
   }
@@ -282,14 +283,15 @@ export function DealForm({
     const { error } = await supabase
       .from("deals")
       .update({ status })
-      .eq("id", deal.id);
+      .eq("id", deal.id)
+      .eq("account_id", accountId ?? "");
     setStatusAction(null);
     if (error) {
       toast.error("Falha ao atualizar status do negócio");
       return;
     }
     toast.success(
-      status === "won" ? "Marked as won" : status === "lost" ? "Marked as lost" : "Deal reopened",
+      status === "won" ? "Marcado como ganho" : status === "lost" ? "Marcado como perdido" : "Negócio reaberto",
     );
     onOpenChange(false);
     onSaved();
@@ -298,7 +300,7 @@ export function DealForm({
   async function handleDelete() {
     if (!deal) return;
     setDeleting(true);
-    const { error } = await supabase.from("deals").delete().eq("id", deal.id);
+    const { error } = await supabase.from("deals").delete().eq("id", deal.id).eq("account_id", accountId ?? "");
     setDeleting(false);
     if (error) {
       toast.error("Falha ao excluir negócio");
