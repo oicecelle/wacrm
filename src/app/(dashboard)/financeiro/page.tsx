@@ -578,11 +578,7 @@ export default function FinanceiroPage() {
         const price = procPrices[appt.type || ""] || 180;
         return sum + price;
       }, 0);
-      if (calculatedFuture === 0) {
-        setFutureReceivables(4850);
-      } else {
-        setFutureReceivables(calculatedFuture);
-      }
+      setFutureReceivables(calculatedFuture);
 
       // 4. Fetch clinic users & procedure professionals to calculate real commissions
       const { data: teamUsers } = await supabase
