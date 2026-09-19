@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { generateAIDocument } from "@/app/actions/ai-actions";
 import {
   FileTextIcon,
   SendIcon,
@@ -14,7 +13,6 @@ import {
   Loader2Icon,
   CopyIcon,
   PlusIcon,
-  SparklesIcon,
   ChevronDownIcon,
   EyeIcon,
   ChevronLeftIcon,
@@ -128,13 +126,6 @@ export default function DocumentosPage() {
   const [customContent, setCustomContent] = useState("");
   const [customType, setCustomType] = useState("contrato");
   const [addCustom, setAddCustom] = useState(false);
-
-  /* AI generation */
-  const [aiProcedure, setAiProcedure] = useState("");
-  const [aiRisks, setAiRisks] = useState("");
-  const [aiCuidados, setAiCuidados] = useState("");
-  const [aiDocType, setAiDocType] = useState("consentimento");
-  const [aiGenerating, setAiGenerating] = useState(false);
 
   /* Preview */
   const [previewDoc, setPreviewDoc] = useState<{ title: string; content: string } | null>(null);
@@ -285,26 +276,6 @@ export default function DocumentosPage() {
     }
   };
 
-  const handleGenerateAI = async () => {
-    if (!aiProcedure.trim()) {
-      toast.error("Informe o nome do procedimento.");
-      return;
-    }
-    setAiGenerating(true);
-    try {
-      const generated = await generateAIDocument(aiProcedure, aiRisks, aiCuidados, "", aiDocType);
-      setCustomContent(generated);
-      setCustomTitle(`${TYPE_LABELS[aiDocType] || aiDocType} — ${aiProcedure}`);
-      setCustomType(aiDocType);
-      setAddCustom(true);
-      toast.success("Documento gerado com sucesso por IA!");
-    } catch (err: any) {
-      toast.error("Erro ao gerar com IA: " + err.message);
-    } finally {
-      setAiGenerating(false);
-    }
-  };
-
   const handleSend = async () => {
     if (!selectedPatientId) {
       toast.error("Selecione um paciente.");
@@ -361,9 +332,6 @@ export default function DocumentosPage() {
       setAddCustom(false);
       setCustomContent("");
       setCustomTitle("");
-      setAiProcedure("");
-      setAiRisks("");
-      setAiCuidados("");
       loadDocuments();
       toast.success("Documento(s) enviado(s) com sucesso!");
       setTimeout(() => {
@@ -921,80 +889,12 @@ export default function DocumentosPage() {
             )}
           </div>
 
-          {/* Step 3: AI Generator or Manual */}
+          {/* Step 3: Write document content */}
           <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">3</div>
-              <h2 className="text-sm font-black text-neutral-800">Gerar com IA ou Escrever Manualmente</h2>
+              <h2 className="text-sm font-black text-neutral-800">Conteúdo do Documento</h2>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="space-y-1.5 text-left">
-                <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                  Tipo de Documento
-                </label>
-                <select
-                  value={aiDocType}
-                  onChange={(e) => setAiDocType(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="consentimento">Consentimento</option>
-                  <option value="contrato">Contrato</option>
-                  <option value="anamnese">Anamnese</option>
-                  <option value="orcamento">Orçamento</option>
-                </select>
-              </div>
-              <div className="space-y-1.5 text-left">
-                <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                  Procedimento *
-                </label>
-                <input
-                  value={aiProcedure}
-                  onChange={(e) => setAiProcedure(e.target.value)}
-                  placeholder="Ex: Botox, Preenchimento labial..."
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="space-y-1.5 text-left">
-                <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                  Riscos / Contraindicações (Opcional)
-                </label>
-                <textarea
-                  value={aiRisks}
-                  onChange={(e) => setAiRisks(e.target.value)}
-                  placeholder="Ex: Alergias conhecidas, hematomas locais..."
-                  rows={2}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all resize-none shadow-xs"
-                />
-              </div>
-              <div className="space-y-1.5 text-left">
-                <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                  Cuidados Pós-Procedimento (Opcional)
-                </label>
-                <textarea
-                  value={aiCuidados}
-                  onChange={(e) => setAiCuidados(e.target.value)}
-                  placeholder="Ex: Não deitar por 4 horas, aplicar gelo..."
-                  rows={2}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all resize-none shadow-xs"
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={handleGenerateAI}
-              disabled={aiGenerating}
-              className="flex items-center justify-center gap-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 text-xs font-bold w-full transition-colors cursor-pointer"
-            >
-              {aiGenerating ? (
-                <><Loader2Icon className="h-4 w-4 animate-spin" /> Escrevendo termo...</>
-              ) : (
-                <><SparklesIcon className="h-4 w-4" /> Gerar Termo Personalizado com IA</>
-              )}
-            </button>
 
             {/* Custom/Manual input */}
             {(addCustom || customContent) && (
