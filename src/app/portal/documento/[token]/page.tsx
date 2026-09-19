@@ -30,6 +30,7 @@ export default function DocumentSigningPortalPage() {
   const [isSigned, setIsSigned] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [signatureProof, setSignatureProof] = useState<{ ip?: string; contentHash?: string; signedAt?: string } | null>(null);
 
   // Fetch document by public token (no auth required)
   useEffect(() => {
@@ -192,33 +193,15 @@ export default function DocumentSigningPortalPage() {
     try {
       const signatureDataUrl = canvas.toDataURL("image/png");
 
-      const originalContent =
-        typeof document.content === "object" && document.content !== null
-          ? document.content
-          : { text: document.content || "" };
-
-      const { error: updateErr } = await supabase
-        .from("documents")
-        .update({
-          status: "signed",
-          signed_at: new Date().toISOString(),
-          content: { ...originalContent, signature_image: signatureDataUrl },
-        })
-        .eq("id", document.id);
-
-      if (updateErr) throw updateErr;
-
-      await supabase.from("patient_timeline").insert({
-        patient_id: document.patient_id,
-        event_type: "document",
-        title: `Documento [${document.title}] assinado digitalmente pelo paciente`,
-        payload: {
-          document_id: document.id,
-          signed_at: new Date().toISOString(),
-          ip: "Portal do Paciente (IP Registrado)",
-        },
+      const res = await fetch("/api/documents/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, signatureDataUrl }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha ao registrar a assinatura.");
 
+      setSignatureProof({ ip: data.ip, contentHash: data.contentHash, signedAt: data.signedAt });
       setSuccess(true);
       setIsSigned(true);
     } catch (err: any) {
@@ -319,9 +302,12 @@ export default function DocumentSigningPortalPage() {
                 Comprovante de Validação Digital
               </p>
               <p>• ID do Documento: {document.id}</p>
-              <p>• Assinatura: Hash Digital SSL</p>
-              <p>• Data / Hora: {new Date(document.signed_at || new Date()).toLocaleString("pt-BR")}</p>
-              <p>• IP de Origem: Registrado pelo Servidor</p>
+              <p>• Assinatura: Desenhada digitalmente pelo signatário</p>
+              <p>• Data / Hora: {new Date(signatureProof?.signedAt || document.signed_at || new Date()).toLocaleString("pt-BR")}</p>
+              <p>• IP de Origem: {signatureProof?.ip || "não disponível"}</p>
+              {signatureProof?.contentHash && (
+                <p className="break-all">• Hash SHA-256 do conteúdo: {signatureProof.contentHash}</p>
+              )}
             </div>
             <p className="text-[10px] text-slate-400 italic">
               Você pode fechar esta guia. A equipe da clínica já foi notificada.
