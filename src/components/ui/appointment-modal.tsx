@@ -2710,20 +2710,20 @@ Qualquer dúvida, estou à disposição! 😊`;
                     
                     {/* Documents Alert status badge */}
                     {pendingDocsCount > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[10px] text-rose-600 font-bold border border-rose-500/20">
-                        <BadgeAlertIcon className="h-3 w-3" />
-                        {pendingDocsCount} Assinatura{pendingDocsCount > 1 ? "s" : ""} Pendente{pendingDocsCount > 1 ? "s" : ""}
+                      <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] text-rose-600 font-bold border border-rose-500/20">
+                        <BadgeAlertIcon className="h-2.5 w-2.5" />
+                        {pendingDocsCount} Pendente{pendingDocsCount > 1 ? "s" : ""}
                       </span>
                     ) : patientDocs.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] text-emerald-600 font-bold border border-emerald-500/20">
-                        <CheckCircle2Icon className="h-3 w-3" />
-                        Tudo Assinado
+                      <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-600 font-bold border border-emerald-500/20">
+                        <CheckCircle2Icon className="h-2.5 w-2.5" />
+                        Assinado
                       </span>
                     ) : null}
 
                     {/* Appointment Status Badge */}
                     <span 
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border shadow-2xs"
+                      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider border shadow-2xs"
                       style={{
                         backgroundColor: `color-mix(in srgb, ${getStatusColor(status)} 12%, #ffffff)`,
                         color: getStatusColor(status),
