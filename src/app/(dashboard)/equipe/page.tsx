@@ -386,7 +386,8 @@ export default function EquipePage() {
           commission_fixed: parseFloat(formCommFixed) || 0,
           permissions_json: formPermissions,
         })
-        .eq("id", editingMember.id);
+        .eq("id", editingMember.id)
+        .eq("clinic_id", accountId);
 
       if (updateErr) throw updateErr;
       toast.success("Colaborador atualizado!");
