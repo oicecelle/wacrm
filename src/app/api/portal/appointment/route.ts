@@ -114,11 +114,38 @@ export async function POST(request: Request) {
         .eq('id', session.clinicId)
         .maybeSingle();
 
+      // 5. Packages — real credit/session data, not decorative text.
+      const { data: packages } = await db
+        .from('patient_packages')
+        .select('id, package_name, sessions_total, sessions_used, status, expires_at')
+        .eq('patient_id', session.patientId)
+        .order('created_at', { ascending: false });
+
+      // 6. Clinical evolutions (notes + photos) — patient-facing view
+      // only ever shows ones the clinic marked as shared.
+      const { data: evolutions } = await db
+        .from('clinical_evolutions')
+        .select('id, created_at, content, photos, shared')
+        .eq('patient_id', session.patientId)
+        .eq('shared', true)
+        .order('created_at', { ascending: false });
+
+      // 7. Documents — real signing status + link to the actual
+      // signing portal, not just a status label with no way to act.
+      const { data: documents } = await db
+        .from('documents')
+        .select('id, title, type, status, public_token, created_at, signed_at')
+        .eq('patient_id', session.patientId)
+        .order('created_at', { ascending: false });
+
       return NextResponse.json({
         appointments: appointments || [],
         timeline: timeline || [],
         settings: settings || null,
         clinic: clinicData || null,
+        packages: packages || [],
+        evolutions: evolutions || [],
+        documents: documents || [],
       });
 
     } else if (action === 'get-slots') {

@@ -29,9 +29,13 @@ export default function PatientPortalDashboardPage() {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [portalSettings, setPortalSettings] = useState<any | null>(null);
   const [patient, setPatient] = useState<any | null>(null);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [evolutions, setEvolutions] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [bannerIndex, setBannerIndex] = useState(0);
 
   // Navigation tab
-  const [activeTab, setActiveTab] = useState<'inicio' | 'appointments' | 'financeiro' | 'docs'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'appointments' | 'financeiro' | 'docs' | 'evolucoes'>('inicio');
 
   // Booking states
   const [bookingDate, setBookingDate] = useState('');
@@ -61,6 +65,9 @@ export default function PatientPortalDashboardPage() {
         setAppointments(data.appointments || []);
         setTimeline(data.timeline || []);
         setPortalSettings(data.settings || {});
+        setPackages(data.packages || []);
+        setEvolutions(data.evolutions || []);
+        setDocuments(data.documents || []);
       } else {
         toast.error(data.error || 'Erro ao carregar dados');
       }
@@ -78,6 +85,14 @@ export default function PatientPortalDashboardPage() {
     }
     fetchData();
   }, [slug]);
+
+  // Auto-rotate the promo banners the clinic configured
+  useEffect(() => {
+    const banners = portalSettings?.banners_carousel || [];
+    if (banners.length <= 1) return;
+    const timer = setInterval(() => setBannerIndex((i) => (i + 1) % banners.length), 4000);
+    return () => clearInterval(timer);
+  }, [portalSettings]);
 
   // Load slots when date changes
   const loadSlots = async (dateStr: string) => {
@@ -206,9 +221,6 @@ export default function PatientPortalDashboardPage() {
   }, [appointments]);
 
   // Derived timeline feeds
-  const docTimeline = useMemo(() => {
-    return timeline.filter(t => t.event_type.includes('document') || t.event_type.includes('signed'));
-  }, [timeline]);
 
   const financeTimeline = useMemo(() => {
     return timeline.filter(t => t.event_type.includes('payment') || t.event_type.includes('quote') || t.event_type.includes('note'));
@@ -234,11 +246,12 @@ export default function PatientPortalDashboardPage() {
     <div className="space-y-6">
       {/* Tabs Navigation */}
       <div className="flex border-b overflow-x-auto gap-2 pb-1">
-        {(['inicio', 'appointments', 'financeiro', 'docs'] as const).map(tab => {
+        {(['inicio', 'appointments', 'evolucoes', 'financeiro', 'docs'] as const).map(tab => {
           const isActive = activeTab === tab;
           const labels = {
             inicio: 'Início',
             appointments: 'Consultas / Agenda',
+            evolucoes: 'Evoluções',
             financeiro: 'Financeiro',
             docs: 'Documentos',
           };
@@ -261,6 +274,34 @@ export default function PatientPortalDashboardPage() {
       {/* TAB: INÍCIO (SUMMARY) */}
       {activeTab === 'inicio' && (
         <div className="space-y-6 text-left">
+          {/* Promo banners the clinic configured */}
+          {(portalSettings?.banners_carousel || []).length > 0 && (
+            <div className="space-y-2">
+              {(() => {
+                const banners = portalSettings.banners_carousel;
+                const current = banners[bannerIndex % banners.length];
+                const img = (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={current.image_url || current.url} alt="" className="w-full rounded-2xl object-cover shadow-sm" />
+                );
+                return (
+                  <>
+                    {current.link_url ? (
+                      <a href={current.link_url} target="_blank" rel="noopener noreferrer">{img}</a>
+                    ) : img}
+                    {banners.length > 1 && (
+                      <div className="flex justify-center gap-1.5">
+                        {banners.map((_: unknown, i: number) => (
+                          <span key={i} className={`h-1.5 rounded-full transition-all ${i === bannerIndex % banners.length ? 'w-4 bg-neutral-700' : 'w-1.5 bg-neutral-300'}`} />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Welcome Message Card */}
           <div className="p-5 rounded-2xl bg-neutral-50 border border-neutral-100 space-y-1">
             <h2 className="text-base font-black text-neutral-800">
@@ -317,22 +358,32 @@ export default function PatientPortalDashboardPage() {
               )}
             </div>
 
-            {/* Sessions Packages Card */}
+            {/* Sessions Packages Card — real credit data, not a fixed label */}
             <div className="border p-5 rounded-2xl bg-white space-y-3 shadow-xs">
               <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
                 <Package className="h-4 w-4 text-blue-600" />
                 Meus Pacotes de Tratamento
               </h3>
-              <div className="space-y-2">
-                <p className="text-xs text-neutral-500 leading-relaxed">
-                  Consulte os créditos de sessões e procedimentos contratados ativos.
-                </p>
-                <div className="flex gap-2">
-                  <span className="bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1.5 rounded-xl text-xs font-bold">
-                    Tratamento Ativo
-                  </span>
+              {packages.length === 0 ? (
+                <p className="text-xs text-neutral-500 leading-relaxed">Nenhum pacote contratado no momento.</p>
+              ) : (
+                <div className="space-y-2">
+                  {packages.slice(0, 2).map((pkg) => {
+                    const remaining = (pkg.sessions_total ?? 0) - (pkg.sessions_used ?? 0);
+                    return (
+                      <div key={pkg.id} className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-neutral-700 truncate">{pkg.package_name || 'Pacote'}</span>
+                        <span className={`shrink-0 rounded-lg px-2 py-1 font-bold ${remaining > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                          {pkg.sessions_used ?? 0}/{pkg.sessions_total ?? 0} usadas
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {packages.length > 2 && (
+                    <p className="text-[10px] text-neutral-400">+{packages.length - 2} outro(s) pacote(s)</p>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -510,6 +561,35 @@ export default function PatientPortalDashboardPage() {
         </div>
       )}
 
+      {/* TAB: EVOLUÇÕES CLÍNICAS + FOTOS */}
+      {activeTab === 'evolucoes' && (
+        <div className="space-y-4 text-left">
+          <h3 className="text-xs font-black text-neutral-400 uppercase tracking-wider">Minhas Evoluções</h3>
+          {evolutions.length === 0 ? (
+            <p className="text-xs text-neutral-500">Nenhuma evolução compartilhada pela clínica até o momento.</p>
+          ) : (
+            <div className="space-y-3">
+              {evolutions.map((evo) => (
+                <div key={evo.id} className="border p-4 rounded-2xl bg-white shadow-xs space-y-2">
+                  <p className="text-[10px] font-bold text-neutral-400">
+                    {new Date(evo.created_at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-neutral-700 leading-relaxed">{evo.content}</p>
+                  {(evo.photos || []).length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pt-1">
+                      {evo.photos.map((url: string, i: number) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB: FINANCEIRO (PAYMENTS & TIMELINE) */}
       {activeTab === 'financeiro' && (
         <div className="space-y-4 text-left">
@@ -547,30 +627,35 @@ export default function PatientPortalDashboardPage() {
       {activeTab === 'docs' && (
         <div className="space-y-4 text-left">
           <h3 className="text-xs font-black text-neutral-400 uppercase tracking-wider">Termos e Contratos para Assinatura</h3>
-          {docTimeline.length === 0 ? (
+          {documents.length === 0 ? (
             <p className="text-xs text-neutral-500">Nenhum termo ou documento localizado.</p>
           ) : (
             <div className="space-y-3">
-              {docTimeline.map(item => (
-                <div key={item.id} className="border p-4 rounded-2xl bg-white shadow-xs flex items-center justify-between gap-3">
-                  <div className="flex gap-2.5 items-center">
+              {documents.map((doc) => (
+                <div key={doc.id} className="border p-4 rounded-2xl bg-white shadow-xs flex items-center justify-between gap-3">
+                  <div className="flex gap-2.5 items-center min-w-0">
                     <div className="h-8 w-8 bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
                       <FileText className="h-4 w-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-neutral-800">{item.title}</p>
-                      {item.payload?.status && (
-                        <span className="inline-flex px-1.5 py-0.5 rounded bg-neutral-100 text-[8px] font-bold text-neutral-600 mt-1 uppercase">
-                          Status: {item.payload.status === 'signed' ? 'Assinado' : 'Pendente'}
-                        </span>
-                      )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-neutral-800 truncate">{doc.title}</p>
+                      <span className={`inline-flex px-1.5 py-0.5 rounded bg-neutral-100 text-[8px] font-bold text-neutral-600 mt-1 uppercase`}>
+                        {doc.status === 'signed' ? 'Assinado' : 'Pendente'}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-neutral-400 font-medium block">
-                      {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                  {doc.status !== 'signed' && doc.public_token ? (
+                    <a
+                      href={`/portal/documento/${doc.public_token}`}
+                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-blue-700"
+                    >
+                      Assinar agora
+                    </a>
+                  ) : (
+                    <span className="shrink-0 text-[10px] text-neutral-400 font-medium">
+                      {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('pt-BR') : ''}
                     </span>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
