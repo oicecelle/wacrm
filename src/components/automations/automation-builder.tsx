@@ -98,7 +98,8 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   add_tag: { label: "Adicionar tag", icon: Tag, border: "border-l-emerald-600" },
   remove_tag: { label: "Remover tag", icon: TagIcon, border: "border-l-amber-600" },
   assign_conversation: { label: "Criar tarefa / Atribuir", icon: UserCheck, border: "border-l-purple-600" },
-  update_contact_field: { label: "Mudar status / etapa", icon: PencilLine, border: "border-l-blue-600" },
+  update_contact_field: { label: "Mudar dado do contato", icon: PencilLine, border: "border-l-blue-600" },
+  update_deal_field: { label: "Mudar qualificação do negócio", icon: PencilLine, border: "border-l-sky-600" },
   create_deal: { label: "Criar negócio", icon: Briefcase, border: "border-l-emerald-600" },
   create_appointment: { label: "Criar agendamento", icon: CalendarPlus, border: "border-l-teal-600" },
   update_appointment_status: { label: "Atualizar status do agendamento", icon: CalendarCheck, border: "border-l-teal-600" },
@@ -113,6 +114,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "send_message",
   "send_template",
   "update_contact_field",
+  "update_deal_field",
   "add_tag",
   "assign_conversation",
   "create_deal",
@@ -155,6 +157,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { mode: "round_robin" }
     case "update_contact_field":
       return { field: "name", value: "" }
+    case "update_deal_field":
+      return { field: "temperature", value: "" }
     case "create_deal":
       return { pipeline_id: "", stage_id: "", title: "", value: 0 }
     case "create_appointment":
@@ -352,14 +356,10 @@ function ContactFieldSelect({
       <option value="name">Nome</option>
       <option value="email">E-mail</option>
       <option value="company">Empresa</option>
-      <optgroup label="Qualificação do lead">
-        <option value="source">Origem</option>
-        <option value="interest">Interesse</option>
-        <option value="crm_stage">Etapa no CRM</option>
-        <option value="temperature">Temperatura (hot / warm / cold)</option>
-        <option value="main_objection">Principal objeção</option>
-        <option value="next_action">Próxima ação</option>
-      </optgroup>
+      <option value="cpf">CPF</option>
+      <option value="birthday">Data de nascimento (AAAA-MM-DD)</option>
+      <option value="address">Endereço</option>
+      <option value="gender">Sexo (male / female / other)</option>
       {customFields.length > 0 && (
         <optgroup label="Campos personalizados">
           {customFields.map((f) => (
@@ -372,6 +372,25 @@ function ContactFieldSelect({
       {customValue && !knownCustom && (
         <option value={customValue}>{customValue} (campo desconhecido)</option>
       )}
+    </select>
+  )
+}
+
+function DealFieldSelect({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <select value={value || "temperature"} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
+      <option value="source">Origem</option>
+      <option value="interest">Interesse</option>
+      <option value="crm_stage">Etapa no CRM (texto livre)</option>
+      <option value="temperature">Temperatura (hot / warm / cold)</option>
+      <option value="main_objection">Principal objeção</option>
+      <option value="next_action">Próxima ação</option>
     </select>
   )
 }
@@ -1225,6 +1244,29 @@ function StepEditor({
           </FieldBlock>
         </>
       )
+    case "update_deal_field":
+      return (
+        <>
+          <FieldBlock label="Campo do negócio">
+            <DealFieldSelect
+              value={(cfg.field as string) ?? "temperature"}
+              onChange={(v) => set({ field: v })}
+            />
+          </FieldBlock>
+          <FieldBlock label="Valor">
+            <Input
+              value={(cfg.value as string) ?? ""}
+              onChange={(e) => set({ value: e.target.value })}
+              placeholder="Texto fixo ou {{ vars.x }} / {{ message.text }}"
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <p className="text-xs text-muted-foreground">
+            Aplica no negócio aberto mais recente desse contato. Se não houver nenhum, a etapa não
+            faz nada.
+          </p>
+        </>
+      )
     case "create_deal":
       return (
         <>
@@ -1528,6 +1570,9 @@ function previewFor(step: BuilderStep): string {
     }
     case "register_payment":
       return (step.step_config.template as string) || "sem mensagem-modelo ainda"
+    case "update_contact_field":
+    case "update_deal_field":
+      return `${step.step_config.field ?? "?"} = ${(step.step_config.value as string) || "?"}`
     case "wait":
       return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
     case "condition":

@@ -397,6 +397,21 @@ export async function POST(request: Request) {
       // Flip broadcast status to replied if appropriate
       await flagBroadcastReplyIfAny(accountId, contactRecord.id)
 
+      if (isFirstInboundMessage) {
+        // "Primeira conversa" on the contact's timeline — nothing
+        // wrote this event before, so a brand-new lead's timeline
+        // started blank until something else (an appointment, a
+        // deal stage change, etc.) happened to it.
+        await db.from('contact_timeline').insert({
+          account_id: accountId,
+          contact_id: contactRecord.id,
+          event_type: 'message',
+          title: 'Primeira conversa',
+          description: contentText ? `"${contentText}"` : 'Primeiro contato via WhatsApp.',
+          metadata: { conversation_id: conversation.id },
+        })
+      }
+
       // Dispatch to Flow Runner
       const flowResult = await dispatchInboundToFlows({
         accountId,

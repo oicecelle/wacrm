@@ -78,6 +78,7 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       }
       break
     case 'update_contact_field':
+    case 'update_deal_field':
       if (!nonEmpty(c.field)) {
         issues.push({ path: `${path}.field`, message: 'field name is required' })
       }

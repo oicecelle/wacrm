@@ -418,6 +418,7 @@ export type AutomationStepType =
   | 'remove_tag'
   | 'assign_conversation'
   | 'update_contact_field'
+  | 'update_deal_field'
   | 'create_deal'
   | 'create_appointment'
   | 'update_appointment_status'
@@ -480,12 +481,23 @@ export interface AssignConversationStepConfig {
 
 export interface UpdateContactFieldStepConfig {
   /**
-   * Either a built-in contact column (`name` | `email` | `company`) or a
-   * custom field encoded as `custom:<custom_field_id>`. The `custom:` prefix
+   * Either a built-in contact column (`name` | `email` | `company` |
+   * `cpf` | `birthday` | `address` | `gender`) or a custom field
+   * encoded as `custom:<custom_field_id>`. The `custom:` prefix
    * is how the engine distinguishes a `contact_custom_values` write from a
    * direct `contacts` column update. Older configs store the bare column name,
    * so this stays backward compatible.
    */
+  field: string;
+  /** Supports `{{ vars.* }}` / `{{ message.text }}` interpolation at runtime. */
+  value: string;
+}
+
+export interface UpdateDealFieldStepConfig {
+  /** A qualification column on `deals` — source | interest | temperature
+   *  | main_objection | next_action | crm_stage. Written to the
+   *  contact's most recently updated deal that isn't closed
+   *  (won/lost), same lookup move_deal_stage uses. */
   field: string;
   /** Supports `{{ vars.* }}` / `{{ message.text }}` interpolation at runtime. */
   value: string;
@@ -579,6 +591,7 @@ export type AutomationStepConfig =
   | TagStepConfig
   | AssignConversationStepConfig
   | UpdateContactFieldStepConfig
+  | UpdateDealFieldStepConfig
   | CreateDealStepConfig
   | CreateAppointmentStepConfig
   | UpdateAppointmentStatusStepConfig

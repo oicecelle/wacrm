@@ -10,6 +10,7 @@ import type {
   SendWebhookStepConfig,
   TagStepConfig,
   UpdateContactFieldStepConfig,
+  UpdateDealFieldStepConfig,
   WaitStepConfig,
   CreateDealStepConfig,
   CreateAppointmentStepConfig,
@@ -489,17 +490,14 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         return `custom field updated`
       }
 
-      const allowed = new Set([
-        'name',
-        'email',
-        'company',
-        'source',
-        'interest',
-        'crm_stage',
-        'temperature',
-        'main_objection',
-        'next_action',
-      ])
+      // Real contacts columns only — source/interest/temperature/
+      // main_objection/next_action/score/crm_stage live on `deals`,
+      // not `contacts` (confirmed against the live schema after an
+      // earlier version of this whitelist wrongly included them,
+      // which would have failed with "column does not exist" the
+      // moment anyone actually used it). Deal-side qualification
+      // fields go through the separate update_deal_field step below.
+      const allowed = new Set(['name', 'email', 'company', 'cpf', 'birthday', 'address', 'gender'])
       if (!allowed.has(cfg.field)) {
         return `field ${cfg.field} not writable from automations`
       }
@@ -540,6 +538,41 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         status: 'open',
       })
       return 'deal created'
+    }
+
+    case 'update_deal_field': {
+      const cfg = step.step_config as UpdateDealFieldStepConfig
+      if (!args.contactId) throw new Error('update_deal_field needs a contact')
+
+      // These live on `deals`, not `contacts` — confirmed against the
+      // live schema. update_contact_field's own whitelist used to
+      // wrongly include them, which would have failed at write time
+      // with "column does not exist" the moment anyone used it.
+      const allowed = new Set(['source', 'interest', 'temperature', 'main_objection', 'next_action', 'crm_stage'])
+      if (!allowed.has(cfg.field)) {
+        return `field ${cfg.field} not writable from automations`
+      }
+
+      const { data: deal } = await db
+        .from('deals')
+        .select('id')
+        .eq('contact_id', args.contactId)
+        .eq('account_id', args.automation.account_id)
+        .not('status', 'in', '(won,lost)')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!deal) return 'no open deal for this contact — skipped'
+
+      const value = interpolate(cfg.value, args)
+      await db
+        .from('deals')
+        .update({ [cfg.field]: value, updated_at: new Date().toISOString() })
+        .eq('id', deal.id)
+        .eq('account_id', args.automation.account_id)
+
+      return `deal.${cfg.field} set to "${value}"`
     }
 
     case 'create_appointment': {
