@@ -305,53 +305,75 @@ Responda APENAS com um JSON válido seguindo este schema exato:
     // 9.3 Confirm Appointment
     const co = result.confirm_appointment;
     if (co?.requested && co.appointment_id) {
-      await db
+      // Defense in depth: the AI's returned appointment_id is trusted
+      // input from a probabilistic model, and this runs on the
+      // service-role client (bypasses RLS entirely). Scoping the
+      // update by clinic_id + patient_id means a hallucinated or
+      // miscopied id can, at worst, match nothing — never touch
+      // another clinic's or another patient's appointment.
+      const { data: updated } = await db
         .from("appointments")
         .update({
           status: "confirmed",
           ai_label: LIA_UPDATED_LABEL,
         })
-        .eq("id", co.appointment_id);
+        .eq("id", co.appointment_id)
+        .eq("clinic_id", accountId)
+        .eq("patient_id", contactId)
+        .select("id")
+        .maybeSingle();
 
-      await db.from("contact_timeline").insert({
-        account_id: accountId,
-        contact_id: contactId,
-        event_type: "appointment",
-        title: `${LIA_UPDATED_LABEL} — Agendamento confirmado`,
-        description: "O paciente confirmou presença via WhatsApp.",
-        metadata: { ...auditMeta, appointment_id: co.appointment_id },
-      });
-      console.log("[LIA Analyser] Confirmed appointment:", co.appointment_id);
+      if (updated) {
+        await db.from("contact_timeline").insert({
+          account_id: accountId,
+          contact_id: contactId,
+          event_type: "appointment",
+          title: `${LIA_UPDATED_LABEL} — Agendamento confirmado`,
+          description: "O paciente confirmou presença via WhatsApp.",
+          metadata: { ...auditMeta, appointment_id: co.appointment_id },
+        });
+        console.log("[LIA Analyser] Confirmed appointment:", co.appointment_id);
+      } else {
+        console.warn("[LIA Analyser] confirm_appointment: id not found for this clinic/patient, skipped:", co.appointment_id);
+      }
     }
 
     // 9.4 Cancel Appointment
     const cn = result.cancel_appointment;
     if (cn?.requested && cn.appointment_id) {
-      await db
+      const { data: updated } = await db
         .from("appointments")
         .update({
           status: "cancelled",
           ai_label: LIA_UPDATED_LABEL,
           notes: `Cancelado pelo paciente via WhatsApp. ${LIA_UPDATED_LABEL}`,
         })
-        .eq("id", cn.appointment_id);
+        .eq("id", cn.appointment_id)
+        .eq("clinic_id", accountId)
+        .eq("patient_id", contactId)
+        .select("id")
+        .maybeSingle();
 
-      await db.from("contact_timeline").insert({
-        account_id: accountId,
-        contact_id: contactId,
-        event_type: "appointment_cancelled",
-        title: `${LIA_UPDATED_LABEL} — Agendamento cancelado`,
-        description: "O paciente solicitou cancelamento via WhatsApp.",
-        metadata: { ...auditMeta, appointment_id: cn.appointment_id },
-      });
-      console.log("[LIA Analyser] Cancelled appointment:", cn.appointment_id);
+      if (updated) {
+        await db.from("contact_timeline").insert({
+          account_id: accountId,
+          contact_id: contactId,
+          event_type: "appointment_cancelled",
+          title: `${LIA_UPDATED_LABEL} — Agendamento cancelado`,
+          description: "O paciente solicitou cancelamento via WhatsApp.",
+          metadata: { ...auditMeta, appointment_id: cn.appointment_id },
+        });
+        console.log("[LIA Analyser] Cancelled appointment:", cn.appointment_id);
+      } else {
+        console.warn("[LIA Analyser] cancel_appointment: id not found for this clinic/patient, skipped:", cn.appointment_id);
+      }
     }
 
     // 9.5 Reschedule Appointment
     const re = result.reschedule_appointment;
     if (re?.requested && re.appointment_id && re.new_start_time) {
       const newEnd = re.new_end_time || new Date(new Date(re.new_start_time).getTime() + 60 * 60 * 1000).toISOString();
-      await db
+      const { data: updated } = await db
         .from("appointments")
         .update({
           start_time: re.new_start_time,
@@ -360,17 +382,25 @@ Responda APENAS com um JSON válido seguindo este schema exato:
           ai_label: LIA_UPDATED_LABEL,
           notes: `Remarcado${re.reason ? ` (motivo: ${re.reason})` : ""} via WhatsApp. ${LIA_UPDATED_LABEL}`,
         })
-        .eq("id", re.appointment_id);
+        .eq("id", re.appointment_id)
+        .eq("clinic_id", accountId)
+        .eq("patient_id", contactId)
+        .select("id")
+        .maybeSingle();
 
-      await db.from("contact_timeline").insert({
-        account_id: accountId,
-        contact_id: contactId,
-        event_type: "appointment_rescheduled",
-        title: `${LIA_UPDATED_LABEL} — Agendamento remarcado`,
-        description: `Novo horário: ${new Date(re.new_start_time).toLocaleString("pt-BR")}${re.reason ? `. Motivo: ${re.reason}` : ""}`,
-        metadata: { ...auditMeta, appointment_id: re.appointment_id },
-      });
-      console.log("[LIA Analyser] Rescheduled appointment:", re.appointment_id);
+      if (updated) {
+        await db.from("contact_timeline").insert({
+          account_id: accountId,
+          contact_id: contactId,
+          event_type: "appointment_rescheduled",
+          title: `${LIA_UPDATED_LABEL} — Agendamento remarcado`,
+          description: `Novo horário: ${new Date(re.new_start_time).toLocaleString("pt-BR")}${re.reason ? `. Motivo: ${re.reason}` : ""}`,
+          metadata: { ...auditMeta, appointment_id: re.appointment_id },
+        });
+        console.log("[LIA Analyser] Rescheduled appointment:", re.appointment_id);
+      } else {
+        console.warn("[LIA Analyser] reschedule_appointment: id not found for this clinic/patient, skipped:", re.appointment_id);
+      }
     }
 
     // 9.6 Update Deal CRM Fields
@@ -549,19 +579,27 @@ Responda APENAS com um JSON válido seguindo este schema exato:
 
       const recId = ar.record_id || latestRec?.id;
       if (recId) {
-        await db
+        // Same defense-in-depth as the appointment actions above —
+        // ar.record_id can come straight from the AI's output, so
+        // scope the update to this patient regardless of source.
+        const { data: updated } = await db
           .from("patient_records")
           .update({ patient_acknowledged: true, acknowledged_at: isoNow })
-          .eq("id", recId);
+          .eq("id", recId)
+          .eq("patient_id", contactId)
+          .select("id")
+          .maybeSingle();
 
-        await db.from("contact_timeline").insert({
-          account_id: accountId,
-          contact_id: contactId,
-          event_type: "payment",
-          title: `${LIA_UPDATED_LABEL} — Ciência confirmada`,
-          description: "Paciente confirmou ciência do atendimento via WhatsApp.",
-          metadata: { ...auditMeta, record_id: recId },
-        });
+        if (updated) {
+          await db.from("contact_timeline").insert({
+            account_id: accountId,
+            contact_id: contactId,
+            event_type: "payment",
+            title: `${LIA_UPDATED_LABEL} — Ciência confirmada`,
+            description: "Paciente confirmou ciência do atendimento via WhatsApp.",
+            metadata: { ...auditMeta, record_id: recId },
+          });
+        }
       }
     }
   } catch (err) {
