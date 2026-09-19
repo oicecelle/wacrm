@@ -39,6 +39,8 @@ interface DBDocument {
   public_token: string | null;
   created_at: string;
   signed_at: string | null;
+  sent_at: string | null;
+  viewed_at: string | null;
   patient_name: string;
   phone?: string;
   content?: { text?: string; body?: string } | null;
@@ -158,7 +160,7 @@ export default function DocumentosPage() {
     try {
       const { data: docs, error: docsErr } = await supabase
         .from("documents")
-        .select(`id, title, type, status, patient_id, public_token, created_at, signed_at, content, patients (name, phone)`)
+        .select(`id, title, type, status, patient_id, public_token, created_at, signed_at, sent_at, viewed_at, content, patients (name, phone)`)
         .eq("clinic_id", accountId)
         .order("created_at", { ascending: false });
 
@@ -174,6 +176,8 @@ export default function DocumentosPage() {
           public_token: d.public_token,
           created_at: d.created_at,
           signed_at: d.signed_at,
+          sent_at: d.sent_at,
+          viewed_at: d.viewed_at,
           patient_name: (d.patients as any)?.name || "Paciente Removido",
           phone: (d.patients as any)?.phone || "",
           content: d.content as any,
@@ -741,6 +745,8 @@ export default function DocumentosPage() {
                             </p>
                             <p className="text-[10px] text-neutral-400">
                               Gerado em {new Date(doc.created_at).toLocaleDateString("pt-BR")} às {new Date(doc.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              {doc.sent_at && !doc.signed_at && ` · Enviado em ${new Date(doc.sent_at).toLocaleDateString("pt-BR")}`}
+                              {doc.viewed_at && !doc.signed_at && ` · Visualizado em ${new Date(doc.viewed_at).toLocaleDateString("pt-BR")}`}
                               {doc.signed_at && ` · Assinado em ${new Date(doc.signed_at).toLocaleDateString("pt-BR")}`}
                             </p>
                           </div>

@@ -54,6 +54,14 @@ export default function DocumentSigningPortalPage() {
 
         setDocument(doc);
 
+        // First open of this link — mark it viewed (fire-and-forget;
+        // the signing flow shouldn't block or fail on this).
+        fetch("/api/documents/mark-viewed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        }).catch(() => {});
+
         // Fetch patient
         if (doc.patient_id) {
           const { data: pt } = await supabase
