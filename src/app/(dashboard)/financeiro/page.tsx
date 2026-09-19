@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PackageProgressRing } from "@/components/ui/package-progress-ring";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 type TxType = "receita" | "despesa" | "sinal";
@@ -1126,27 +1127,33 @@ export default function FinanceiroPage() {
                 </div>
               ) : (
                 packages.map((pkg) => {
-                  const pct = Math.round(((pkg.totalSessions - pkg.remainingSessions) / pkg.totalSessions) * 100);
                   return (
                     <div key={pkg.id} className={`rounded-xl border bg-card p-5 space-y-3 ${pkg.warningDays ? "border-amber-500/30" : "border-border"}`}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-foreground">{pkg.procedure}</h3>
-                            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                               pkg.status === "active" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
-                               pkg.status === "completed" ? "border-border text-muted-foreground bg-muted" :
-                               "border-destructive/30 text-destructive bg-destructive/10"
-                             }`}>
-                              {pkg.status === "active" ? "Ativo" : pkg.status === "completed" ? "Concluído" : "Vencido"}
-                            </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <PackageProgressRing
+                            used={pkg.totalSessions - pkg.remainingSessions}
+                            total={pkg.totalSessions}
+                            size={44}
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-foreground truncate">{pkg.procedure}</h3>
+                              <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                 pkg.status === "active" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10" :
+                                 pkg.status === "completed" ? "border-border text-muted-foreground bg-muted" :
+                                 "border-destructive/30 text-destructive bg-destructive/10"
+                               }`}>
+                                {pkg.status === "active" ? "Ativo" : pkg.status === "completed" ? "Concluído" : "Vencido"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">Paciente: {pkg.contactName} • Expira: {pkg.expiresAt}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">Paciente: {pkg.contactName} • Expira: {pkg.expiresAt}</p>
                         </div>
                         {pkg.status === "active" && pkg.remainingSessions > 0 && (
                           <button
                             onClick={() => handleConsumeSession(pkg.id, pkg.totalSessions, pkg.remainingSessions, pkg.contactId, pkg.procedure)}
-                            className="rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer border-0"
+                            className="shrink-0 rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer border-0"
                           >
                             Consumir Sessão
                           </button>
@@ -1158,19 +1165,11 @@ export default function FinanceiroPage() {
                           Pacote vence em {pkg.warningDays} dias
                         </div>
                       )}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Sessões utilizadas</span>
-                          <span className="font-bold text-foreground">
-                            {pkg.totalSessions - pkg.remainingSessions}/{pkg.totalSessions}
-                          </span>
-                        </div>
-                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${pct === 100 ? "bg-muted-foreground" : "bg-primary"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Sessões utilizadas</span>
+                        <span className="font-bold text-foreground">
+                          {pkg.totalSessions - pkg.remainingSessions}/{pkg.totalSessions}
+                        </span>
                       </div>
                     </div>
                   );

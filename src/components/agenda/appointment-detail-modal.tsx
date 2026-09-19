@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PackageProgressRing } from "@/components/ui/package-progress-ring";
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface Appointment {
@@ -493,17 +494,19 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                     </div>
                   ) : (
                     packages.map((pkg) => {
-                      const progress = (pkg.sessions_used / pkg.sessions_total) * 100;
                       return (
                         <div key={pkg.id} className="rounded-xl border border-neutral-200 bg-white p-4 space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="text-sm font-black text-neutral-800">{pkg.package_name}</p>
-                              {pkg.expires_at && (
-                                <p className="text-xs text-neutral-400">Válido até {fmtDate(pkg.expires_at)}</p>
-                              )}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <PackageProgressRing used={pkg.sessions_used} total={pkg.sessions_total} size={42} />
+                              <div className="min-w-0">
+                                <p className="text-sm font-black text-neutral-800 truncate">{pkg.package_name}</p>
+                                {pkg.expires_at && (
+                                  <p className="text-xs text-neutral-400">Válido até {fmtDate(pkg.expires_at)}</p>
+                                )}
+                              </div>
                             </div>
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                            <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${
                               pkg.status === "active" ? "bg-emerald-50 text-emerald-600 border-emerald-200"
                               : pkg.status === "completed" ? "bg-neutral-100 text-neutral-500 border-neutral-200"
                               : "bg-rose-50 text-rose-500 border-rose-200"
@@ -513,18 +516,9 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                           </div>
 
                           {/* Session progress */}
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-neutral-500">
-                              <span>{pkg.sessions_used} sessões realizadas</span>
-                              <span>{pkg.sessions_total - pkg.sessions_used} restantes</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-blue-500 transition-all"
-                                style={{ width: `${Math.min(100, progress)}%` }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-neutral-400 text-right">{pkg.sessions_used}/{pkg.sessions_total}</p>
+                          <div className="flex justify-between text-xs text-neutral-500">
+                            <span>{pkg.sessions_used} sessões realizadas</span>
+                            <span>{pkg.sessions_total - pkg.sessions_used} restantes</span>
                           </div>
 
                           {pkg.value_paid > 0 && (

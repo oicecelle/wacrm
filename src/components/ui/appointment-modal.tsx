@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/select";
 import { uploadAccountMedia } from "@/lib/storage/upload-media";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { PackageProgressRing } from "@/components/ui/package-progress-ring";
 
 const TIME_SLOTS = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
@@ -2793,14 +2794,19 @@ Qualquer dúvida, estou à disposição! 😊`;
                               <PackageIcon className="h-4 w-4 text-blue-700 animate-pulse" />
                               Pacotes de Sessões Ativos
                             </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="space-y-1.5">
                               {patientPackages.filter(p => p.status === 'active').map(pkg => (
-                                <div key={pkg.id} className="bg-white/80 border border-blue-100/50 rounded-lg p-2.5 flex flex-col text-[10px] text-blue-900 font-semibold space-y-0.5">
-                                  <span className="font-extrabold text-neutral-800 text-xs">{pkg.name}</span>
-                                  <span>Total de Sessões: {pkg.total}</span>
-                                  <span>Sessões Consumidas: {pkg.used}</span>
-                                  <span className="text-blue-700 font-bold">Restantes: {pkg.total - pkg.used}</span>
-                                  <span className="text-neutral-400 font-medium text-[9px] mt-1 uppercase">Validade: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem expiração"}</span>
+                                <div key={pkg.id} className="flex items-center gap-3 rounded-lg bg-white/80 border border-blue-100/50 p-2.5">
+                                  <PackageProgressRing used={pkg.used} total={pkg.total} size={40} strokeWidth={3.5} />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-extrabold text-neutral-800">{pkg.name}</p>
+                                    <p className="text-[10px] font-semibold text-blue-700">
+                                      {pkg.total - pkg.used} restante{pkg.total - pkg.used === 1 ? '' : 's'}
+                                    </p>
+                                    <p className="text-[9px] font-medium uppercase text-neutral-400">
+                                      Validade: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem expiração"}
+                                    </p>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -3722,29 +3728,24 @@ Qualquer dúvida, estou à disposição! 😊`;
                               <div className="grid grid-cols-1 gap-3">
                                 {patientPackages.map((pkg) => {
                                   const remaining = pkg.total - pkg.used;
-                                  const pct = (pkg.used / pkg.total) * 100;
                                   return (
-                                    <div key={pkg.id} className="border border-neutral-200/80 rounded-xl p-3 bg-neutral-50/50 space-y-2.5 shadow-xs">
-                                      <div className="flex justify-between items-center text-xs">
-                                        <div>
-                                          <p className="font-extrabold text-neutral-800">{pkg.name}</p>
-                                          <p className="text-[8px] text-neutral-400 font-bold uppercase mt-0.5">Expira: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem validade"}</p>
+                                    <div key={pkg.id} className="border border-neutral-200/80 rounded-xl p-3 bg-neutral-50/50 shadow-xs flex items-center gap-3">
+                                      <PackageProgressRing used={pkg.used} total={pkg.total} size={44} />
+                                      <div className="min-w-0 flex-1 space-y-0.5 text-xs">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <p className="truncate font-extrabold text-neutral-800">{pkg.name}</p>
+                                          <span className={`shrink-0 text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                                            pkg.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-500"
+                                          }`}>
+                                            {pkg.status === "active" ? "ativo" : pkg.status}
+                                          </span>
                                         </div>
-                                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
-                                          pkg.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-500"
-                                        }`}>
-                                          {pkg.status}
-                                        </span>
-                                      </div>
-
-                                      <div className="space-y-1">
-                                        <div className="flex justify-between text-[9px] font-bold text-neutral-600">
-                                          <span>Consumido: {pkg.used} / {pkg.total}</span>
-                                          <span className="text-blue-700">{remaining} restantes</span>
-                                        </div>
-                                        <div className="w-full bg-neutral-200/60 rounded-full h-1.5 overflow-hidden">
-                                          <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-                                        </div>
+                                        <p className="text-blue-700 font-bold text-[10px]">
+                                          {remaining} restante{remaining === 1 ? '' : 's'}
+                                        </p>
+                                        <p className="text-[8px] text-neutral-400 font-bold uppercase">
+                                          Expira: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem validade"}
+                                        </p>
                                       </div>
                                     </div>
                                   );
