@@ -136,10 +136,12 @@ export default function AdminDashboardPage() {
 
         setProfile(prof);
 
-        // Access check: Marcelle's email or specific admins, or role system_admin
+        // Access check: role-based (system_admin) is the real,
+        // durable mechanism — grant it via the SQL snippet below
+        // rather than hardcoding more emails here. The two fallback
+        // emails exist only for developer access during setup.
         const hasAccess =
           prof?.role === "system_admin" ||
-          authData.user.email?.includes("admin") ||
           authData.user.email === "marcelle@leadpluz.com.br" ||
           authData.user.email === "m.portela@live.com"; // developer fallback
 
