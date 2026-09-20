@@ -303,22 +303,29 @@ export default function LinkBioPage() {
             Monte a página pública da sua clínica — cards, banners, depoimentos e formulários.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {pageId && slug && (
-            <a
-              href={`https://leadpluz.com/${slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver página
-            </a>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            {pageId && slug && (
+              <a
+                href={`https://leadpluz.com/${slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Ver página
+              </a>
+            )}
+            <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Salvar
+            </Button>
+          </div>
+          {pageId && slug && !isPublished && (
+            <p className="text-[10px] font-bold text-amber-600">
+              Ainda não publicada — marque &quot;Página publicada&quot; e salve pra ficar visível.
+            </p>
           )}
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Salvar
-          </Button>
         </div>
       </div>
 

@@ -27,7 +27,7 @@ export default function DashboardNotFound() {
           href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent("Olá! Caí numa página que não existe no sistema. Poderia me ajudar?")}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <MessageCircle className="h-4 w-4" />
           Falar com o suporte

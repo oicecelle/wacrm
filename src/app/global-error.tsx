@@ -69,7 +69,7 @@ export default function GlobalError({
               rel="noopener noreferrer"
               style={{
                 borderRadius: 12,
-                background: "#059669",
+                background: "#2563eb",
                 padding: "10px 16px",
                 fontSize: 14,
                 fontWeight: 600,
