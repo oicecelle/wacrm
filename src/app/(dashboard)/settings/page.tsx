@@ -17,7 +17,6 @@ import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
 import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel';
 import { DealsSettings } from '@/components/settings/deals-settings';
-import { MembersTab } from '@/components/settings/members-tab';
 import { GoogleCalendarPanel } from '@/components/settings/google-calendar-panel';
 import { RemindersPanel } from '@/components/settings/reminders-panel';
 import {
@@ -65,7 +64,6 @@ export default function SettingsPage() {
     templates: <TemplateManager />,
     fields: <FieldsAndTagsPanel />,
     deals: <DealsSettings />,
-    members: <MembersTab />,
     google: <GoogleCalendarPanel />,
     reminders: <RemindersPanel />,
   };

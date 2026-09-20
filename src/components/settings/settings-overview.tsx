@@ -172,20 +172,6 @@ export function SettingsOverview({
       ),
     },
     {
-      section: 'members',
-      loading: countsLoading,
-      subtitle:
-        counts?.members == null
-          ? 'View team members'
-          : `${counts.members} member${counts.members === 1 ? '' : 's'}${
-              counts.pendingInvites
-                ? ` · ${counts.pendingInvites} pending invite${
-                    counts.pendingInvites === 1 ? '' : 's'
-                  }`
-                : ''
-            }`,
-    },
-    {
       section: 'templates',
       loading: countsLoading,
       subtitle:
