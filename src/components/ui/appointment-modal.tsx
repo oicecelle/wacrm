@@ -383,8 +383,8 @@ export function AppointmentModal({
   // EMR Clinical notes states
   const [clinicalEvolutions, setClinicalEvolutions] = useState<any[]>([]);
   const [newEvolContent, setNewEvolContent] = useState("");
-  const [evolSigned, setEvolSigned] = useState(true);
   const [evolShared, setEvolShared] = useState(true);
+  const [sendingConsentId, setSendingConsentId] = useState<string | null>(null);
   const [evolSaving, setEvolSaving] = useState(false);
 
   // Body Evaluations state
@@ -858,6 +858,9 @@ export function AppointmentModal({
             content,
             signed,
             shared,
+            consent_document_id,
+            consent_requested_at,
+            consent_document:documents(status, public_token),
             clinic_users (
               name
             )
@@ -871,6 +874,10 @@ export function AppointmentModal({
           content: ev.content,
           signed: ev.signed,
           shared: ev.shared,
+          consent_document_id: ev.consent_document_id,
+          consent_requested_at: ev.consent_requested_at,
+          consent_status: (Array.isArray(ev.consent_document) ? ev.consent_document[0]?.status : (ev.consent_document as any)?.status) || null,
+          consent_token: (Array.isArray(ev.consent_document) ? ev.consent_document[0]?.public_token : (ev.consent_document as any)?.public_token) || null,
           professional_name: (Array.isArray(ev.clinic_users) ? ev.clinic_users[0]?.name : (ev.clinic_users as any)?.name) || "Profissional"
         })));
 
@@ -1658,6 +1665,54 @@ Qualquer dúvida, estou à disposição! 😊`;
   };
 
   // Add EMR clinical evolution note
+  const handleSendConsent = async (evolutionId: string) => {
+    setSendingConsentId(evolutionId);
+    try {
+      const res = await fetch("/api/evolutions/send-consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evolution_id: evolutionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha ao enviar para assinatura.");
+      alert("Termo de ciência enviado pro paciente pelo WhatsApp!");
+
+      // Reload to reflect the new pending consent status
+      const { data: evolData } = await supabase
+        .from("clinical_evolutions")
+        .select(`
+          id,
+          created_at,
+          content,
+          signed,
+          shared,
+          consent_document_id,
+          consent_requested_at,
+          consent_document:documents(status, public_token),
+          clinic_users ( name )
+        `)
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false });
+
+      setClinicalEvolutions((evolData || []).map((ev: any) => ({
+        id: ev.id,
+        created_at: ev.created_at,
+        content: ev.content,
+        signed: ev.signed,
+        shared: ev.shared,
+        consent_document_id: ev.consent_document_id,
+        consent_requested_at: ev.consent_requested_at,
+        consent_status: (Array.isArray(ev.consent_document) ? ev.consent_document[0]?.status : ev.consent_document?.status) || null,
+        consent_token: (Array.isArray(ev.consent_document) ? ev.consent_document[0]?.public_token : ev.consent_document?.public_token) || null,
+        professional_name: (Array.isArray(ev.clinic_users) ? ev.clinic_users[0]?.name : ev.clinic_users?.name) || "Profissional",
+      })));
+    } catch (err: any) {
+      alert(err.message || "Erro ao enviar termo de ciência.");
+    } finally {
+      setSendingConsentId(null);
+    }
+  };
+
   const handleAddClinicalEvolution = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvolContent.trim() || !patientId || !profile) return;
@@ -1671,7 +1726,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           patient_id: patientId,
           professional_id: user?.id,
           content: newEvolContent.trim(),
-          signed: evolSigned,
+          signed: false,
           shared: evolShared,
         })
         .select()
@@ -1683,10 +1738,9 @@ Qualquer dúvida, estou à disposição! 😊`;
       await supabase.from("patient_timeline").insert({
         patient_id: patientId,
         event_type: "evolution_added",
-        title: evolSigned ? "Nova evolução clínica assinada" : "Evolução adicionada como rascunho",
+        title: "Evolução adicionada ao prontuário",
         payload: {
           professional: profileName,
-          signed: evolSigned,
         },
       });
 
@@ -1701,6 +1755,9 @@ Qualquer dúvida, estou à disposição! 😊`;
           content,
           signed,
           shared,
+          consent_document_id,
+          consent_requested_at,
+          consent_document:documents(status, public_token),
           clinic_users (
             name
           )
@@ -1714,6 +1771,10 @@ Qualquer dúvida, estou à disposição! 😊`;
         content: ev.content,
         signed: ev.signed,
         shared: ev.shared,
+        consent_document_id: ev.consent_document_id,
+        consent_requested_at: ev.consent_requested_at,
+        consent_status: (Array.isArray(ev.consent_document) ? ev.consent_document[0]?.status : (ev.consent_document as any)?.status) || null,
+        consent_token: (Array.isArray(ev.consent_document) ? ev.consent_document[0]?.public_token : (ev.consent_document as any)?.public_token) || null,
         professional_name: (Array.isArray(ev.clinic_users) ? ev.clinic_users[0]?.name : (ev.clinic_users as any)?.name) || "Profissional"
       })));
 
@@ -3832,15 +3893,6 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <label className="flex items-center gap-1.5 cursor-pointer font-bold text-neutral-600 text-[10px]">
                                   <input
                                     type="checkbox"
-                                    checked={evolSigned}
-                                    onChange={(e) => setEvolSigned(e.target.checked)}
-                                    className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                                  />
-                                  Assinar Digitalmente
-                                </label>
-                                <label className="flex items-center gap-1.5 cursor-pointer font-bold text-neutral-600 text-[10px]">
-                                  <input
-                                    type="checkbox"
                                     checked={evolShared}
                                     onChange={(e) => setEvolShared(e.target.checked)}
                                     className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
@@ -3868,20 +3920,40 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     </span>
                                   </div>
                                   <p className="text-neutral-600 leading-relaxed whitespace-pre-wrap">{ev.content}</p>
-                                  <div className="flex items-center gap-2 pt-1 text-[8px] font-bold">
-                                    {ev.signed ? (
-                                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-1.5 py-0.5 rounded uppercase">
-                                        Assinado Digitalmente
-                                      </span>
-                                    ) : (
-                                      <span className="bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded uppercase">
-                                        Rascunho Não Assinado
-                                      </span>
-                                    )}
-                                    {ev.shared && (
-                                      <span className="bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded uppercase">
-                                        Compartilhado no Portal
-                                      </span>
+                                  <div className="flex items-center justify-between gap-2 pt-1">
+                                    <div className="flex flex-wrap items-center gap-2 text-[8px] font-bold">
+                                      {ev.consent_status === "signed" ? (
+                                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-1.5 py-0.5 rounded uppercase">
+                                          Ciência Assinada pelo Paciente
+                                        </span>
+                                      ) : ev.consent_document_id ? (
+                                        <span className="bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded uppercase">
+                                          Aguardando Assinatura do Paciente
+                                        </span>
+                                      ) : (
+                                        <span className="bg-neutral-50 text-neutral-500 border border-neutral-100 px-1.5 py-0.5 rounded uppercase">
+                                          Ciência Não Solicitada
+                                        </span>
+                                      )}
+                                      {ev.shared && (
+                                        <span className="bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded uppercase">
+                                          Compartilhado no Portal
+                                        </span>
+                                      )}
+                                    </div>
+                                    {ev.consent_status !== "signed" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSendConsent(ev.id)}
+                                        disabled={sendingConsentId === ev.id}
+                                        className="shrink-0 text-[9px] font-black text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                                      >
+                                        {sendingConsentId === ev.id
+                                          ? "Enviando..."
+                                          : ev.consent_document_id
+                                            ? "Reenviar"
+                                            : "Enviar p/ assinatura"}
+                                      </button>
                                     )}
                                   </div>
                                 </div>
