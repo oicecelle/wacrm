@@ -36,8 +36,23 @@ interface SendTemplateArgs {
   variables?: Record<string, string>
 }
 
+interface SendMediaArgs {
+  accountId: string
+  userId: string
+  conversationId: string
+  contactId: string
+  mediaType: 'image' | 'video' | 'document' | 'audio'
+  mediaUrl: string
+  filename?: string
+  caption?: string
+}
+
 export async function engineSendText(args: SendTextArgs): Promise<{ whatsapp_message_id: string }> {
   return send({ ...args, kind: 'text' })
+}
+
+export async function engineSendMedia(args: SendMediaArgs): Promise<{ whatsapp_message_id: string }> {
+  return send({ ...args, kind: 'media' })
 }
 
 export async function engineSendTemplate(
@@ -49,6 +64,7 @@ export async function engineSendTemplate(
 type SendInput =
   | (SendTextArgs & { kind: 'text' })
   | (SendTemplateArgs & { kind: 'template' })
+  | (SendMediaArgs & { kind: 'media' })
 
 async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> {
   const db = supabaseAdmin()
@@ -79,6 +95,38 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
 
   const attempt = async (phone: string): Promise<string> => {
     const isTemplate = input.kind === 'template'
+    const isMedia = input.kind === 'media'
+
+    if (isMedia) {
+      const mediaArgs = input as SendMediaArgs
+      if (!mediaArgs.mediaUrl) throw new Error('send_media needs media_url')
+
+      if (config.provider_type === 'uazapi') {
+        if (!config.uazapi_token) throw new Error('Uazapi token not configured')
+        const result = await sendUazapiMediaMessage(
+          config.uazapi_base_url || 'https://customix.uazapi.com',
+          config.uazapi_token,
+          phone,
+          mediaArgs.mediaUrl,
+          mediaArgs.mediaType,
+          mediaArgs.caption,
+          mediaArgs.filename,
+        )
+        if (!result.success) throw new Error(result.error || 'Failed to dispatch media')
+        return result.messageId || ''
+      }
+
+      const result = await dispatchSendMessage({
+        config,
+        to: phone,
+        messageType: mediaArgs.mediaType,
+        media_url: mediaArgs.mediaUrl,
+        filename: mediaArgs.filename,
+        content_text: mediaArgs.caption,
+      })
+      if (!result.success) throw new Error(result.error || 'Failed to dispatch media')
+      return result.messageId || ''
+    }
 
     // Uazapi templates skip Meta's review pipeline entirely, so there's
     // no positional {{1}}/{{2}} contract — fill the named placeholders
@@ -172,9 +220,16 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
     await db.from('contacts').update({ phone: workingPhone }).eq('id', contact.id)
   }
 
-  const content_type = input.kind === 'template' ? 'template' : 'text'
-  const content_text = input.kind === 'text' ? (input as SendTextArgs).text : null
+  const content_type =
+    input.kind === 'template' ? 'template' : input.kind === 'media' ? (input as SendMediaArgs).mediaType : 'text'
+  const content_text =
+    input.kind === 'text'
+      ? (input as SendTextArgs).text
+      : input.kind === 'media'
+        ? (input as SendMediaArgs).caption ?? null
+        : null
   const template_name = input.kind === 'template' ? (input as SendTemplateArgs).templateName : null
+  const media_url = input.kind === 'media' ? (input as SendMediaArgs).mediaUrl : null
 
   const { error: msgErr } = await db.from('messages').insert({
     conversation_id: input.conversationId,
@@ -182,6 +237,7 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
     content_type,
     content_text,
     template_name,
+    media_url,
     message_id: waMessageId,
     status: 'sent',
   })
@@ -193,7 +249,11 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
     .from('conversations')
     .update({
       last_message_text:
-        input.kind === 'template' ? `[template:${(input as SendTemplateArgs).templateName}]` : (input as SendTextArgs).text,
+        input.kind === 'template'
+          ? `[template:${(input as SendTemplateArgs).templateName}]`
+          : input.kind === 'media'
+            ? `[${(input as SendMediaArgs).mediaType}]`
+            : (input as SendTextArgs).text,
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

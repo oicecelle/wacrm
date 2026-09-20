@@ -17,6 +17,7 @@ import {
   GripVertical,
   MessageSquare,
   FileText,
+  ImagePlus,
   Tag,
   TagIcon,
   UserCheck,
@@ -52,6 +53,7 @@ import type {
   CustomField,
   KeywordMatchTriggerConfig,
   MessageTemplate,
+  SendMediaStepConfig,
   Tag as TagRecord,
 } from "@/types"
 import { createClient } from "@/lib/supabase/client"
@@ -94,7 +96,8 @@ interface StepMeta {
 
 const STEP_META: Record<AutomationStepType, StepMeta> = {
   send_message: { label: "Enviar mensagem", icon: MessageSquare, border: "border-l-blue-600" },
-  send_template: { label: "Enviar foto / anexo", icon: FileText, border: "border-l-indigo-600" },
+  send_template: { label: "Enviar Modelo Salvo", icon: FileText, border: "border-l-indigo-600" },
+  send_media: { label: "Enviar Foto / Anexo", icon: ImagePlus, border: "border-l-cyan-600" },
   add_tag: { label: "Adicionar tag", icon: Tag, border: "border-l-emerald-600" },
   remove_tag: { label: "Remover tag", icon: TagIcon, border: "border-l-amber-600" },
   assign_conversation: { label: "Criar tarefa / Atribuir", icon: UserCheck, border: "border-l-purple-600" },
@@ -113,6 +116,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
 const ADDABLE_STEPS: AutomationStepType[] = [
   "send_message",
   "send_template",
+  "send_media",
   "update_contact_field",
   "update_deal_field",
   "add_tag",
@@ -568,6 +572,117 @@ function SendTemplateFields({
         </FieldBlock>
       )}
     </>
+  )
+}
+
+const AUTOMATION_MEDIA_ACCEPT: Record<"image" | "video" | "document" | "audio", string> = {
+  image: "image/png,image/jpeg,image/webp",
+  video: "video/mp4,video/3gpp",
+  document:
+    "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain",
+  audio: "audio/*",
+}
+
+// This is a real upload, not a template picker — answers the "Enviar
+// Foto/Anexo" label literally: pick a file from your computer and it
+// goes out as-is, no message-template step in between. Mirrors the
+// Flows send_media node's own upload flow (same bucket, same 16MB
+// cap) so a photo sent this way behaves identically either place.
+function SendMediaFields({
+  mediaType,
+  mediaUrl,
+  filename,
+  caption,
+  onChange,
+}: {
+  mediaType: "image" | "video" | "document" | "audio"
+  mediaUrl: string
+  filename: string
+  caption: string
+  onChange: (patch: Partial<SendMediaStepConfig>) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [inputId] = useState(() => `automation-media-${Math.random().toString(36).slice(2)}`)
+
+  async function handleFile(file: File) {
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error(`Arquivo de ${(file.size / 1024 / 1024).toFixed(1)} MB — o limite é 16 MB.`)
+      return
+    }
+    setUploading(true)
+    try {
+      const { uploadAccountMedia } = await import("@/lib/storage/upload-media")
+      const { publicUrl } = await uploadAccountMedia("flow-media", file)
+      onChange({ media_url: publicUrl, filename: file.name })
+      toast.success("Arquivo enviado.")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha no envio do arquivo.")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <FieldBlock label="Tipo de arquivo">
+        <select
+          value={mediaType}
+          onChange={(e) => onChange({ media_type: e.target.value as SendMediaStepConfig["media_type"], media_url: "", filename: "" })}
+          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+        >
+          <option value="image">Imagem</option>
+          <option value="video">Vídeo</option>
+          <option value="document">Documento</option>
+          <option value="audio">Áudio</option>
+        </select>
+      </FieldBlock>
+
+      <FieldBlock label="Arquivo">
+        {mediaUrl ? (
+          <div className="flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2 text-sm">
+            <span className="truncate text-foreground">{filename || mediaUrl}</span>
+            <button
+              type="button"
+              onClick={() => onChange({ media_url: "", filename: "" })}
+              className="ml-2 shrink-0 text-xs font-bold text-destructive hover:underline"
+            >
+              Remover
+            </button>
+          </div>
+        ) : (
+          <label
+            htmlFor={inputId}
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted px-3 py-4 text-xs font-bold text-primary hover:bg-muted/70"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            {uploading ? "Enviando..." : "Escolher arquivo do computador"}
+            <input
+              id={inputId}
+              type="file"
+              accept={AUTOMATION_MEDIA_ACCEPT[mediaType]}
+              disabled={uploading}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleFile(file)
+                e.target.value = ""
+              }}
+            />
+          </label>
+        )}
+      </FieldBlock>
+
+      {mediaType !== "audio" && (
+        <FieldBlock label="Legenda (opcional)">
+          <Input
+            value={caption}
+            onChange={(e) => onChange({ caption: e.target.value })}
+            placeholder="Texto que acompanha o arquivo"
+            className="bg-muted text-foreground"
+          />
+        </FieldBlock>
+      )}
+    </div>
   )
 }
 
@@ -1315,6 +1430,16 @@ function StepEditor({
           onChange={(patch) => set(patch)}
         />
       )
+    case "send_media":
+      return (
+        <SendMediaFields
+          mediaType={(cfg.media_type as "image" | "video" | "document" | "audio") ?? "image"}
+          mediaUrl={(cfg.media_url as string) ?? ""}
+          filename={(cfg.filename as string) ?? ""}
+          caption={(cfg.caption as string) ?? ""}
+          onChange={(patch) => set(patch)}
+        />
+      )
     case "add_tag":
     case "remove_tag":
       return (
@@ -1680,6 +1805,8 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.text as string) || "sem texto ainda"
     case "send_template":
       return (step.step_config.template_name as string) || "escolher um modelo"
+    case "send_media":
+      return (step.step_config.filename as string) || "nenhum arquivo ainda"
     case "create_appointment":
       return (step.step_config.template as string) || "sem mensagem-modelo ainda"
     case "update_appointment_status": {
