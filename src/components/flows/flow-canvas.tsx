@@ -154,7 +154,7 @@ function FlowNodeCard({ data, selected }: NodeProps) {
         </span>
         {isEntry && (
           <span className="ml-auto rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
-            Entry
+            Entrada
           </span>
         )}
       </div>
