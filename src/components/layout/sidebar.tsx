@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Radio,
   Settings,
+  ListOrdered,
   Shield,
   User,
   UserCog,
@@ -205,6 +206,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
   const menuItems = applySidebarOrder(defaultMenuItems, savedOrder);
 
   const bottomNavItems = [
+    { href: "/settings?tab=appearance", label: "Personalizar Menu", icon: ListOrdered },
     { href: "/settings", label: "Configurações", icon: Settings },
   ];
 
