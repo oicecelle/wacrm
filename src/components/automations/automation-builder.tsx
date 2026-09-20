@@ -845,6 +845,15 @@ function KeywordMatchConfig({
   onChange: (c: Record<string, unknown>) => void
 }) {
   const keywords = config?.keywords ?? []
+  // "phrase" mode is purely a UI convenience over the same
+  // keywords/match_type storage — one long sentence is just a
+  // one-item keywords array. Inferred from the data (a single entry
+  // containing a space reads as a phrase) so old automations display
+  // sensibly without needing a migration, but explicit user choice
+  // (via the toggle below) always wins once made this session.
+  const [mode, setMode] = useState<"word" | "phrase">(
+    keywords.length === 1 && keywords[0].includes(" ") ? "phrase" : "word"
+  )
   // Keep a local draft string so the comma and trailing space aren't
   // stripped on every keystroke (which made multi-word, comma-separated
   // entry like "SEO, search engine optimization" impossible to type).
@@ -865,7 +874,7 @@ function KeywordMatchConfig({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function commit() {
+  function commitWords() {
     const parsed = draft
       .split(",")
       .map((s) => s.trim())
@@ -874,26 +883,13 @@ function KeywordMatchConfig({
     onChange({ ...config, keywords: parsed })
   }
 
+  function commitPhrase() {
+    const trimmed = draft.trim()
+    onChange({ ...config, keywords: trimmed ? [trimmed] : [] })
+  }
+
   return (
     <div className="space-y-2">
-      <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Palavras-chave (separadas por vírgula)
-        </label>
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault()
-              commit()
-            }
-          }}
-          placeholder="ex: preço, agendar avaliação, falar com atendente"
-          className="bg-muted text-foreground"
-        />
-      </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
           Tipo de correspondência
@@ -907,6 +903,58 @@ function KeywordMatchConfig({
           <option value="exact">Exato</option>
         </select>
       </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">Gatilho por</label>
+        <select
+          value={mode}
+          onChange={(e) => {
+            const next = e.target.value as "word" | "phrase"
+            setMode(next)
+            // Switching mode starts the field fresh rather than trying
+            // to reinterpret a comma list as one phrase or vice versa.
+            setDraft("")
+            onChange({ ...config, keywords: [] })
+          }}
+          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
+        >
+          <option value="word">Palavra-chave</option>
+          <option value="phrase">Frase</option>
+        </select>
+      </div>
+
+      {mode === "word" ? (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Palavras-chave (separadas por vírgula)
+          </label>
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitWords}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                commitWords()
+              }
+            }}
+            placeholder="ex: preço, agendar avaliação, falar com atendente"
+            className="bg-muted text-foreground"
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Frase específica</label>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitPhrase}
+            placeholder="ex: agendamos sua avaliação para o dia combinado"
+            className="bg-muted text-foreground"
+            rows={2}
+          />
+        </div>
+      )}
     </div>
   )
 }
