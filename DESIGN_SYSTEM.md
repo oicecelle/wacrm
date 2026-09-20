@@ -97,16 +97,13 @@ certeza de qual se aplica, o card padrão (`rounded-xl border border-border
 bg-card p-5 shadow-xs`) e o botão primário acima cobrem a grande maioria dos
 casos.
 
-## Pendências conhecidas (ainda não convertido, mas devia)
+## Conversão concluída
 
-Esses padrões antigos (cor direta do Tailwind em vez de token) ainda
-aparecem em partes do sistema mais antigas e não foram todos convertidos
-ainda, por ser uma mudança grande de uma vez só. Ao MEXER em qualquer tela
-que tenha isso, aproveite pra converter pro token, mesmo que não seja o
-motivo da mudança:
+As conversões que ficaram pendentes aqui (bordas, textos, fundos de card) já
+foram feitas em todas as telas internas do painel — 984 ocorrências no
+total. Páginas públicas (link na bio, portal do paciente, login, landing)
+ficaram de fora de propósito, já que não seguem o tema claro/escuro do
+painel — podem continuar com cor fixa sem problema.
 
-- `bg-blue-600` / `text-blue-600` → `bg-primary` / `text-primary` (~92 ocorrências)
-- `border-neutral-200` → `border-border` (~84 ocorrências)
-- `text-neutral-900` / `text-neutral-800` → `text-foreground`
-- `text-neutral-500` / `text-neutral-400` → `text-muted-foreground`
-- `bg-white` (como fundo de card) → `bg-card`
+Se aparecer cor fixa nova em código futuro, é só seguir a tabela acima na
+hora de escrever, não vai precisar de outra rodada de conversão em massa.
