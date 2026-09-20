@@ -59,7 +59,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 const STATUS_CONFIG: Record<string, { label: string; classes: string; icon: any }> = {
   pending: { label: 'Pendente', classes: 'bg-amber-50 text-amber-700 border-amber-200/40', icon: Clock },
   sent: { label: 'Enviado', classes: 'bg-emerald-50 text-emerald-700 border-emerald-200/40', icon: CheckCircle2 },
-  cancelled: { label: 'Cancelado', classes: 'bg-neutral-50 text-neutral-600 border-neutral-200/40', icon: XCircle },
+  cancelled: { label: 'Cancelado', classes: 'bg-neutral-50 text-neutral-600 border-border/40', icon: XCircle },
   failed: { label: 'Falhou', classes: 'bg-red-50 text-red-700 border-red-200/40', icon: AlertTriangle },
 };
 
@@ -284,7 +284,7 @@ export default function ScheduledNotificationsPage() {
             size="sm"
             onClick={triggerCronSync}
             disabled={syncing}
-            className="border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+            className="border-border text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             {syncing ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-500 mr-1.5" />
@@ -336,7 +336,7 @@ export default function ScheduledNotificationsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por paciente ou texto..."
-            className="pl-9 pr-4 py-2 border-neutral-200 bg-neutral-50 text-xs text-neutral-900 rounded-2xl placeholder:text-neutral-400"
+            className="pl-9 pr-4 py-2 border-border bg-neutral-50 text-xs text-neutral-900 rounded-2xl placeholder:text-neutral-400"
           />
         </div>
       </div>
@@ -363,7 +363,7 @@ export default function ScheduledNotificationsPage() {
               variant="outline"
               size="sm"
               onClick={() => setSelectedIds(new Set())}
-              className="border-neutral-200 text-neutral-700 h-8 rounded-xl text-xs font-bold hover:bg-neutral-50"
+              className="border-border text-neutral-700 h-8 rounded-xl text-xs font-bold hover:bg-neutral-50"
             >
               Desmarcar
             </Button>
@@ -524,7 +524,7 @@ export default function ScheduledNotificationsPage() {
 
       {/* Edit Modal */}
       <Dialog open={!!editingNotif} onOpenChange={(open) => !open && setEditingNotif(null)}>
-        <DialogContent className="border-neutral-200 bg-white sm:max-w-lg rounded-3xl">
+        <DialogContent className="border-border bg-white sm:max-w-lg rounded-3xl">
           <DialogHeader className="text-left">
             <DialogTitle className="text-neutral-900 font-black tracking-tight text-lg">
               Editar Mensagem Agendada
@@ -554,7 +554,7 @@ export default function ScheduledNotificationsPage() {
                   type="datetime-local"
                   value={editScheduledFor}
                   onChange={(e) => setEditScheduledFor(e.target.value)}
-                  className="border-neutral-200 bg-neutral-50 text-xs text-neutral-900 rounded-xl"
+                  className="border-border bg-neutral-50 text-xs text-neutral-900 rounded-xl"
                 />
               </div>
 
@@ -565,7 +565,7 @@ export default function ScheduledNotificationsPage() {
                   value={editMessageText}
                   onChange={(e) => setEditMessageText(e.target.value)}
                   rows={6}
-                  className="w-full border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"
+                  className="w-full border border-border bg-neutral-50 text-xs text-neutral-900 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"
                   placeholder="Escreva a mensagem personalizada..."
                 />
               </div>
@@ -577,7 +577,7 @@ export default function ScheduledNotificationsPage() {
               variant="outline"
               onClick={() => setEditingNotif(null)}
               disabled={updating}
-              className="border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold hover:bg-neutral-50"
+              className="border-border text-neutral-700 rounded-xl text-xs font-bold hover:bg-neutral-50"
             >
               Cancelar
             </Button>

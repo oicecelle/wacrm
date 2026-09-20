@@ -187,7 +187,7 @@ export default function PortalConfigPage() {
               variant="outline"
               size="sm"
               onClick={handleCopyLink}
-              className="border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 rounded-xl flex-1 sm:flex-initial flex items-center gap-1.5 h-9"
+              className="border-border text-xs font-bold text-neutral-700 hover:bg-neutral-50 rounded-xl flex-1 sm:flex-initial flex items-center gap-1.5 h-9"
             >
               <Copy className="h-3.5 w-3.5 text-neutral-400" />
               Copiar Link
@@ -223,7 +223,7 @@ export default function PortalConfigPage() {
                   value={welcomeTitle}
                   onChange={(e) => setWelcomeTitle(e.target.value)}
                   placeholder="Ex: Bem-vindo à Marcelle Odontologia"
-                  className="border-neutral-200 bg-neutral-50 text-xs rounded-xl"
+                  className="border-border bg-neutral-50 text-xs rounded-xl"
                 />
               </div>
 
@@ -233,7 +233,7 @@ export default function PortalConfigPage() {
                   value={welcomeSubtitle}
                   onChange={(e) => setWelcomeSubtitle(e.target.value)}
                   rows={3}
-                  className="w-full border border-neutral-200 bg-neutral-50 text-xs text-neutral-700 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full border border-border bg-neutral-50 text-xs text-neutral-700 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="Ex: Gerencie seus horários, consulte faturas e assine seus documentos."
                 />
               </div>
@@ -244,7 +244,7 @@ export default function PortalConfigPage() {
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://exemplo.com/logo.png"
-                  className="border-neutral-200 bg-neutral-50 text-xs rounded-xl"
+                  className="border-border bg-neutral-50 text-xs rounded-xl"
                 />
                 <p className="text-[10px] text-neutral-400">
                   URL de uma imagem pública do seu logo para personalizar o cabeçalho e tela de login.
@@ -362,13 +362,13 @@ export default function PortalConfigPage() {
                   value={newBannerUrl}
                   onChange={(e) => setNewBannerUrl(e.target.value)}
                   placeholder="URL da Imagem do Banner"
-                  className="border-neutral-200 bg-neutral-50 text-[11px] rounded-lg p-2 h-8"
+                  className="border-border bg-neutral-50 text-[11px] rounded-lg p-2 h-8"
                 />
                 <Input
                   value={newBannerLink}
                   onChange={(e) => setNewBannerLink(e.target.value)}
                   placeholder="Link do Clique (opcional)"
-                  className="border-neutral-200 bg-neutral-50 text-[11px] rounded-lg p-2 h-8"
+                  className="border-border bg-neutral-50 text-[11px] rounded-lg p-2 h-8"
                 />
                 <Button
                   onClick={handleAddBanner}

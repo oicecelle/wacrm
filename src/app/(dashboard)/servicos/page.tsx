@@ -450,7 +450,7 @@ export default function ServicosPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-neutral-200">
+      <div className="flex gap-1 border-b border-border">
         <button onClick={() => setActiveTab("procedures")} className={tabBtnCls("procedures")}>
           <ActivityIcon className="h-4 w-4" />
           Procedimentos ({procedures.length})
@@ -467,10 +467,10 @@ export default function ServicosPage() {
 
       {/* ── PROCEDURES TAB ── */}
       {activeTab === "procedures" && (
-        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs">
+        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-xs">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
+              <tr className="border-b border-border bg-neutral-50">
                 <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide w-6">Cor</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Procedimento</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide hidden sm:table-cell">Categoria</th>
@@ -546,10 +546,10 @@ export default function ServicosPage() {
 
       {/* ── ROOMS TAB ── */}
       {activeTab === "rooms" && (
-        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs">
+        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-xs">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
+              <tr className="border-b border-border bg-neutral-50">
                 <th className="px-6 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Nome da Sala</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-bold text-neutral-500 uppercase tracking-wide">Ações</th>
@@ -593,7 +593,7 @@ export default function ServicosPage() {
       {activeTab === "packages" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
-            <div key={pkg.id} className="rounded-xl border border-neutral-200 bg-white p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all">
+            <div key={pkg.id} className="rounded-xl border border-border bg-white p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -634,7 +634,7 @@ export default function ServicosPage() {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   pkg.is_active
                     ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                    : "bg-neutral-100 text-neutral-400 border-neutral-200"
+                    : "bg-neutral-100 text-neutral-400 border-border"
                 }`}>
                   {pkg.is_active ? "Ativo" : "Inativo"}
                 </span>
@@ -656,7 +656,7 @@ export default function ServicosPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSaveProcedure}
-            className="bg-white w-full max-w-lg rounded-2xl border border-neutral-200 shadow-2xl text-left overflow-hidden"
+            className="bg-white w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
               <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">
@@ -682,7 +682,7 @@ export default function ServicosPage() {
                 <select
                   value={procCategory}
                   onChange={e => setProcCategory(e.target.value)}
-                  className="w-full text-sm h-9 rounded-lg border border-neutral-200 bg-white px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full text-sm h-9 rounded-lg border border-border bg-white px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   disabled={saving}
                 >
                   <option value="">Selecione uma categoria...</option>
@@ -699,7 +699,7 @@ export default function ServicosPage() {
                   onChange={e => setProcDescription(e.target.value)}
                   rows={2}
                   disabled={saving}
-                  className="w-full text-sm rounded-md border border-neutral-200 bg-white px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full text-sm rounded-md border border-border bg-white px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
                 />
               </div>
 
@@ -722,7 +722,7 @@ export default function ServicosPage() {
                     type="color"
                     value={procColor}
                     onChange={e => setProcColor(e.target.value)}
-                    className="h-7 w-7 rounded-full border border-neutral-200 cursor-pointer"
+                    className="h-7 w-7 rounded-full border border-border cursor-pointer"
                     title="Cor personalizada"
                   />
                   <span className="text-xs text-neutral-400 ml-1">Prévia:</span>
@@ -778,7 +778,7 @@ export default function ServicosPage() {
                                 [member.id]: { ...comm, type: e.target.value as "percentage" | "fixed" }
                               });
                             }}
-                            className="h-8 text-xs rounded border border-neutral-200 bg-white px-1.5 focus:outline-none"
+                            className="h-8 text-xs rounded border border-border bg-white px-1.5 focus:outline-none"
                           >
                             <option value="percentage">% Percentual</option>
                             <option value="fixed">R$ Fixo</option>
@@ -793,7 +793,7 @@ export default function ServicosPage() {
                                 [member.id]: { ...comm, value: e.target.value }
                               });
                             }}
-                            className="h-8 w-16 text-center text-xs rounded border border-neutral-200 bg-white focus:outline-none"
+                            className="h-8 w-16 text-center text-xs rounded border border-border bg-white focus:outline-none"
                           />
                         </div>
                       </div>
@@ -820,7 +820,7 @@ export default function ServicosPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSaveRoom}
-            className="bg-white w-full max-w-md rounded-2xl border border-neutral-200 p-6 space-y-4 shadow-2xl text-left"
+            className="bg-white w-full max-w-md rounded-2xl border border-border p-6 space-y-4 shadow-2xl text-left"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">
@@ -853,7 +853,7 @@ export default function ServicosPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSavePackage}
-            className="bg-white w-full max-w-lg rounded-2xl border border-neutral-200 shadow-2xl text-left overflow-hidden"
+            className="bg-white w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
               <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">
@@ -878,7 +878,7 @@ export default function ServicosPage() {
                   onChange={e => setPkgDescription(e.target.value)}
                   rows={2}
                   disabled={saving}
-                  className="w-full text-sm rounded-md border border-neutral-200 bg-white px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full text-sm rounded-md border border-border bg-white px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
                 />
               </div>
 
@@ -921,7 +921,7 @@ export default function ServicosPage() {
                           updated[idx].procedure_name = e.target.value;
                           setPkgItems(updated);
                         }}
-                        className="flex-1 text-xs h-8 rounded-md border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 text-xs h-8 rounded-md border border-border bg-white px-2 focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">Selecione um procedimento...</option>
                         {procedures.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}

@@ -477,7 +477,7 @@ export function ContactDetailView({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl h-[88vh] bg-popover border border-neutral-200 shadow-2xl text-popover-foreground w-full p-0 overflow-hidden flex flex-col rounded-2xl z-50"
+        className="max-w-5xl h-[88vh] bg-popover border border-border shadow-2xl text-popover-foreground w-full p-0 overflow-hidden flex flex-col rounded-2xl z-50"
       >
         {loading || !contact ? (
           <div className="flex items-center justify-center h-full">
@@ -811,7 +811,7 @@ export function ContactDetailView({
                               <Icon className="size-3" />
                             </span>
 
-                            <div className="rounded-xl border border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/20 dark:bg-neutral-900/10 p-3.5 transition-all group-hover:border-neutral-200 dark:group-hover:border-neutral-700">
+                            <div className="rounded-xl border border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/20 dark:bg-neutral-900/10 p-3.5 transition-all group-hover:border-border dark:group-hover:border-neutral-700">
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <h4 className="text-xs font-bold text-foreground">{evt.title}</h4>
                                 <span className="text-[10px] text-muted-foreground font-medium">
@@ -1130,7 +1130,7 @@ export function ContactDetailView({
                           paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
                           pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
                           overdue: 'bg-red-500/10 text-red-600 border-red-500/20',
-                          cancelled: 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:border-neutral-800',
+                          cancelled: 'bg-neutral-100 text-neutral-500 border-border dark:border-neutral-800',
                         };
                         const currentStatusColor = statusColors[tx.status as 'paid'|'pending'|'overdue'|'cancelled'] || statusColors.pending;
                         const isRevenue = tx.type === 'receita';

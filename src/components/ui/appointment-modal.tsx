@@ -155,12 +155,12 @@ function RoundedDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled}
-        className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
+        className="w-full flex items-center justify-between rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
       >
         <span>{displayValue}</span>
         <CalendarDaysIcon className="h-4 w-4 text-neutral-400 shrink-0" />
       </PopoverTrigger>
-      <PopoverContent className="rounded-2xl bg-white border border-neutral-200 p-4 shadow-xl w-64 text-xs z-50">
+      <PopoverContent className="rounded-2xl bg-white border border-border p-4 shadow-xl w-64 text-xs z-50">
         <div className="flex items-center justify-between mb-3">
           <span className="font-extrabold text-neutral-800 capitalize">
             {monthNames[currentMonth]} {currentYear}
@@ -2043,7 +2043,7 @@ Qualquer dúvida, estou à disposição! 😊`;
   const renderSvgChart = () => {
     if (bodyEvaluations.length < 2) {
       return (
-        <div className="flex flex-col items-center justify-center py-8 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+        <div className="flex flex-col items-center justify-center py-8 bg-neutral-50 rounded-xl border border-dashed border-border">
           <TrendingUpIcon className="h-6 w-6 text-neutral-400 mb-1" />
           <p className="text-xs text-neutral-500 font-medium">Histórico insuficiente</p>
           <p className="text-[10px] text-neutral-400 text-center px-4">Cadastre pelo menos 2 avaliações corporais para visualizar o gráfico de evolução.</p>
@@ -2093,10 +2093,10 @@ Qualquer dúvida, estou à disposição! 😊`;
             value={selectedChartMetric}
             onValueChange={(val) => setSelectedChartMetric(val as any)}
           >
-            <SelectTrigger className="rounded-lg border border-neutral-200 bg-white h-8 px-2 text-xs font-semibold text-neutral-800 shadow-xs focus:ring-1 focus:ring-blue-500">
+            <SelectTrigger className="rounded-lg border border-border bg-white h-8 px-2 text-xs font-semibold text-neutral-800 shadow-xs focus:ring-1 focus:ring-blue-500">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
-            <SelectContent className="rounded-xl bg-white border border-neutral-200">
+            <SelectContent className="rounded-xl bg-white border border-border">
               <SelectItem value="weight" className="rounded-lg text-xs">Peso (kg)</SelectItem>
               <SelectItem value="fat_percentage" className="rounded-lg text-xs">Gordura (%)</SelectItem>
               <SelectItem value="waist" className="rounded-lg text-xs">Cintura (cm)</SelectItem>
@@ -2152,7 +2152,7 @@ Qualquer dúvida, estou à disposição! 😊`;
         <button
           type="button"
           onClick={() => setIsStaffDropdownOpen(!isStaffDropdownOpen)}
-          className="w-full flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9"
+          className="w-full flex items-center justify-between rounded-xl border border-border bg-white px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9"
           disabled={saving}
         >
           {selectedStaffObj ? (
@@ -2171,7 +2171,7 @@ Qualquer dúvida, estou à disposição! 😊`;
         {isStaffDropdownOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsStaffDropdownOpen(false)} />
-            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 max-h-52 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl divide-y divide-neutral-50">
+            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 max-h-52 overflow-y-auto rounded-xl border border-border bg-white p-1.5 shadow-xl divide-y divide-neutral-50">
               {staff.map((s) => (
                 <button
                   key={s.id}
@@ -2242,7 +2242,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   value={procedureName}
                   onChange={(e) => setProcedureName(e.target.value)}
                   placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
-                  className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                 />
               </div>
 
@@ -2275,10 +2275,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setStartTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                       {TIME_SLOTS.map((t) => (
                         <SelectItem key={t} value={t} className="rounded-lg text-xs">
                           {t}
@@ -2296,10 +2296,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setEndTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                       {TIME_SLOTS.map((t) => (
                         <SelectItem key={t} value={t} className="rounded-lg text-xs">
                           {t}
@@ -2318,7 +2318,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Notas ou observações sobre este período..."
-                  className="rounded-xl border-neutral-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  className="rounded-xl border-border focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                   rows={3}
                 />
               </div>
@@ -2405,7 +2405,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     onChange={(e) => setNewPatientName(e.target.value)}
                     required
                     disabled={savingNewPatient}
-                    className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2419,7 +2419,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     onChange={(e) => setNewPatientPhone(e.target.value)}
                     required
                     disabled={savingNewPatient}
-                    className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2432,7 +2432,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     value={newPatientEmail}
                     onChange={(e) => setNewPatientEmail(e.target.value)}
                     disabled={savingNewPatient}
-                    className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
 
@@ -2474,7 +2474,7 @@ Qualquer dúvida, estou à disposição! 😊`;
               </DialogHeader>
 
               {/* Type Tabs */}
-              <div className="flex rounded-xl border border-neutral-200 bg-neutral-50 p-1 gap-1">
+              <div className="flex rounded-xl border border-border bg-neutral-50 p-1 gap-1">
                 {([
                   { key: "consulta", label: "Agendamento", emoji: "📅" },
                   { key: "evento",   label: "Evento",       emoji: "🎯" },
@@ -2540,7 +2540,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   </div>
                   {appointmentColor && (
                     <p className="text-[10px] text-neutral-400 flex items-center gap-1.5">
-                      <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
+                      <span className="inline-block h-3 w-3 rounded-full border border-border" style={{ backgroundColor: appointmentColor }} />
                       Cor selecionada: <span className="font-mono">{appointmentColor}</span>
                       <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 ml-1 font-black">✕</button>
                     </p>
@@ -2562,7 +2562,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       value={procedureName}
                       onChange={(e) => setProcedureName(e.target.value)}
                       placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
-                      className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                     />
                   </div>
                   <div className="space-y-1">
@@ -2592,10 +2592,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setStartTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                           {TIME_SLOTS.map((t) => (
                             <SelectItem key={t} value={t} className="rounded-lg text-xs">
                               {t}
@@ -2613,10 +2613,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setEndTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                           {TIME_SLOTS.map((t) => (
                             <SelectItem key={t} value={t} className="rounded-lg text-xs">
                               {t}
@@ -2632,7 +2632,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     <select
                       value={recurrence}
                       onChange={(e) => setRecurrence(e.target.value as any)}
-                      className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="none">Não se repete</option>
                       <option value="daily">Diariamente</option>
@@ -2650,7 +2650,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           max={52}
                           value={recurrenceCount}
                           onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                          className="w-16 rounded-xl border border-neutral-200 h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                         <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
                       </div>
@@ -2663,7 +2663,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Notas sobre este horário..."
-                      className="rounded-xl border-neutral-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      className="rounded-xl border-border focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
                       rows={2}
                     />
                   </div>
@@ -2705,7 +2705,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       placeholder="Digite nome, e-mail ou telefone..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="rounded-xl border-neutral-200 pl-10 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="rounded-xl border-border pl-10 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
 
@@ -2921,10 +2921,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => handleSelectProcedure(val || "")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o procedimento..." />
                               </SelectTrigger>
-                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                                 <SelectItem value="none" className="rounded-lg text-xs">Nenhum</SelectItem>
                                 {procedures.map((p) => (
                                   <SelectItem key={p.id} value={p.name} className="rounded-lg text-xs">
@@ -2949,12 +2949,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione a sala...">
                                   {roomId ? rooms.find((r) => r.id === roomId)?.name ?? "Nenhuma" : "Nenhuma"}
                                 </SelectValue>
                               </SelectTrigger>
-                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                                 <SelectItem value="none" className="rounded-lg text-xs">Nenhuma</SelectItem>
                                 {rooms.map((r) => (
                                   <SelectItem key={r.id} value={r.id} className="rounded-lg text-xs">
@@ -2992,10 +2992,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 onValueChange={(val) => handleSelectStartTime(val || "09:00")}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                                   {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((t) => (
                                     <SelectItem key={t} value={t} className="rounded-lg text-xs">
                                       {t}
@@ -3014,10 +3014,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 }}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-neutral-200">
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
                                   {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((t) => (
                                     <SelectItem key={t} value={t} className="rounded-lg text-xs">
                                       {t}
@@ -3039,7 +3039,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 max={480}
                                 value={procedureDuration}
                                 onChange={(e) => handleDurationChange(Number(e.target.value))}
-                                className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
                               />
                             </div>
                             <div className="space-y-1 text-left">
@@ -3050,7 +3050,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={procedureValue}
                                 onChange={(e) => setProcedureValue(e.target.value)}
                                 placeholder="0,00"
-                                className="rounded-xl border-neutral-200 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
                               />
                             </div>
                           </div>
@@ -3063,7 +3063,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRecurrence(val as any)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione">
                                   {
                                     {
@@ -3077,7 +3077,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   }
                                 </SelectValue>
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl bg-white border border-neutral-200">
+                              <SelectContent className="rounded-xl bg-white border border-border">
                                 <SelectItem value="none" className="rounded-lg text-xs">Não se repete</SelectItem>
                                 <SelectItem value="daily" className="rounded-lg text-xs">Diariamente</SelectItem>
                                 <SelectItem value="weekly" className="rounded-lg text-xs">Semanalmente</SelectItem>
@@ -3095,7 +3095,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   max={52}
                                   value={recurrenceCount}
                                   onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                                  className="w-16 rounded-xl border border-neutral-200 h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                  className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 />
                                 <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
                               </div>
@@ -3110,10 +3110,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setStatus(val || "provisional")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-neutral-200 bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o status" />
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl bg-white border border-neutral-200">
+                              <SelectContent className="rounded-xl bg-white border border-border">
                                 <SelectItem value="provisional" className="rounded-lg text-xs">Provisório (Pendente)</SelectItem>
                                 <SelectItem value="confirmed" className="rounded-lg text-xs">Confirmado</SelectItem>
                                 <SelectItem value="attended" className="rounded-lg text-xs">Realizado</SelectItem>
@@ -3133,7 +3133,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onChange={(e) => setNotes(e.target.value)}
                               rows={3}
                               disabled={saving}
-                              className="rounded-xl border-neutral-200 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              className="rounded-xl border-border shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             />
                           </div>
 
@@ -3172,13 +3172,13 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   title="Cor personalizada"
                                   value={appointmentColor || "#3ba2e8"}
                                   onChange={(e) => setAppointmentColor(e.target.value)}
-                                  className="h-6 w-6 rounded-full cursor-pointer border border-neutral-200 p-0 overflow-hidden"
+                                  className="h-6 w-6 rounded-full cursor-pointer border border-border p-0 overflow-hidden"
                                   style={{ padding: 0 }}
                                 />
                               </div>
                               {appointmentColor && (
                                 <p className="text-[10px] text-neutral-500 flex items-center gap-1.5">
-                                  <span className="inline-block h-3 w-3 rounded-full border border-neutral-200" style={{ backgroundColor: appointmentColor }} />
+                                  <span className="inline-block h-3 w-3 rounded-full border border-border" style={{ backgroundColor: appointmentColor }} />
                                   Cor selecionada: <span className="font-mono">{appointmentColor}</span>
                                   <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 underline ml-1">Remover</button>
                                 </p>
@@ -3196,7 +3196,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={appointmentTag}
                                 onChange={(e) => setAppointmentTag(e.target.value)}
                                 placeholder="Ex: Retorno, VIP, Urgente..."
-                                className="flex-1 rounded-xl border border-neutral-200 h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                               />
                               <div className="flex gap-1.5">
                                 {["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#f97316","#ec4899","#6b7280"].map(c => (
@@ -3287,7 +3287,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         {patientAppointments.length === 0 ? (
                           <p className="text-xs text-neutral-400 italic">Nenhum agendamento anterior registrado.</p>
                         ) : (
-                          <div className="border-l-2 border-neutral-200 pl-4 space-y-4">
+                          <div className="border-l-2 border-border pl-4 space-y-4">
                             {patientAppointments.map((appt) => {
                               const sTime = new Date(appt.start_time);
                               const formattedDate = sTime.toLocaleDateString("pt-BR", {
@@ -3336,7 +3336,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     {activeTab === "documents" && (
                       <div className="space-y-6 text-left">
                         {/* Templates Checklist & Send */}
-                        <div className="space-y-3 border border-neutral-200/80 rounded-xl p-4 bg-neutral-50/10 shadow-xs">
+                        <div className="space-y-3 border border-border/80 rounded-xl p-4 bg-neutral-50/10 shadow-xs">
                           <h4 className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
                             <SendIcon className="h-3.5 w-3.5 text-blue-600" />
                             Enviar Termo / Contrato Existente
@@ -3441,7 +3441,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               type="button"
                               variant="ghost"
                               onClick={() => setIsCreatingQuote(false)}
-                              className="text-neutral-500 hover:text-neutral-800 text-[10px] font-bold h-7 px-2.5 rounded-lg border border-neutral-200"
+                              className="text-neutral-500 hover:text-neutral-800 text-[10px] font-bold h-7 px-2.5 rounded-lg border border-border"
                             >
                               ← Voltar
                             </Button>
@@ -3550,10 +3550,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           value={quoteDiscountType}
                                           onValueChange={(val) => setQuoteDiscountType(val as any)}
                                         >
-                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-400">
+                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-border bg-white px-2 focus:ring-1 focus:ring-blue-400">
                                             <SelectValue placeholder="Selecione..." />
                                           </SelectTrigger>
-                                          <SelectContent className="rounded-xl bg-white border border-neutral-200">
+                                          <SelectContent className="rounded-xl bg-white border border-border">
                                             <SelectItem value="fixed" className="rounded-lg text-xs">R$ Fixo</SelectItem>
                                             <SelectItem value="percent" className="rounded-lg text-xs">% Percentual</SelectItem>
                                           </SelectContent>
@@ -3587,7 +3587,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           type="date"
                                           value={quoteExpiresAt}
                                           onChange={(e) => setQuoteExpiresAt(e.target.value)}
-                                          className="w-full rounded-lg border border-neutral-200 h-8 px-2.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                                         />
                                       </div>
                                     </div>
@@ -3604,7 +3604,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           <span className="font-mono">-{fmt(discountAmount)}</span>
                                         </div>
                                       )}
-                                      <div className="flex justify-between text-neutral-800 font-extrabold border-t border-neutral-200/50 pt-1.5">
+                                      <div className="flex justify-between text-neutral-800 font-extrabold border-t border-border/50 pt-1.5">
                                         <span>Total Líquido</span>
                                         <span className="text-blue-700">{fmt(total)}</span>
                                       </div>
@@ -3641,7 +3641,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   value={quoteMessageText}
                                   onChange={(e) => setQuoteMessageText(e.target.value)}
                                   rows={8}
-                                  className="w-full text-xs font-mono rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                  className="w-full text-xs font-mono rounded-xl border border-border bg-neutral-50/50 px-3.5 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
                                 />
                                 <p className="text-[9px] text-neutral-400">Você pode modificar o texto livremente antes de enviar.</p>
                               </div>
@@ -3659,7 +3659,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   type="button"
                                   variant="ghost"
                                   onClick={() => setQuoteStep("build")}
-                                  className="text-neutral-500 hover:text-neutral-800 text-xs h-9 rounded-lg border border-neutral-200"
+                                  className="text-neutral-500 hover:text-neutral-800 text-xs h-9 rounded-lg border border-border"
                                 >
                                   ← Voltar para Edição
                                 </Button>
@@ -3668,7 +3668,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   <button
                                     type="button"
                                     onClick={handleCopyMessageInline}
-                                    className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
+                                    className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
                                   >
                                     {quoteCopied ? <CheckCircle2Icon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}
                                     {quoteCopied ? "Copiado!" : "Copiar"}
@@ -3678,7 +3678,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     type="button"
                                     onClick={handleSaveDraftInline}
                                     disabled={quoteSaving}
-                                    className="text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors disabled:opacity-40"
+                                    className="text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors disabled:opacity-40"
                                   >
                                     {quoteSaving ? "Salvando..." : "Salvar Rascunho"}
                                   </button>
@@ -3772,7 +3772,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                             {/* Quotes stats row */}
                             <div className="grid grid-cols-3 gap-3">
-                              <div className="bg-neutral-50 border border-neutral-200/50 rounded-xl p-2.5 text-center shadow-xs">
+                              <div className="bg-neutral-50 border border-border/50 rounded-xl p-2.5 text-center shadow-xs">
                                 <span className="text-[8px] text-neutral-500 font-extrabold uppercase block tracking-wider">Total</span>
                                 <span className="text-sm font-black text-neutral-700">{quotes.length}</span>
                               </div>
@@ -3841,7 +3841,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 {patientPackages.map((pkg) => {
                                   const remaining = pkg.total - pkg.used;
                                   return (
-                                    <div key={pkg.id} className="border border-neutral-200/80 rounded-xl p-3 bg-neutral-50/50 shadow-xs flex items-center gap-3">
+                                    <div key={pkg.id} className="border border-border/80 rounded-xl p-3 bg-neutral-50/50 shadow-xs flex items-center gap-3">
                                       <PackageProgressRing used={pkg.used} total={pkg.total} size={44} />
                                       <div className="min-w-0 flex-1 space-y-0.5 text-xs">
                                         <div className="flex items-center justify-between gap-2">
@@ -3884,7 +3884,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               value={newEvolContent}
                               onChange={(e) => setNewEvolContent(e.target.value)}
                               rows={3}
-                              className="text-xs rounded-xl border-neutral-200 bg-white focus:ring-blue-500"
+                              className="text-xs rounded-xl border-border bg-white focus:ring-blue-500"
                               required
                               disabled={evolSaving}
                             />
@@ -4008,7 +4008,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                               {patientPhotos.map((photo) => (
-                                <div key={photo.id} className="relative group rounded-xl overflow-hidden border border-neutral-200 bg-white aspect-square flex flex-col shadow-xs">
+                                <div key={photo.id} className="relative group rounded-xl overflow-hidden border border-border bg-white aspect-square flex flex-col shadow-xs">
                                   <img
                                     src={photo.payload?.url}
                                     alt={photo.payload?.name || "Foto"}
@@ -4085,13 +4085,13 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   type="text"
                                   value={currentCalculatedImc}
                                   disabled
-                                  className="text-xs h-9 bg-neutral-100 border-neutral-200 text-neutral-500 font-extrabold"
+                                  className="text-xs h-9 bg-neutral-100 border-border text-neutral-500 font-extrabold"
                                   placeholder="Calcula automático"
                                 />
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 border-t border-dashed border-neutral-200 pt-3">
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 border-t border-dashed border-border pt-3">
                               <div className="space-y-1">
                                 <Label className="text-[9px] font-bold text-neutral-500 uppercase">Braço Dir (cm)</Label>
                                 <Input 
@@ -4184,7 +4184,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={evalNotes}
                                 onChange={(e) => setEvalNotes(e.target.value)}
                                 rows={2}
-                                className="text-xs bg-white border-neutral-200"
+                                className="text-xs bg-white border-border"
                               />
                             </div>
 
@@ -4206,7 +4206,7 @@ Qualquer dúvida, estou à disposição! 😊`;
               </div>
 
               {/* Smart Sidebar Panel (Right - 35% width) */}
-              <aside className="w-80 shrink-0 border-l border-neutral-200/80 bg-[#fbfcfc]/60 p-6 overflow-y-auto flex flex-col gap-5">
+              <aside className="w-80 shrink-0 border-l border-border/80 bg-[#fbfcfc]/60 p-6 overflow-y-auto flex flex-col gap-5">
                 <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-2">
                   <SparklesIcon className="h-4 w-4 text-blue-600 animate-pulse" />
                   <span className="font-bold text-xs text-neutral-800 uppercase tracking-wider">Painel Inteligente</span>
@@ -4249,7 +4249,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     </div>
 
                     {/* Remaining package sessions alert summary */}
-                    <div className="bg-white p-3 rounded-xl border border-neutral-200/70 space-y-1 text-left shadow-xs">
+                    <div className="bg-white p-3 rounded-xl border border-border/70 space-y-1 text-left shadow-xs">
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
                         <UserCheckIcon className="h-3.5 w-3.5 text-blue-500" /> Sessões em Aberto
                       </span>
@@ -4282,7 +4282,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         <CalendarDaysIcon className="h-3.5 w-3.5 text-blue-500" /> Último Atendimento
                       </span>
                       {smartPanelData.lastAppointmentDate ? (
-                        <div className="bg-white p-2.5 rounded-xl border border-neutral-200/50 text-[10px] shadow-xs space-y-1 font-semibold text-neutral-600">
+                        <div className="bg-white p-2.5 rounded-xl border border-border/50 text-[10px] shadow-xs space-y-1 font-semibold text-neutral-600">
                           <p><span className="text-neutral-400">Doutor:</span> {smartPanelData.lastProfessionalName}</p>
                           <p>
                             <span className="text-neutral-400">Data:</span> {new Date(smartPanelData.lastAppointmentDate).toLocaleDateString("pt-BR")} às {new Date(smartPanelData.lastAppointmentDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -4300,7 +4300,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             </div>
 
             {/* Footer buttons row */}
-            <footer className="border-t border-neutral-200 p-4 bg-white shrink-0 flex items-center justify-between">
+            <footer className="border-t border-border p-4 bg-white shrink-0 flex items-center justify-between">
               <div>
                 {appointmentId && (
                   <Button

@@ -146,7 +146,7 @@ function SourceBadge({ source }: { source?: string }) {
 
   const sourceLower = source.toLowerCase();
   let Icon: any = MapPin;
-  let color = "bg-neutral-100 text-neutral-600 border-neutral-200 dark:border-neutral-800";
+  let color = "bg-neutral-100 text-neutral-600 border-border dark:border-neutral-800";
 
   if (sourceLower.includes("whatsapp")) {
     Icon = MessageSquare;
@@ -207,7 +207,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
   }
 
   visualTags.forEach((t) => {
-    let tagColor = "bg-neutral-100 text-neutral-600 border-neutral-200 dark:border-neutral-800";
+    let tagColor = "bg-neutral-100 text-neutral-600 border-border dark:border-neutral-800";
     const tLower = t.toLowerCase();
     if (tLower.includes("vip")) tagColor = "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:border-purple-500/30";
     else if (tLower.includes("recorrente") || tLower.includes("antigo")) tagColor = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:border-emerald-500/30";

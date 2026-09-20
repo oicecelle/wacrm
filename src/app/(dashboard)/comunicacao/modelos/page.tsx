@@ -216,7 +216,7 @@ export default function ModelosPage() {
                 return (
                   <div
                     key={item.type}
-                    className="group relative flex flex-col justify-between rounded-3xl border border-neutral-200 bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all"
+                    className="group relative flex flex-col justify-between rounded-3xl border border-border bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all"
                   >
                     <div>
                       {/* Top Header Card */}
@@ -231,7 +231,7 @@ export default function ModelosPage() {
                               Ativo
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-neutral-100 border border-neutral-200/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
+                            <span className="inline-flex items-center rounded-full bg-neutral-100 border border-border/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
                               Inativo
                             </span>
                           )}

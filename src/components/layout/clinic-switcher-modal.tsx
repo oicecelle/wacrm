@@ -240,7 +240,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-blue-600 bg-blue-50/40 text-blue-900"
-                      : "border-neutral-200 hover:border-neutral-300 bg-white text-neutral-700"
+                      : "border-border hover:border-neutral-300 bg-white text-neutral-700"
                   }`}
                 >
                   <span className="text-xs font-bold">{clinic.name}</span>
@@ -291,7 +291,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   value={newClinicName}
                   onChange={(e) => setNewClinicName(e.target.value)}
                   placeholder="Ex: Clínica Bella Vitta"
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-800 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-xs text-neutral-800 outline-none focus:border-blue-500"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateClinic()}
                 />
                 <div className="flex gap-2">

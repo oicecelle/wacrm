@@ -267,7 +267,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-2xl rounded-2xl border border-neutral-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="bg-white w-full max-w-2xl rounded-2xl border border-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
           <div>
@@ -335,7 +335,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                           className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
                             appointment.status === key
                               ? cfg.cls + " shadow-sm scale-105"
-                              : "bg-neutral-50 text-neutral-500 border-neutral-200 hover:border-neutral-400"
+                              : "bg-neutral-50 text-neutral-500 border-border hover:border-neutral-400"
                           }`}
                         >
                           {appointment.status === key && <CheckCircle2Icon className="h-3 w-3 inline mr-1" />}
@@ -381,7 +381,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                       onChange={e => setNewProntuario(e.target.value)}
                       rows={4}
                       placeholder="Queixas, histórico, observações clínicas..."
-                      className="w-full text-sm rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                      className="w-full text-sm rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
                     />
                     <Button
                       onClick={handleAddProntuario}
@@ -418,7 +418,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                       onChange={e => setNewEvolucao(e.target.value)}
                       rows={3}
                       placeholder="Resultado do procedimento, resposta do paciente, próximos passos..."
-                      className="w-full text-sm rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                      className="w-full text-sm rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
                     />
                     <Button
                       onClick={handleAddEvolucao}
@@ -495,7 +495,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                   ) : (
                     packages.map((pkg) => {
                       return (
-                        <div key={pkg.id} className="rounded-xl border border-neutral-200 bg-white p-4 space-y-3">
+                        <div key={pkg.id} className="rounded-xl border border-border bg-white p-4 space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <PackageProgressRing used={pkg.sessions_used} total={pkg.sessions_total} size={42} />
@@ -508,7 +508,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                             </div>
                             <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${
                               pkg.status === "active" ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                              : pkg.status === "completed" ? "bg-neutral-100 text-neutral-500 border-neutral-200"
+                              : pkg.status === "completed" ? "bg-neutral-100 text-neutral-500 border-border"
                               : "bg-rose-50 text-rose-500 border-rose-200"
                             }`}>
                               {pkg.status === "active" ? "Ativo" : pkg.status === "completed" ? "Concluído" : pkg.status}

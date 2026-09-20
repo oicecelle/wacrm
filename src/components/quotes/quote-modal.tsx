@@ -413,7 +413,7 @@ export function QuoteModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-2xl rounded-2xl border border-neutral-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-2xl rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
           <div className="flex items-center gap-2">
@@ -547,7 +547,7 @@ export function QuoteModal({
                       <select
                         value={discountType}
                         onChange={(e) => setDiscountType(e.target.value as "fixed" | "percent")}
-                        className="text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2"
+                        className="text-xs h-8 rounded-lg border border-border bg-white px-2"
                       >
                         <option value="fixed">R$ Fixo</option>
                         <option value="percent">% Percentual</option>
@@ -601,7 +601,7 @@ export function QuoteModal({
                           <select
                             value={line.method}
                             onChange={(e) => updatePaymentLine(idx, { method: e.target.value })}
-                            className="h-8 rounded-lg border border-neutral-200 bg-white px-1.5 text-xs shrink-0 w-[92px]"
+                            className="h-8 rounded-lg border border-border bg-white px-1.5 text-xs shrink-0 w-[92px]"
                           >
                             {PAYMENT_METHODS.map((m) => (
                               <option key={m} value={m}>{m}</option>
@@ -638,7 +638,7 @@ export function QuoteModal({
                       type="date"
                       value={expiresAt}
                       onChange={(e) => setExpiresAt(e.target.value)}
-                      className="w-full rounded-xl border border-neutral-200 h-8 px-3 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-full rounded-xl border border-border h-8 px-3 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                     />
                   </div>
 
@@ -690,7 +690,7 @@ export function QuoteModal({
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 rows={14}
-                className="w-full text-sm font-mono rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                className="w-full text-sm font-mono rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
               />
               <p className="text-xs text-neutral-400">
                 Você pode editar o texto acima antes de enviar.
@@ -719,7 +719,7 @@ export function QuoteModal({
 
               <button
                 onClick={handleCopyMessage}
-                className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
+                className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
               >
                 {copied ? <CheckCircle2Icon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}
                 {copied ? "Copiado!" : "Copiar"}

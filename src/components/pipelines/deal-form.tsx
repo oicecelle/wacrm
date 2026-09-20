@@ -315,7 +315,7 @@ export function DealForm({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl h-[85vh] bg-popover border border-neutral-200 shadow-2xl text-popover-foreground w-full p-0 overflow-hidden flex flex-col rounded-2xl z-50"
+        className="max-w-4xl h-[85vh] bg-popover border border-border shadow-2xl text-popover-foreground w-full p-0 overflow-hidden flex flex-col rounded-2xl z-50"
       >
         <div className="flex h-full flex-col overflow-hidden">
           <DialogHeader className="border-b border-border/50 p-4">

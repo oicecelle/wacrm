@@ -128,7 +128,7 @@ export function CopilotChat() {
   return (
     <div
       id="copilot-panel"
-      className={`fixed bottom-5 right-5 z-50 flex flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl transition-all duration-200 ${
+      className={`fixed bottom-5 right-5 z-50 flex flex-col rounded-2xl border border-border bg-white shadow-2xl transition-all duration-200 ${
         minimized ? "h-14 w-72" : "h-[520px] w-96"
       }`}
     >
@@ -211,7 +211,7 @@ export function CopilotChat() {
                 <button
                   key={s}
                   onClick={() => handleSend(s)}
-                  className="text-[11px] font-semibold bg-neutral-100 hover:bg-blue-50 hover:text-blue-700 border border-neutral-200 rounded-full px-2.5 py-1 transition-colors"
+                  className="text-[11px] font-semibold bg-neutral-100 hover:bg-blue-50 hover:text-blue-700 border border-border rounded-full px-2.5 py-1 transition-colors"
                 >
                   {s}
                 </button>
@@ -221,7 +221,7 @@ export function CopilotChat() {
 
           {/* Input */}
           <div className="p-3 border-t border-neutral-100 shrink-0">
-            <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-300 transition-all">
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-neutral-50 px-3 py-2 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-300 transition-all">
               <input
                 ref={inputRef}
                 id="copilot-input"

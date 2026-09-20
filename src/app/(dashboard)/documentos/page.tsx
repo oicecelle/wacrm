@@ -69,7 +69,7 @@ interface DocTemplate {
 const STATUS_CONFIG: Record<DocStatus, { label: string; cls: string; icon: React.ElementType }> = {
   signed: { label: "Assinado", cls: "text-emerald-600 bg-emerald-50 border-emerald-100", icon: CheckCircle2Icon },
   pending: { label: "Aguardando", cls: "text-amber-600 bg-amber-50 border-amber-100", icon: ClockIcon },
-  expired: { label: "Expirado", cls: "text-neutral-500 bg-neutral-100 border-neutral-200", icon: XCircleIcon },
+  expired: { label: "Expirado", cls: "text-neutral-500 bg-neutral-100 border-border", icon: XCircleIcon },
   refused: { label: "Recusado", cls: "text-red-600 bg-red-50 border-red-100", icon: XCircleIcon },
 };
 
@@ -508,7 +508,7 @@ export default function DocumentosPage() {
           onClick={() => setPreviewDoc(null)}
         >
           <div
-            className="max-w-xl w-full rounded-2xl p-6 bg-white border border-neutral-200 shadow-2xl flex flex-col max-h-[85vh]"
+            className="max-w-xl w-full rounded-2xl p-6 bg-white border border-border shadow-2xl flex flex-col max-h-[85vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
@@ -529,7 +529,7 @@ export default function DocumentosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <form
             onSubmit={handleSaveTemplate}
-            className="max-w-xl w-full rounded-2xl p-6 bg-white border border-neutral-200 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            className="max-w-xl w-full rounded-2xl p-6 bg-white border border-border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
               <h3 className="text-sm font-bold text-neutral-800">
@@ -602,7 +602,7 @@ export default function DocumentosPage() {
                   onChange={(e) => setTmplFormContent(e.target.value)}
                   placeholder="Prezada(o) {{nome}}, por meio deste..."
                   rows={10}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-mono resize-none"
+                  className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-mono resize-none"
                   required
                 />
               </div>
@@ -612,7 +612,7 @@ export default function DocumentosPage() {
               <button
                 type="button"
                 onClick={() => setTemplateFormOpen(false)}
-                className="rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 px-4 py-2 text-xs font-bold text-neutral-500 transition-colors cursor-pointer"
+                className="rounded-xl border border-border bg-white hover:bg-neutral-50 px-4 py-2 text-xs font-bold text-neutral-500 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -698,7 +698,7 @@ export default function DocumentosPage() {
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs text-center"
+                className="rounded-xl border border-border bg-white p-4 shadow-xs text-center"
               >
                 <p className={`text-2xl font-black ${s.cls}`}>{s.value}</p>
                 <p className="text-xs text-neutral-400 mt-0.5 font-bold">{s.label}</p>
@@ -715,7 +715,7 @@ export default function DocumentosPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por título ou paciente..."
-                  className="w-full rounded-xl border border-neutral-200 bg-white pl-9 pr-3 py-2.5 text-xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-all shadow-xs"
+                  className="w-full rounded-xl border border-border bg-white pl-9 pr-3 py-2.5 text-xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-all shadow-xs"
                 />
               </div>
               <div className="flex gap-1.5 flex-wrap">
@@ -726,7 +726,7 @@ export default function DocumentosPage() {
                     className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
                       statusFilter === f
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "border-neutral-200 text-neutral-500 bg-white hover:bg-neutral-50"
+                        : "border-border text-neutral-500 bg-white hover:bg-neutral-50"
                     }`}
                   >
                     {f === "all" ? "Todos" : STATUS_CONFIG[f]?.label ?? f}
@@ -741,7 +741,7 @@ export default function DocumentosPage() {
                 <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
               </div>
             ) : filtered.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-neutral-200 p-12 text-center text-neutral-400 bg-white shadow-xs">
+              <div className="rounded-2xl border border-dashed border-border p-12 text-center text-neutral-400 bg-white shadow-xs">
                 <FileTextIcon className="h-10 w-10 mx-auto text-neutral-300 mb-2" />
                 <p className="text-xs font-bold">Nenhum documento encontrado.</p>
               </div>
@@ -754,7 +754,7 @@ export default function DocumentosPage() {
                   return (
                     <div
                       key={doc.id}
-                      className="rounded-xl border border-neutral-200 bg-white p-5 hover:border-blue-200 transition-all shadow-xs"
+                      className="rounded-xl border border-border bg-white p-5 hover:border-blue-200 transition-all shadow-xs"
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-start gap-4 min-w-0 text-left">
@@ -791,7 +791,7 @@ export default function DocumentosPage() {
                               const raw = doc.content?.text || doc.content?.body || "";
                               setPreviewDoc({ title: doc.title, content: raw });
                             }}
-                            className="p-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-500 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                            className="p-2 border border-border hover:bg-neutral-50 text-neutral-500 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                             title="Visualizar Conteúdo"
                           >
                             <EyeIcon className="h-4 w-4" />
@@ -800,14 +800,14 @@ export default function DocumentosPage() {
                             <>
                               <button
                                 onClick={() => handleCopyLink(doc.public_token)}
-                                className="p-2 border border-neutral-200 hover:bg-neutral-50 text-blue-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                                className="p-2 border border-border hover:bg-neutral-50 text-blue-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                                 title="Copiar Link de Assinatura"
                               >
                                 <CopyIcon className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleResendWa(doc)}
-                                className="p-2 border border-neutral-200 hover:bg-neutral-50 text-emerald-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                                className="p-2 border border-border hover:bg-neutral-50 text-emerald-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                                 title="Reenviar por WhatsApp"
                               >
                                 <SendIcon className="h-4 w-4" />
@@ -829,7 +829,7 @@ export default function DocumentosPage() {
       {activeTab === "novo" && (
         <div className="space-y-6">
           {/* Step 1: Select Patient */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+          <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">1</div>
               <h2 className="text-sm font-black text-neutral-800">Selecionar Paciente</h2>
@@ -845,11 +845,11 @@ export default function DocumentosPage() {
                 }}
                 onFocus={() => setShowPatientDropdown(true)}
                 placeholder="Pesquise o paciente pelo nome..."
-                className="w-full rounded-xl border border-neutral-200 bg-white pl-10 pr-4 py-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
+                className="w-full rounded-xl border border-border bg-white pl-10 pr-4 py-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
               />
               
               {showPatientDropdown && filteredPatients.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-30 rounded-xl mt-1 overflow-y-auto max-h-52 shadow-2xl bg-white border border-neutral-200 divide-y divide-neutral-100">
+                <div className="absolute top-full left-0 right-0 z-30 rounded-xl mt-1 overflow-y-auto max-h-52 shadow-2xl bg-white border border-border divide-y divide-neutral-100">
                   {filteredPatients.map((p) => (
                     <button
                       key={p.id}
@@ -892,7 +892,7 @@ export default function DocumentosPage() {
           </div>
 
           {/* Step 2: Select Templates */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+          <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">2</div>
               <h2 className="text-sm font-black text-neutral-800">Selecionar Modelos de Documento</h2>
@@ -919,7 +919,7 @@ export default function DocumentosPage() {
                       className={`w-full rounded-xl px-4 py-3 flex items-center gap-3 transition-all border cursor-pointer ${
                         selected
                           ? "bg-blue-50/40 border-blue-300 shadow-xs"
-                          : "border-neutral-200 bg-white hover:bg-neutral-50/50"
+                          : "border-border bg-white hover:bg-neutral-50/50"
                       }`}
                     >
                       <div
@@ -941,7 +941,7 @@ export default function DocumentosPage() {
                           const raw = t.content?.text || t.content?.body || "";
                           setPreviewDoc({ title: t.name, content: interpolateVars(raw, selectedPatient) });
                         }}
-                        className="shrink-0 p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-500 transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                        className="shrink-0 p-1.5 rounded-lg border border-border hover:bg-neutral-100 text-neutral-500 transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                         title="Pré-visualizar"
                       >
                         <EyeIcon className="h-3.5 w-3.5" />
@@ -954,7 +954,7 @@ export default function DocumentosPage() {
           </div>
 
           {/* Step 3: Write document content */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+          <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">3</div>
               <h2 className="text-sm font-black text-neutral-800">Conteúdo do Documento</h2>
@@ -971,7 +971,7 @@ export default function DocumentosPage() {
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
                     placeholder="Título do termo customizado..."
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
+                    className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
                   />
                 </div>
                 <div className="space-y-1.5 text-left">
@@ -983,7 +983,7 @@ export default function DocumentosPage() {
                     onChange={(e) => setCustomContent(e.target.value)}
                     placeholder="Escreva ou edite o conteúdo do documento..."
                     rows={8}
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all resize-none font-mono shadow-xs"
+                    className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all resize-none font-mono shadow-xs"
                   />
                 </div>
               </div>
@@ -1041,7 +1041,7 @@ export default function DocumentosPage() {
 
           {/* Preview list to send */}
           {docsToSend.length > 0 && (
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-3 shadow-xs text-left">
+            <div className="rounded-2xl border border-border bg-white p-5 space-y-3 shadow-xs text-left">
               <h3 className="text-xs font-black text-neutral-800 uppercase tracking-wide">Documentos que serão gerados:</h3>
               <div className="divide-y divide-neutral-100">
                 {docsToSend.map((doc, idx) => (
@@ -1066,7 +1066,7 @@ export default function DocumentosPage() {
           <div className="flex items-center justify-end gap-3 pt-3">
             <button
               onClick={() => setActiveTab("history")}
-              className="rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 px-5 py-3 text-xs font-bold text-neutral-500 transition-colors cursor-pointer"
+              className="rounded-xl border border-border bg-white hover:bg-neutral-50 px-5 py-3 text-xs font-bold text-neutral-500 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -1095,13 +1095,13 @@ export default function DocumentosPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Pesquisar por nome do modelo..."
-                className="w-full rounded-xl border border-neutral-200 bg-white pl-9 pr-3 py-2.5 text-xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-all shadow-xs"
+                className="w-full rounded-xl border border-border bg-white pl-9 pr-3 py-2.5 text-xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-all shadow-xs"
               />
             </div>
           </div>
 
           {templates.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-neutral-200 p-12 text-center text-neutral-400 bg-white shadow-xs">
+            <div className="rounded-2xl border border-dashed border-border p-12 text-center text-neutral-400 bg-white shadow-xs">
               <LibraryIcon className="h-10 w-10 mx-auto text-neutral-300 mb-2" />
               <p className="text-xs font-bold">Nenhum modelo de documento cadastrado na biblioteca.</p>
             </div>
@@ -1116,7 +1116,7 @@ export default function DocumentosPage() {
                   return (
                     <div
                       key={tmpl.id}
-                      className="group relative flex flex-col justify-between rounded-3xl border border-neutral-200 bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all text-left"
+                      className="group relative flex flex-col justify-between rounded-3xl border border-border bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all text-left"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-4">
@@ -1130,7 +1130,7 @@ export default function DocumentosPage() {
                               </span>
                             )}
                             {isSystem ? (
-                              <span className="inline-flex items-center rounded-full bg-neutral-100 border border-neutral-200/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
+                              <span className="inline-flex items-center rounded-full bg-neutral-100 border border-border/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
                                 Sistema
                               </span>
                             ) : (

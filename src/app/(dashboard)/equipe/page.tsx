@@ -404,7 +404,7 @@ export default function EquipePage() {
           { label: "Faturamento (mês)", value: fmt(totalRevenue) },
           { label: "Comissões a pagar", value: fmt(totalCommissions) },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+          <div key={s.label} className="rounded-xl border border-border bg-white p-4 shadow-sm">
             <p className="text-[10px] text-neutral-400 font-extrabold uppercase tracking-wide">{s.label}</p>
             <p className="mt-1 text-lg font-black text-neutral-800">{s.value}</p>
           </div>
@@ -425,14 +425,14 @@ export default function EquipePage() {
       {/* Team Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {members.map((member) => {
-          const roleConf = ROLE_CONFIG[member.role] || { label: member.role, cls: "text-neutral-500 bg-neutral-100 border-neutral-200", icon: UserCogIcon };
+          const roleConf = ROLE_CONFIG[member.role] || { label: member.role, cls: "text-neutral-500 bg-neutral-100 border-border", icon: UserCogIcon };
           const RoleIcon = roleConf.icon;
           const isPending = member.invite_status === "pending";
 
           return (
             <div
               key={member.id}
-              className="rounded-xl border border-neutral-200 bg-white p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all relative"
+              className="rounded-xl border border-border bg-white p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all relative"
             >
               {/* Pending badge overlay */}
               {isPending && (
@@ -442,7 +442,7 @@ export default function EquipePage() {
               )}
 
               <div className="flex items-center gap-3">
-                <div className="size-10 rounded-full flex items-center justify-center shrink-0 bg-neutral-100 border border-neutral-200 overflow-hidden text-neutral-700 font-black text-base">
+                <div className="size-10 rounded-full flex items-center justify-center shrink-0 bg-neutral-100 border border-border overflow-hidden text-neutral-700 font-black text-base">
                   {member.avatar_url ? (
                     <img 
                       src={member.avatar_url} 
@@ -539,7 +539,7 @@ export default function EquipePage() {
 
       {/* Commission Table */}
       {members.filter((m) => m.role === "professional").length > 0 && (
-        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-sm">
           <div className="border-b border-neutral-100 bg-neutral-50 px-6 py-4">
             <h2 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Folha de Comissionamento — Mês Vigente</h2>
           </div>
@@ -603,7 +603,7 @@ export default function EquipePage() {
                     <select
                       value={formRole}
                       onChange={(e) => handleRoleChange(e.target.value as Role)}
-                      className="w-full text-xs h-9 rounded-lg border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                      className="w-full text-xs h-9 rounded-lg border border-border bg-white px-2 focus:ring-1 focus:ring-blue-500"
                     >
                       {Object.entries(ROLE_CONFIG).map(([k, v]) => (
                         <option key={k} value={k}>{v.label}</option>
@@ -646,7 +646,7 @@ export default function EquipePage() {
                       <select
                         value={formCommModel}
                         onChange={(e) => setFormCommModel(e.target.value as "percentage" | "fixed" | "hybrid")}
-                        className="w-full text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2"
+                        className="w-full text-xs h-8 rounded-lg border border-border bg-white px-2"
                       >
                         <option value="percentage">Percentual (%) sobre faturamento</option>
                         <option value="fixed">Valor fixo (R$) por procedimento</option>
@@ -671,7 +671,7 @@ export default function EquipePage() {
                 )}
 
                 {/* Granular permissions */}
-                <div className="border border-neutral-200 rounded-xl p-4 space-y-3">
+                <div className="border border-border rounded-xl p-4 space-y-3">
                   <p className="text-[10px] font-black text-neutral-700 uppercase tracking-wide flex items-center gap-1">
                     <ShieldIcon className="h-3.5 w-3.5 text-neutral-500" /> Permissões Granulares
                   </p>

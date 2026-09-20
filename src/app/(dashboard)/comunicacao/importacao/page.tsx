@@ -434,7 +434,7 @@ export default function MigrationPage() {
             size="sm"
             onClick={handleReset}
             disabled={importing}
-            className="border-neutral-200 text-xs font-bold text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl shrink-0"
+            className="border-border text-xs font-bold text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl shrink-0"
           >
             Reiniciar Assistente
           </Button>
@@ -452,7 +452,7 @@ export default function MigrationPage() {
               key={step.num}
               className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
                 isCurrent 
-                  ? 'bg-white shadow-xs border border-neutral-200/60 font-black text-blue-600'
+                  ? 'bg-white shadow-xs border border-border/60 font-black text-blue-600'
                   : isCompleted
                   ? 'text-emerald-600 font-bold'
                   : 'text-neutral-400 font-medium'
@@ -494,7 +494,7 @@ export default function MigrationPage() {
                 className={`flex flex-col items-left text-left p-5 rounded-2xl border-2 transition-all hover:scale-[1.01] ${
                   importType === 'patients'
                     ? 'border-blue-500 bg-blue-50/10 ring-2 ring-blue-500/10'
-                    : 'border-neutral-200 hover:border-neutral-300'
+                    : 'border-border hover:border-neutral-300'
                 }`}
               >
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
@@ -519,7 +519,7 @@ export default function MigrationPage() {
                 className={`flex flex-col items-left text-left p-5 rounded-2xl border-2 transition-all hover:scale-[1.01] ${
                   importType === 'contacts'
                     ? 'border-blue-500 bg-blue-50/10 ring-2 ring-blue-500/10'
-                    : 'border-neutral-200 hover:border-neutral-300'
+                    : 'border-border hover:border-neutral-300'
                 }`}
               >
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
@@ -587,7 +587,7 @@ export default function MigrationPage() {
                   role="button"
                   onClick={() => fileInputRef.current?.click()}
                   className={`flex-1 border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all hover:bg-neutral-50/50 flex flex-col justify-center items-center ${
-                    file ? 'border-blue-300 bg-blue-50/10' : 'border-neutral-200'
+                    file ? 'border-blue-300 bg-blue-50/10' : 'border-border'
                   }`}
                 >
                   <Upload className={`h-12 w-12 mb-3 ${file ? 'text-blue-500 animate-pulse' : 'text-neutral-300'}`} />
@@ -621,7 +621,7 @@ export default function MigrationPage() {
               <Button
                 variant="outline"
                 onClick={() => setCurrentStep(1)}
-                className="border-neutral-200 text-xs font-bold text-neutral-600 rounded-xl flex items-center gap-1.5 hover:bg-neutral-50"
+                className="border-border text-xs font-bold text-neutral-600 rounded-xl flex items-center gap-1.5 hover:bg-neutral-50"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Voltar
@@ -673,7 +673,7 @@ export default function MigrationPage() {
                       value={mappings[field.key] || ''}
                       onChange={(e) => handleMappingChange(field.key, e.target.value)}
                       disabled={importing}
-                      className="w-full bg-white border border-neutral-200 text-xs text-neutral-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-border text-xs text-neutral-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">-- Ignorar este campo --</option>
                       {headers.map(h => (
@@ -743,7 +743,7 @@ export default function MigrationPage() {
                 variant="outline"
                 disabled={importing}
                 onClick={() => setCurrentStep(2)}
-                className="border-neutral-200 text-xs font-bold text-neutral-600 rounded-xl flex items-center gap-1.5 hover:bg-neutral-50"
+                className="border-border text-xs font-bold text-neutral-600 rounded-xl flex items-center gap-1.5 hover:bg-neutral-50"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Voltar Planilha
@@ -799,7 +799,7 @@ export default function MigrationPage() {
               <Button
                 variant="outline"
                 onClick={handleReset}
-                className="border-neutral-200 text-xs font-bold text-neutral-700 rounded-xl hover:bg-neutral-50 px-4 py-2"
+                className="border-border text-xs font-bold text-neutral-700 rounded-xl hover:bg-neutral-50 px-4 py-2"
               >
                 Migrar Nova Planilha
               </Button>

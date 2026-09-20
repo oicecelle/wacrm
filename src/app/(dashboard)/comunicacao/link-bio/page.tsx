@@ -310,7 +310,7 @@ export default function LinkBioPage() {
                 href={`https://leadpluz.com/${slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 Ver página
@@ -330,7 +330,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Slug + publish */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
         <div>
           <label className="mb-1 block text-xs font-bold text-neutral-600 uppercase tracking-wide">
             Endereço da sua página
@@ -375,7 +375,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Appearance */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
         <h2 className="text-xs font-black uppercase tracking-wide text-neutral-500">Aparência</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -397,7 +397,7 @@ export default function LinkBioPage() {
                 type="color"
                 value={themeColor}
                 onChange={(e) => setThemeColor(e.target.value)}
-                className="h-9 w-14 cursor-pointer rounded-md border border-neutral-200"
+                className="h-9 w-14 cursor-pointer rounded-md border border-border"
               />
               <Input value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="flex-1" />
             </div>
@@ -406,7 +406,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Blocks */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-black uppercase tracking-wide text-neutral-500">Conteúdo da página</h2>
           <div className="relative">
@@ -416,7 +416,7 @@ export default function LinkBioPage() {
                 e.target.value = '';
               }}
               defaultValue=""
-              className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold text-blue-600"
+              className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-bold text-blue-600"
             >
               <option value="" disabled>
                 + Adicionar bloco
@@ -454,12 +454,12 @@ export default function LinkBioPage() {
       </div>
 
       {/* Forms manager */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-black uppercase tracking-wide text-neutral-500">Formulários</h2>
           <button
             onClick={addForm}
-            className="flex items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50"
+            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50"
           >
             <Plus className="h-3.5 w-3.5" />
             Novo formulário
@@ -515,7 +515,7 @@ function BlockEditor({
   const Icon = meta.icon;
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-neutral-50/50 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <GripVertical className="h-4 w-4 text-neutral-300" />
         <Icon className="h-4 w-4 text-blue-600" />
@@ -541,7 +541,7 @@ function BlockEditor({
             <select
               value={block.action_kind || 'link'}
               onChange={(e) => onChange({ action_kind: e.target.value as 'form' | 'link' })}
-              className="rounded-lg border border-neutral-200 bg-white px-2 py-2 text-xs"
+              className="rounded-lg border border-border bg-white px-2 py-2 text-xs"
             >
               <option value="link">Abre um link</option>
               <option value="form">Abre um formulário</option>
@@ -550,7 +550,7 @@ function BlockEditor({
               <select
                 value={block.form_id || ''}
                 onChange={(e) => onChange({ form_id: e.target.value })}
-                className="flex-1 rounded-lg border border-neutral-200 bg-white px-2 py-2 text-xs"
+                className="flex-1 rounded-lg border border-border bg-white px-2 py-2 text-xs"
               >
                 <option value="">Selecione o formulário...</option>
                 {forms.map((f) => (
@@ -659,7 +659,7 @@ function FormEditor({
   onUpdateField: (fieldId: string, patch: Partial<FormField>) => void;
 }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-neutral-50/50 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <FileText className="h-4 w-4 text-blue-600" />
         <Input
@@ -684,7 +684,7 @@ function FormEditor({
             <select
               value={field.type}
               onChange={(e) => onUpdateField(field.id, { type: e.target.value as FormField['type'] })}
-              className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs"
+              className="h-8 rounded-lg border border-border bg-white px-2 text-xs"
             >
               <option value="text">Texto curto</option>
               <option value="textarea">Texto longo</option>
@@ -718,7 +718,7 @@ function FormEditor({
           onChange={(e) => onChange({ whatsapp_message_template: e.target.value })}
           rows={3}
           placeholder="Ex: Olá! Meu nome é {{campo_nome}} e tenho interesse em {{campo_interesse}}."
-          className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-mono resize-none"
+          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-xs font-mono resize-none"
         />
       </div>
     </div>

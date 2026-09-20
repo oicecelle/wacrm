@@ -662,7 +662,7 @@ export default function AgendaPage() {
       {/* Mobile-only view layout */}
       <div className="lg:hidden space-y-4">
         {/* Mini Calendar (Month selector + cells) */}
-        <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white border border-border/70 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <button
               type="button"
@@ -750,7 +750,7 @@ export default function AgendaPage() {
 
             if (dayAppts.length === 0) {
               return (
-                <div className="rounded-2xl border border-dashed border-neutral-200 bg-white p-8 text-center text-neutral-400 shadow-xs">
+                <div className="rounded-2xl border border-dashed border-border bg-white p-8 text-center text-neutral-400 shadow-xs">
                   <p className="text-xs font-bold">Nenhum agendamento para este dia.</p>
                 </div>
               );
@@ -837,7 +837,7 @@ export default function AgendaPage() {
         {/* Left Sidebar: Mini Calendar and Dropdown Filters */}
         <aside className="w-full lg:w-[260px] shrink-0 space-y-5 flex flex-col">
           {/* Mini Month Picker */}
-          <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs">
+          <div className="bg-white border border-border/70 rounded-2xl p-4 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <button
                 type="button"
@@ -917,7 +917,7 @@ export default function AgendaPage() {
           </div>
 
           {/* Status Statistics Filters */}
-          <div className="bg-white border border-neutral-200/70 rounded-2xl p-4 shadow-xs space-y-3.5">
+          <div className="bg-white border border-border/70 rounded-2xl p-4 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100">
               <span className="text-xs font-extrabold text-neutral-800 tracking-wider uppercase">Filtros por Status</span>
               {filterStatus !== "Todos" && (
@@ -939,7 +939,7 @@ export default function AgendaPage() {
                   "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
                   filterStatus === "Todos"
                     ? "bg-blue-50/70 border-blue-200 text-blue-800 font-bold"
-                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                    : "bg-white border-neutral-100 hover:border-border text-neutral-600"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -959,7 +959,7 @@ export default function AgendaPage() {
                   "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
                   filterStatus === "confirmed"
                     ? "bg-emerald-50 border-emerald-200 text-emerald-800 font-bold"
-                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                    : "bg-white border-neutral-100 hover:border-border text-neutral-600"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -979,7 +979,7 @@ export default function AgendaPage() {
                   "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
                   filterStatus === "provisional"
                     ? "bg-amber-50 border-amber-200 text-amber-800 font-bold"
-                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                    : "bg-white border-neutral-100 hover:border-border text-neutral-600"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -999,7 +999,7 @@ export default function AgendaPage() {
                   "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
                   filterStatus === "attended"
                     ? "bg-purple-50 border-purple-200 text-purple-800 font-bold"
-                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                    : "bg-white border-neutral-100 hover:border-border text-neutral-600"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -1019,7 +1019,7 @@ export default function AgendaPage() {
                   "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
                   filterStatus === "cancelled"
                     ? "bg-rose-50 border-rose-200 text-rose-800 font-bold"
-                    : "bg-white border-neutral-100 hover:border-neutral-200 text-neutral-600"
+                    : "bg-white border-neutral-100 hover:border-border text-neutral-600"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -1035,7 +1035,7 @@ export default function AgendaPage() {
         </aside>
 
         {/* Right Main Panel: Calendar Weekly Grid */}
-        <main className="flex-1 bg-white border border-neutral-200/70 rounded-2xl shadow-xs overflow-hidden flex flex-col">
+        <main className="flex-1 bg-white border border-border/70 rounded-2xl shadow-xs overflow-hidden flex flex-col">
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-neutral-100 bg-[#fbfcfb]/50">
             {/* Week Nav controls */}
@@ -1051,7 +1051,7 @@ export default function AgendaPage() {
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={handlePrevWeek}
-                  className="h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 active:scale-95 transition-all text-neutral-600"
+                  className="h-8 w-8 rounded-lg border border-border flex items-center justify-center hover:bg-neutral-50 active:scale-95 transition-all text-neutral-600"
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
@@ -1060,7 +1060,7 @@ export default function AgendaPage() {
                 </span>
                 <button
                   onClick={handleNextWeek}
-                  className="h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 active:scale-95 transition-all text-neutral-600"
+                  className="h-8 w-8 rounded-lg border border-border flex items-center justify-center hover:bg-neutral-50 active:scale-95 transition-all text-neutral-600"
                 >
                   <ChevronRightIcon className="h-4 w-4" />
                 </button>
@@ -1080,7 +1080,7 @@ export default function AgendaPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 text-neutral-700 font-semibold flex items-center gap-1.5 bg-white border-neutral-200"
+                className="h-8 text-neutral-700 font-semibold flex items-center gap-1.5 bg-white border-border"
                 onClick={() => setWaitlistOpen(true)}
               >
                 <ClipboardList className="h-4 w-4 text-neutral-500" />
@@ -1088,11 +1088,11 @@ export default function AgendaPage() {
               </Button>
 
               <DropdownMenu>
-                <DropdownMenuTrigger className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none font-semibold cursor-pointer shadow-xs flex items-center gap-1.5">
+                <DropdownMenuTrigger className="h-8 rounded-xl border border-border bg-white px-3 text-xs text-neutral-800 focus:outline-none font-semibold cursor-pointer shadow-xs flex items-center gap-1.5">
                   {calendarView === "dia" ? "📅 Dia" : calendarView === "semana" ? "📆 Semana" : "🗓️ Mês"}
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl border border-neutral-200 bg-white shadow-md p-1 min-w-[110px]">
+                <DropdownMenuContent align="end" className="rounded-xl border border-border bg-white shadow-md p-1 min-w-[110px]">
                   <DropdownMenuItem
                     onClick={() => setCalendarView("dia")}
                     className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
@@ -1117,7 +1117,7 @@ export default function AgendaPage() {
           </div>
 
           {/* Grid column headers (Weekdays row) */}
-          <div className={cn("grid border-b border-neutral-200 text-center bg-[#fafbfc]/30 divide-x divide-neutral-100",
+          <div className={cn("grid border-b border-border text-center bg-[#fafbfc]/30 divide-x divide-neutral-100",
             calendarView === "dia" ? "grid-cols-1" : "grid-cols-7"
           )}>
             {displayedDates.map((dayDate, i) => {
@@ -1163,9 +1163,9 @@ export default function AgendaPage() {
             </div>
           ) : (
             /* Main Hour/Days weekly view */
-            <div className="flex-1 flex overflow-y-auto relative h-[800px] border-b border-neutral-200 scrollbar-thin">
+            <div className="flex-1 flex overflow-y-auto relative h-[800px] border-b border-border scrollbar-thin">
               {/* Vertical hours column (Left y-axis) */}
-              <div className="w-14 shrink-0 bg-[#fafafa]/50 border-r border-neutral-200/80 relative z-10 pointer-events-none select-none">
+              <div className="w-14 shrink-0 bg-[#fafafa]/50 border-r border-border/80 relative z-10 pointer-events-none select-none">
                 {timeSlots.map((slot, idx) => (
                   <div
                      key={slot}
@@ -1242,9 +1242,9 @@ export default function AgendaPage() {
                       ) : (
                         <>
                           {/* 08:00 to 08:30 (Morning non-working hour - 1 slot) */}
-                          <div className="absolute top-0 left-0 right-0 h-[50px] bg-hatched opacity-60 pointer-events-none z-0 border-b border-dashed border-neutral-200/50" />
+                          <div className="absolute top-0 left-0 right-0 h-[50px] bg-hatched opacity-60 pointer-events-none z-0 border-b border-dashed border-border/50" />
                           {/* 18:30 to 20:00 (Evening non-working hours - starts after slot index 21, which is 18:30) */}
-                          <div className="absolute top-[1050px] bottom-0 left-0 right-0 bg-hatched opacity-60 pointer-events-none z-0 border-t border-dashed border-neutral-200/50" />
+                          <div className="absolute top-[1050px] bottom-0 left-0 right-0 bg-hatched opacity-60 pointer-events-none z-0 border-t border-dashed border-border/50" />
                         </>
                       )}
 
@@ -1347,7 +1347,7 @@ export default function AgendaPage() {
         {isFabMenuOpen && (
           <>
             <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFabMenuOpen(false)} />
-            <div className="absolute bottom-[calc(100%+12px)] right-0 bg-white border border-neutral-200 shadow-2xl rounded-2xl p-2 z-50 w-52 flex flex-col gap-1 text-left animate-in fade-in slide-in-from-bottom-5 duration-150">
+            <div className="absolute bottom-[calc(100%+12px)] right-0 bg-white border border-border shadow-2xl rounded-2xl p-2 z-50 w-52 flex flex-col gap-1 text-left animate-in fade-in slide-in-from-bottom-5 duration-150">
               <button
                 type="button"
                 onClick={() => {
@@ -1450,7 +1450,7 @@ export default function AgendaPage() {
               }
             }}
             onMouseLeave={handleApptMouseLeave}
-            className="z-50 w-[310px] bg-white border border-neutral-200 shadow-2xl rounded-2xl p-4 text-left space-y-4 animate-in fade-in zoom-in-95 duration-100"
+            className="z-50 w-[310px] bg-white border border-border shadow-2xl rounded-2xl p-4 text-left space-y-4 animate-in fade-in zoom-in-95 duration-100"
           >
             {/* Header: status and "Agendamento" */}
             <div className="flex items-center justify-between">
@@ -1490,7 +1490,7 @@ export default function AgendaPage() {
             <div className="space-y-3">
               {/* Professional */}
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-full bg-neutral-100 border border-neutral-200 overflow-hidden text-neutral-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                <div className="h-7 w-7 rounded-full bg-neutral-100 border border-border overflow-hidden text-neutral-600 flex items-center justify-center text-[10px] font-bold shrink-0">
                   {(() => {
                     const prof = staff.find((s) => s.id === popoverAppt.professional_id);
                     return prof?.avatar_url ? (

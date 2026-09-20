@@ -278,7 +278,7 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={item.dealId}
-                      className="group relative rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/10 p-4 transition-all hover:border-neutral-200 dark:hover:border-neutral-700"
+                      className="group relative rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/10 p-4 transition-all hover:border-border dark:hover:border-neutral-700"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
