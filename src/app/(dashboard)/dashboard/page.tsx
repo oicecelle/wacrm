@@ -28,6 +28,10 @@ import {
   loadConversationsSeries,
   loadPipelineDonut,
   loadResponseTime,
+  loadRevenueForecast,
+  loadPendingFeedItems,
+  type FeedForecast,
+  type PendingFeedItem,
 } from '@/lib/dashboard/queries'
 import type {
   ActivityItem,
@@ -67,6 +71,10 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<ActivityItem[] | null>(null)
   const [activityLoading, setActivityLoading] = useState(true)
 
+  const [forecast, setForecast] = useState<FeedForecast | null>(null)
+  const [forecastPeriod, setForecastPeriod] = useState<'today' | 'week' | 'month'>('today')
+  const [pendingItems, setPendingItems] = useState<PendingFeedItem[] | null>(null)
+
   const loadAll = useCallback(() => {
     if (!accountId) return
     const db = createClient()
@@ -95,6 +103,14 @@ export default function DashboardPage() {
       .then((a) => setActivity(a))
       .catch((err) => console.error('[dashboard] activity failed:', err))
       .finally(() => setActivityLoading(false))
+
+    void loadRevenueForecast(db, accountId)
+      .then((f) => setForecast(f))
+      .catch((err) => console.error('[dashboard] forecast failed:', err))
+
+    void loadPendingFeedItems(db, accountId)
+      .then((p) => setPendingItems(p))
+      .catch((err) => console.error('[dashboard] pending items failed:', err))
   }, [accountId])
 
   useEffect(() => {
@@ -405,6 +421,86 @@ export default function DashboardPage() {
         </div>
         <div className="h-full lg:col-span-2">
           <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
+        </div>
+      </div>
+
+      {/* Previsão de Receita e Agendamentos por Período */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-xs lg:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+              Previsão de Agenda
+            </h3>
+            <div className="flex gap-1 rounded-lg bg-muted p-0.5">
+              {(['today', 'week', 'month'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setForecastPeriod(p)}
+                  className={cn(
+                    'rounded-md px-2.5 py-1 text-[10px] font-bold transition-colors',
+                    forecastPeriod === p
+                      ? 'bg-card text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {p === 'today' ? 'Hoje' : p === 'week' ? 'Semana' : 'Mês'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {forecast ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-2xl font-black text-foreground">
+                  {forecast[forecastPeriod].count}
+                </p>
+                <p className="text-xs text-muted-foreground">agendamento{forecast[forecastPeriod].count === 1 ? '' : 's'}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-black text-emerald-600">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: defaultCurrency || 'BRL' }).format(
+                    forecast[forecastPeriod].value,
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">previsão de receita</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-14 animate-pulse rounded-lg bg-muted" />
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+          <h3 className="mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground">
+            Pendentes e Programados
+          </h3>
+          {pendingItems === null ? (
+            <div className="space-y-2">
+              <div className="h-8 animate-pulse rounded-lg bg-muted" />
+              <div className="h-8 animate-pulse rounded-lg bg-muted" />
+            </div>
+          ) : pendingItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nada pendente no momento.</p>
+          ) : (
+            <div className="max-h-40 space-y-2 overflow-y-auto">
+              {pendingItems.map((item) => (
+                <div key={item.id} className="flex items-start gap-2 text-xs">
+                  <span
+                    className={cn(
+                      'mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full',
+                      item.kind === 'document' && 'bg-amber-500',
+                      item.kind === 'quote' && 'bg-blue-500',
+                      item.kind === 'appointment_upcoming' && 'bg-purple-500',
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{item.title}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{item.subtitle}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
