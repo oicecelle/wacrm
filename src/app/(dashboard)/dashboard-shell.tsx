@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -17,6 +17,12 @@ import { ShieldAlert, AlertCircle, Sparkles } from "lucide-react";
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { user, loading, profile } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  // Full-screen "app-like" builders (fixed inset-0, no z-index of
+  // their own so they don't fight every dropdown/popover that also
+  // lives at z-50 throughout the app) need this banner out of the
+  // way entirely rather than layered under or over it.
+  const hideTrialBanner = pathname?.startsWith("/automations/new") || /^\/automations\/[^/]+\/edit/.test(pathname ?? "");
 
   // Sidebar drawer state — only used on mobile. On lg+ the sidebar is
   // always visible and this stays at `false` (ignored by the component).
@@ -197,7 +203,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <PresenceHeartbeat />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        {user?.created_at && (
+        {user?.created_at && !hideTrialBanner && (
           <div className="bg-blue-600 text-white text-center py-2 px-4 text-[11px] font-bold shadow-xs flex items-center justify-center gap-2 relative z-50">
             <Sparkles className="w-3.5 h-3.5 shrink-0 text-yellow-300 animate-pulse" />
             <span>
