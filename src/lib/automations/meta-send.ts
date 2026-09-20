@@ -10,7 +10,7 @@ import {
   interpolateNamedTemplateBody,
   namedParamsToPositional,
 } from '@/lib/whatsapp/sender-dispatcher'
-import { sendUazapiTextMessage } from '@/lib/whatsapp/uazapi-api'
+import { sendUazapiTextMessage, sendUazapiMediaMessage } from '@/lib/whatsapp/uazapi-api'
 import { supabaseAdmin } from './admin-client'
 
 interface SendTextArgs {
@@ -89,7 +89,7 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
       const tplArgs = input as SendTemplateArgs
       const { data: templateRow } = await db
         .from('message_templates')
-        .select('body_text')
+        .select('body_text, parts')
         .eq('account_id', input.accountId)
         .eq('name', tplArgs.templateName)
         .eq('language', tplArgs.language || 'pt_BR')
@@ -98,13 +98,31 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
       if (!templateRow) throw new Error(`template not found: ${tplArgs.templateName}`)
       if (!config.uazapi_token) throw new Error('Uazapi token not configured')
 
+      const parts = Array.isArray(templateRow.parts) ? templateRow.parts : []
+      const baseUrl = config.uazapi_base_url || 'https://customix.uazapi.com'
+
+      if (parts.length > 0) {
+        let lastMessageId = ''
+        for (const part of parts) {
+          const partResult =
+            part.type === 'text'
+              ? await sendUazapiTextMessage(
+                  baseUrl,
+                  config.uazapi_token,
+                  phone,
+                  interpolateNamedTemplateBody(part.text ?? '', tplArgs.variables ?? {}),
+                )
+              : part.media_url
+                ? await sendUazapiMediaMessage(baseUrl, config.uazapi_token, phone, part.media_url, part.type, undefined, part.filename)
+                : { success: true, messageId: lastMessageId }
+          if (!partResult.success) throw new Error(partResult.error || 'Failed to dispatch message part')
+          lastMessageId = partResult.messageId || lastMessageId
+        }
+        return lastMessageId
+      }
+
       const text = interpolateNamedTemplateBody(templateRow.body_text, tplArgs.variables ?? {})
-      const result = await sendUazapiTextMessage(
-        config.uazapi_base_url || 'https://customix.uazapi.com',
-        config.uazapi_token,
-        phone,
-        text,
-      )
+      const result = await sendUazapiTextMessage(baseUrl, config.uazapi_token, phone, text)
       if (!result.success) throw new Error(result.error || 'Failed to dispatch message')
       return result.messageId || ''
     }
@@ -122,7 +140,7 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
       messageType: isTemplate ? 'template' : 'text',
       content_text: isTemplate ? null : (input as SendTextArgs).text,
       template_name: isTemplate ? (input as SendTemplateArgs).templateName : null,
-      template_language: isTemplate ? (input as SendTemplateArgs).language || 'en_US' : null,
+      template_language: isTemplate ? (input as SendTemplateArgs).language || 'pt_BR' : null,
       template_params: isTemplate ? namedParamsToPositional((input as SendTemplateArgs).variables ?? {}) : [],
     })
 

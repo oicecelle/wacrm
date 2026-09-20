@@ -623,66 +623,102 @@ export function MessageThread({
       template: MessageTemplate,
       values: {
         body: string[];
+        namedValues?: Record<string, string>;
         headerText?: string;
         buttonParams?: Record<number, string>;
       },
     ) => {
       if (!conversation) return;
 
-      const renderedBody = renderTemplateBody(template.body_text, values.body);
-      const tempId = `temp-${Date.now()}`;
+      const named = values.namedValues ?? {};
+      const interpolateNamed = (text: string) =>
+        text.replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g, (_, key) => named[key] ?? `{{${key}}}`);
 
-      const optimisticMsg: Message = {
-        id: tempId,
-        conversation_id: conversation.id,
-        sender_type: "agent",
-        content_type: "template",
-        content_text: renderedBody,
-        template_name: template.name,
-        status: "sending",
-        created_at: new Date().toISOString(),
-      };
-      onNewMessage(optimisticMsg);
+      const parts = Array.isArray(template.parts) && template.parts.length > 0
+        ? template.parts
+        : [{ id: "single", type: "text" as const, text: template.body_text }];
 
-      try {
-        const res = await fetch("/api/whatsapp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversation_id: conversation.id,
-            message_type: "template",
-            template_name: template.name,
-            template_language: template.language,
-            // Structured params drive the new send-builder path
-            // (header media + URL button substitution). Body values
-            // are mirrored under both shapes so the route can fall
-            // back if the template row isn't found locally.
-            template_message_params: {
-              body: values.body,
-              headerText: values.headerText,
-              buttonParams: values.buttonParams,
-            },
-            template_params: values.body,
-            content_text: renderedBody,
-          }),
-        });
+      const isLegacySingleBody = !Array.isArray(template.parts) || template.parts.length === 0;
 
-        const payload = await res.json().catch(() => ({}));
+      for (const part of parts) {
+        const tempId = `temp-${Date.now()}-${part.id}`;
+        const isText = part.type === "text";
+        const renderedBody = isText
+          ? interpolateNamed(renderTemplateBody(part.text ?? "", values.body))
+          : undefined;
 
-        if (!res.ok) {
-          const reason = payload?.error || `HTTP ${res.status}`;
-          console.error("Failed to send template:", reason);
-          toast.error(`Failed to send template: ${reason}`);
+        const optimisticMsg: Message = {
+          id: tempId,
+          conversation_id: conversation.id,
+          sender_type: "agent",
+          content_type: isText ? "template" : part.type,
+          content_text: renderedBody,
+          media_url: !isText ? part.media_url : undefined,
+          template_name: template.name,
+          status: "sending",
+          created_at: new Date().toISOString(),
+        };
+        onNewMessage(optimisticMsg);
+
+        try {
+          const res = await fetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              !isText
+                ? {
+                    conversation_id: conversation.id,
+                    message_type: part.type,
+                    media_url: part.media_url,
+                  }
+                : isLegacySingleBody
+                  ? {
+                      // Legacy single-body template — preserved as-is,
+                      // including Meta's official template_message_params
+                      // path (header media, URL button substitution),
+                      // since this shape may still be a Meta-approved
+                      // template that needs to go through that route.
+                      conversation_id: conversation.id,
+                      message_type: "template",
+                      template_name: template.name,
+                      template_language: template.language,
+                      template_message_params: {
+                        body: values.body,
+                        headerText: values.headerText,
+                        buttonParams: values.buttonParams,
+                      },
+                      template_params: values.body,
+                      content_text: renderedBody,
+                    }
+                  : {
+                      // A part of a multi-part template — already fully
+                      // interpolated (named + positional) client-side,
+                      // sent as a plain text message.
+                      conversation_id: conversation.id,
+                      message_type: "text",
+                      content_text: renderedBody,
+                    },
+            ),
+          });
+
+          const payload = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            const reason = payload?.error || `HTTP ${res.status}`;
+            console.error("Falha ao enviar parte do modelo:", reason);
+            toast.error(`Falha ao enviar modelo: ${reason}`);
+            onUpdateMessage(tempId, { status: "failed" });
+            return;
+          }
+
+          onUpdateMessage(tempId, { status: "sent" });
+        } catch (err) {
+          console.error("Falha ao enviar parte do modelo:", err);
+          const reason = err instanceof Error ? err.message : "erro de rede";
+          toast.error(`Falha ao enviar modelo: ${reason}`);
           onUpdateMessage(tempId, { status: "failed" });
           return;
         }
-
-        onUpdateMessage(tempId, { status: "sent" });
-      } catch (err) {
-        console.error("Failed to send template:", err);
-        const reason = err instanceof Error ? err.message : "network error";
-        toast.error(`Failed to send template: ${reason}`);
-        onUpdateMessage(tempId, { status: "failed" });
       }
     },
     [conversation, onNewMessage, onUpdateMessage],
