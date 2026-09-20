@@ -24,7 +24,36 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Supabase's auth endpoint has had an ongoing intermittent slowness
+  // incident (401s from JWT rejections, degraded API Gateway — see
+  // status.supabase.com) that isn't fully resolved by Supabase's own
+  // side; some projects need a manual upgrade to pick up the fix.
+  // Until then, and as a permanent safeguard regardless of Supabase's
+  // health, this call must never be allowed to hang the whole
+  // middleware — that's exactly what produces Vercel's uncontrollable
+  // 504 MIDDLEWARE_INVOCATION_TIMEOUT screen, which we can't brand or
+  // recover from. Racing it against a short timeout means a slow
+  // auth check degrades to "treat as unknown session" instead of
+  // freezing the request. Every page already re-checks auth
+  // client-side via useAuth(), so letting a request through
+  // unresolved here isn't a real security gap — worst case a
+  // protected page's own client-side check redirects a beat later.
+  let user = null
+  let authCheckTimedOut = false
+  try {
+    const getUserPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise<'timeout'>((resolve) =>
+      setTimeout(() => resolve('timeout'), 4000)
+    )
+    const result = await Promise.race([getUserPromise, timeoutPromise])
+    if (result === 'timeout') {
+      authCheckTimedOut = true
+    } else {
+      user = result.data.user
+    }
+  } catch {
+    authCheckTimedOut = true
+  }
 
   const host = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
@@ -83,8 +112,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Protected pages - redirect to login if not authenticated
-  if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+  // Protected pages - redirect to login if not authenticated. Skipped
+  // entirely when the auth check itself timed out — we genuinely
+  // don't know this user's status then, and assuming "logged out"
+  // would wrongly bounce a real, signed-in user during a Supabase
+  // hiccup. The page's own client-side useAuth() check still applies.
+  if (!authCheckTimedOut && !user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
