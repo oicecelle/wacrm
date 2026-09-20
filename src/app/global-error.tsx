@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const SUPPORT_WHATSAPP = "5521976640033";
+const SUPPORT_WHATSAPP = "5521990525962";
 
 /**
  * Last-resort error boundary — only fires if the root layout itself

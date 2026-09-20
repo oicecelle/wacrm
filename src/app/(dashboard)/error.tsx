@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { AlertTriangle, RotateCw, MessageCircle } from "lucide-react";
 
-const SUPPORT_WHATSAPP = "5521976640033";
+const SUPPORT_WHATSAPP = "5521990525962";
 
 /**
  * Route-level error boundary for the whole (dashboard) area. Next.js

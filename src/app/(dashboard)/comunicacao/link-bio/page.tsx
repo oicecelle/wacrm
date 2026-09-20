@@ -306,7 +306,7 @@ export default function LinkBioPage() {
         <div className="flex items-center gap-2">
           {pageId && slug && (
             <a
-              href={`/${slug}`}
+              href={`https://leadpluz.com/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
