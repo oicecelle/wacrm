@@ -46,7 +46,7 @@ export default function NewAutomationPage() {
     }
   }, [template])
 
-  return <AutomationBuilder initial={initial} />
+  return <AutomationBuilder key={template || "blank"} initial={initial} />
 }
 
 interface SeedRow {
