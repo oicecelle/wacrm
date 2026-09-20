@@ -147,7 +147,7 @@ export function defaultConfigFor(type: NodeType): Record<string, unknown> {
     case "send_list":
       return {
         text: "",
-        button_label: "View options",
+        button_label: "Ver opções",
         sections: [
           {
             title: "",
@@ -168,7 +168,7 @@ export function defaultConfigFor(type: NodeType): Record<string, unknown> {
     case "collect_input":
       return {
         prompt_text: "",
-        var_key: "answer",
+        var_key: "resposta",
         next_node_key: "",
       };
     case "condition":
@@ -351,7 +351,7 @@ export function FlowEditorProvider({
       setDirty(false);
       toast.success("Salvo.");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Save failed";
+      const msg = err instanceof Error ? err.message : "Falha ao salvar";
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -385,13 +385,13 @@ export function FlowEditorProvider({
         setStateRaw((s) => ({ ...s, status: next }));
         toast.success(
           next === "active"
-            ? "Flow activated."
+            ? "Fluxo ativado."
             : next === "archived"
-              ? "Archived."
-              : "Saved as draft.",
+              ? "Arquivado."
+              : "Salvo como rascunho.",
         );
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Status update failed";
+        const msg = err instanceof Error ? err.message : "Falha ao atualizar status";
         toast.error(msg);
       } finally {
         setActivating(false);
@@ -403,17 +403,17 @@ export function FlowEditorProvider({
   // ---- Delete ----
   const deleteFlow = useCallback(async () => {
     const yes = window.confirm(
-      `Delete "${state.name}"? Any active runs end immediately. This can't be undone.`,
+      `Excluir "${state.name}"? Qualquer execução em andamento vai parar imediatamente. Isso não pode ser desfeito.`,
     );
     if (!yes) return;
     try {
       const res = await fetch(`/api/flows/${initialFlow.id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      if (!res.ok) throw new Error(`Falha ao excluir: ${res.status}`);
       router.push("/flows");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Delete failed";
+      const msg = err instanceof Error ? err.message : "Falha ao excluir";
       toast.error(msg);
     }
   }, [initialFlow.id, router, state.name]);
