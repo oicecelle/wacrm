@@ -547,7 +547,7 @@ export function QuoteModal({
                       <select
                         value={discountType}
                         onChange={(e) => setDiscountType(e.target.value as "fixed" | "percent")}
-                        className="text-xs h-8 rounded-md border border-neutral-200 bg-white px-2"
+                        className="text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2"
                       >
                         <option value="fixed">R$ Fixo</option>
                         <option value="percent">% Percentual</option>
@@ -601,7 +601,7 @@ export function QuoteModal({
                           <select
                             value={line.method}
                             onChange={(e) => updatePaymentLine(idx, { method: e.target.value })}
-                            className="h-8 rounded-md border border-neutral-200 bg-white px-1.5 text-xs shrink-0 w-[92px]"
+                            className="h-8 rounded-lg border border-neutral-200 bg-white px-1.5 text-xs shrink-0 w-[92px]"
                           >
                             {PAYMENT_METHODS.map((m) => (
                               <option key={m} value={m}>{m}</option>

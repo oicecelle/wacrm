@@ -541,7 +541,7 @@ function BlockEditor({
             <select
               value={block.action_kind || 'link'}
               onChange={(e) => onChange({ action_kind: e.target.value as 'form' | 'link' })}
-              className="rounded-md border border-neutral-200 bg-white px-2 py-2 text-xs"
+              className="rounded-lg border border-neutral-200 bg-white px-2 py-2 text-xs"
             >
               <option value="link">Abre um link</option>
               <option value="form">Abre um formulário</option>
@@ -550,7 +550,7 @@ function BlockEditor({
               <select
                 value={block.form_id || ''}
                 onChange={(e) => onChange({ form_id: e.target.value })}
-                className="flex-1 rounded-md border border-neutral-200 bg-white px-2 py-2 text-xs"
+                className="flex-1 rounded-lg border border-neutral-200 bg-white px-2 py-2 text-xs"
               >
                 <option value="">Selecione o formulário...</option>
                 {forms.map((f) => (
@@ -684,7 +684,7 @@ function FormEditor({
             <select
               value={field.type}
               onChange={(e) => onUpdateField(field.id, { type: e.target.value as FormField['type'] })}
-              className="h-8 rounded-md border border-neutral-200 bg-white px-2 text-xs"
+              className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs"
             >
               <option value="text">Texto curto</option>
               <option value="textarea">Texto longo</option>

@@ -687,7 +687,7 @@ export default function EquipePage() {
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as Role)}
-                  className="w-full text-sm h-9 rounded-md border border-neutral-200 bg-white px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full text-sm h-9 rounded-lg border border-neutral-200 bg-white px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   disabled={sendingInvite}
                 >
                   {Object.entries(ROLE_CONFIG).map(([k, v]) => (
@@ -759,7 +759,7 @@ export default function EquipePage() {
                     <select
                       value={formRole}
                       onChange={(e) => handleRoleChange(e.target.value as Role)}
-                      className="w-full text-xs h-9 rounded-md border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                      className="w-full text-xs h-9 rounded-lg border border-neutral-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
                     >
                       {Object.entries(ROLE_CONFIG).map(([k, v]) => (
                         <option key={k} value={k}>{v.label}</option>
@@ -802,7 +802,7 @@ export default function EquipePage() {
                       <select
                         value={formCommModel}
                         onChange={(e) => setFormCommModel(e.target.value as "percentage" | "fixed" | "hybrid")}
-                        className="w-full text-xs h-8 rounded-md border border-neutral-200 bg-white px-2"
+                        className="w-full text-xs h-8 rounded-lg border border-neutral-200 bg-white px-2"
                       >
                         <option value="percentage">Percentual (%) sobre faturamento</option>
                         <option value="fixed">Valor fixo (R$) por procedimento</option>

@@ -419,7 +419,7 @@ export function ContactForm({
               id="cf-gender"
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground"
             >
               <option value="">Não informado</option>
               <option value="female">Feminino</option>

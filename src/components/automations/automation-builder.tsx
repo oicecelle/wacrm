@@ -295,7 +295,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
 }
 
 const SELECT_CLASS =
-  "w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+  "w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
 
 /** Tag dropdown by name + color, storing the tag's id. Falls back to a
  *  raw id input when no tags exist yet. */
@@ -628,7 +628,7 @@ function SendMediaFields({
         <select
           value={mediaType}
           onChange={(e) => onChange({ media_type: e.target.value as SendMediaStepConfig["media_type"], media_url: "", filename: "" })}
-          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+          className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
         >
           <option value="image">Imagem</option>
           <option value="video">Vídeo</option>
@@ -911,7 +911,7 @@ function TriggerCard({
               <select
                 value={displayValue}
                 onChange={(e) => handleSelect(e.target.value)}
-                className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
               >
                 {TRIGGER_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -1017,7 +1017,7 @@ function KeywordMatchConfig({
         <select
           value={config?.match_type ?? "contains"}
           onChange={(e) => onChange({ ...config, match_type: e.target.value as "exact" | "contains" })}
-          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
+          className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
         >
           <option value="contains">Contém</option>
           <option value="exact">Exato</option>
@@ -1036,7 +1036,7 @@ function KeywordMatchConfig({
             setDraft("")
             onChange({ ...config, keywords: [] })
           }}
-          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
+          className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
         >
           <option value="word">Palavra-chave</option>
           <option value="phrase">Frase</option>
@@ -1457,7 +1457,7 @@ function StepEditor({
             <select
               value={(cfg.mode as string) ?? "round_robin"}
               onChange={(e) => set({ mode: e.target.value })}
-              className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
             >
               <option value="round_robin">Rodízio</option>
               <option value="specific">Agente específico</option>
@@ -1657,7 +1657,7 @@ function StepEditor({
             <select
               value={mode}
               onChange={(e) => set({ mode: e.target.value })}
-              className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
             >
               <option value="relative">Tempo fixo</option>
               <option value="until_window">Até um horário (fila de atendimento)</option>
@@ -1691,7 +1691,7 @@ function StepEditor({
                 <select
                   value={(cfg.unit as string) ?? "hours"}
                   onChange={(e) => set({ unit: e.target.value })}
-                  className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+                  className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
                 >
                   <option value="minutes">Minutos</option>
                   <option value="hours">Horas</option>
@@ -1710,7 +1710,7 @@ function StepEditor({
             <select
               value={(cfg.subject as string) ?? "tag_presence"}
               onChange={(e) => set({ subject: e.target.value })}
-              className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+              className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
             >
               <option value="tag_presence">Presença de tag</option>
               <option value="contact_field">Campo do contato</option>
