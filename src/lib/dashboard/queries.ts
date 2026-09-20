@@ -6,6 +6,10 @@ import {
   localDayKey,
   mondayIndex,
   startOfLocalDay,
+  startOfLocalWeek,
+  endOfLocalDay,
+  endOfLocalWeek,
+  endOfLocalMonth,
 } from './date-utils'
 import type {
   ActivityItem,
@@ -622,5 +626,161 @@ export async function loadClinicDashboardMetrics(db: DB, accountId: string): Pro
     priorities,
     aiInsights
   }
+}
+
+export interface PeriodForecast {
+  count: number
+  value: number
+}
+
+export interface FeedForecast {
+  today: PeriodForecast
+  week: PeriodForecast
+  month: PeriodForecast
+}
+
+export interface PendingFeedItem {
+  id: string
+  kind: 'document' | 'quote' | 'appointment_upcoming'
+  title: string
+  subtitle: string
+  when?: string
+}
+
+/**
+ * Revenue forecast + appointment counts bucketed by day/week/month —
+ * distinct from faturamentoPrevisto above, which is the sales-pipeline
+ * (open deals) forecast, not a time-scoped one. This one answers "how
+ * much is expected to come in today/this week/this month", based on
+ * scheduled (not yet cancelled) appointments and each one's linked
+ * procedure price — same calculation Financeiro's own forecast used,
+ * just bucketed into three windows instead of one.
+ */
+export async function loadRevenueForecast(db: DB, accountId: string): Promise<FeedForecast> {
+  const monthStart = startOfLocalMonth()
+  const monthEnd = endOfLocalMonth()
+
+  const [{ data: appts }, { data: procedures }] = await Promise.all([
+    db
+      .from('appointments')
+      .select('id, start_time, type, status')
+      .eq('clinic_id', accountId)
+      .neq('status', 'cancelled')
+      .gte('start_time', monthStart.toISOString())
+      .lt('start_time', monthEnd.toISOString()),
+    db.from('procedures').select('name, price, valor').eq('clinic_id', accountId),
+  ])
+
+  const priceByType = new Map<string, number>()
+  for (const p of procedures ?? []) {
+    const price = Number(p.price ?? p.valor ?? 0)
+    if (p.name) priceByType.set(p.name, price)
+  }
+  const DEFAULT_PRICE = 180
+
+  const todayStart = startOfLocalDay()
+  const todayEnd = endOfLocalDay()
+  const weekStart = startOfLocalWeek()
+  const weekEnd = endOfLocalWeek()
+
+  const bucket: FeedForecast = {
+    today: { count: 0, value: 0 },
+    week: { count: 0, value: 0 },
+    month: { count: 0, value: 0 },
+  }
+
+  for (const appt of appts ?? []) {
+    const start = new Date(appt.start_time)
+    const price = priceByType.get(appt.type) ?? DEFAULT_PRICE
+
+    bucket.month.count++
+    bucket.month.value += price
+
+    if (start >= weekStart && start < weekEnd) {
+      bucket.week.count++
+      bucket.week.value += price
+    }
+    if (start >= todayStart && start < todayEnd) {
+      bucket.today.count++
+      bucket.today.value += price
+    }
+  }
+
+  return bucket
+}
+
+/**
+ * "Coisas pendentes / programadas" for the clinic feed — unsigned
+ * documents, quotes still awaiting the patient's response, and
+ * appointments coming up in the next 48h. Each already has its own
+ * dedicated screen; this just surfaces the handful most worth
+ * attention right on the dashboard.
+ */
+export async function loadPendingFeedItems(db: DB, accountId: string, limit = 8): Promise<PendingFeedItem[]> {
+  const now = new Date()
+  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+
+  const [{ data: docs }, { data: quotes }, { data: upcoming }] = await Promise.all([
+    db
+      .from('documents')
+      .select('id, title, created_at, patient:contacts(name)')
+      .eq('clinic_id', accountId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    db
+      .from('quotes')
+      .select('id, total_value, created_at, contact:contacts(name)')
+      .eq('account_id', accountId)
+      .eq('status', 'sent')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    db
+      .from('appointments')
+      .select('id, start_time, type, patient:contacts(name)')
+      .eq('clinic_id', accountId)
+      .eq('status', 'provisional')
+      .gte('start_time', now.toISOString())
+      .lt('start_time', in48h.toISOString())
+      .order('start_time', { ascending: true })
+      .limit(5),
+  ])
+
+  const items: PendingFeedItem[] = []
+
+  for (const d of docs ?? []) {
+    const patient = Array.isArray(d.patient) ? d.patient[0] : d.patient
+    items.push({
+      id: `doc-${d.id}`,
+      kind: 'document',
+      title: d.title || 'Documento',
+      subtitle: `Aguardando assinatura de ${patient?.name || 'paciente'}`,
+      when: d.created_at,
+    })
+  }
+  for (const q of quotes ?? []) {
+    const contact = Array.isArray(q.contact) ? q.contact[0] : q.contact
+    items.push({
+      id: `quote-${q.id}`,
+      kind: 'quote',
+      title: `Orçamento — ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(q.total_value) || 0)}`,
+      subtitle: `Enviado a ${contact?.name || 'paciente'}, aguardando resposta`,
+      when: q.created_at,
+    })
+  }
+  for (const a of upcoming ?? []) {
+    const patient = Array.isArray(a.patient) ? a.patient[0] : a.patient
+    items.push({
+      id: `appt-${a.id}`,
+      kind: 'appointment_upcoming',
+      title: a.type || 'Consulta',
+      subtitle: `${patient?.name || 'Paciente'} — não confirmado ainda`,
+      when: a.start_time,
+    })
+  }
+
+  return items
+    .sort((a, b) => new Date(b.when ?? 0).getTime() - new Date(a.when ?? 0).getTime())
+    .slice(0, limit)
 }
 

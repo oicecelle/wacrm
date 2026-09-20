@@ -50,3 +50,37 @@ export function mondayIndex(d: Date): number {
 }
 
 export const DOW_SHORT_MON_FIRST = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const
+
+/** Local Monday 00:00 of the week containing `d` — the business week
+ *  starts Monday, matching DOW_SHORT_MON_FIRST's ordering. */
+export function startOfLocalWeek(d: Date = new Date()): Date {
+  const out = startOfLocalDay(d)
+  out.setDate(out.getDate() - mondayIndex(out))
+  return out
+}
+
+/** Local 1st-of-month 00:00 for the month containing `d`. */
+export function startOfLocalMonth(d: Date = new Date()): Date {
+  const out = startOfLocalDay(d)
+  out.setDate(1)
+  return out
+}
+
+/** End-exclusive boundary for "today" / "this week" / "this month" —
+ *  start of the NEXT day/week/month, so a `< end` comparison is
+ *  correct without off-by-one issues around midnight. */
+export function endOfLocalDay(d: Date = new Date()): Date {
+  const out = startOfLocalDay(d)
+  out.setDate(out.getDate() + 1)
+  return out
+}
+export function endOfLocalWeek(d: Date = new Date()): Date {
+  const out = startOfLocalWeek(d)
+  out.setDate(out.getDate() + 7)
+  return out
+}
+export function endOfLocalMonth(d: Date = new Date()): Date {
+  const out = startOfLocalMonth(d)
+  out.setMonth(out.getMonth() + 1)
+  return out
+}
