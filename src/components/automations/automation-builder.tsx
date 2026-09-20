@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { toast } from "sonner"
 import {
   ArrowLeft,
@@ -176,7 +177,7 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
     case "create_deal":
       return { pipeline_id: "", stage_id: "", title: "", value: 0 }
     case "create_appointment":
-      return { template: "", duration_minutes: 60 }
+      return { template: "" }
     case "update_appointment_status":
       return { action: "confirm", appointment_selector: "next_upcoming" }
     case "register_payment":
@@ -209,6 +210,7 @@ interface AutomationResources {
   members: AccountMember[]
   templates: MessageTemplate[]
   customFields: CustomField[]
+  pipelineStages: { id: string; name: string }[]
 }
 
 const ResourcesContext = createContext<AutomationResources>({
@@ -216,6 +218,7 @@ const ResourcesContext = createContext<AutomationResources>({
   members: [],
   templates: [],
   customFields: [],
+  pipelineStages: [],
 })
 
 function useResources(): AutomationResources {
@@ -229,6 +232,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   const [members, setMembers] = useState<AccountMember[]>([])
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
   const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     if (!accountId) return
@@ -257,15 +261,21 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
           ? templatesQuery.eq("status", "APPROVED")
           : templatesQuery.not("status", "in", "(REJECTED,DISABLED)")
 
-      const [tagsRes, templatesRes, customFieldsRes] = await Promise.all([
+      const [tagsRes, templatesRes, customFieldsRes, stagesRes] = await Promise.all([
         supabase.from("tags").select("*").eq("account_id", accountId).order("name"),
         templatesQuery,
         supabase.from("custom_fields").select("*").eq("account_id", accountId).order("field_name"),
+        supabase
+          .from("pipeline_stages")
+          .select("id, name, pipelines!inner(account_id)")
+          .eq("pipelines.account_id", accountId)
+          .order("position"),
       ])
       if (cancelled) return
       setTags((tagsRes.data as TagRecord[] | null) ?? [])
       setTemplates((templatesRes.data as MessageTemplate[] | null) ?? [])
       setCustomFields((customFieldsRes.data as CustomField[] | null) ?? [])
+      setPipelineStages(((stagesRes.data as { id: string; name: string }[] | null) ?? []).map((s) => ({ id: s.id, name: s.name })))
     })()
 
     // Members go through the API so we inherit its email-visibility
@@ -288,7 +298,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   }, [accountId, providerType])
 
   return (
-    <ResourcesContext.Provider value={{ tags, members, templates, customFields }}>
+    <ResourcesContext.Provider value={{ tags, members, templates, customFields, pipelineStages }}>
       {children}
     </ResourcesContext.Provider>
   )
@@ -309,12 +319,13 @@ function TagSelect({
   const { tags } = useResources()
   if (tags.length === 0) {
     return (
-      <Input
-        placeholder="ID da tag"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-muted text-foreground"
-      />
+      <p className="rounded-lg border border-dashed border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
+        Nenhuma tag criada ainda nesta conta. Crie tags em{" "}
+        <Link href="/settings?tab=fields" className="font-bold text-primary hover:underline">
+          Configurações → Campos e Tags
+        </Link>{" "}
+        pra poder escolher uma aqui.
+      </p>
     )
   }
   const selected = tags.find((t) => t.id === value)
@@ -330,7 +341,7 @@ function TagSelect({
         onChange={(e) => onChange(e.target.value)}
         className={SELECT_CLASS}
       >
-        <option value="">Select a tag…</option>
+        <option value="">Selecione uma tag…</option>
         {tags.map((t) => (
           <option key={t.id} value={t.id}>
             {t.name}
@@ -339,7 +350,7 @@ function TagSelect({
         {/* Preserve a saved tag that's since been deleted so editing an
             existing automation doesn't silently drop it. */}
         {value && !selected && (
-          <option value={value}>{value} (unknown tag)</option>
+          <option value={value}>{value} (tag não encontrada)</option>
         )}
       </select>
     </div>
@@ -402,10 +413,121 @@ function DealFieldSelect({
       <option value="source">Origem</option>
       <option value="interest">Interesse</option>
       <option value="crm_stage">Etapa no CRM (texto livre)</option>
-      <option value="temperature">Temperatura (hot / warm / cold)</option>
+      <option value="temperature">Temperatura (quente / morno / frio)</option>
       <option value="main_objection">Principal objeção</option>
       <option value="next_action">Próxima ação</option>
     </select>
+  )
+}
+
+const TEMPERATURE_OPTIONS = [
+  { value: "hot", label: "🔥 Quente" },
+  { value: "warm", label: "🌤️ Morno" },
+  { value: "cold", label: "❄️ Frio" },
+]
+
+/**
+ * Adapts to the chosen deal field: temperature and crm_stage have a
+ * known, finite set of real options (temperature is a hard-coded
+ * 3-value enum on `deals`; crm_stage commonly mirrors the account's
+ * own pipeline stage names) so those get a dropdown of the real
+ * values instead of a free-text field the user has to guess at. The
+ * remaining fields (source, interest, main_objection, next_action)
+ * are genuinely open text on the `deals` table, so they keep a text
+ * input — but with an explicit fixed-value/patient-reply toggle
+ * instead of expecting the user to know {{message.text}} syntax.
+ */
+function DealValueEditor({
+  field,
+  value,
+  onChange,
+}: {
+  field: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { pipelineStages } = useResources()
+
+  if (field === "temperature") {
+    return (
+      <FieldBlock label="Nova temperatura">
+        <select
+          value={value || "hot"}
+          onChange={(e) => onChange(e.target.value)}
+          className={SELECT_CLASS}
+        >
+          {TEMPERATURE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </FieldBlock>
+    )
+  }
+
+  if (field === "crm_stage") {
+    if (pipelineStages.length > 0) {
+      return (
+        <FieldBlock label="Nova etapa">
+          <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={SELECT_CLASS}
+          >
+            <option value="">Selecione uma etapa…</option>
+            {pipelineStages.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
+      )
+    }
+    // No pipeline stages found for this account yet — fall through to
+    // the free-text editor below rather than showing an empty dropdown.
+  }
+
+  const isDynamic = value.trim() === "{{message.text}}"
+  return (
+    <FieldBlock label="Novo valor">
+      <div className="mb-2 flex gap-1 rounded-lg bg-muted p-0.5 text-xs">
+        <button
+          type="button"
+          onClick={() => onChange(isDynamic ? "" : value)}
+          className={cn(
+            "flex-1 rounded-md py-1.5 font-bold transition-colors",
+            !isDynamic ? "bg-card shadow-xs text-foreground" : "text-muted-foreground",
+          )}
+        >
+          Valor fixo
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange("{{message.text}}")}
+          className={cn(
+            "flex-1 rounded-md py-1.5 font-bold transition-colors",
+            isDynamic ? "bg-card shadow-xs text-foreground" : "text-muted-foreground",
+          )}
+        >
+          O que o paciente escreveu
+        </button>
+      </div>
+      {!isDynamic && (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Ex: Instagram, ou Indicação"
+          className="bg-muted text-foreground"
+        />
+      )}
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        {isDynamic
+          ? "Usa exatamente o texto que o paciente mandou na mensagem que disparou este gatilho."
+          : "Esse texto exato é gravado no negócio toda vez que essa automação rodar."}
+      </p>
+    </FieldBlock>
   )
 }
 
@@ -1503,23 +1625,14 @@ function StepEditor({
           <FieldBlock label="Qual informação mudar">
             <DealFieldSelect
               value={(cfg.field as string) ?? "temperature"}
-              onChange={(v) => set({ field: v })}
+              onChange={(v) => set({ field: v, value: "" })}
             />
           </FieldBlock>
-          <FieldBlock label="Novo valor">
-            <Input
-              value={(cfg.value as string) ?? ""}
-              onChange={(e) => set({ value: e.target.value })}
-              placeholder="Ex: hot, ou Instagram, ou {{message.text}} pra usar o que o paciente escreveu"
-              className="bg-muted text-foreground"
-            />
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Exemplo prático: campo &quot;Temperatura&quot; com valor <code>hot</code> — sempre que
-              esse gatilho disparar, o negócio desse paciente no CRM é marcado como quente. Pra
-              &quot;Origem&quot;, algo como <code>Instagram</code> ou <code>Indicação</code> funciona
-              melhor que uma variável.
-            </p>
-          </FieldBlock>
+          <DealValueEditor
+            field={(cfg.field as string) ?? "temperature"}
+            value={(cfg.value as string) ?? ""}
+            onChange={(v) => set({ value: v })}
+          />
           <p className="text-xs text-muted-foreground">
             Isso muda o negócio mais recente e ainda aberto desse contato no funil de vendas
             (Pipelines). Se o contato não tiver nenhum negócio aberto, essa etapa simplesmente não
@@ -1580,15 +1693,10 @@ function StepEditor({
               <code className="font-mono">19/09</code> ou <code className="font-mono">19/09/2026</code>;
               hora <code className="font-mono">10h</code> ou <code className="font-mono">10:30</code>.
             </p>
-          </FieldBlock>
-          <FieldBlock label="Duração (minutos)">
-            <Input
-              type="number"
-              min={5}
-              value={(cfg.duration_minutes as number) ?? 60}
-              onChange={(e) => set({ duration_minutes: Math.max(5, Number(e.target.value)) })}
-              className="bg-muted text-foreground"
-            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              A duração do agendamento é automática, de acordo com o serviço cadastrado em
+              Serviços — não precisa configurar aqui.
+            </p>
           </FieldBlock>
         </>
       )
@@ -1733,20 +1841,25 @@ function StepEditor({
           </FieldBlock>
           {cfg.subject !== "no_reply_since" && (
             <FieldBlock label="Operando">
-              <Input
-                placeholder={
-                  cfg.subject === "time_of_day"
-                    ? "HH:mm-HH:mm"
-                    : cfg.subject === "contact_field"
-                    ? "nome / e-mail / empresa"
-                    : cfg.subject === "tag_presence"
-                    ? "ID da tag"
-                    : ""
-                }
-                value={(cfg.operand as string) ?? ""}
-                onChange={(e) => set({ operand: e.target.value })}
-                className="bg-muted text-foreground"
-              />
+              {cfg.subject === "tag_presence" ? (
+                <TagSelect
+                  value={(cfg.operand as string) ?? ""}
+                  onChange={(v) => set({ operand: v })}
+                />
+              ) : (
+                <Input
+                  placeholder={
+                    cfg.subject === "time_of_day"
+                      ? "HH:mm-HH:mm"
+                      : cfg.subject === "contact_field"
+                      ? "nome / e-mail / empresa"
+                      : ""
+                  }
+                  value={(cfg.operand as string) ?? ""}
+                  onChange={(e) => set({ operand: e.target.value })}
+                  className="bg-muted text-foreground"
+                />
+              )}
             </FieldBlock>
           )}
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (

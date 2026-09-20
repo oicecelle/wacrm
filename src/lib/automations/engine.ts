@@ -606,9 +606,21 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       const startTime = combineDateAndTime(fields)
       if (!startTime) return 'could not parse a date from the message — skipped'
 
-      const durationMs = (cfg.duration_minutes ?? 60) * 60_000
-      const endTime = new Date(startTime.getTime() + durationMs)
       const serviceName = fields.raw.servico || fields.raw.procedimento || 'Consulta'
+
+      // Duration always comes from the matching service's own
+      // configured length (Serviços), never a fixed number typed into
+      // the automation — a clinic with a 90-minute procedure and a
+      // 20-minute one shouldn't need two near-identical automations
+      // just to get the right end_time.
+      const { data: matchedProcedure } = await db
+        .from('procedures')
+        .select('duration_minutes')
+        .eq('clinic_id', args.automation.account_id)
+        .ilike('name', serviceName)
+        .maybeSingle()
+      const durationMs = (matchedProcedure?.duration_minutes ?? 60) * 60_000
+      const endTime = new Date(startTime.getTime() + durationMs)
 
       const { data: newAppt, error: apptErr } = await db
         .from('appointments')
