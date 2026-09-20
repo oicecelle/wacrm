@@ -308,122 +308,8 @@ function AddTransactionModal({ onClose, onSuccess }: { onClose: () => void; onSu
   );
 }
 
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "mock-tx-1",
-    date: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Pacote 10x Criolipólise Redux",
-    category: "Estética Corporal",
-    method: "credito",
-    type: "receita",
-    value: 1200,
-    status: "paid",
-    contactName: "Juliana Costa",
-    installments: { total: 6, paid: 2 }
-  },
-  {
-    id: "mock-tx-2",
-    date: new Date(Date.now() - 24*3600*1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Preenchimento Labial Restylane 1ml",
-    category: "Injetáveis",
-    method: "pix",
-    type: "receita",
-    value: 950,
-    status: "paid",
-    contactName: "Mariana Motta"
-  },
-  {
-    id: "mock-tx-3",
-    date: new Date(Date.now() - 2*24*3600*1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Aluguel Mensal Ultraformer III",
-    category: "Equipamentos",
-    method: "pix",
-    type: "despesa",
-    value: 1500,
-    status: "paid"
-  },
-  {
-    id: "mock-tx-4",
-    date: new Date(Date.now() - 3*24*3600*1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Consulta de Avaliação Facial",
-    category: "Avaliação",
-    method: "dinheiro",
-    type: "receita",
-    value: 150,
-    status: "paid",
-    contactName: "Ana Clara Silva"
-  },
-  {
-    id: "mock-tx-5",
-    date: new Date(Date.now() - 5*24*3600*1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Compra de Toxina Botulínica (3 frascos)",
-    category: "Insumos",
-    method: "credito",
-    type: "despesa",
-    value: 2300,
-    status: "paid",
-    installments: { total: 3, paid: 1 }
-  },
-  {
-    id: "mock-tx-6",
-    date: new Date(Date.now() - 6*24*3600*1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Aplicação Botox Completo",
-    category: "Injetáveis",
-    method: "pix",
-    type: "receita",
-    value: 1100,
-    status: "paid",
-    contactName: "Cláudia Fernandes"
-  },
-  {
-    id: "mock-tx-7",
-    date: new Date(Date.now() - 8*24*3600*1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-    description: "Limpeza de Pele Profunda + Hidratação",
-    category: "Estética Facial",
-    method: "debito",
-    type: "receita",
-    value: 220,
-    status: "paid",
-    contactName: "Luana Zanoni"
-  }
-];
 
-const MOCK_PACKAGES: Package[] = [
-  {
-    id: "mock-pkg-1",
-    contactName: "Juliana Costa",
-    procedure: "Criolipólise Redux",
-    totalSessions: 10,
-    remainingSessions: 8,
-    expiresAt: new Date(Date.now() + 60*24*3600*1000).toLocaleDateString("pt-BR"),
-    status: "active"
-  },
-  {
-    id: "mock-pkg-2",
-    contactName: "Luana Zanoni",
-    procedure: "Drenagem Linfática Facial",
-    totalSessions: 5,
-    remainingSessions: 2,
-    expiresAt: new Date(Date.now() + 15*24*3600*1000).toLocaleDateString("pt-BR"),
-    status: "active",
-    warningDays: 15
-  },
-  {
-    id: "mock-pkg-3",
-    contactName: "Mariana Motta",
-    procedure: "Massagem Modeladora",
-    totalSessions: 10,
-    remainingSessions: 10,
-    expiresAt: new Date(Date.now() + 90*24*3600*1000).toLocaleDateString("pt-BR"),
-    status: "active"
-  }
-];
 
-const MOCK_PROFESSIONALS = [
-  { name: "Dra. Marcelle Gonçalves", commission: 1450.00 },
-  { name: "Dra. Monique Canuto", commission: 890.00 },
-  { name: "Dra. Ellen Barros", commission: 560.00 }
-];
 
 /* ─── Main page ───────────────────────────────────────────────── */
 export default function FinanceiroPage() {
@@ -489,11 +375,7 @@ export default function FinanceiroPage() {
         contactName: tx.patient_id ? patientsMap[tx.patient_id] : undefined,
         installments: tx.installments_total > 1 ? { total: tx.installments_total, paid: tx.installments_paid || 1 } : undefined,
       }));
-      if (formattedTx.length === 0) {
-        setTransactions(MOCK_TRANSACTIONS);
-      } else {
-        setTransactions(formattedTx);
-      }
+      setTransactions(formattedTx);
 
       // 2. Fetch packages & patient packages
       const { data: pPkgsData, error: pPkgsErr } = await supabase
@@ -551,11 +433,7 @@ export default function FinanceiroPage() {
           warningDays,
         };
       });
-      if (formattedPkgs.length === 0) {
-        setPackages(MOCK_PACKAGES);
-      } else {
-        setPackages(formattedPkgs);
-      }
+      setPackages(formattedPkgs);
 
       // 3. Fetch future expected receivables (Previsão de Recebimentos Futuros)
       const { data: apptData } = await supabase
@@ -651,11 +529,7 @@ export default function FinanceiroPage() {
         };
       });
 
-      if (formattedCommissions.length === 0) {
-        setProfessionals(MOCK_PROFESSIONALS);
-      } else {
-        setProfessionals(formattedCommissions);
-      }
+      setProfessionals(formattedCommissions);
 
     } catch (err) {
       console.error("Error loading financial stats:", err);
