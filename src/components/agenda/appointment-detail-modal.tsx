@@ -267,7 +267,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-2xl rounded-2xl border border-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
           <div>
@@ -495,7 +495,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                   ) : (
                     packages.map((pkg) => {
                       return (
-                        <div key={pkg.id} className="rounded-xl border border-border bg-white p-4 space-y-3">
+                        <div key={pkg.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <PackageProgressRing used={pkg.sessions_used} total={pkg.sessions_total} size={42} />

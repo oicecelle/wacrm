@@ -168,7 +168,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-[420px] sm:max-w-[420px] bg-white flex flex-col p-6 z-50">
+      <SheetContent className="w-[420px] sm:max-w-[420px] bg-card flex flex-col p-6 z-50">
         <SheetHeader className="pb-4 border-b border-neutral-100 text-left">
           <SheetTitle className="text-lg font-black text-foreground uppercase tracking-wider flex items-center gap-2">
             Fila / Lista de Espera
@@ -191,14 +191,14 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   value={selectedPatientId || "none"}
                   onValueChange={(val) => setSelectedPatientId(val === "none" || val === null ? "" : val)}
                 >
-                  <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                  <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                     <SelectValue placeholder="Selecione o paciente...">
                       {selectedPatientId
                         ? patients.find((p) => p.id === selectedPatientId)?.name ?? "Selecione o paciente..."
                         : "Selecione o paciente..."}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                  <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                     <SelectItem value="none" className="rounded-lg text-xs">Selecione o paciente...</SelectItem>
                     {patients.map(p => (
                       <SelectItem key={p.id} value={p.id} className="rounded-lg text-xs">
@@ -216,14 +216,14 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   value={selectedStaffId || "none"}
                   onValueChange={(val) => setSelectedStaffId(val === "none" || val === null ? "" : val)}
                 >
-                  <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                  <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                     <SelectValue placeholder="Qualquer profissional...">
                       {selectedStaffId
                         ? staff.find((s) => s.user_id === selectedStaffId)?.name ?? "Qualquer profissional..."
                         : "Qualquer profissional..."}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                  <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                     <SelectItem value="none" className="rounded-lg text-xs">Qualquer profissional...</SelectItem>
                     {staff.map(s => (
                       <SelectItem key={s.user_id} value={s.user_id} className="rounded-lg text-xs">
@@ -301,7 +301,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={item.id} className="border border-border/80 rounded-2xl p-4 bg-white shadow-xs space-y-3 relative group">
+                  <div key={item.id} className="border border-border/80 rounded-2xl p-4 bg-card shadow-xs space-y-3 relative group">
                     <div className="text-left space-y-1 pr-6">
                       <p className="text-xs font-black text-foreground">{item.patientName}</p>
                       {item.patientPhone && (

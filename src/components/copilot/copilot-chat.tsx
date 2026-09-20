@@ -128,14 +128,14 @@ export function CopilotChat() {
   return (
     <div
       id="copilot-panel"
-      className={`fixed bottom-5 right-5 z-50 flex flex-col rounded-2xl border border-border bg-white shadow-2xl transition-all duration-200 ${
+      className={`fixed bottom-5 right-5 z-50 flex flex-col rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 ${
         minimized ? "h-14 w-72" : "h-[520px] w-96"
       }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 rounded-t-2xl bg-gradient-to-r from-blue-600 to-violet-600 text-white shrink-0">
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center">
+          <div className="h-7 w-7 rounded-full bg-card/20 flex items-center justify-center">
             <SparklesIcon className="h-4 w-4" />
           </div>
           <div>
@@ -146,14 +146,14 @@ export function CopilotChat() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setMinimized(!minimized)}
-            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors"
+            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-card/20 transition-colors"
             aria-label={minimized ? "Expandir" : "Minimizar"}
           >
             {minimized ? <MaximizeIcon className="h-3.5 w-3.5" /> : <MinimizeIcon className="h-3.5 w-3.5" />}
           </button>
           <button
             onClick={() => setOpen(false)}
-            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors"
+            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-card/20 transition-colors"
             aria-label="Fechar copiloto"
           >
             <XIcon className="h-3.5 w-3.5" />

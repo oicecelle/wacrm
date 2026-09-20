@@ -297,7 +297,7 @@ export default function ScheduledNotificationsPage() {
       </div>
 
       {/* Toolbar / Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-3xl border border-neutral-100 shadow-xs">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-3xl border border-neutral-100 shadow-xs">
         {/* Status Filters */}
         <div className="flex flex-wrap gap-1.5">
           {(['pending', 'sent', 'cancelled', 'failed', 'all'] as const).map((tab) => {
@@ -373,11 +373,11 @@ export default function ScheduledNotificationsPage() {
 
       {/* Table Section */}
       {loading ? (
-        <div className="flex items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-white">
+        <div className="flex items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-card">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       ) : filteredNotifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-white p-8 text-center">
+        <div className="flex flex-col items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-card p-8 text-center">
           <CalendarClock className="h-10 w-10 text-neutral-300 mb-3" />
           <h3 className="text-sm font-bold text-foreground">Nenhum envio encontrado</h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm">
@@ -385,7 +385,7 @@ export default function ScheduledNotificationsPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto border border-neutral-100 rounded-3xl bg-white shadow-xs">
+        <div className="overflow-x-auto border border-neutral-100 rounded-3xl bg-card shadow-xs">
           <Table>
             <TableHeader>
               <TableRow className="border-neutral-100 hover:bg-transparent">
@@ -524,7 +524,7 @@ export default function ScheduledNotificationsPage() {
 
       {/* Edit Modal */}
       <Dialog open={!!editingNotif} onOpenChange={(open) => !open && setEditingNotif(null)}>
-        <DialogContent className="border-border bg-white sm:max-w-lg rounded-3xl">
+        <DialogContent className="border-border bg-card sm:max-w-lg rounded-3xl">
           <DialogHeader className="text-left">
             <DialogTitle className="text-foreground font-black tracking-tight text-lg">
               Editar Mensagem Agendada

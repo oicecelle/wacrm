@@ -137,7 +137,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       disabled={disabled}
       className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-blue-600" : "bg-neutral-300"}`}
     >
-      <span className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
+      <span className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-card shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
     </button>
   );
 }
@@ -404,7 +404,7 @@ export default function EquipePage() {
           { label: "Faturamento (mês)", value: fmt(totalRevenue) },
           { label: "Comissões a pagar", value: fmt(totalCommissions) },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-white p-4 shadow-sm">
+          <div key={s.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <p className="text-[10px] text-muted-foreground font-extrabold uppercase tracking-wide">{s.label}</p>
             <p className="mt-1 text-lg font-black text-foreground">{s.value}</p>
           </div>
@@ -432,7 +432,7 @@ export default function EquipePage() {
           return (
             <div
               key={member.id}
-              className="rounded-xl border border-border bg-white p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all relative"
+              className="rounded-xl border border-border bg-card p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all relative"
             >
               {/* Pending badge overlay */}
               {isPending && (
@@ -539,7 +539,7 @@ export default function EquipePage() {
 
       {/* Commission Table */}
       {members.filter((m) => m.role === "professional").length > 0 && (
-        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-sm">
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
           <div className="border-b border-neutral-100 bg-neutral-50 px-6 py-4">
             <h2 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Folha de Comissionamento — Mês Vigente</h2>
           </div>
@@ -577,7 +577,7 @@ export default function EquipePage() {
       {/* ═══ EDIT DRAWER ════════════════════════════════════════ */}
       {isDrawerOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex justify-end backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl border-l border-neutral-100 overflow-y-auto">
+          <div className="bg-card w-full max-w-md h-full flex flex-col shadow-2xl border-l border-neutral-100 overflow-y-auto">
             <header className="p-5 border-b border-neutral-100 flex items-center justify-between shrink-0 bg-neutral-50">
               <div>
                 <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Editar Colaborador</h3>
@@ -603,7 +603,7 @@ export default function EquipePage() {
                     <select
                       value={formRole}
                       onChange={(e) => handleRoleChange(e.target.value as Role)}
-                      className="w-full text-xs h-9 rounded-lg border border-border bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                      className="w-full text-xs h-9 rounded-lg border border-border bg-card px-2 focus:ring-1 focus:ring-blue-500"
                     >
                       {Object.entries(ROLE_CONFIG).map(([k, v]) => (
                         <option key={k} value={k}>{v.label}</option>
@@ -646,7 +646,7 @@ export default function EquipePage() {
                       <select
                         value={formCommModel}
                         onChange={(e) => setFormCommModel(e.target.value as "percentage" | "fixed" | "hybrid")}
-                        className="w-full text-xs h-8 rounded-lg border border-border bg-white px-2"
+                        className="w-full text-xs h-8 rounded-lg border border-border bg-card px-2"
                       >
                         <option value="percentage">Percentual (%) sobre faturamento</option>
                         <option value="fixed">Valor fixo (R$) por procedimento</option>

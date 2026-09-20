@@ -452,7 +452,7 @@ export default function MigrationPage() {
               key={step.num}
               className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
                 isCurrent 
-                  ? 'bg-white shadow-xs border border-border/60 font-black text-blue-600'
+                  ? 'bg-card shadow-xs border border-border/60 font-black text-blue-600'
                   : isCompleted
                   ? 'text-emerald-600 font-bold'
                   : 'text-muted-foreground font-medium'
@@ -474,7 +474,7 @@ export default function MigrationPage() {
       </div>
 
       {/* WIZARD CONTAINER */}
-      <div className="bg-white rounded-3xl border border-neutral-100 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-3xl border border-neutral-100 shadow-xs overflow-hidden">
         
         {/* STEP 1: CHOOSE TARGET TABLE */}
         {currentStep === 1 && (
@@ -673,7 +673,7 @@ export default function MigrationPage() {
                       value={mappings[field.key] || ''}
                       onChange={(e) => handleMappingChange(field.key, e.target.value)}
                       disabled={importing}
-                      className="w-full bg-white border border-border text-xs text-neutral-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-card border border-border text-xs text-neutral-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">-- Ignorar este campo --</option>
                       {headers.map(h => (

@@ -152,7 +152,7 @@ export default function PortalConfigPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-white">
+      <div className="flex items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-card">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
@@ -210,7 +210,7 @@ export default function PortalConfigPage() {
         <div className="md:col-span-2 space-y-6">
           
           {/* Identity settings */}
-          <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
+          <div className="bg-card p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b pb-2">
               <Settings className="h-4 w-4 text-blue-600" />
               Identidade do Portal
@@ -254,7 +254,7 @@ export default function PortalConfigPage() {
           </div>
 
           {/* Autonomy settings */}
-          <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
+          <div className="bg-card p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-foreground border-b pb-2">
               Permissões do Paciente (Autonomia)
             </h2>
@@ -304,7 +304,7 @@ export default function PortalConfigPage() {
 
         {/* Banners Carousel Column */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
+          <div className="bg-card p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-foreground border-b pb-2 flex items-center gap-1.5">
               <Upload className="h-4 w-4 text-blue-600" />
               Carrossel de Banners

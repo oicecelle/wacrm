@@ -216,7 +216,7 @@ export default function ModelosPage() {
                 return (
                   <div
                     key={item.type}
-                    className="group relative flex flex-col justify-between rounded-3xl border border-border bg-white p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all"
+                    className="group relative flex flex-col justify-between rounded-3xl border border-border bg-card p-6 shadow-xs hover:shadow-md hover:border-neutral-300 transition-all"
                   >
                     <div>
                       {/* Top Header Card */}

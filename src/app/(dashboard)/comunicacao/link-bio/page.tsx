@@ -310,7 +310,7 @@ export default function LinkBioPage() {
                 href={`https://leadpluz.com/${slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 Ver página
@@ -330,7 +330,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Slug + publish */}
-      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
         <div>
           <label className="mb-1 block text-xs font-bold text-neutral-600 uppercase tracking-wide">
             Endereço da sua página
@@ -375,7 +375,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Appearance */}
-      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
         <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Aparência</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -406,7 +406,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Blocks */}
-      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Conteúdo da página</h2>
           <div className="relative">
@@ -416,7 +416,7 @@ export default function LinkBioPage() {
                 e.target.value = '';
               }}
               defaultValue=""
-              className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-bold text-blue-600"
+              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-bold text-blue-600"
             >
               <option value="" disabled>
                 + Adicionar bloco
@@ -454,7 +454,7 @@ export default function LinkBioPage() {
       </div>
 
       {/* Forms manager */}
-      <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Formulários</h2>
           <button
@@ -541,7 +541,7 @@ function BlockEditor({
             <select
               value={block.action_kind || 'link'}
               onChange={(e) => onChange({ action_kind: e.target.value as 'form' | 'link' })}
-              className="rounded-lg border border-border bg-white px-2 py-2 text-xs"
+              className="rounded-lg border border-border bg-card px-2 py-2 text-xs"
             >
               <option value="link">Abre um link</option>
               <option value="form">Abre um formulário</option>
@@ -550,7 +550,7 @@ function BlockEditor({
               <select
                 value={block.form_id || ''}
                 onChange={(e) => onChange({ form_id: e.target.value })}
-                className="flex-1 rounded-lg border border-border bg-white px-2 py-2 text-xs"
+                className="flex-1 rounded-lg border border-border bg-card px-2 py-2 text-xs"
               >
                 <option value="">Selecione o formulário...</option>
                 {forms.map((f) => (
@@ -674,7 +674,7 @@ function FormEditor({
 
       <div className="space-y-2">
         {form.fields.map((field) => (
-          <div key={field.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white p-2 border border-neutral-100">
+          <div key={field.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-card p-2 border border-neutral-100">
             <Input
               placeholder="Pergunta (ex: Nome)"
               value={field.label}
@@ -684,7 +684,7 @@ function FormEditor({
             <select
               value={field.type}
               onChange={(e) => onUpdateField(field.id, { type: e.target.value as FormField['type'] })}
-              className="h-8 rounded-lg border border-border bg-white px-2 text-xs"
+              className="h-8 rounded-lg border border-border bg-card px-2 text-xs"
             >
               <option value="text">Texto curto</option>
               <option value="textarea">Texto longo</option>
@@ -718,7 +718,7 @@ function FormEditor({
           onChange={(e) => onChange({ whatsapp_message_template: e.target.value })}
           rows={3}
           placeholder="Ex: Olá! Meu nome é {{campo_nome}} e tenho interesse em {{campo_interesse}}."
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-xs font-mono resize-none"
+          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-xs font-mono resize-none"
         />
       </div>
     </div>

@@ -413,7 +413,7 @@ export function QuoteModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-2xl rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
           <div className="flex items-center gap-2">
@@ -547,7 +547,7 @@ export function QuoteModal({
                       <select
                         value={discountType}
                         onChange={(e) => setDiscountType(e.target.value as "fixed" | "percent")}
-                        className="text-xs h-8 rounded-lg border border-border bg-white px-2"
+                        className="text-xs h-8 rounded-lg border border-border bg-card px-2"
                       >
                         <option value="fixed">R$ Fixo</option>
                         <option value="percent">% Percentual</option>
@@ -601,7 +601,7 @@ export function QuoteModal({
                           <select
                             value={line.method}
                             onChange={(e) => updatePaymentLine(idx, { method: e.target.value })}
-                            className="h-8 rounded-lg border border-border bg-white px-1.5 text-xs shrink-0 w-[92px]"
+                            className="h-8 rounded-lg border border-border bg-card px-1.5 text-xs shrink-0 w-[92px]"
                           >
                             {PAYMENT_METHODS.map((m) => (
                               <option key={m} value={m}>{m}</option>
@@ -638,7 +638,7 @@ export function QuoteModal({
                       type="date"
                       value={expiresAt}
                       onChange={(e) => setExpiresAt(e.target.value)}
-                      className="w-full rounded-xl border border-border h-8 px-3 text-xs bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-full rounded-xl border border-border h-8 px-3 text-xs bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
                     />
                   </div>
 

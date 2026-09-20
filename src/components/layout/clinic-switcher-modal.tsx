@@ -203,7 +203,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl p-6 bg-white border border-neutral-100 shadow-xl text-center">
+      <DialogContent className="max-w-md rounded-2xl p-6 bg-card border border-neutral-100 shadow-xl text-center">
         <DialogHeader className="space-y-2">
           {/* Logo element placeholder matching aesthetics */}
           <div className="flex justify-center items-center gap-1.5 mb-1">
@@ -240,7 +240,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                     isSelected
                       ? "border-blue-600 bg-blue-50/40 text-blue-900"
-                      : "border-border hover:border-neutral-300 bg-white text-neutral-700"
+                      : "border-border hover:border-neutral-300 bg-card text-neutral-700"
                   }`}
                 >
                   <span className="text-xs font-bold">{clinic.name}</span>
@@ -248,7 +248,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                     className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all ${
                       isSelected
                         ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-neutral-300 bg-white"
+                        : "border-neutral-300 bg-card"
                     }`}
                   >
                     {isSelected && <CheckIcon className="h-3 w-3 stroke-[3]" />}

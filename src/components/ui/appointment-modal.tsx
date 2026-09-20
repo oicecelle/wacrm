@@ -155,12 +155,12 @@ function RoundedDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled}
-        className="w-full flex items-center justify-between rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
+        className="w-full flex items-center justify-between rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
       >
         <span>{displayValue}</span>
         <CalendarDaysIcon className="h-4 w-4 text-muted-foreground shrink-0" />
       </PopoverTrigger>
-      <PopoverContent className="rounded-2xl bg-white border border-border p-4 shadow-xl w-64 text-xs z-50">
+      <PopoverContent className="rounded-2xl bg-card border border-border p-4 shadow-xl w-64 text-xs z-50">
         <div className="flex items-center justify-between mb-3">
           <span className="font-extrabold text-foreground capitalize">
             {monthNames[currentMonth]} {currentYear}
@@ -2093,10 +2093,10 @@ Qualquer dúvida, estou à disposição! 😊`;
             value={selectedChartMetric}
             onValueChange={(val) => setSelectedChartMetric(val as any)}
           >
-            <SelectTrigger className="rounded-lg border border-border bg-white h-8 px-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-blue-500">
+            <SelectTrigger className="rounded-lg border border-border bg-card h-8 px-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-blue-500">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
-            <SelectContent className="rounded-xl bg-white border border-border">
+            <SelectContent className="rounded-xl bg-card border border-border">
               <SelectItem value="weight" className="rounded-lg text-xs">Peso (kg)</SelectItem>
               <SelectItem value="fat_percentage" className="rounded-lg text-xs">Gordura (%)</SelectItem>
               <SelectItem value="waist" className="rounded-lg text-xs">Cintura (cm)</SelectItem>
@@ -2105,7 +2105,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           </Select>
         </div>
 
-        <div className="bg-white border border-neutral-100 rounded-xl p-3 shadow-inner overflow-visible">
+        <div className="bg-card border border-neutral-100 rounded-xl p-3 shadow-inner overflow-visible">
           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible select-none">
             {/* Grid lines */}
             <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="#f3f4f6" strokeDasharray="3" />
@@ -2119,7 +2119,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             {svgPoints.map((p, idx) => (
               <g key={idx} className="group cursor-pointer">
                 <circle cx={p.x} cy={p.y} r="5" fill="#a855f7" stroke="#ffffff" strokeWidth="2" className="transition-all hover:scale-125" />
-                <text x={p.x} y={p.y - 12} textAnchor="middle" className="text-[10px] font-black fill-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-250 bg-white px-1 py-0.5 rounded shadow">
+                <text x={p.x} y={p.y - 12} textAnchor="middle" className="text-[10px] font-black fill-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-250 bg-card px-1 py-0.5 rounded shadow">
                   {p.val}
                 </text>
                 <text x={p.x} y={height - 8} textAnchor="middle" className="text-[8px] fill-neutral-400 font-semibold">
@@ -2152,7 +2152,7 @@ Qualquer dúvida, estou à disposição! 😊`;
         <button
           type="button"
           onClick={() => setIsStaffDropdownOpen(!isStaffDropdownOpen)}
-          className="w-full flex items-center justify-between rounded-xl border border-border bg-white px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9"
+          className="w-full flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9"
           disabled={saving}
         >
           {selectedStaffObj ? (
@@ -2171,7 +2171,7 @@ Qualquer dúvida, estou à disposição! 😊`;
         {isStaffDropdownOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsStaffDropdownOpen(false)} />
-            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 max-h-52 overflow-y-auto rounded-xl border border-border bg-white p-1.5 shadow-xl divide-y divide-neutral-50">
+            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 max-h-52 overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl divide-y divide-neutral-50">
               {staff.map((s) => (
                 <button
                   key={s.id}
@@ -2201,7 +2201,7 @@ Qualquer dúvida, estou à disposição! 😊`;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
-        "bg-white text-foreground transition-all duration-300 overflow-hidden flex flex-col p-0 text-xs font-medium",
+        "bg-card text-foreground transition-all duration-300 overflow-hidden flex flex-col p-0 text-xs font-medium",
         (apptType === "evento" || apptType === "bloqueio") 
           ? "sm:max-w-md p-6 rounded-2xl"
           : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"),
@@ -2275,10 +2275,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setStartTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                       {TIME_SLOTS.map((t) => (
                         <SelectItem key={t} value={t} className="rounded-lg text-xs">
                           {t}
@@ -2296,10 +2296,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setEndTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                    <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                       {TIME_SLOTS.map((t) => (
                         <SelectItem key={t} value={t} className="rounded-lg text-xs">
                           {t}
@@ -2489,7 +2489,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     }}
                     className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
                       apptType === tab.key
-                        ? "bg-white shadow-sm text-blue-700 border border-blue-100"
+                        ? "bg-card shadow-sm text-blue-700 border border-blue-100"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -2592,10 +2592,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setStartTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                           {TIME_SLOTS.map((t) => (
                             <SelectItem key={t} value={t} className="rounded-lg text-xs">
                               {t}
@@ -2613,10 +2613,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setEndTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                        <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                           {TIME_SLOTS.map((t) => (
                             <SelectItem key={t} value={t} className="rounded-lg text-xs">
                               {t}
@@ -2632,7 +2632,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     <select
                       value={recurrence}
                       onChange={(e) => setRecurrence(e.target.value as any)}
-                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-card shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="none">Não se repete</option>
                       <option value="daily">Diariamente</option>
@@ -2755,7 +2755,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-white text-foreground p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
+            <header className="bg-card text-foreground p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
                 <div className="h-12 w-12 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-base font-black shadow-md shrink-0">
@@ -2870,7 +2870,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             {/* Split panel Content body */}
             <div className="flex-1 flex overflow-hidden min-h-0 bg-neutral-50/25">
               {/* Main Tab Area (Left - 65% width) */}
-              <div className="flex-1 overflow-y-auto p-6 bg-white min-w-0">
+              <div className="flex-1 overflow-y-auto p-6 bg-card min-w-0">
                 {error && (
                   <Alert variant="destructive" className="mb-4">
                     <AlertDescription className="text-xs">{error}</AlertDescription>
@@ -2895,7 +2895,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                             </p>
                             <div className="space-y-1.5">
                               {patientPackages.filter(p => p.status === 'active').map(pkg => (
-                                <div key={pkg.id} className="flex items-center gap-3 rounded-lg bg-white/80 border border-blue-100/50 p-2.5">
+                                <div key={pkg.id} className="flex items-center gap-3 rounded-lg bg-card/80 border border-blue-100/50 p-2.5">
                                   <PackageProgressRing used={pkg.used} total={pkg.total} size={40} strokeWidth={3.5} />
                                   <div className="min-w-0 flex-1">
                                     <p className="truncate text-xs font-extrabold text-foreground">{pkg.name}</p>
@@ -2921,10 +2921,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => handleSelectProcedure(val || "")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o procedimento..." />
                               </SelectTrigger>
-                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                                 <SelectItem value="none" className="rounded-lg text-xs">Nenhum</SelectItem>
                                 {procedures.map((p) => (
                                   <SelectItem key={p.id} value={p.name} className="rounded-lg text-xs">
@@ -2949,12 +2949,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione a sala...">
                                   {roomId ? rooms.find((r) => r.id === roomId)?.name ?? "Nenhuma" : "Nenhuma"}
                                 </SelectValue>
                               </SelectTrigger>
-                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                              <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                                 <SelectItem value="none" className="rounded-lg text-xs">Nenhuma</SelectItem>
                                 {rooms.map((r) => (
                                   <SelectItem key={r.id} value={r.id} className="rounded-lg text-xs">
@@ -2992,10 +2992,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 onValueChange={(val) => handleSelectStartTime(val || "09:00")}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                                   {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((t) => (
                                     <SelectItem key={t} value={t} className="rounded-lg text-xs">
                                       {t}
@@ -3014,10 +3014,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 }}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
+                                <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
                                   {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((t) => (
                                     <SelectItem key={t} value={t} className="rounded-lg text-xs">
                                       {t}
@@ -3063,7 +3063,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRecurrence(val as any)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione">
                                   {
                                     {
@@ -3077,7 +3077,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   }
                                 </SelectValue>
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl bg-white border border-border">
+                              <SelectContent className="rounded-xl bg-card border border-border">
                                 <SelectItem value="none" className="rounded-lg text-xs">Não se repete</SelectItem>
                                 <SelectItem value="daily" className="rounded-lg text-xs">Diariamente</SelectItem>
                                 <SelectItem value="weekly" className="rounded-lg text-xs">Semanalmente</SelectItem>
@@ -3110,10 +3110,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setStatus(val || "provisional")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o status" />
                               </SelectTrigger>
-                              <SelectContent className="rounded-xl bg-white border border-border">
+                              <SelectContent className="rounded-xl bg-card border border-border">
                                 <SelectItem value="provisional" className="rounded-lg text-xs">Provisório (Pendente)</SelectItem>
                                 <SelectItem value="confirmed" className="rounded-lg text-xs">Confirmado</SelectItem>
                                 <SelectItem value="attended" className="rounded-lg text-xs">Realizado</SelectItem>
@@ -3196,7 +3196,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={appointmentTag}
                                 onChange={(e) => setAppointmentTag(e.target.value)}
                                 placeholder="Ex: Retorno, VIP, Urgente..."
-                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-card shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                               />
                               <div className="flex gap-1.5">
                                 {["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#f97316","#ec4899","#6b7280"].map(c => (
@@ -3245,7 +3245,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               }`}
                             >
                               <span
-                                className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-white shadow transition-transform ${
+                                className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-card shadow transition-transform ${
                                   sendWa ? "translate-x-4" : ""
                                 }`}
                               />
@@ -3348,7 +3348,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                               {docTemplates.map((t) => (
-                                <label key={t.id} className="flex items-center gap-2 text-xs text-neutral-700 bg-white border border-neutral-100 hover:border-blue-200 hover:bg-blue-50/10 rounded-lg p-2 cursor-pointer transition-colors shadow-xs">
+                                <label key={t.id} className="flex items-center gap-2 text-xs text-neutral-700 bg-card border border-neutral-100 hover:border-blue-200 hover:bg-blue-50/10 rounded-lg p-2 cursor-pointer transition-colors shadow-xs">
                                   <input
                                     type="checkbox"
                                     checked={selectedDocs.includes(t.id)}
@@ -3462,7 +3462,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           key={p.id}
                                           type="button"
                                           onClick={() => addQuoteProcedure(p)}
-                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 border border-neutral-100 bg-white transition-all text-left shadow-xs font-semibold"
+                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 border border-neutral-100 bg-card transition-all text-left shadow-xs font-semibold"
                                         >
                                           <span className="truncate">{p.name}</span>
                                           <span className="text-muted-foreground font-mono shrink-0 ml-2">{fmt(p.valor || p.price || 0)}</span>
@@ -3484,7 +3484,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           key={pkg.id}
                                           type="button"
                                           onClick={() => addQuotePackage(pkg)}
-                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-purple-50 hover:text-purple-700 border border-neutral-100 bg-white transition-all text-left shadow-xs font-semibold"
+                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-purple-50 hover:text-purple-700 border border-neutral-100 bg-card transition-all text-left shadow-xs font-semibold"
                                         >
                                           <span className="truncate">{pkg.name}</span>
                                           <span className="text-muted-foreground font-mono shrink-0 ml-2">{fmt(pkg.price)}</span>
@@ -3498,7 +3498,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 </div>
 
                                 {/* Right Column: Cart items & configuration */}
-                                <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-white flex flex-col justify-between">
+                                <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-card flex flex-col justify-between">
                                   <div className="space-y-3">
                                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                       <ClipboardListIcon className="h-3 w-3 text-emerald-500" /> Itens Selecionados
@@ -3550,10 +3550,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           value={quoteDiscountType}
                                           onValueChange={(val) => setQuoteDiscountType(val as any)}
                                         >
-                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-border bg-white px-2 focus:ring-1 focus:ring-blue-400">
+                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-border bg-card px-2 focus:ring-1 focus:ring-blue-400">
                                             <SelectValue placeholder="Selecione..." />
                                           </SelectTrigger>
-                                          <SelectContent className="rounded-xl bg-white border border-border">
+                                          <SelectContent className="rounded-xl bg-card border border-border">
                                             <SelectItem value="fixed" className="rounded-lg text-xs">R$ Fixo</SelectItem>
                                             <SelectItem value="percent" className="rounded-lg text-xs">% Percentual</SelectItem>
                                           </SelectContent>
@@ -3587,7 +3587,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           type="date"
                                           value={quoteExpiresAt}
                                           onChange={(e) => setQuoteExpiresAt(e.target.value)}
-                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
                                         />
                                       </div>
                                     </div>
@@ -3730,7 +3730,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   const isIncome = tx.type === "receita";
                                   const isPaid = tx.status === "paid";
                                   return (
-                                    <div key={tx.id} className="flex items-center justify-between p-3.5 bg-white text-xs gap-4">
+                                    <div key={tx.id} className="flex items-center justify-between p-3.5 bg-card text-xs gap-4">
                                       <div className="text-left min-w-0">
                                         <p className="font-extrabold text-foreground truncate">{tx.description || "Transação Sem Título"}</p>
                                         <p className="text-[9px] text-muted-foreground">
@@ -3802,7 +3802,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   const isSent = q.status === "sent";
                                   const isAccepted = q.status === "accepted" || q.status === "approved";
                                   return (
-                                    <div key={q.id} className="flex items-center justify-between p-3 bg-white text-xs gap-4">
+                                    <div key={q.id} className="flex items-center justify-between p-3 bg-card text-xs gap-4">
                                       <div className="text-left min-w-0">
                                         <p className="font-extrabold text-foreground truncate">
                                           Orçamento #{q.id.substring(0, 6).toUpperCase()}
@@ -3884,7 +3884,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               value={newEvolContent}
                               onChange={(e) => setNewEvolContent(e.target.value)}
                               rows={3}
-                              className="text-xs rounded-xl border-border bg-white focus:ring-blue-500"
+                              className="text-xs rounded-xl border-border bg-card focus:ring-blue-500"
                               required
                               disabled={evolSaving}
                             />
@@ -3912,7 +3912,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           ) : (
                             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                               {clinicalEvolutions.map((ev) => (
-                                <div key={ev.id} className="p-3.5 rounded-xl border border-neutral-100 bg-white text-xs space-y-2 shadow-xs">
+                                <div key={ev.id} className="p-3.5 rounded-xl border border-neutral-100 bg-card text-xs space-y-2 shadow-xs">
                                   <div className="flex items-center justify-between border-b border-neutral-50 pb-1.5 text-[9px] text-muted-foreground font-bold">
                                     <span className="text-neutral-700">{ev.professional_name}</span>
                                     <span>
@@ -4008,7 +4008,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                               {patientPhotos.map((photo) => (
-                                <div key={photo.id} className="relative group rounded-xl overflow-hidden border border-border bg-white aspect-square flex flex-col shadow-xs">
+                                <div key={photo.id} className="relative group rounded-xl overflow-hidden border border-border bg-card aspect-square flex flex-col shadow-xs">
                                   <img
                                     src={photo.payload?.url}
                                     alt={photo.payload?.name || "Foto"}
@@ -4051,7 +4051,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   type="date"
                                   value={evalDate}
                                   onChange={(e) => setEvalDate(e.target.value)}
-                                  className="text-xs h-9 bg-white"
+                                  className="text-xs h-9 bg-card"
                                   required
                                 />
                               </div>
@@ -4063,7 +4063,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   placeholder="Ex: 72.50"
                                   value={evalWeight}
                                   onChange={(e) => setEvalWeight(e.target.value)}
-                                  className="text-xs h-9 bg-white"
+                                  className="text-xs h-9 bg-card"
                                   required
                                 />
                               </div>
@@ -4075,7 +4075,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   placeholder="Ex: 1.70"
                                   value={evalHeight}
                                   onChange={(e) => setEvalHeight(e.target.value)}
-                                  className="text-xs h-9 bg-white"
+                                  className="text-xs h-9 bg-card"
                                   required
                                 />
                               </div>
@@ -4097,7 +4097,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 32"
                                   value={evalArmRight} onChange={(e) => setEvalArmRight(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4105,7 +4105,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 32"
                                   value={evalArmLeft} onChange={(e) => setEvalArmLeft(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4113,7 +4113,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 75"
                                   value={evalWaist} onChange={(e) => setEvalWaist(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4121,7 +4121,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 85"
                                   value={evalAbdomen} onChange={(e) => setEvalAbdomen(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4129,7 +4129,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 98"
                                   value={evalHip} onChange={(e) => setEvalHip(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4137,7 +4137,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 22.5"
                                   value={evalFatPercentage} onChange={(e) => setEvalFatPercentage(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                             </div>
@@ -4148,7 +4148,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 58"
                                   value={evalThighRight} onChange={(e) => setEvalThighRight(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4156,7 +4156,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 58"
                                   value={evalThighLeft} onChange={(e) => setEvalThighLeft(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4164,7 +4164,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 38"
                                   value={evalCalfRight} onChange={(e) => setEvalCalfRight(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -4172,7 +4172,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 38"
                                   value={evalCalfLeft} onChange={(e) => setEvalCalfLeft(e.target.value)}
-                                  className="text-[11px] h-8 bg-white"
+                                  className="text-[11px] h-8 bg-card"
                                 />
                               </div>
                             </div>
@@ -4184,7 +4184,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={evalNotes}
                                 onChange={(e) => setEvalNotes(e.target.value)}
                                 rows={2}
-                                className="text-xs bg-white border-border"
+                                className="text-xs bg-card border-border"
                               />
                             </div>
 
@@ -4249,7 +4249,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     </div>
 
                     {/* Remaining package sessions alert summary */}
-                    <div className="bg-white p-3 rounded-xl border border-border/70 space-y-1 text-left shadow-xs">
+                    <div className="bg-card p-3 rounded-xl border border-border/70 space-y-1 text-left shadow-xs">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <UserCheckIcon className="h-3.5 w-3.5 text-blue-500" /> Sessões em Aberto
                       </span>
@@ -4282,7 +4282,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         <CalendarDaysIcon className="h-3.5 w-3.5 text-blue-500" /> Último Atendimento
                       </span>
                       {smartPanelData.lastAppointmentDate ? (
-                        <div className="bg-white p-2.5 rounded-xl border border-border/50 text-[10px] shadow-xs space-y-1 font-semibold text-neutral-600">
+                        <div className="bg-card p-2.5 rounded-xl border border-border/50 text-[10px] shadow-xs space-y-1 font-semibold text-neutral-600">
                           <p><span className="text-muted-foreground">Doutor:</span> {smartPanelData.lastProfessionalName}</p>
                           <p>
                             <span className="text-muted-foreground">Data:</span> {new Date(smartPanelData.lastAppointmentDate).toLocaleDateString("pt-BR")} às {new Date(smartPanelData.lastAppointmentDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -4300,7 +4300,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             </div>
 
             {/* Footer buttons row */}
-            <footer className="border-t border-border p-4 bg-white shrink-0 flex items-center justify-between">
+            <footer className="border-t border-border p-4 bg-card shrink-0 flex items-center justify-between">
               <div>
                 {appointmentId && (
                   <Button

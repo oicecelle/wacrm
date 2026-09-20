@@ -444,7 +444,7 @@ export function DealForm({
                   <select
                     value={temperature}
                     onChange={(e) => setTemperature(e.target.value as any)}
-                    className="h-9 w-full rounded-lg border border-border bg-white px-2.5 text-xs text-foreground outline-none"
+                    className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground outline-none"
                   >
                     <option value="">Nenhuma</option>
                     <option value="hot">🔥 Hot (Quente)</option>
@@ -462,7 +462,7 @@ export function DealForm({
                     value={score}
                     onChange={(e) => setScore(e.target.value)}
                     placeholder="0-100"
-                    className="border-border bg-white text-xs h-9 text-foreground"
+                    className="border-border bg-card text-xs h-9 text-foreground"
                   />
                 </div>
               </div>
@@ -474,7 +474,7 @@ export function DealForm({
                     value={interest}
                     onChange={(e) => setInterest(e.target.value)}
                     placeholder="Ex: Toxina Botulínica"
-                    className="border-border bg-white text-xs h-9 text-foreground"
+                    className="border-border bg-card text-xs h-9 text-foreground"
                   />
                 </div>
 
@@ -483,7 +483,7 @@ export function DealForm({
                   <select
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
-                    className="h-9 w-full rounded-lg border border-border bg-white px-2.5 text-xs text-foreground outline-none"
+                    className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground outline-none"
                   >
                     <option value="">Selecione...</option>
                     {(followupSettings?.lead_sources ?? ['WhatsApp Orgânico','Instagram','Indicação','Site','Google','TikTok']).map((s: string) => (
@@ -499,14 +499,14 @@ export function DealForm({
                   value={mainObjection}
                   onChange={(e) => setMainObjection(e.target.value)}
                   placeholder="Ex: Achou o preço alto"
-                  className="border-border bg-white text-xs h-9 text-foreground"
+                  className="border-border bg-card text-xs h-9 text-foreground"
                 />
               </div>
 
               {/* Objeções múltiplas (tags) */}
               <div className="grid gap-1.5">
                 <Label className="text-xs font-bold text-neutral-600">Objeções (múltiplas)</Label>
-                <div className="flex flex-wrap gap-1 min-h-[32px] p-1.5 rounded-lg border border-border bg-white">
+                <div className="flex flex-wrap gap-1 min-h-[32px] p-1.5 rounded-lg border border-border bg-card">
                   {objections.map((obj, i) => (
                     <span key={i} className="inline-flex items-center gap-0.5 bg-red-100 text-red-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                       {obj}
@@ -535,7 +535,7 @@ export function DealForm({
                   value={nextAction}
                   onChange={(e) => setNextAction(e.target.value)}
                   placeholder="Ex: Enviar proposta de parcelamento na segunda"
-                  className="border-border bg-white text-xs h-9 text-foreground"
+                  className="border-border bg-card text-xs h-9 text-foreground"
                 />
               </div>
             </div>
@@ -552,7 +552,7 @@ export function DealForm({
                     type="datetime-local"
                     value={followupDateTime}
                     onChange={e => setFollowupDateTime(e.target.value)}
-                    className="border-border bg-white text-xs h-9 text-foreground"
+                    className="border-border bg-card text-xs h-9 text-foreground"
                   />
                 </div>
                 <div className="flex items-end">
@@ -590,7 +590,7 @@ export function DealForm({
                   value={followupMessage}
                   onChange={e => setFollowupMessage(e.target.value)}
                   placeholder="Olá! Tudo bem? Passando para saber se ainda tem interesse..."
-                  className="min-h-[70px] border-border bg-white text-xs text-foreground"
+                  className="min-h-[70px] border-border bg-card text-xs text-foreground"
                 />
               </div>
             </div>
@@ -607,7 +607,7 @@ export function DealForm({
                     type="date"
                     value={futureTaskDate}
                     onChange={e => setFutureTaskDate(e.target.value)}
-                    className="border-border bg-white text-xs h-9 text-foreground"
+                    className="border-border bg-card text-xs h-9 text-foreground"
                   />
                 </div>
               </div>
@@ -617,7 +617,7 @@ export function DealForm({
                   value={futureTaskNote}
                   onChange={e => setFutureTaskNote(e.target.value)}
                   placeholder='Ex: "Lead volta em agosto"'
-                  className="border-border bg-white text-xs h-9 text-foreground"
+                  className="border-border bg-card text-xs h-9 text-foreground"
                 />
               </div>
             </div>
@@ -634,7 +634,7 @@ export function DealForm({
                     type="datetime-local"
                     value={alertDate}
                     onChange={e => setAlertDate(e.target.value)}
-                    className="border-border bg-white text-xs h-9 text-foreground"
+                    className="border-border bg-card text-xs h-9 text-foreground"
                   />
                 </div>
               </div>
@@ -644,7 +644,7 @@ export function DealForm({
                   value={alertNote}
                   onChange={e => setAlertNote(e.target.value)}
                   placeholder="Ex: Ligar para confirmar consulta"
-                  className="border-border bg-white text-xs h-9 text-foreground"
+                  className="border-border bg-card text-xs h-9 text-foreground"
                 />
               </div>
             </div>

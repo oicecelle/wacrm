@@ -384,7 +384,7 @@ export default function AutomationsPage() {
                         <button
                           key={slug}
                           onClick={() => startFromTemplate(slug)}
-                          className="group flex flex-col items-start rounded-xl border border-border bg-white p-4 text-left transition-all hover:border-blue-300 hover:shadow-xs"
+                          className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-300 hover:shadow-xs"
                         >
                           <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors">
                             <Icon className="h-5 w-5" />
@@ -399,7 +399,7 @@ export default function AutomationsPage() {
               )}
 
               {automations.length === 0 ? (
-                <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white shadow-xs">
+                <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card shadow-xs">
                   <Zap className="h-8 w-8 text-neutral-300 mb-2 animate-pulse" />
                   <p className="text-xs font-bold text-foreground">Nenhuma regra de automação criada</p>
                   <p className="text-[10px] text-muted-foreground mt-1 font-semibold">
@@ -432,7 +432,7 @@ export default function AutomationsPage() {
               <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
             </div>
           ) : flows.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white shadow-xs">
+            <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card shadow-xs">
               <Workflow className="h-8 w-8 text-neutral-300 mb-2 animate-pulse" />
               <p className="text-xs font-bold text-foreground">Nenhum fluxo interativo criado</p>
               <p className="text-[10px] text-muted-foreground mt-1 font-semibold">
@@ -442,7 +442,7 @@ export default function AutomationsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setCreateFlowOpen(true)}
-                className="mt-3 text-xs font-bold border-border text-neutral-700 bg-white hover:bg-neutral-50 h-8 rounded-lg"
+                className="mt-3 text-xs font-bold border-border text-neutral-700 bg-card hover:bg-neutral-50 h-8 rounded-lg"
               >
                 Começar Fluxo
               </Button>
@@ -464,7 +464,7 @@ export default function AutomationsPage() {
 
       {/* Delete Rule Confirmation Dialog */}
       <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
-        <DialogContent className="bg-white border border-border shadow-xl rounded-2xl max-w-sm">
+        <DialogContent className="bg-card border border-border shadow-xl rounded-2xl max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold text-foreground">Excluir Automação</DialogTitle>
             <DialogDescription className="text-xs font-semibold text-muted-foreground leading-relaxed mt-1">
@@ -495,7 +495,7 @@ export default function AutomationsPage() {
 
       {/* Create Flow Dialog */}
       <Dialog open={createFlowOpen} onOpenChange={setCreateFlowOpen}>
-        <DialogContent className="sm:max-w-3xl bg-white border border-border shadow-2xl rounded-2xl p-6 text-left space-y-4">
+        <DialogContent className="sm:max-w-3xl bg-card border border-border shadow-2xl rounded-2xl p-6 text-left space-y-4">
           <DialogHeader>
             <DialogTitle className="text-sm font-bold text-foreground">Criar Novo Fluxo de Conversa</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground font-semibold leading-relaxed mt-1">
@@ -517,7 +517,7 @@ export default function AutomationsPage() {
                       type="button"
                       onClick={() => handleUseFlowTemplate(t.slug)}
                       disabled={creatingFlow}
-                      className="flex flex-col gap-2 rounded-xl border border-border bg-white p-4 text-left transition-all hover:border-blue-400 hover:shadow-xs disabled:opacity-50"
+                      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-400 hover:shadow-xs disabled:opacity-50"
                     >
                       <Icon className="h-5 w-5 text-blue-600" />
                       <span className="text-xs font-bold text-foreground leading-tight">
@@ -593,7 +593,7 @@ function AutomationCard({
   else if (automation.trigger_type === "new_contact_created") localizedTriggerLabel = "Novo Contato";
 
   return (
-    <li className="rounded-xl border border-border bg-white transition-all hover:border-blue-200 shadow-xs">
+    <li className="rounded-xl border border-border bg-card transition-all hover:border-blue-200 shadow-xs">
       <div className="flex items-center gap-4 p-4">
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
           <Zap className="h-5 w-5" />
@@ -637,7 +637,7 @@ function AutomationCard({
             <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-neutral-50 hover:text-neutral-600">
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-40 bg-white border border-border shadow-lg text-xs">
+            <DropdownMenuContent align="end" className="min-w-40 bg-card border border-border shadow-lg text-xs">
               <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
                 <Pencil className="h-3.5 w-3.5" />
                 Editar
@@ -678,7 +678,7 @@ function FlowCard({
   else if (flow.trigger_type === "manual") triggerLabel = "Manual";
 
   return (
-    <div className="rounded-xl border border-border bg-white p-4 hover:border-blue-200 transition-all shadow-xs flex flex-col justify-between">
+    <div className="rounded-xl border border-border bg-card p-4 hover:border-blue-200 transition-all shadow-xs flex flex-col justify-between">
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -714,7 +714,7 @@ function FlowCard({
             size="sm"
             variant="outline"
             onClick={onEdit}
-            className="h-7 text-[10px] font-bold border-border text-neutral-700 bg-white hover:bg-neutral-50 px-2.5 rounded-lg"
+            className="h-7 text-[10px] font-bold border-border text-neutral-700 bg-card hover:bg-neutral-50 px-2.5 rounded-lg"
           >
             Editar
           </Button>

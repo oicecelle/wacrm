@@ -103,7 +103,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-white shadow transition-transform ${
+        className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-card shadow transition-transform ${
           checked ? "translate-x-4" : ""
         }`}
       />
@@ -467,7 +467,7 @@ export default function ServicosPage() {
 
       {/* ── PROCEDURES TAB ── */}
       {activeTab === "procedures" && (
-        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-xs">
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-neutral-50">
@@ -546,7 +546,7 @@ export default function ServicosPage() {
 
       {/* ── ROOMS TAB ── */}
       {activeTab === "rooms" && (
-        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-xs">
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-neutral-50">
@@ -593,7 +593,7 @@ export default function ServicosPage() {
       {activeTab === "packages" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
-            <div key={pkg.id} className="rounded-xl border border-border bg-white p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all">
+            <div key={pkg.id} className="rounded-xl border border-border bg-card p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -656,7 +656,7 @@ export default function ServicosPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSaveProcedure}
-            className="bg-white w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
+            className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
               <h2 className="text-sm font-black text-foreground uppercase tracking-wide">
@@ -682,7 +682,7 @@ export default function ServicosPage() {
                 <select
                   value={procCategory}
                   onChange={e => setProcCategory(e.target.value)}
-                  className="w-full text-sm h-9 rounded-lg border border-border bg-white px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full text-sm h-9 rounded-lg border border-border bg-card px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   disabled={saving}
                 >
                   <option value="">Selecione uma categoria...</option>
@@ -699,7 +699,7 @@ export default function ServicosPage() {
                   onChange={e => setProcDescription(e.target.value)}
                   rows={2}
                   disabled={saving}
-                  className="w-full text-sm rounded-md border border-border bg-white px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full text-sm rounded-md border border-border bg-card px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
                 />
               </div>
 
@@ -778,7 +778,7 @@ export default function ServicosPage() {
                                 [member.id]: { ...comm, type: e.target.value as "percentage" | "fixed" }
                               });
                             }}
-                            className="h-8 text-xs rounded border border-border bg-white px-1.5 focus:outline-none"
+                            className="h-8 text-xs rounded border border-border bg-card px-1.5 focus:outline-none"
                           >
                             <option value="percentage">% Percentual</option>
                             <option value="fixed">R$ Fixo</option>
@@ -793,7 +793,7 @@ export default function ServicosPage() {
                                 [member.id]: { ...comm, value: e.target.value }
                               });
                             }}
-                            className="h-8 w-16 text-center text-xs rounded border border-border bg-white focus:outline-none"
+                            className="h-8 w-16 text-center text-xs rounded border border-border bg-card focus:outline-none"
                           />
                         </div>
                       </div>
@@ -820,7 +820,7 @@ export default function ServicosPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSaveRoom}
-            className="bg-white w-full max-w-md rounded-2xl border border-border p-6 space-y-4 shadow-2xl text-left"
+            className="bg-card w-full max-w-md rounded-2xl border border-border p-6 space-y-4 shadow-2xl text-left"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-black text-foreground uppercase tracking-wide">
@@ -853,7 +853,7 @@ export default function ServicosPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSavePackage}
-            className="bg-white w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
+            className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
               <h2 className="text-sm font-black text-foreground uppercase tracking-wide">
@@ -878,7 +878,7 @@ export default function ServicosPage() {
                   onChange={e => setPkgDescription(e.target.value)}
                   rows={2}
                   disabled={saving}
-                  className="w-full text-sm rounded-md border border-border bg-white px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full text-sm rounded-md border border-border bg-card px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
                 />
               </div>
 
@@ -921,7 +921,7 @@ export default function ServicosPage() {
                           updated[idx].procedure_name = e.target.value;
                           setPkgItems(updated);
                         }}
-                        className="flex-1 text-xs h-8 rounded-md border border-border bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 text-xs h-8 rounded-md border border-border bg-card px-2 focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">Selecione um procedimento...</option>
                         {procedures.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
