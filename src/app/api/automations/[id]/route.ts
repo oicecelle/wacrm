@@ -16,7 +16,15 @@ async function requireUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  return user
+  if (!user) return null
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('account_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const accountId = profile?.account_id as string | undefined
+  if (!accountId) return null
+  return { user, accountId }
 }
 
 export async function GET(
@@ -24,15 +32,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const user = await requireUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireUser()
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = supabaseAdmin()
   const { data: automation, error } = await admin
     .from('automations')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    // Scoped by account so any teammate can open an automation a
+    // colleague built — not just whoever happened to create it.
+    .eq('account_id', auth.accountId)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -47,8 +57,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const user = await requireUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireUser()
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -59,10 +69,10 @@ export async function PATCH(
   // to compute the post-patch "effective" state for validation.
   const { data: existing } = await admin
     .from('automations')
-    .select('id, user_id, is_active, trigger_type, trigger_config')
+    .select('id, account_id, is_active, trigger_type, trigger_config')
     .eq('id', id)
     .maybeSingle()
-  if (!existing || existing.user_id !== user.id) {
+  if (!existing || existing.account_id !== auth.accountId) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
@@ -125,14 +135,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const user = await requireUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireUser()
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { error } = await supabaseAdmin()
     .from('automations')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('account_id', auth.accountId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

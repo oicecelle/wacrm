@@ -13,12 +13,23 @@ export async function POST(
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('account_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const accountId = profile?.account_id as string | undefined
+  if (!accountId) return NextResponse.json({ error: 'Sua conta não foi encontrada.' }, { status: 403 })
+
   const admin = supabaseAdmin()
   const { data: original, error: origErr } = await admin
     .from('automations')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    // Scoped by account, not by whichever teammate originally created
+    // it — otherwise a colleague on the same clinic couldn't duplicate
+    // an automation someone else on their own team built.
+    .eq('account_id', accountId)
     .maybeSingle()
   if (origErr) return NextResponse.json({ error: origErr.message }, { status: 500 })
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -30,7 +41,7 @@ export async function POST(
       // NULL post-017, so the INSERT fails the constraint without it.
       account_id: original.account_id,
       user_id: user.id,
-      name: `${original.name} (Copy)`,
+      name: `${original.name} (Cópia)`,
       description: original.description,
       trigger_type: original.trigger_type,
       trigger_config: original.trigger_config,
