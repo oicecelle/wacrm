@@ -4,7 +4,7 @@ import {
   interpolateNamedTemplateBody,
   namedParamsToPositional,
 } from '@/lib/whatsapp/sender-dispatcher'
-import { sendUazapiTextMessage } from '@/lib/whatsapp/uazapi-api'
+import { sendUazapiTextMessage, sendUazapiMediaMessage } from '@/lib/whatsapp/uazapi-api'
 
 /**
  * Sends one broadcast_recipients row right now and writes its result
@@ -47,23 +47,63 @@ export async function sendOneBroadcastRecipient(
   // positional {{1}}/{{2}} contract to satisfy — send the body with
   // named placeholders filled in directly, skipping
   // dispatchSendMessage's Meta-shaped template path entirely.
-  const result =
-    config.provider_type === 'uazapi'
-      ? await sendUazapiTextMessage(
-          config.uazapi_base_url || 'https://customix.uazapi.com',
-          config.uazapi_token,
-          phone,
-          interpolateNamedTemplateBody(templateRow?.body_text ?? '', namedParams),
-        )
-      : await dispatchSendMessage({
-          config,
-          to: phone,
-          messageType: 'template',
-          template_name: broadcast.template_name,
-          template_language: broadcast.template_language,
-          template_params: namedParamsToPositional(namedParams),
-          templateRow,
-        })
+  //
+  // Multi-part templates (text/image/video/document/audio, each its
+  // own message) send each part in its saved order — only the
+  // built-in delay between broadcast recipients applies between
+  // recipients, not between a single recipient's own parts, since
+  // WhatsApp doesn't need pacing for a handful of messages to the
+  // same number.
+  const parts = Array.isArray(templateRow?.parts) ? templateRow.parts : []
+
+  let result: { success: boolean; error?: string; messageId?: string }
+  if (config.provider_type === 'uazapi' && parts.length > 0) {
+    result = { success: true }
+    for (const part of parts) {
+      const partResult =
+        part.type === 'text'
+          ? await sendUazapiTextMessage(
+              config.uazapi_base_url || 'https://customix.uazapi.com',
+              config.uazapi_token,
+              phone,
+              interpolateNamedTemplateBody(part.text ?? '', namedParams),
+            )
+          : part.media_url
+            ? await sendUazapiMediaMessage(
+                config.uazapi_base_url || 'https://customix.uazapi.com',
+                config.uazapi_token,
+                phone,
+                part.media_url,
+                part.type,
+                undefined,
+                part.filename,
+              )
+            : { success: true } // empty media part — nothing to send, don't fail the whole sequence over it
+      if (!partResult.success) {
+        result = partResult
+        break
+      }
+      result.messageId = partResult.messageId
+    }
+  } else {
+    result =
+      config.provider_type === 'uazapi'
+        ? await sendUazapiTextMessage(
+            config.uazapi_base_url || 'https://customix.uazapi.com',
+            config.uazapi_token,
+            phone,
+            interpolateNamedTemplateBody(templateRow?.body_text ?? '', namedParams),
+          )
+        : await dispatchSendMessage({
+            config,
+            to: phone,
+            messageType: 'template',
+            template_name: broadcast.template_name,
+            template_language: broadcast.template_language,
+            template_params: namedParamsToPositional(namedParams),
+            templateRow,
+          })
+  }
 
   if (result.success) {
     await admin

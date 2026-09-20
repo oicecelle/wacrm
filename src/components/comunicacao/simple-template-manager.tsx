@@ -40,6 +40,28 @@ function extractNamedVariables(bodyText: string): string[] {
   return Array.from(names);
 }
 
+type PartType = 'text' | 'image' | 'video' | 'document' | 'audio';
+
+interface TemplatePart {
+  id: string;
+  type: PartType;
+  text?: string;
+  media_url?: string;
+  filename?: string;
+}
+
+const PART_LABELS: Record<PartType, string> = {
+  text: 'Texto',
+  image: 'Imagem',
+  video: 'Vídeo',
+  document: 'Documento',
+  audio: 'Áudio',
+};
+
+function newPartId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 export function SimpleTemplateManager() {
   const { profile } = useAuth();
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -48,7 +70,8 @@ export function SimpleTemplateManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [body, setBody] = useState('');
+  const [parts, setParts] = useState<TemplatePart[]>([{ id: newPartId(), type: 'text', text: '' }]);
+  const [uploadingPartId, setUploadingPartId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -80,24 +103,87 @@ export function SimpleTemplateManager() {
   function openCreate() {
     setEditingId(null);
     setName('');
-    setBody('');
+    setParts([{ id: newPartId(), type: 'text', text: '' }]);
     setDialogOpen(true);
   }
 
   function openEdit(t: MessageTemplate) {
     setEditingId(t.id);
     setName(t.name);
-    setBody(t.body_text);
+    const existingParts = t.parts as TemplatePart[] | undefined;
+    setParts(
+      existingParts && existingParts.length > 0
+        ? existingParts
+        : [{ id: newPartId(), type: 'text', text: t.body_text || '' }],
+    );
     setDialogOpen(true);
   }
 
   function insertVariable(key: string) {
-    setBody((prev) => `${prev}{{${key}}}`);
+    // Always lands in the first text part — the main message is the
+    // usual place for {{nome}}/{{data}}/etc, and picking "the
+    // currently focused part" would need tracking focus across a
+    // dynamic list for very little practical gain.
+    setParts((prev) => {
+      const idx = prev.findIndex((p) => p.type === 'text');
+      if (idx === -1) return prev;
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], text: `${copy[idx].text ?? ''}{{${key}}}` };
+      return copy;
+    });
+  }
+
+  function addPart(type: PartType) {
+    setParts((prev) => [
+      ...prev,
+      type === 'text' ? { id: newPartId(), type, text: '' } : { id: newPartId(), type, media_url: '', filename: '' },
+    ]);
+  }
+
+  function updatePart(id: string, patch: Partial<TemplatePart>) {
+    setParts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }
+
+  function removePart(id: string) {
+    setParts((prev) => (prev.length > 1 ? prev.filter((p) => p.id !== id) : prev));
+  }
+
+  function movePart(id: string, dir: -1 | 1) {
+    setParts((prev) => {
+      const idx = prev.findIndex((p) => p.id === id);
+      const newIdx = idx + dir;
+      if (idx < 0 || newIdx < 0 || newIdx >= prev.length) return prev;
+      const copy = [...prev];
+      [copy[idx], copy[newIdx]] = [copy[newIdx], copy[idx]];
+      return copy;
+    });
+  }
+
+  async function handlePartFileUpload(id: string, file: File) {
+    setUploadingPartId(id);
+    try {
+      const { uploadAccountMedia } = await import('@/lib/storage/upload-media');
+      const part = parts.find((p) => p.id === id);
+      const bucket = 'chat-media';
+      const { publicUrl } = await uploadAccountMedia(bucket, file);
+      updatePart(id, { media_url: publicUrl, filename: file.name });
+      if (part?.type === 'audio' && !file.name.toLowerCase().endsWith('.ogg')) {
+        toast.warning(
+          'Esse áudio não está em .ogg — vai ser enviado como arquivo comum, não como nota de voz gravada.',
+        );
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao enviar arquivo.');
+    } finally {
+      setUploadingPartId(null);
+    }
   }
 
   async function handleSave() {
-    if (!name.trim() || !body.trim()) {
-      toast.error('Preencha o nome e o corpo da mensagem.');
+    const firstText = parts.find((p) => p.type === 'text')?.text?.trim() ?? '';
+    const hasContent = parts.some((p) => (p.type === 'text' ? p.text?.trim() : p.media_url));
+    if (!name.trim() || !hasContent) {
+      toast.error('Preencha o nome e pelo menos uma parte com conteúdo.');
       return;
     }
     if (!profile?.account_id) {
@@ -108,12 +194,12 @@ export function SimpleTemplateManager() {
     setSaving(true);
     try {
       const supabase = createClient();
-      const variables = extractNamedVariables(body);
+      const variables = extractNamedVariables(parts.map((p) => p.text ?? '').join(' '));
 
       if (editingId) {
         const { error } = await supabase
           .from('message_templates')
-          .update({ name: name.trim(), body_text: body.trim(), variables })
+          .update({ name: name.trim(), body_text: firstText, parts, variables })
           .eq('id', editingId)
           .eq('account_id', profile.account_id);
         if (error) throw error;
@@ -130,7 +216,8 @@ export function SimpleTemplateManager() {
           name: name.trim(),
           category: 'Marketing',
           language: 'pt_BR',
-          body_text: body.trim(),
+          body_text: firstText,
+          parts,
           variables,
           // No Meta review pipeline on this path — usable immediately.
           status: 'APPROVED',
@@ -284,15 +371,124 @@ export function SimpleTemplateManager() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="tpl-body">Corpo da mensagem</Label>
-              <Textarea
-                id="tpl-body"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={6}
-                placeholder="Olá {{nome}}, seu horário em {{data}} às {{horario}} está confirmado."
-              />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Conteúdo do modelo</Label>
+                <div className="relative">
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) addPart(e.target.value as PartType);
+                      e.target.value = '';
+                    }}
+                    defaultValue=""
+                    className="rounded-lg border border-border bg-card px-2 py-1 text-xs font-bold text-primary"
+                  >
+                    <option value="" disabled>
+                      + Adicionar parte
+                    </option>
+                    <option value="text">Texto</option>
+                    <option value="image">Imagem</option>
+                    <option value="video">Vídeo</option>
+                    <option value="document">Documento</option>
+                    <option value="audio">Áudio</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cada parte vira uma mensagem separada, enviada em sequência.
+              </p>
+
+              {parts.map((part, idx) => (
+                <div key={part.id} className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                      {idx + 1}. {PART_LABELS[part.type]}
+                    </span>
+                    <div className="ml-auto flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => movePart(part.id, -1)}
+                        disabled={idx === 0}
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePart(part.id, 1)}
+                        disabled={idx === parts.length - 1}
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+                      {parts.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removePart(part.id)}
+                          className="text-rose-400 hover:text-rose-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {part.type === 'text' ? (
+                    <Textarea
+                      value={part.text ?? ''}
+                      onChange={(e) => updatePart(part.id, { text: e.target.value })}
+                      rows={4}
+                      placeholder="Olá {{nome}}, seu horário em {{data}} às {{horario}} está confirmado."
+                    />
+                  ) : (
+                    <div className="space-y-1.5">
+                      {part.media_url ? (
+                        <div className="flex items-center justify-between rounded-lg bg-background px-2.5 py-2 text-xs">
+                          <span className="truncate font-medium">{part.filename || part.media_url}</span>
+                          <button
+                            type="button"
+                            onClick={() => updatePart(part.id, { media_url: '', filename: '' })}
+                            className="shrink-0 text-rose-400 hover:text-rose-600 ml-2"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-3 text-xs font-bold text-primary hover:bg-card">
+                          {uploadingPartId === part.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5" />
+                          )}
+                          Enviar {PART_LABELS[part.type].toLowerCase()}
+                          <input
+                            type="file"
+                            accept={
+                              part.type === 'image' ? 'image/*'
+                              : part.type === 'video' ? 'video/*'
+                              : part.type === 'audio' ? 'audio/*'
+                              : undefined
+                            }
+                            className="hidden"
+                            disabled={uploadingPartId === part.id}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePartFileUpload(part.id, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      )}
+                      {part.type === 'audio' && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Só soa como &quot;gravado na hora&quot; (nota de voz) se o arquivo já estiver em
+                          formato .ogg. Outros formatos chegam como arquivo de áudio comum.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 

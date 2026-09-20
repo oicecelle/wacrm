@@ -270,6 +270,12 @@ export interface MessageTemplate {
   header_handle?: string;
   header_media_url?: string;
   body_text: string;
+  /** Ordered sequence of separate messages sent for this template —
+   *  text, image, video, document, or audio — each dispatched as its
+   *  own WhatsApp message in order. body_text mirrors the first text
+   *  part for backward compatibility with anything still reading it
+   *  directly. */
+  parts?: { id: string; type: 'text' | 'image' | 'video' | 'document' | 'audio'; text?: string; media_url?: string; filename?: string }[];
   footer_text?: string;
   buttons?: TemplateButton[];
   sample_values?: TemplateSampleValues;
