@@ -18,15 +18,13 @@
 
 import {
   Flag,
-  GitFork,
+  GitBranch,
   Inbox,
-  ListChecks,
-  ListPlus,
-  MessageCircle,
-  Paperclip,
+  ImagePlus,
+  MessageSquare,
   PlayCircle,
   Tag,
-  UserPlus,
+  UserCheck,
   Workflow,
   RefreshCw,
 } from "lucide-react";
@@ -71,54 +69,76 @@ export const NODE_META: Record<
   NodeType,
   { label: string; icon: typeof Workflow; color: string }
 > = {
-  start: { label: "Start", icon: PlayCircle, color: "text-emerald-400" },
+  start: { label: "Início", icon: PlayCircle, color: "text-emerald-400" },
   send_message: {
-    label: "Send message",
-    icon: MessageCircle,
+    label: "Enviar mensagem",
+    icon: MessageSquare,
     color: "text-sky-400",
   },
+  // send_buttons / send_list are deliberately absent from the
+  // add-node list (see NODE_TYPES_ADDABLE below) — Uazapi has no real
+  // interactive button/list tap, so these were always a text
+  // approximation. Kept here (and in the engine) only so flows built
+  // before this change keep rendering and running correctly.
   send_buttons: {
-    label: "Send buttons",
-    icon: ListChecks,
+    label: "Enviar botões (descontinuado)",
+    icon: MessageSquare,
     color: "text-primary",
   },
   send_list: {
-    label: "Send list",
-    icon: ListPlus,
+    label: "Enviar lista (descontinuado)",
+    icon: MessageSquare,
     color: "text-indigo-400",
   },
   send_media: {
-    label: "Send media",
-    icon: Paperclip,
+    label: "Enviar foto / anexo",
+    icon: ImagePlus,
     color: "text-cyan-400",
   },
   collect_input: {
-    label: "Collect input",
+    label: "Coletar resposta",
     icon: Inbox,
     color: "text-teal-400",
   },
   condition: {
-    label: "If / else",
-    icon: GitFork,
-    color: "text-fuchsia-400",
+    label: "Condição (Se / Senão)",
+    icon: GitBranch,
+    color: "text-amber-500",
   },
   set_tag: {
-    label: "Tag contact",
+    label: "Adicionar tag",
     icon: Tag,
     color: "text-pink-400",
   },
   set_crm_status: {
-    label: "Alterar Status CRM",
+    label: "Alterar status no CRM",
     icon: RefreshCw,
     color: "text-amber-500",
   },
   handoff: {
-    label: "Handoff to agent",
-    icon: UserPlus,
+    label: "Transferir para atendente",
+    icon: UserCheck,
     color: "text-amber-400",
   },
-  end: { label: "End", icon: Flag, color: "text-muted-foreground" },
+  end: { label: "Fim", icon: Flag, color: "text-muted-foreground" },
 };
+
+/**
+ * Node types offered in the "add node" picker — a subset of NodeType.
+ * send_buttons/send_list are excluded here (but stay in NodeType/
+ * NODE_META) so existing flows keep working, new ones just can't add
+ * more of them.
+ */
+export const NODE_TYPES_ADDABLE: NodeType[] = [
+  "send_message",
+  "send_media",
+  "collect_input",
+  "condition",
+  "set_tag",
+  "set_crm_status",
+  "handoff",
+  "end",
+];
 
 // ============================================================
 // Pure editing helpers — used by forms in both views.

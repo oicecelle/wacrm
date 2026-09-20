@@ -76,6 +76,7 @@ import {
 import { autoLayout, shouldAutoLayout } from "@/lib/flows/layout";
 import {
   NODE_META,
+  NODE_TYPES_ADDABLE,
   summarizeNode,
   type BuilderNode,
   type NodeType,
@@ -618,20 +619,6 @@ function NodeEditSheet({
 // center of the visible viewport rather than appending to a list.
 // ============================================================
 
-const ADD_NODE_TYPES: NodeType[] = [
-  "start",
-  "send_buttons",
-  "send_list",
-  "send_message",
-  "send_media",
-  "collect_input",
-  "condition",
-  "set_tag",
-  "set_crm_status",
-  "handoff",
-  "end",
-];
-
 function CanvasAddNodeButton() {
   const reactFlow = useReactFlow();
   const { addNode, updateNodePosition } = useFlowEditor();
@@ -663,10 +650,10 @@ function CanvasAddNodeButton() {
         aria-label="Adicionar nó"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add node
+        Adicionar nó
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="border-border bg-popover">
-        {ADD_NODE_TYPES.map((t) => {
+        {NODE_TYPES_ADDABLE.map((t) => {
           const meta = NODE_META[t];
           const Icon = meta.icon;
           return (

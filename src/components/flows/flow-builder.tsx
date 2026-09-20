@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { type ValidationIssue } from "@/lib/flows/validate";
 import {
   NODE_META,
+  NODE_TYPES_ADDABLE,
   slugify,
   summarizeNode,
   type BuilderNode,
@@ -558,19 +559,6 @@ function NodeConfigWithAdvanced({
 // ============================================================
 
 function AddNodeButton({ onAdd }: { onAdd: (type: NodeType) => void }) {
-  const types: NodeType[] = [
-    "start",
-    "send_buttons",
-    "send_list",
-    "send_message",
-    "send_media",
-    "collect_input",
-    "condition",
-    "set_tag",
-    "set_crm_status",
-    "handoff",
-    "end",
-  ];
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -578,10 +566,10 @@ function AddNodeButton({ onAdd }: { onAdd: (type: NodeType) => void }) {
         aria-label="Adicionar nó"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add node
+        Adicionar nó
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="border-border bg-popover">
-        {types.map((t) => {
+        {NODE_TYPES_ADDABLE.map((t) => {
           const meta = NODE_META[t];
           return (
             <DropdownMenuItem key={t} onClick={() => onAdd(t)}>
