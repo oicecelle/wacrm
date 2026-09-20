@@ -49,7 +49,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   follow_up_reminder: {
     slug: 'follow_up_reminder',
     name: 'Follow-up Sem Resposta',
-    description: 'Se o contato não responder em 24h, manda uma mensagem de retomada automaticamente.',
+    description: 'Espera 24h e só manda a mensagem de retomada se o contato ainda não tiver respondido.',
     trigger_type: 'new_message_received',
     trigger_config: {},
     steps: [
@@ -58,10 +58,16 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_config: { amount: 1, unit: 'days' },
       },
       {
+        step_type: 'condition',
+        step_config: { subject: 'no_reply_since' },
+      },
+      {
         step_type: 'send_message',
         step_config: {
           text: 'Oi! Passando aqui pra saber se ficou alguma dúvida. Estou à disposição! 😊',
         },
+        branch: 'yes',
+        parent_index: 1,
       },
     ],
   },
