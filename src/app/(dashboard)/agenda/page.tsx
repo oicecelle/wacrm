@@ -633,10 +633,10 @@ export default function AgendaPage() {
   if (!permsLoading && !hasPermission("view_agenda", "view")) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <ShieldAlertIcon className="h-10 w-10 text-neutral-400" />
+        <ShieldAlertIcon className="h-10 w-10 text-muted-foreground" />
         <div>
-          <h2 className="text-sm font-bold text-neutral-800">Sem acesso à Agenda</h2>
-          <p className="mt-1 text-xs text-neutral-500">
+          <h2 className="text-sm font-bold text-foreground">Sem acesso à Agenda</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
             Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
             de acesso.
           </p>
@@ -667,11 +667,11 @@ export default function AgendaPage() {
             <button
               type="button"
               onClick={() => setIsMiniCalendarExpanded(!isMiniCalendarExpanded)}
-              className="flex items-center gap-1.5 text-sm font-bold text-neutral-800 hover:text-blue-600 transition-colors capitalize"
+              className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-blue-600 transition-colors capitalize"
               title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
             >
               <span>{monthNames[pickerMonth]} {pickerYear}</span>
-              <span className="text-[9px] font-extrabold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
+              <span className="text-[9px] font-extrabold text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
                 {isMiniCalendarExpanded ? "Mês" : "Semana"}
               </span>
             </button>
@@ -691,7 +691,7 @@ export default function AgendaPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-neutral-400">
+          <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-muted-foreground">
             {weekdayInitials.map((initial, i) => (
               <div key={i}>{initial}</div>
             ))}
@@ -730,7 +730,7 @@ export default function AgendaPage() {
 
         {/* Selected date display */}
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-black text-neutral-500 uppercase tracking-wider">
+          <span className="text-xs font-black text-muted-foreground uppercase tracking-wider">
             Consultas de {selectedDate.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
           </span>
         </div>
@@ -738,7 +738,7 @@ export default function AgendaPage() {
         {/* Appointments List for selectedDate */}
         <div className="space-y-2.5">
           {loading ? (
-            <div className="flex items-center justify-center py-10 text-neutral-400">
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
               <Loader2Icon className="h-5 w-5 animate-spin text-blue-600 mr-2" />
               <span className="text-xs">Buscando agendamentos...</span>
             </div>
@@ -750,7 +750,7 @@ export default function AgendaPage() {
 
             if (dayAppts.length === 0) {
               return (
-                <div className="rounded-2xl border border-dashed border-border bg-white p-8 text-center text-neutral-400 shadow-xs">
+                <div className="rounded-2xl border border-dashed border-border bg-white p-8 text-center text-muted-foreground shadow-xs">
                   <p className="text-xs font-bold">Nenhum agendamento para este dia.</p>
                 </div>
               );
@@ -842,11 +842,11 @@ export default function AgendaPage() {
               <button
                 type="button"
                 onClick={() => setIsMiniCalendarExpanded(!isMiniCalendarExpanded)}
-                className="flex items-center gap-1.5 text-sm font-bold text-neutral-800 hover:text-blue-600 transition-colors capitalize"
+                className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-blue-600 transition-colors capitalize"
                 title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
               >
                 <span>{monthNames[pickerMonth]} {pickerYear}</span>
-                <span className="text-[9px] font-extrabold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
+                <span className="text-[9px] font-extrabold text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
                   {isMiniCalendarExpanded ? "Mês" : "Semana"}
                 </span>
               </button>
@@ -867,7 +867,7 @@ export default function AgendaPage() {
             </div>
 
             {/* Weekday Initials Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-neutral-400">
+            <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-muted-foreground">
               {weekdayInitials.map((initial, i) => (
                 <div key={i}>{initial}</div>
               ))}
@@ -919,7 +919,7 @@ export default function AgendaPage() {
           {/* Status Statistics Filters */}
           <div className="bg-white border border-border/70 rounded-2xl p-4 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100">
-              <span className="text-xs font-extrabold text-neutral-800 tracking-wider uppercase">Filtros por Status</span>
+              <span className="text-xs font-extrabold text-foreground tracking-wider uppercase">Filtros por Status</span>
               {filterStatus !== "Todos" && (
                 <button
                   onClick={() => setFilterStatus("Todos")}
@@ -1055,7 +1055,7 @@ export default function AgendaPage() {
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
-                <span className="text-sm font-bold text-neutral-800">
+                <span className="text-sm font-bold text-foreground">
                   {formatWeekRange(weekDates)}
                 </span>
                 <button
@@ -1083,31 +1083,31 @@ export default function AgendaPage() {
                 className="h-8 text-neutral-700 font-semibold flex items-center gap-1.5 bg-white border-border"
                 onClick={() => setWaitlistOpen(true)}
               >
-                <ClipboardList className="h-4 w-4 text-neutral-500" />
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
                 Lista de espera
               </Button>
 
               <DropdownMenu>
-                <DropdownMenuTrigger className="h-8 rounded-xl border border-border bg-white px-3 text-xs text-neutral-800 focus:outline-none font-semibold cursor-pointer shadow-xs flex items-center gap-1.5">
+                <DropdownMenuTrigger className="h-8 rounded-xl border border-border bg-white px-3 text-xs text-foreground focus:outline-none font-semibold cursor-pointer shadow-xs flex items-center gap-1.5">
                   {calendarView === "dia" ? "📅 Dia" : calendarView === "semana" ? "📆 Semana" : "🗓️ Mês"}
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-xl border border-border bg-white shadow-md p-1 min-w-[110px]">
                   <DropdownMenuItem
                     onClick={() => setCalendarView("dia")}
-                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
+                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-foreground focus:bg-neutral-50 hover:bg-neutral-100"
                   >
                     📅 Dia
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setCalendarView("semana")}
-                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
+                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-foreground focus:bg-neutral-50 hover:bg-neutral-100"
                   >
                     📆 Semana
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setCalendarView("mes")}
-                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-neutral-800 focus:bg-neutral-50 hover:bg-neutral-100"
+                    className="text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer text-foreground focus:bg-neutral-50 hover:bg-neutral-100"
                   >
                     🗓️ Mês
                   </DropdownMenuItem>
@@ -1137,9 +1137,9 @@ export default function AgendaPage() {
                         {dayNum}
                       </span>
                     ) : (
-                      <span className="text-neutral-800 text-xs font-bold">{dayNum}</span>
+                      <span className="text-foreground text-xs font-bold">{dayNum}</span>
                     )}
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-blue-600" : "text-neutral-400"}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
                       {dayName}
                     </span>
                     {hasBirthday && (
@@ -1157,7 +1157,7 @@ export default function AgendaPage() {
 
           {/* Loading state indicator */}
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] gap-2 text-neutral-400">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] gap-2 text-muted-foreground">
               <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
               <span className="text-xs">Buscando consultas agendadas...</span>
             </div>
@@ -1169,7 +1169,7 @@ export default function AgendaPage() {
                 {timeSlots.map((slot, idx) => (
                   <div
                      key={slot}
-                     className="absolute right-0 left-0 text-[9px] text-neutral-400 font-mono text-center pr-1.5 border-b border-neutral-100/30"
+                     className="absolute right-0 left-0 text-[9px] text-muted-foreground font-mono text-center pr-1.5 border-b border-neutral-100/30"
                      style={{
                        height: "50px",
                        top: `${idx * 50}px`,
@@ -1298,7 +1298,7 @@ export default function AgendaPage() {
                               {/* Line 1: Status Dot & Patient Name */}
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span style={styles.dotStyle} className="h-2 w-2 shrink-0 rounded-full shadow-2xs" />
-                                <span className="text-[11px] font-bold text-neutral-800 truncate flex-1 leading-tight">
+                                <span className="text-[11px] font-bold text-foreground truncate flex-1 leading-tight">
                                   {appt.patients?.name || "Sem Nome"}
                                 </span>
                                 {appt.status === "provisional" && (
@@ -1456,7 +1456,7 @@ export default function AgendaPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span style={getCardStatusStyles(popoverAppt.status, popoverAppt.type).dotStyle} className="h-2.5 w-2.5 rounded-full" />
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
                   Agendamento • {(() => {
                     switch (popoverAppt.status) {
                       case "confirmed": return "Confirmado";
@@ -1473,14 +1473,14 @@ export default function AgendaPage() {
                   setPopoverAppt(null);
                   setPopoverPosition(null);
                 }}
-                className="text-neutral-400 hover:text-neutral-600 text-xs font-bold"
+                className="text-muted-foreground hover:text-neutral-600 text-xs font-bold"
               >
                 ✕
               </button>
             </div>
 
             {/* Date & Time */}
-            <div className="text-xs font-bold text-neutral-800">
+            <div className="text-xs font-bold text-foreground">
               {formatPopoverDate(popoverAppt.start_time, popoverAppt.end_time)}
             </div>
 
@@ -1508,7 +1508,7 @@ export default function AgendaPage() {
                   })()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Profissional</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Profissional</p>
                   <p className="text-xs font-bold text-neutral-700 truncate">
                     {staff.find((s) => s.id === popoverAppt.professional_id)?.name || "Não atribuído"}
                   </p>
@@ -1532,7 +1532,7 @@ export default function AgendaPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Paciente</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Paciente</p>
                   <p className="text-xs font-bold text-neutral-700 truncate">
                     {popoverAppt.patients?.name || "Sem Nome"}
                   </p>
@@ -1568,13 +1568,13 @@ export default function AgendaPage() {
             {/* Procedure name & Price */}
             <div className="flex items-center justify-between text-xs">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Procedimento</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Procedimento</p>
                 <p className="font-bold text-neutral-700 truncate">
                   1x {popoverAppt.type || popoverAppt.title || "Consulta"}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Valor</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Valor</p>
                 <p className="font-extrabold text-blue-700">
                   {(() => {
                     const proc = procedures.find(p => p.name === popoverAppt.type);

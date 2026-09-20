@@ -298,8 +298,8 @@ export default function LinkBioPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Link na Bio</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Link na Bio</h1>
+          <p className="text-sm text-muted-foreground">
             Monte a página pública da sua clínica — cards, banners, depoimentos e formulários.
           </p>
         </div>
@@ -336,14 +336,14 @@ export default function LinkBioPage() {
             Endereço da sua página
           </label>
           <div className="flex items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-neutral-400">leadpluz.com/</span>
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">leadpluz.com/</span>
             <Input
               value={slug}
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
               placeholder="clinica-abc"
               className="flex-1"
             />
-            {slugCheck.checking && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-neutral-400" />}
+            {slugCheck.checking && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
             {!slugCheck.checking && slugCheck.available === true && (
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
             )}
@@ -357,7 +357,7 @@ export default function LinkBioPage() {
           {!slugCheck.checking && slugCheck.available === true && (
             <p className="mt-1 text-xs font-semibold text-emerald-600">Disponível!</p>
           )}
-          <p className="mt-1 text-[10px] text-neutral-400">
+          <p className="mt-1 text-[10px] text-muted-foreground">
             Esse mesmo endereço também é usado pro login do Portal do Paciente.
           </p>
         </div>
@@ -369,14 +369,14 @@ export default function LinkBioPage() {
             onChange={(e) => setIsPublished(e.target.checked)}
             className="h-4 w-4 rounded border-neutral-300"
           />
-          <span className="text-sm font-bold text-neutral-800">Página publicada</span>
-          <span className="text-xs text-neutral-400">(desmarcado, ninguém consegue acessar)</span>
+          <span className="text-sm font-bold text-foreground">Página publicada</span>
+          <span className="text-xs text-muted-foreground">(desmarcado, ninguém consegue acessar)</span>
         </label>
       </div>
 
       {/* Appearance */}
       <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
-        <h2 className="text-xs font-black uppercase tracking-wide text-neutral-500">Aparência</h2>
+        <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Aparência</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-bold text-neutral-600">Título</label>
@@ -408,7 +408,7 @@ export default function LinkBioPage() {
       {/* Blocks */}
       <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-black uppercase tracking-wide text-neutral-500">Conteúdo da página</h2>
+          <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Conteúdo da página</h2>
           <div className="relative">
             <select
               onChange={(e) => {
@@ -431,7 +431,7 @@ export default function LinkBioPage() {
         </div>
 
         {blocks.length === 0 && (
-          <p className="py-8 text-center text-xs font-semibold text-neutral-400">
+          <p className="py-8 text-center text-xs font-semibold text-muted-foreground">
             Nenhum bloco ainda. Adicione um card, banner ou depoimentos acima.
           </p>
         )}
@@ -456,7 +456,7 @@ export default function LinkBioPage() {
       {/* Forms manager */}
       <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-black uppercase tracking-wide text-neutral-500">Formulários</h2>
+          <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Formulários</h2>
           <button
             onClick={addForm}
             className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50"
@@ -465,13 +465,13 @@ export default function LinkBioPage() {
             Novo formulário
           </button>
         </div>
-        <p className="text-xs text-neutral-400">
+        <p className="text-xs text-muted-foreground">
           Um card do tipo &quot;Card&quot; pode abrir um desses formulários. As respostas viram uma mensagem pronta
           no WhatsApp — use <code className="rounded bg-neutral-100 px-1">{'{{id_do_campo}}'}</code> no texto da
           mensagem pra inserir cada resposta.
         </p>
         {forms.length === 0 && (
-          <p className="py-6 text-center text-xs font-semibold text-neutral-400">Nenhum formulário criado ainda.</p>
+          <p className="py-6 text-center text-xs font-semibold text-muted-foreground">Nenhum formulário criado ainda.</p>
         )}
         <div className="space-y-3">
           {forms.map((form) => (
@@ -521,10 +521,10 @@ function BlockEditor({
         <Icon className="h-4 w-4 text-blue-600" />
         <span className="text-xs font-black text-neutral-700">{meta.label}</span>
         <div className="ml-auto flex items-center gap-1">
-          <button onClick={onMoveUp} disabled={isFirst} className="text-neutral-400 hover:text-neutral-700 disabled:opacity-30">
+          <button onClick={onMoveUp} disabled={isFirst} className="text-muted-foreground hover:text-neutral-700 disabled:opacity-30">
             <ChevronUp className="h-4 w-4" />
           </button>
-          <button onClick={onMoveDown} disabled={isLast} className="text-neutral-400 hover:text-neutral-700 disabled:opacity-30">
+          <button onClick={onMoveDown} disabled={isLast} className="text-muted-foreground hover:text-neutral-700 disabled:opacity-30">
             <ChevronDown className="h-4 w-4" />
           </button>
           <button onClick={onRemove} className="text-rose-400 hover:text-rose-600">
@@ -626,7 +626,7 @@ function BlockEditor({
             value={block.testimonials_title || ''}
             onChange={(e) => onChange({ testimonials_title: e.target.value })}
           />
-          <p className="text-[10px] text-neutral-400">
+          <p className="text-[10px] text-muted-foreground">
             Mostra os depoimentos aprovados da sua clínica, rotativos automaticamente.
           </p>
         </div>
@@ -700,7 +700,7 @@ function FormEditor({
                 className="h-8 flex-1 min-w-[160px] text-xs"
               />
             )}
-            <span className="text-[9px] font-mono text-neutral-400">{'{{' + field.id + '}}'}</span>
+            <span className="text-[9px] font-mono text-muted-foreground">{'{{' + field.id + '}}'}</span>
             <button onClick={() => onRemoveField(field.id)} className="text-rose-400 hover:text-rose-600">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -712,7 +712,7 @@ function FormEditor({
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Mensagem que vai pro WhatsApp</label>
+        <label className="mb-1 block text-[10px] font-bold uppercase text-muted-foreground">Mensagem que vai pro WhatsApp</label>
         <textarea
           value={form.whatsapp_message_template}
           onChange={(e) => onChange({ whatsapp_message_template: e.target.value })}

@@ -307,7 +307,7 @@ export function FollowupQueue() {
                           <span className="shrink-0 text-[9px] bg-blue-100 text-blue-700 font-semibold px-1 rounded">Enviado</span>
                         )}
                         {followup.status === 'cancelled' && (
-                          <span className="shrink-0 text-[9px] bg-neutral-100 text-neutral-500 font-semibold px-1 rounded">Cancelado</span>
+                          <span className="shrink-0 text-[9px] bg-neutral-100 text-muted-foreground font-semibold px-1 rounded">Cancelado</span>
                         )}
                         {followup.status === 'failed' && (
                           <span className="shrink-0 text-[9px] bg-red-100 text-red-600 font-semibold px-1 rounded">Falhou</span>

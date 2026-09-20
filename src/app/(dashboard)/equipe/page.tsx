@@ -359,10 +359,10 @@ export default function EquipePage() {
   if (!permsLoading && !hasPermission("gerenciar_equipe", "view")) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <ShieldAlertIcon className="h-10 w-10 text-neutral-400" />
+        <ShieldAlertIcon className="h-10 w-10 text-muted-foreground" />
         <div>
-          <h2 className="text-sm font-bold text-neutral-800">Sem acesso à Equipe</h2>
-          <p className="mt-1 text-xs text-neutral-500">
+          <h2 className="text-sm font-bold text-foreground">Sem acesso à Equipe</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
             Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
             de acesso.
           </p>
@@ -376,8 +376,8 @@ export default function EquipePage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Equipe & Comissões</h1>
-          <p className="text-sm text-neutral-500">Convide colaboradores, configure permissões e acompanhe comissões.</p>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Equipe & Comissões</h1>
+          <p className="text-sm text-muted-foreground">Convide colaboradores, configure permissões e acompanhe comissões.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -405,8 +405,8 @@ export default function EquipePage() {
           { label: "Comissões a pagar", value: fmt(totalCommissions) },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border border-border bg-white p-4 shadow-sm">
-            <p className="text-[10px] text-neutral-400 font-extrabold uppercase tracking-wide">{s.label}</p>
-            <p className="mt-1 text-lg font-black text-neutral-800">{s.value}</p>
+            <p className="text-[10px] text-muted-foreground font-extrabold uppercase tracking-wide">{s.label}</p>
+            <p className="mt-1 text-lg font-black text-foreground">{s.value}</p>
           </div>
         ))}
       </div>
@@ -425,7 +425,7 @@ export default function EquipePage() {
       {/* Team Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {members.map((member) => {
-          const roleConf = ROLE_CONFIG[member.role] || { label: member.role, cls: "text-neutral-500 bg-neutral-100 border-border", icon: UserCogIcon };
+          const roleConf = ROLE_CONFIG[member.role] || { label: member.role, cls: "text-muted-foreground bg-neutral-100 border-border", icon: UserCogIcon };
           const RoleIcon = roleConf.icon;
           const isPending = member.invite_status === "pending";
 
@@ -457,8 +457,8 @@ export default function EquipePage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-extrabold text-neutral-800 truncate">{member.name}</p>
-                  <p className="text-xs text-neutral-400 truncate">{member.specialty || member.email}</p>
+                  <p className="text-sm font-extrabold text-foreground truncate">{member.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{member.specialty || member.email}</p>
                   {member.phone && (
                     <a 
                       href={`https://wa.me/${member.phone.replace(/\D/g, '')}`}
@@ -489,11 +489,11 @@ export default function EquipePage() {
               {!isPending && member.role === "professional" && (
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded-lg bg-neutral-50 p-2">
-                    <p className="text-[10px] text-neutral-400 font-bold uppercase">Proc./mês</p>
-                    <p className="font-black text-neutral-800 text-base mt-0.5">{member.proceduresMonth}</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase">Proc./mês</p>
+                    <p className="font-black text-foreground text-base mt-0.5">{member.proceduresMonth}</p>
                   </div>
                   <div className="rounded-lg bg-neutral-50 p-2">
-                    <p className="text-[10px] text-neutral-400 font-bold uppercase">Comissão</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase">Comissão</p>
                     <p className="font-black text-blue-700 text-sm mt-0.5">{fmt(member.commissionMonth)}</p>
                   </div>
                 </div>
@@ -501,7 +501,7 @@ export default function EquipePage() {
 
               {/* Invite resend for pending */}
               {isPending && (
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-[11px] text-muted-foreground">
                   Convite enviado para: <span className="font-bold text-neutral-600">{member.invite_email || member.email}</span>
                 </p>
               )}
@@ -529,7 +529,7 @@ export default function EquipePage() {
         })}
 
         {members.length === 0 && (
-          <div className="col-span-3 text-center py-16 text-neutral-400">
+          <div className="col-span-3 text-center py-16 text-muted-foreground">
             <MailIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm font-semibold">Nenhum colaborador cadastrado.</p>
             <p className="text-xs mt-1">Clique em &quot;Convidar por Link&quot; para adicionar membros à equipe.</p>
@@ -546,17 +546,17 @@ export default function EquipePage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100">
-                <th className="px-6 py-3 text-left text-[10px] font-black text-neutral-400 uppercase">Profissional</th>
-                <th className="px-6 py-3 text-left text-[10px] font-black text-neutral-400 uppercase">Modelo</th>
-                <th className="px-6 py-3 text-left text-[10px] font-black text-neutral-400 uppercase">Faturamento</th>
-                <th className="px-6 py-3 text-left text-[10px] font-black text-neutral-400 uppercase">Comissão</th>
+                <th className="px-6 py-3 text-left text-[10px] font-black text-muted-foreground uppercase">Profissional</th>
+                <th className="px-6 py-3 text-left text-[10px] font-black text-muted-foreground uppercase">Modelo</th>
+                <th className="px-6 py-3 text-left text-[10px] font-black text-muted-foreground uppercase">Faturamento</th>
+                <th className="px-6 py-3 text-left text-[10px] font-black text-muted-foreground uppercase">Comissão</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {members.filter((m) => m.role === "professional").map((m) => (
                 <tr key={m.id} className="hover:bg-neutral-50/50">
-                  <td className="px-6 py-3 font-bold text-neutral-800">{m.name}</td>
-                  <td className="px-6 py-3 text-xs text-neutral-500 capitalize">
+                  <td className="px-6 py-3 font-bold text-foreground">{m.name}</td>
+                  <td className="px-6 py-3 text-xs text-muted-foreground capitalize">
                     {m.commission_model === "percentage" ? `${m.commission_rate}%` : m.commission_model === "fixed" ? `R$ ${m.commission_fixed} fixo` : "Híbrido"}
                   </td>
                   <td className="px-6 py-3 font-mono text-neutral-600">{fmt(m.revenueMonth)}</td>
@@ -580,11 +580,11 @@ export default function EquipePage() {
           <div className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl border-l border-neutral-100 overflow-y-auto">
             <header className="p-5 border-b border-neutral-100 flex items-center justify-between shrink-0 bg-neutral-50">
               <div>
-                <h3 className="text-sm font-black text-neutral-900 uppercase tracking-wider">Editar Colaborador</h3>
-                <p className="text-[10px] text-neutral-500">{editingMember?.name}</p>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">Editar Colaborador</h3>
+                <p className="text-[10px] text-muted-foreground">{editingMember?.name}</p>
               </div>
               <button onClick={() => setIsDrawerOpen(false)} className="h-8 w-8 hover:bg-neutral-200 rounded-lg flex items-center justify-center">
-                <XIcon className="h-5 w-5 text-neutral-500" />
+                <XIcon className="h-5 w-5 text-muted-foreground" />
               </button>
             </header>
 
@@ -592,14 +592,14 @@ export default function EquipePage() {
               <div className="space-y-4">
                 {/* Name */}
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold text-neutral-500 uppercase">Nome Completo *</Label>
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nome Completo *</Label>
                   <Input required value={formName} onChange={(e) => setFormName(e.target.value)} />
                 </div>
 
                 {/* Role + Specialty */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Função</Label>
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">Função</Label>
                     <select
                       value={formRole}
                       onChange={(e) => handleRoleChange(e.target.value as Role)}
@@ -611,26 +611,26 @@ export default function EquipePage() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-neutral-500 uppercase">Especialidade</Label>
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">Especialidade</Label>
                     <Input placeholder="Ex: Harmonização" value={formSpecialty} onChange={(e) => setFormSpecialty(e.target.value)} className="text-xs h-9" />
                   </div>
                 </div>
 
                 {/* Email + Phone */}
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold text-neutral-500 uppercase">E-mail</Label>
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase">E-mail</Label>
                   <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className="text-xs h-9" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold text-neutral-500 uppercase">WhatsApp</Label>
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase">WhatsApp</Label>
                   <Input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="11999990000" className="text-xs h-9" />
                 </div>
 
                 {/* Active toggle */}
                 <div className="flex items-center justify-between rounded-xl bg-neutral-50 border p-3">
                   <div>
-                    <p className="text-xs font-bold text-neutral-800">Colaborador Ativo</p>
-                    <p className="text-[9px] text-neutral-500">Inativos não aparecem para agendamentos.</p>
+                    <p className="text-xs font-bold text-foreground">Colaborador Ativo</p>
+                    <p className="text-[9px] text-muted-foreground">Inativos não aparecem para agendamentos.</p>
                   </div>
                   <Toggle checked={formIsActive} onChange={() => setFormIsActive(!formIsActive)} />
                 </div>
@@ -642,7 +642,7 @@ export default function EquipePage() {
                       <PercentIcon className="h-3.5 w-3.5 text-blue-600" /> Comissão
                     </p>
                     <div className="space-y-1">
-                      <Label className="text-[9px] font-bold text-neutral-500 uppercase">Modelo</Label>
+                      <Label className="text-[9px] font-bold text-muted-foreground uppercase">Modelo</Label>
                       <select
                         value={formCommModel}
                         onChange={(e) => setFormCommModel(e.target.value as "percentage" | "fixed" | "hybrid")}
@@ -656,13 +656,13 @@ export default function EquipePage() {
                     <div className="grid grid-cols-2 gap-3">
                       {(formCommModel === "percentage" || formCommModel === "hybrid") && (
                         <div className="space-y-1">
-                          <Label className="text-[9px] font-bold text-neutral-500 uppercase">Taxa %</Label>
+                          <Label className="text-[9px] font-bold text-muted-foreground uppercase">Taxa %</Label>
                           <Input type="number" step="0.1" value={formCommRate} onChange={(e) => setFormCommRate(e.target.value)} className="h-8 text-xs" />
                         </div>
                       )}
                       {(formCommModel === "fixed" || formCommModel === "hybrid") && (
                         <div className="space-y-1">
-                          <Label className="text-[9px] font-bold text-neutral-500 uppercase">Valor R$</Label>
+                          <Label className="text-[9px] font-bold text-muted-foreground uppercase">Valor R$</Label>
                           <Input type="number" step="0.01" value={formCommFixed} onChange={(e) => setFormCommFixed(e.target.value)} className="h-8 text-xs" />
                         </div>
                       )}
@@ -673,7 +673,7 @@ export default function EquipePage() {
                 {/* Granular permissions */}
                 <div className="border border-border rounded-xl p-4 space-y-3">
                   <p className="text-[10px] font-black text-neutral-700 uppercase tracking-wide flex items-center gap-1">
-                    <ShieldIcon className="h-3.5 w-3.5 text-neutral-500" /> Permissões Granulares
+                    <ShieldIcon className="h-3.5 w-3.5 text-muted-foreground" /> Permissões Granulares
                   </p>
                   <div className="space-y-2">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (

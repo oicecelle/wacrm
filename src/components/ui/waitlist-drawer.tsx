@@ -170,10 +170,10 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-[420px] sm:max-w-[420px] bg-white flex flex-col p-6 z-50">
         <SheetHeader className="pb-4 border-b border-neutral-100 text-left">
-          <SheetTitle className="text-lg font-black text-neutral-800 uppercase tracking-wider flex items-center gap-2">
+          <SheetTitle className="text-lg font-black text-foreground uppercase tracking-wider flex items-center gap-2">
             Fila / Lista de Espera
           </SheetTitle>
-          <SheetDescription className="text-xs text-neutral-500 font-medium">
+          <SheetDescription className="text-xs text-muted-foreground font-medium">
             Gerencie pacientes aguardando desistências ou horários disponíveis.
           </SheetDescription>
         </SheetHeader>
@@ -191,7 +191,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   value={selectedPatientId || "none"}
                   onValueChange={(val) => setSelectedPatientId(val === "none" || val === null ? "" : val)}
                 >
-                  <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                  <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                     <SelectValue placeholder="Selecione o paciente...">
                       {selectedPatientId
                         ? patients.find((p) => p.id === selectedPatientId)?.name ?? "Selecione o paciente..."
@@ -216,7 +216,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   value={selectedStaffId || "none"}
                   onValueChange={(val) => setSelectedStaffId(val === "none" || val === null ? "" : val)}
                 >
-                  <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                  <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                     <SelectValue placeholder="Qualquer profissional...">
                       {selectedStaffId
                         ? staff.find((s) => s.user_id === selectedStaffId)?.name ?? "Qualquer profissional..."
@@ -277,7 +277,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
             </div>
           ) : (
             <div className="flex justify-between items-center pb-2">
-              <span className="text-xs font-bold text-neutral-500">
+              <span className="text-xs font-bold text-muted-foreground">
                 {items.length} {items.length === 1 ? "paciente aguardando" : "pacientes aguardando"}
               </span>
               <Button
@@ -297,15 +297,15 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-2 border border-dashed border-border rounded-2xl">
                   <ClockIcon className="h-8 w-8 text-neutral-300" />
-                  <p className="text-xs text-neutral-400 italic font-medium">A lista de espera está vazia.</p>
+                  <p className="text-xs text-muted-foreground italic font-medium">A lista de espera está vazia.</p>
                 </div>
               ) : (
                 items.map((item) => (
                   <div key={item.id} className="border border-border/80 rounded-2xl p-4 bg-white shadow-xs space-y-3 relative group">
                     <div className="text-left space-y-1 pr-6">
-                      <p className="text-xs font-black text-neutral-800">{item.patientName}</p>
+                      <p className="text-xs font-black text-foreground">{item.patientName}</p>
                       {item.patientPhone && (
-                        <p className="text-[10px] text-neutral-500 font-semibold">Tel: {item.patientPhone}</p>
+                        <p className="text-[10px] text-muted-foreground font-semibold">Tel: {item.patientPhone}</p>
                       )}
                       <div className="flex flex-wrap gap-1.5 pt-1.5">
                         <span className="text-[9px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100/50 font-bold">
@@ -316,7 +316,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                         </span>
                       </div>
                       {item.notes && (
-                        <p className="text-[10px] text-neutral-500 italic bg-neutral-50 rounded-lg p-2 border border-neutral-100/80 mt-2">
+                        <p className="text-[10px] text-muted-foreground italic bg-neutral-50 rounded-lg p-2 border border-neutral-100/80 mt-2">
                           "{item.notes}"
                         </p>
                       )}

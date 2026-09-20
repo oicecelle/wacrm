@@ -181,7 +181,7 @@ export function CopilotChat() {
                   className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
                     m.role === "user"
                       ? "bg-blue-600 text-white rounded-tr-sm"
-                      : "bg-neutral-100 text-neutral-800 rounded-tl-sm"
+                      : "bg-neutral-100 text-foreground rounded-tl-sm"
                   }`}
                 >
                   {m.content}
@@ -231,7 +231,7 @@ export function CopilotChat() {
                 onKeyDown={handleKeyDown}
                 placeholder="Pergunte ou peça algo..."
                 disabled={loading}
-                className="flex-1 bg-transparent text-xs outline-none placeholder:text-neutral-400 disabled:opacity-50"
+                className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:opacity-50"
               />
               <button
                 onClick={() => handleSend()}
@@ -243,7 +243,7 @@ export function CopilotChat() {
                 {loading ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SendIcon className="h-3.5 w-3.5" />}
               </button>
             </div>
-            <p className="text-center text-[9px] text-neutral-400 mt-1.5">
+            <p className="text-center text-[9px] text-muted-foreground mt-1.5">
               Powered by GPT-4o · LeadPluz AI
             </p>
           </div>

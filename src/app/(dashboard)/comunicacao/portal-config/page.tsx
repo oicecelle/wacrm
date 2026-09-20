@@ -162,8 +162,8 @@ export default function PortalConfigPage() {
     <div className="space-y-6 text-left max-w-4xl mx-auto pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-neutral-900">Configuração do Portal</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-2xl font-black tracking-tight text-foreground">Configuração do Portal</h1>
+        <p className="text-sm text-muted-foreground">
           Personalize a Área do Paciente da sua clínica com sua logo, regras de agendamento online e banners de marketing.
         </p>
       </div>
@@ -176,8 +176,8 @@ export default function PortalConfigPage() {
               <Globe className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-black text-neutral-800">Seu Portal do Paciente está Ativo</p>
-              <p className="text-[11px] text-neutral-500 mt-0.5 select-all font-mono" id="portal-url">
+              <p className="text-xs font-black text-foreground">Seu Portal do Paciente está Ativo</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 select-all font-mono" id="portal-url">
                 {portalLink}
               </p>
             </div>
@@ -189,7 +189,7 @@ export default function PortalConfigPage() {
               onClick={handleCopyLink}
               className="border-border text-xs font-bold text-neutral-700 hover:bg-neutral-50 rounded-xl flex-1 sm:flex-initial flex items-center gap-1.5 h-9"
             >
-              <Copy className="h-3.5 w-3.5 text-neutral-400" />
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
               Copiar Link
             </Button>
             <a
@@ -211,7 +211,7 @@ export default function PortalConfigPage() {
           
           {/* Identity settings */}
           <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-neutral-800 flex items-center gap-1.5 border-b pb-2">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b pb-2">
               <Settings className="h-4 w-4 text-blue-600" />
               Identidade do Portal
             </h2>
@@ -246,7 +246,7 @@ export default function PortalConfigPage() {
                   placeholder="https://exemplo.com/logo.png"
                   className="border-border bg-neutral-50 text-xs rounded-xl"
                 />
-                <p className="text-[10px] text-neutral-400">
+                <p className="text-[10px] text-muted-foreground">
                   URL de uma imagem pública do seu logo para personalizar o cabeçalho e tela de login.
                 </p>
               </div>
@@ -255,7 +255,7 @@ export default function PortalConfigPage() {
 
           {/* Autonomy settings */}
           <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-neutral-800 border-b pb-2">
+            <h2 className="text-sm font-bold text-foreground border-b pb-2">
               Permissões do Paciente (Autonomia)
             </h2>
 
@@ -263,7 +263,7 @@ export default function PortalConfigPage() {
               <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100">
                 <div>
                   <label className="text-xs font-bold text-neutral-700 block">Agendamento Online</label>
-                  <span className="text-[10px] text-neutral-400">Permite ao paciente agendar consultas livres de forma autônoma.</span>
+                  <span className="text-[10px] text-muted-foreground">Permite ao paciente agendar consultas livres de forma autônoma.</span>
                 </div>
                 <input
                   type="checkbox"
@@ -276,7 +276,7 @@ export default function PortalConfigPage() {
               <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100">
                 <div>
                   <label className="text-xs font-bold text-neutral-700 block">Cancelamento Online</label>
-                  <span className="text-[10px] text-neutral-400">Permite ao paciente cancelar agendamentos futuros diretamente no portal.</span>
+                  <span className="text-[10px] text-muted-foreground">Permite ao paciente cancelar agendamentos futuros diretamente no portal.</span>
                 </div>
                 <input
                   type="checkbox"
@@ -289,7 +289,7 @@ export default function PortalConfigPage() {
               <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100">
                 <div>
                   <label className="text-xs font-bold text-neutral-700 block">Reagendamento Online</label>
-                  <span className="text-[10px] text-neutral-400">Permite ao paciente reagendar consultas para novos horários.</span>
+                  <span className="text-[10px] text-muted-foreground">Permite ao paciente reagendar consultas para novos horários.</span>
                 </div>
                 <input
                   type="checkbox"
@@ -305,18 +305,18 @@ export default function PortalConfigPage() {
         {/* Banners Carousel Column */}
         <div className="md:col-span-1 space-y-6">
           <div className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-neutral-800 border-b pb-2 flex items-center gap-1.5">
+            <h2 className="text-sm font-bold text-foreground border-b pb-2 flex items-center gap-1.5">
               <Upload className="h-4 w-4 text-blue-600" />
               Carrossel de Banners
             </h2>
-            <p className="text-xs text-neutral-400 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Adicione banners de marketing que serão mostrados no topo do portal do paciente.
             </p>
 
             {/* List Banners */}
             <div className="space-y-3 pt-2">
               {banners.length === 0 ? (
-                <div className="p-4 border border-dashed rounded-2xl text-center text-xs text-neutral-400">
+                <div className="p-4 border border-dashed rounded-2xl text-center text-xs text-muted-foreground">
                   Nenhum banner cadastrado.
                 </div>
               ) : (
@@ -324,7 +324,7 @@ export default function PortalConfigPage() {
                   {banners.map((banner, idx) => (
                     <div key={idx} className="border p-2.5 rounded-xl bg-neutral-50 space-y-1 relative">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-neutral-500">Banner #{idx + 1}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">Banner #{idx + 1}</span>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
@@ -338,13 +338,13 @@ export default function PortalConfigPage() {
                           <button
                             type="button"
                             onClick={() => handleRemoveBanner(idx)}
-                            className="p-1 rounded text-neutral-400 hover:text-red-600"
+                            className="p-1 rounded text-muted-foreground hover:text-red-600"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
-                      <p className="text-[9px] text-neutral-400 truncate mt-0.5">Img: {banner.image_url}</p>
+                      <p className="text-[9px] text-muted-foreground truncate mt-0.5">Img: {banner.image_url}</p>
                       {banner.link && (
                         <p className="text-[9px] text-blue-500 truncate">Link: {banner.link}</p>
                       )}

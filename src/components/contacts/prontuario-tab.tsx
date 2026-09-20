@@ -197,7 +197,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
     <div className="space-y-4">
       {/* Add button */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-black uppercase tracking-wider text-neutral-500">
+        <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
           Prontuário Clínico
         </h3>
         <button
@@ -281,7 +281,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
                 />
               )}
               {fileToUpload && !previewUrl && (
-                <p className="text-[10px] text-neutral-400 font-semibold">
+                <p className="text-[10px] text-muted-foreground font-semibold">
                   📎 {fileToUpload.name}
                 </p>
               )}
@@ -367,7 +367,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
         <div className="space-y-2">
           {records.map((rec) => {
             const Icon = TYPE_ICONS[rec.type] || FileTextIcon;
-            const clr = TYPE_COLORS[rec.type] || "text-neutral-500 bg-neutral-100/5 border-neutral-700";
+            const clr = TYPE_COLORS[rec.type] || "text-muted-foreground bg-neutral-100/5 border-neutral-700";
             return (
               <div
                 key={rec.id}
@@ -406,7 +406,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
                         href={rec.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-7 w-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-white transition-colors"
                         style={{ background: "rgba(255,255,255,0.05)" }}
                       >
                         <DownloadIcon className="h-3.5 w-3.5" />
@@ -448,7 +448,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
                   </p>
                 )}
                 {rec.file_name && rec.type !== "image" && (
-                  <p className="text-[10px] text-neutral-500 font-semibold">
+                  <p className="text-[10px] text-muted-foreground font-semibold">
                     📎 {rec.file_name}
                   </p>
                 )}

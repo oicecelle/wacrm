@@ -633,7 +633,7 @@ export default function PipelinesPage() {
                 setFilterInterest("all");
                 setFilterResponsible("all");
               }}
-              className="text-xs font-bold text-neutral-500 hover:text-primary transition-colors hover:underline px-2 cursor-pointer"
+              className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors hover:underline px-2 cursor-pointer"
             >
               Limpar Filtros
             </button>

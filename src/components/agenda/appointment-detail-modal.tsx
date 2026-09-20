@@ -271,17 +271,17 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
           <div>
-            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide">Detalhes do Agendamento</p>
-            <h2 className="text-sm font-black text-neutral-900 mt-0.5">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Detalhes do Agendamento</p>
+            <h2 className="text-sm font-black text-foreground mt-0.5">
               {contact?.name || "Carregando..."}
               {appointment && (
-                <span className="ml-2 text-neutral-400 font-normal text-xs">
+                <span className="ml-2 text-muted-foreground font-normal text-xs">
                   {fmtDate(appointment.start_time)} às {fmtTime(appointment.start_time)}
                 </span>
               )}
             </h2>
           </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700">
+          <button onClick={onClose} className="text-muted-foreground hover:text-neutral-700">
             <XIcon className="h-5 w-5" />
           </button>
         </div>
@@ -297,7 +297,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors -mb-px shrink-0 ${
                   activeTab === tab.key
                     ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-neutral-500 hover:text-neutral-800"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -314,7 +314,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
               <Loader2Icon className="h-7 w-7 animate-spin text-blue-600" />
             </div>
           ) : !appointment ? (
-            <div className="flex items-center justify-center py-16 text-neutral-400">
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
               <AlertCircleIcon className="h-6 w-6 mr-2" />
               <p className="text-sm">Agendamento não encontrado.</p>
             </div>
@@ -325,7 +325,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                 <div className="p-6 space-y-5">
                   {/* Status selector */}
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-neutral-500 uppercase">Status do Atendimento</Label>
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Status do Atendimento</Label>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                         <button
@@ -335,7 +335,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                           className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
                             appointment.status === key
                               ? cfg.cls + " shadow-sm scale-105"
-                              : "bg-neutral-50 text-neutral-500 border-border hover:border-neutral-400"
+                              : "bg-neutral-50 text-muted-foreground border-border hover:border-neutral-400"
                           }`}
                         >
                           {appointment.status === key && <CheckCircle2Icon className="h-3 w-3 inline mr-1" />}
@@ -348,22 +348,22 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                   {/* Appointment details grid */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="space-y-0.5">
-                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Paciente</p>
-                      <p className="font-bold text-neutral-800">{contact?.name}</p>
-                      <p className="text-neutral-500 text-xs">{contact?.phone}</p>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase">Paciente</p>
+                      <p className="font-bold text-foreground">{contact?.name}</p>
+                      <p className="text-muted-foreground text-xs">{contact?.phone}</p>
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Procedimento</p>
-                      <p className="font-bold text-neutral-800">{appointment.type || "Não especificado"}</p>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase">Procedimento</p>
+                      <p className="font-bold text-foreground">{appointment.type || "Não especificado"}</p>
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Data & Hora</p>
-                      <p className="font-bold text-neutral-800">{fmtDate(appointment.start_time)}</p>
-                      <p className="text-neutral-500 text-xs">{fmtTime(appointment.start_time)} — {fmtTime(appointment.end_time)}</p>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase">Data & Hora</p>
+                      <p className="font-bold text-foreground">{fmtDate(appointment.start_time)}</p>
+                      <p className="text-muted-foreground text-xs">{fmtTime(appointment.start_time)} — {fmtTime(appointment.end_time)}</p>
                     </div>
                     {appointment.notes && (
                       <div className="space-y-0.5 col-span-2">
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase">Observações</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Observações</p>
                         <p className="text-neutral-600 bg-neutral-50 rounded-lg p-3 text-xs leading-relaxed">{appointment.notes}</p>
                       </div>
                     )}
@@ -375,7 +375,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
               {activeTab === "prontuario" && (
                 <div className="p-6 space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-neutral-500 uppercase">Novo Registro de Prontuário</Label>
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Novo Registro de Prontuário</Label>
                     <textarea
                       value={newProntuario}
                       onChange={e => setNewProntuario(e.target.value)}
@@ -394,11 +394,11 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
 
                   <div className="space-y-2">
                     {evolucoes.filter(e => e.note_type === "prontuario").length === 0 && (
-                      <p className="text-xs text-neutral-400 italic text-center py-6">Nenhum registro de prontuário ainda.</p>
+                      <p className="text-xs text-muted-foreground italic text-center py-6">Nenhum registro de prontuário ainda.</p>
                     )}
                     {evolucoes.filter(e => e.note_type === "prontuario").map((entry, idx) => (
                       <div key={idx} className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
-                        <p className="text-[10px] text-neutral-400 font-bold mb-1">
+                        <p className="text-[10px] text-muted-foreground font-bold mb-1">
                           {fmtDate(entry.created_at)}
                         </p>
                         <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{entry.note_text}</p>
@@ -412,7 +412,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
               {activeTab === "evolucao" && (
                 <div className="p-6 space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-neutral-500 uppercase">Nova Evolução</Label>
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Nova Evolução</Label>
                     <textarea
                       value={newEvolucao}
                       onChange={e => setNewEvolucao(e.target.value)}
@@ -431,7 +431,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
 
                   <div className="space-y-2">
                     {evolucoes.filter(e => e.note_type !== "prontuario").length === 0 && (
-                      <p className="text-xs text-neutral-400 italic text-center py-6">Nenhuma evolução registrada ainda.</p>
+                      <p className="text-xs text-muted-foreground italic text-center py-6">Nenhuma evolução registrada ainda.</p>
                     )}
                     {evolucoes.filter(e => e.note_type !== "prontuario").map((entry, idx) => (
                       <div key={idx} className="flex gap-3">
@@ -442,7 +442,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                           )}
                         </div>
                         <div className="pb-4 flex-1">
-                          <p className="text-[10px] text-neutral-400 font-bold">{fmtDate(entry.created_at)}</p>
+                          <p className="text-[10px] text-muted-foreground font-bold">{fmtDate(entry.created_at)}</p>
                           <p className="text-sm text-neutral-700 leading-relaxed mt-0.5 whitespace-pre-wrap">{entry.note_text}</p>
                         </div>
                       </div>
@@ -455,7 +455,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
               {activeTab === "financeiro" && (
                 <div className="p-6 space-y-4">
                   {transactions.length === 0 ? (
-                    <div className="text-center py-10 text-neutral-400">
+                    <div className="text-center py-10 text-muted-foreground">
                       <DollarSignIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Nenhuma transação registrada para este paciente.</p>
                     </div>
@@ -464,14 +464,14 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                       {transactions.map((t) => (
                         <div key={t.id} className="flex items-center justify-between rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3">
                           <div>
-                            <p className="text-sm font-bold text-neutral-800">{t.description}</p>
-                            <p className="text-xs text-neutral-400">{fmtDate(t.date)}</p>
+                            <p className="text-sm font-bold text-foreground">{t.description}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDate(t.date)}</p>
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-black ${t.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
                               {t.type === "income" ? "+" : "-"}{fmt(t.amount)}
                             </p>
-                            <p className="text-[10px] text-neutral-400 capitalize">{t.status}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">{t.status}</p>
                           </div>
                         </div>
                       ))}
@@ -488,7 +488,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
               {activeTab === "pacotes" && (
                 <div className="p-6 space-y-3">
                   {packages.length === 0 ? (
-                    <div className="text-center py-10 text-neutral-400">
+                    <div className="text-center py-10 text-muted-foreground">
                       <PackageIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Nenhum pacote vinculado a este paciente.</p>
                     </div>
@@ -500,15 +500,15 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                             <div className="flex items-center gap-3 min-w-0">
                               <PackageProgressRing used={pkg.sessions_used} total={pkg.sessions_total} size={42} />
                               <div className="min-w-0">
-                                <p className="text-sm font-black text-neutral-800 truncate">{pkg.package_name}</p>
+                                <p className="text-sm font-black text-foreground truncate">{pkg.package_name}</p>
                                 {pkg.expires_at && (
-                                  <p className="text-xs text-neutral-400">Válido até {fmtDate(pkg.expires_at)}</p>
+                                  <p className="text-xs text-muted-foreground">Válido até {fmtDate(pkg.expires_at)}</p>
                                 )}
                               </div>
                             </div>
                             <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${
                               pkg.status === "active" ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                              : pkg.status === "completed" ? "bg-neutral-100 text-neutral-500 border-border"
+                              : pkg.status === "completed" ? "bg-neutral-100 text-muted-foreground border-border"
                               : "bg-rose-50 text-rose-500 border-rose-200"
                             }`}>
                               {pkg.status === "active" ? "Ativo" : pkg.status === "completed" ? "Concluído" : pkg.status}
@@ -516,13 +516,13 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                           </div>
 
                           {/* Session progress */}
-                          <div className="flex justify-between text-xs text-neutral-500">
+                          <div className="flex justify-between text-xs text-muted-foreground">
                             <span>{pkg.sessions_used} sessões realizadas</span>
                             <span>{pkg.sessions_total - pkg.sessions_used} restantes</span>
                           </div>
 
                           {pkg.value_paid > 0 && (
-                            <p className="text-xs text-neutral-500">Valor pago: <span className="font-bold text-neutral-700">{fmt(pkg.value_paid)}</span></p>
+                            <p className="text-xs text-muted-foreground">Valor pago: <span className="font-bold text-neutral-700">{fmt(pkg.value_paid)}</span></p>
                           )}
                         </div>
                       );
@@ -536,12 +536,12 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-neutral-100 bg-neutral-50 shrink-0 flex items-center justify-between">
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-muted-foreground">
             {contact?.name} · {contact?.phone}
           </p>
           <button
             onClick={onClose}
-            className="text-xs font-bold text-neutral-500 hover:text-neutral-800 transition-colors"
+            className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
           >
             Fechar
           </button>

@@ -185,10 +185,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             <ShieldAlert className="h-6 w-6 text-red-500 animate-bounce" />
           </div>
           <h1 className="text-xl font-bold">Acesso Suspenso</h1>
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-muted-foreground">
             A assinatura da sua clínica foi suspensa temporariamente por motivos administrativos ou de faturamento.
           </p>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-muted-foreground">
             Entre em contato com o suporte ou o administrador da clínica para regularizar a situação.
           </p>
         </div>

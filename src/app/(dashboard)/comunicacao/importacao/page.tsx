@@ -423,8 +423,8 @@ export default function MigrationPage() {
       {/* Title Header */}
       <div className="flex items-center justify-between border-b pb-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Assistente de Migração</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Assistente de Migração</h1>
+          <p className="text-sm text-muted-foreground">
             Siga os passos para migrar seus contatos ou pacientes a partir de planilhas CSV.
           </p>
         </div>
@@ -455,7 +455,7 @@ export default function MigrationPage() {
                   ? 'bg-white shadow-xs border border-border/60 font-black text-blue-600'
                   : isCompleted
                   ? 'text-emerald-600 font-bold'
-                  : 'text-neutral-400 font-medium'
+                  : 'text-muted-foreground font-medium'
               }`}
             >
               <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] ${
@@ -480,8 +480,8 @@ export default function MigrationPage() {
         {currentStep === 1 && (
           <div className="p-6 space-y-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-neutral-800">Para onde deseja migrar seus dados?</h2>
-              <p className="text-xs text-neutral-500">
+              <h2 className="text-base font-black text-foreground">Para onde deseja migrar seus dados?</h2>
+              <p className="text-xs text-muted-foreground">
                 Selecione se os contatos da planilha serão inseridos no fluxo de pacientes ou na lista de contatos do CRM.
               </p>
             </div>
@@ -498,15 +498,15 @@ export default function MigrationPage() {
                 }`}
               >
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
-                  importType === 'patients' ? 'bg-blue-100 text-blue-600' : 'bg-neutral-100 text-neutral-500'
+                  importType === 'patients' ? 'bg-blue-100 text-blue-600' : 'bg-neutral-100 text-muted-foreground'
                 }`}>
                   <Users className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-black text-neutral-800">Pacientes</h3>
-                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                <h3 className="text-sm font-black text-foreground">Pacientes</h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   Ideais para disparos automáticos baseados na agenda clínica (lembretes de consultas, aniversários, retornos).
                 </p>
-                <ul className="text-[10px] text-neutral-400 space-y-1 mt-3 list-disc list-inside">
+                <ul className="text-[10px] text-muted-foreground space-y-1 mt-3 list-disc list-inside">
                   <li>Agenda médica integrada</li>
                   <li>Disparos automáticos de lembretes</li>
                   <li>Importa Nome, Telefone, CPF, Nascimento e Tags</li>
@@ -523,15 +523,15 @@ export default function MigrationPage() {
                 }`}
               >
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
-                  importType === 'contacts' ? 'bg-blue-100 text-blue-600' : 'bg-neutral-100 text-neutral-500'
+                  importType === 'contacts' ? 'bg-blue-100 text-blue-600' : 'bg-neutral-100 text-muted-foreground'
                 }`}>
                   <User className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-black text-neutral-800">Contatos (Chat / CRM)</h3>
-                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                <h3 className="text-sm font-black text-foreground">Contatos (Chat / CRM)</h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   Contatos gerais para marketing, campanhas de disparos em massa, funis de vendas e inbox.
                 </p>
-                <ul className="text-[10px] text-neutral-400 space-y-1 mt-3 list-disc list-inside">
+                <ul className="text-[10px] text-muted-foreground space-y-1 mt-3 list-disc list-inside">
                   <li>Caixa de Entrada compartilhada</li>
                   <li>Funis de Vendas e CRM</li>
                   <li>Importa Nome, Telefone, E-mail, Empresa e Tags</li>
@@ -557,8 +557,8 @@ export default function MigrationPage() {
         {currentStep === 2 && (
           <div className="p-6 space-y-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-neutral-800">Envie a sua planilha CSV</h2>
-              <p className="text-xs text-neutral-500">
+              <h2 className="text-base font-black text-foreground">Envie a sua planilha CSV</h2>
+              <p className="text-xs text-muted-foreground">
                 Selecione o arquivo de dados exportado do seu sistema antigo.
               </p>
             </div>
@@ -567,10 +567,10 @@ export default function MigrationPage() {
               {/* Instructions / Help */}
               <div className="md:col-span-2 space-y-4 bg-neutral-50 p-4 rounded-2xl border border-neutral-100 text-xs">
                 <h3 className="font-bold text-neutral-700 flex items-center gap-1">
-                  <HelpCircle className="h-4 w-4 text-neutral-400" />
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
                   Instruções do Arquivo
                 </h3>
-                <ul className="space-y-2 text-neutral-500 leading-relaxed list-decimal list-inside">
+                <ul className="space-y-2 text-muted-foreground leading-relaxed list-decimal list-inside">
                   <li>O arquivo deve estar no formato **CSV (.csv)**.</li>
                   <li>A primeira linha do arquivo deve ser a linha de **cabeçalhos** (nomes das colunas).</li>
                   <li>As linhas seguintes devem conter os dados separados por vírgulas.</li>
@@ -593,7 +593,7 @@ export default function MigrationPage() {
                   <Upload className={`h-12 w-12 mb-3 ${file ? 'text-blue-500 animate-pulse' : 'text-neutral-300'}`} />
                   {file ? (
                     <div className="space-y-2">
-                      <p className="text-sm font-bold text-neutral-800 truncate max-w-xs">{file.name}</p>
+                      <p className="text-sm font-bold text-foreground truncate max-w-xs">{file.name}</p>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
                         <FileText className="h-3.5 w-3.5" />
                         {csvRows.length} linhas de dados
@@ -602,7 +602,7 @@ export default function MigrationPage() {
                   ) : (
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-neutral-700">Selecione ou arraste o arquivo CSV</p>
-                      <p className="text-xs text-neutral-400">Clique para abrir o explorador</p>
+                      <p className="text-xs text-muted-foreground">Clique para abrir o explorador</p>
                     </div>
                   )}
                 </div>
@@ -643,8 +643,8 @@ export default function MigrationPage() {
         {currentStep === 3 && (
           <div className="p-6 space-y-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-neutral-800">Associe as colunas de dados</h2>
-              <p className="text-xs text-neutral-500">
+              <h2 className="text-base font-black text-foreground">Associe as colunas de dados</h2>
+              <p className="text-xs text-muted-foreground">
                 Mapeie as propriedades do sistema com as colunas reais presentes no seu CSV.
               </p>
             </div>
@@ -661,7 +661,7 @@ export default function MigrationPage() {
                           {field.label}
                           {field.required && <span className="text-red-500 ml-0.5">*</span>}
                         </label>
-                        <p className="text-[10px] text-neutral-400 mt-0.5">{field.desc}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{field.desc}</p>
                       </div>
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
                         isMapped ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
@@ -690,7 +690,7 @@ export default function MigrationPage() {
             {/* Preview Section */}
             {canStartImport && (
               <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Layers className="h-4 w-4 text-blue-600" />
                   Visualização Prévia (Primeiras 5 linhas)
                 </h3>
@@ -699,7 +699,7 @@ export default function MigrationPage() {
                     <TableHeader className="bg-neutral-50/80">
                       <TableRow>
                         {fieldsConfig.filter(f => !!mappings[f.key]).map(f => (
-                          <TableHead key={f.key} className="text-xs font-black text-neutral-500 py-2">
+                          <TableHead key={f.key} className="text-xs font-black text-muted-foreground py-2">
                             {f.label}
                           </TableHead>
                         ))}
@@ -769,8 +769,8 @@ export default function MigrationPage() {
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-lg font-black text-neutral-800">Migração Concluída!</h2>
-              <p className="text-xs text-neutral-400">
+              <h2 className="text-lg font-black text-foreground">Migração Concluída!</h2>
+              <p className="text-xs text-muted-foreground">
                 A importação da planilha foi processada com sucesso no banco de dados da sua clínica.
               </p>
             </div>
@@ -791,7 +791,7 @@ export default function MigrationPage() {
               </div>
             </div>
 
-            <p className="text-[11px] text-neutral-400 leading-relaxed bg-neutral-50 p-3 rounded-xl border">
+            <p className="text-[11px] text-muted-foreground leading-relaxed bg-neutral-50 p-3 rounded-xl border">
               *Contatos e pacientes duplicados foram ignorados para evitar redundâncias na agenda ou no CRM, mantendo seus dados sempre limpos.
             </p>
 

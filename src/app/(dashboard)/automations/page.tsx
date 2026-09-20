@@ -304,8 +304,8 @@ export default function AutomationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Automações</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Automações</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Construa fluxos inteligentes e regras automatizadas para responder no WhatsApp®.
           </p>
         </div>
@@ -342,7 +342,7 @@ export default function AutomationsPage() {
             "px-4 py-2.5 text-xs font-bold transition-all border-b-2",
             activeTab === "rules"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-neutral-500 hover:text-neutral-800"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           Regras de Automação
@@ -353,7 +353,7 @@ export default function AutomationsPage() {
             "px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5",
             activeTab === "flows"
               ? "border-blue-600 text-blue-600"
-              : "border-transparent text-neutral-500 hover:text-neutral-800"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           Fluxos de Mensagens
@@ -375,7 +375,7 @@ export default function AutomationsPage() {
             <>
               {automations.length < 3 && (
                 <section className="space-y-3">
-                  <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Modelos de início rápido</h2>
+                  <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Modelos de início rápido</h2>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {TEMPLATE_ORDER.map((slug) => {
                       const t = AUTOMATION_TEMPLATES[slug];
@@ -389,8 +389,8 @@ export default function AutomationsPage() {
                           <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors">
                             <Icon className="h-5 w-5" />
                           </div>
-                          <div className="text-xs font-bold text-neutral-800">{t.name}</div>
-                          <p className="mt-1 text-[10px] text-neutral-400 font-semibold leading-relaxed">{t.description}</p>
+                          <div className="text-xs font-bold text-foreground">{t.name}</div>
+                          <p className="mt-1 text-[10px] text-muted-foreground font-semibold leading-relaxed">{t.description}</p>
                         </button>
                       );
                     })}
@@ -401,8 +401,8 @@ export default function AutomationsPage() {
               {automations.length === 0 ? (
                 <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white shadow-xs">
                   <Zap className="h-8 w-8 text-neutral-300 mb-2 animate-pulse" />
-                  <p className="text-xs font-bold text-neutral-800">Nenhuma regra de automação criada</p>
-                  <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
+                  <p className="text-xs font-bold text-foreground">Nenhuma regra de automação criada</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-semibold">
                     Escolha um modelo acima ou crie uma do zero no botão superior.
                   </p>
                 </div>
@@ -434,8 +434,8 @@ export default function AutomationsPage() {
           ) : flows.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white shadow-xs">
               <Workflow className="h-8 w-8 text-neutral-300 mb-2 animate-pulse" />
-              <p className="text-xs font-bold text-neutral-800">Nenhum fluxo interativo criado</p>
-              <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
+              <p className="text-xs font-bold text-foreground">Nenhum fluxo interativo criado</p>
+              <p className="text-[10px] text-muted-foreground mt-1 font-semibold">
                 Crie menus automáticos e triagens guiadas por botões para o seu WhatsApp.
               </p>
               <Button
@@ -466,8 +466,8 @@ export default function AutomationsPage() {
       <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
         <DialogContent className="bg-white border border-border shadow-xl rounded-2xl max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold text-neutral-900">Excluir Automação</DialogTitle>
-            <DialogDescription className="text-xs font-semibold text-neutral-400 leading-relaxed mt-1">
+            <DialogTitle className="text-sm font-bold text-foreground">Excluir Automação</DialogTitle>
+            <DialogDescription className="text-xs font-semibold text-muted-foreground leading-relaxed mt-1">
               Tem certeza que deseja excluir permanentemente a automação <span className="font-bold text-neutral-700">{pendingDelete?.name}</span> e todo o seu histórico? Esta ação não poderá ser desfeita.
             </DialogDescription>
           </DialogHeader>
@@ -476,7 +476,7 @@ export default function AutomationsPage() {
               variant="ghost"
               onClick={() => setPendingDelete(null)}
               disabled={deleting}
-              className="text-xs font-bold text-neutral-500 hover:bg-neutral-100 rounded-lg h-9 px-3"
+              className="text-xs font-bold text-muted-foreground hover:bg-neutral-100 rounded-lg h-9 px-3"
             >
               Cancelar
             </Button>
@@ -497,15 +497,15 @@ export default function AutomationsPage() {
       <Dialog open={createFlowOpen} onOpenChange={setCreateFlowOpen}>
         <DialogContent className="sm:max-w-3xl bg-white border border-border shadow-2xl rounded-2xl p-6 text-left space-y-4">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold text-neutral-800">Criar Novo Fluxo de Conversa</DialogTitle>
-            <DialogDescription className="text-xs text-neutral-400 font-semibold leading-relaxed mt-1">
+            <DialogTitle className="text-sm font-bold text-foreground">Criar Novo Fluxo de Conversa</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-semibold leading-relaxed mt-1">
               Desenhe um fluxo de mensagens ramificado e automatizado. Escolha um modelo abaixo ou crie em branco.
             </DialogDescription>
           </DialogHeader>
 
           {flowTemplates.length > 0 && (
             <div className="space-y-2.5">
-              <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
                 Começar de um modelo
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -520,13 +520,13 @@ export default function AutomationsPage() {
                       className="flex flex-col gap-2 rounded-xl border border-border bg-white p-4 text-left transition-all hover:border-blue-400 hover:shadow-xs disabled:opacity-50"
                     >
                       <Icon className="h-5 w-5 text-blue-600" />
-                      <span className="text-xs font-bold text-neutral-800 leading-tight">
+                      <span className="text-xs font-bold text-foreground leading-tight">
                         {t.name}
                       </span>
-                      <span className="text-[10px] leading-relaxed text-neutral-400 font-semibold flex-1">
+                      <span className="text-[10px] leading-relaxed text-muted-foreground font-semibold flex-1">
                         {t.description}
                       </span>
-                      <span className="mt-2 border-t border-neutral-100 pt-2 text-[9px] font-bold text-neutral-400">
+                      <span className="mt-2 border-t border-neutral-100 pt-2 text-[9px] font-bold text-muted-foreground">
                         {t.node_count} {t.node_count === 1 ? "bloco" : "blocos"}
                       </span>
                     </button>
@@ -537,7 +537,7 @@ export default function AutomationsPage() {
           )}
 
           <div className="space-y-2 border-t border-neutral-100 pt-4">
-            <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
               Ou comece em branco
             </p>
             <div className="flex gap-2 items-center">
@@ -545,7 +545,7 @@ export default function AutomationsPage() {
                 value={newFlowName}
                 onChange={(e) => setNewFlowName(e.target.value)}
                 placeholder="Ex: Menu de boas-vindas da clínica"
-                className="bg-neutral-50 border-border outline-none placeholder:text-neutral-400 font-semibold text-xs h-10 w-full"
+                className="bg-neutral-50 border-border outline-none placeholder:text-muted-foreground font-semibold text-xs h-10 w-full"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newFlowName.trim()) {
                     handleCreateFlow();
@@ -601,7 +601,7 @@ function AutomationCard({
 
         <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2">
-            <span className="truncate text-xs font-bold text-neutral-800">
+            <span className="truncate text-xs font-bold text-foreground">
               {automation.name}
             </span>
             {automation.is_active && (
@@ -612,9 +612,9 @@ function AutomationCard({
             )}
           </div>
           {automation.description && (
-            <p className="mt-0.5 truncate text-[10px] text-neutral-400 font-semibold">{automation.description}</p>
+            <p className="mt-0.5 truncate text-[10px] text-muted-foreground font-semibold">{automation.description}</p>
           )}
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-400 font-semibold">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground font-semibold">
             <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase", meta.pillClass)}>
               {localizedTriggerLabel}
             </span>
@@ -634,7 +634,7 @@ function AutomationCard({
           />
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-neutral-600">
+            <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-neutral-50 hover:text-neutral-600">
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-40 bg-white border border-border shadow-lg text-xs">
@@ -683,7 +683,7 @@ function FlowCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Workflow className="h-4 w-4 text-blue-600 shrink-0" />
-            <h3 className="text-xs font-bold text-neutral-800 truncate" title={flow.name}>
+            <h3 className="text-xs font-bold text-foreground truncate" title={flow.name}>
               {flow.name}
             </h3>
           </div>
@@ -693,10 +693,10 @@ function FlowCard({
         </div>
         
         {flow.description && (
-          <p className="text-[10px] text-neutral-400 font-semibold leading-relaxed truncate">{flow.description}</p>
+          <p className="text-[10px] text-muted-foreground font-semibold leading-relaxed truncate">{flow.description}</p>
         )}
 
-        <div className="flex items-center gap-1.5 flex-wrap pt-1.5 text-[9px] text-neutral-400 font-bold">
+        <div className="flex items-center gap-1.5 flex-wrap pt-1.5 text-[9px] text-muted-foreground font-bold">
           <span className="bg-neutral-50 text-neutral-600 border border-neutral-100 rounded px-1.5 py-0.2 uppercase">
             {triggerLabel}
           </span>
@@ -706,7 +706,7 @@ function FlowCard({
       </div>
 
       <div className="flex items-center justify-between border-t border-neutral-100 mt-4 pt-3 gap-2">
-        <span className="text-[8px] text-neutral-400 font-semibold">
+        <span className="text-[8px] text-muted-foreground font-semibold">
           {flow.last_executed_at ? `Última em ${new Date(flow.last_executed_at).toLocaleDateString("pt-BR")}` : "Nunca executado"}
         </span>
         <div className="flex gap-1.5">

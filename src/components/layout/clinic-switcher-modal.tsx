@@ -213,10 +213,10 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
               <span className="font-extrabold text-[#003bbd]">PLUZ</span>
             </span>
           </div>
-          <DialogTitle className="text-lg font-black text-neutral-900 leading-tight">
+          <DialogTitle className="text-lg font-black text-foreground leading-tight">
             Bem-vindo, {modalUserName}!
           </DialogTitle>
-          <DialogDescription className="text-xs text-neutral-500 font-semibold">
+          <DialogDescription className="text-xs text-muted-foreground font-semibold">
             Qual a clínica que você deseja acessar agora?
           </DialogDescription>
         </DialogHeader>
@@ -258,7 +258,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
             })}
 
             {clinics.length === 0 && (
-              <p className="text-xs text-neutral-400 italic text-center py-4">
+              <p className="text-xs text-muted-foreground italic text-center py-4">
                 Nenhuma clínica vinculada a este usuário.
               </p>
             )}
@@ -291,7 +291,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   value={newClinicName}
                   onChange={(e) => setNewClinicName(e.target.value)}
                   placeholder="Ex: Clínica Bella Vitta"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-xs text-neutral-800 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-xs text-foreground outline-none focus:border-blue-500"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateClinic()}
                 />
                 <div className="flex gap-2">
@@ -309,7 +309,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                       setNewClinicName("");
                     }}
                     disabled={creating}
-                    className="rounded-lg px-3 text-xs font-bold text-neutral-400 hover:text-neutral-600"
+                    className="rounded-lg px-3 text-xs font-bold text-muted-foreground hover:text-neutral-600"
                   >
                     Cancelar
                   </button>
@@ -319,7 +319,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
               <button
                 type="button"
                 onClick={() => setShowCreateForm(true)}
-                className="mt-2 w-full rounded-xl border border-dashed border-neutral-300 py-2.5 text-xs font-bold text-neutral-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                className="mt-2 w-full rounded-xl border border-dashed border-neutral-300 py-2.5 text-xs font-bold text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors"
               >
                 + Criar nova clínica
               </button>
@@ -338,7 +338,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="text-[11px] font-bold text-neutral-400 hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center"
+            className="text-[11px] font-bold text-muted-foreground hover:text-neutral-600 transition-colors py-1 cursor-pointer self-center"
           >
             Voltar
           </button>

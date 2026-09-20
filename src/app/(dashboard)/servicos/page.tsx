@@ -423,7 +423,7 @@ export default function ServicosPage() {
     `px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px cursor-pointer flex items-center gap-1.5 ${
       activeTab === t
         ? "border-blue-600 text-blue-600"
-        : "border-transparent text-neutral-500 hover:text-neutral-800"
+        : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
   return (
@@ -431,8 +431,8 @@ export default function ServicosPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Serviços & Pacotes</h1>
-          <p className="text-sm text-neutral-500">Procedimentos, salas de atendimento e pacotes oferecidos pela clínica.</p>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Serviços & Pacotes</h1>
+          <p className="text-sm text-muted-foreground">Procedimentos, salas de atendimento e pacotes oferecidos pela clínica.</p>
         </div>
         <button
           onClick={activeTab === "procedures" ? handleOpenAddProc : activeTab === "rooms" ? handleOpenAddRoom : handleOpenAddPkg}
@@ -471,13 +471,13 @@ export default function ServicosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-neutral-50">
-                <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide w-6">Cor</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Procedimento</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide hidden sm:table-cell">Categoria</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Preço</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide hidden md:table-cell">Duração</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-bold text-neutral-500 uppercase tracking-wide">Ações</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide w-6">Cor</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">Procedimento</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Categoria</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">Preço</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Duração</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-muted-foreground uppercase tracking-wide">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -490,14 +490,14 @@ export default function ServicosPage() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-neutral-800">{p.name}</p>
-                    {p.description && <p className="text-[11px] text-neutral-400 truncate max-w-xs">{p.description}</p>}
+                    <p className="font-bold text-foreground">{p.name}</p>
+                    {p.description && <p className="text-[11px] text-muted-foreground truncate max-w-xs">{p.description}</p>}
                   </td>
-                  <td className="px-4 py-3 text-neutral-500 text-xs hidden sm:table-cell">
+                  <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">
                     {p.category || <span className="text-neutral-300 italic">—</span>}
                   </td>
                   <td className="px-4 py-3 font-mono text-neutral-700 font-semibold">{fmt(p.valor || p.price || 0)}</td>
-                  <td className="px-4 py-3 text-neutral-500 font-semibold text-xs hidden md:table-cell">
+                  <td className="px-4 py-3 text-muted-foreground font-semibold text-xs hidden md:table-cell">
                     <span className="flex items-center gap-1">
                       <ClockIcon className="h-3.5 w-3.5" />
                       {p.duration_minutes || p.tempo_reserva_minutos || 60} min
@@ -534,7 +534,7 @@ export default function ServicosPage() {
               ))}
               {procedures.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-xs text-neutral-400 italic">
+                  <td colSpan={7} className="text-center py-12 text-xs text-muted-foreground italic">
                     Nenhum procedimento cadastrado. Clique em &quot;Novo Procedimento&quot; para começar.
                   </td>
                 </tr>
@@ -550,16 +550,16 @@ export default function ServicosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-neutral-50">
-                <th className="px-6 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Nome da Sala</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-bold text-neutral-500 uppercase tracking-wide">Ações</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">Nome da Sala</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-bold text-muted-foreground uppercase tracking-wide">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {rooms.map((r) => (
                 <tr key={r.id} className="hover:bg-neutral-50/50 transition-colors">
-                  <td className="px-6 py-3.5 font-bold text-neutral-800 flex items-center gap-2">
-                    <MapPinIcon className="h-4 w-4 text-neutral-400" />{r.name}
+                  <td className="px-6 py-3.5 font-bold text-foreground flex items-center gap-2">
+                    <MapPinIcon className="h-4 w-4 text-muted-foreground" />{r.name}
                   </td>
                   <td className="px-6 py-3.5">
                     {r.is_active !== false ? (
@@ -581,7 +581,7 @@ export default function ServicosPage() {
               ))}
               {rooms.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="text-center py-12 text-xs text-neutral-400 italic">Nenhuma sala cadastrada.</td>
+                  <td colSpan={3} className="text-center py-12 text-xs text-muted-foreground italic">Nenhuma sala cadastrada.</td>
                 </tr>
               )}
             </tbody>
@@ -600,22 +600,22 @@ export default function ServicosPage() {
                     <PackageIcon className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-neutral-800">{pkg.name}</p>
+                    <p className="text-sm font-black text-foreground">{pkg.name}</p>
                     {pkg.validity_days && (
-                      <p className="text-[10px] text-neutral-400">{pkg.validity_days} dias de validade</p>
+                      <p className="text-[10px] text-muted-foreground">{pkg.validity_days} dias de validade</p>
                     )}
                   </div>
                 </div>
                 <button
                   onClick={() => handleOpenEditPkg(pkg)}
-                  className="text-neutral-400 hover:text-blue-600 transition-colors p-1"
+                  className="text-muted-foreground hover:text-blue-600 transition-colors p-1"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
               </div>
 
               {pkg.description && (
-                <p className="text-xs text-neutral-500 leading-relaxed">{pkg.description}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{pkg.description}</p>
               )}
 
               {pkg.items && pkg.items.length > 0 && (
@@ -623,7 +623,7 @@ export default function ServicosPage() {
                   {pkg.items.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between text-xs bg-neutral-50 rounded-lg px-3 py-1.5">
                       <span className="font-semibold text-neutral-700">{item.procedure_name}</span>
-                      <span className="text-neutral-400">{item.sessions}x sessão{item.sessions > 1 ? "ões" : ""}</span>
+                      <span className="text-muted-foreground">{item.sessions}x sessão{item.sessions > 1 ? "ões" : ""}</span>
                     </div>
                   ))}
                 </div>
@@ -634,7 +634,7 @@ export default function ServicosPage() {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   pkg.is_active
                     ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                    : "bg-neutral-100 text-neutral-400 border-border"
+                    : "bg-neutral-100 text-muted-foreground border-border"
                 }`}>
                   {pkg.is_active ? "Ativo" : "Inativo"}
                 </span>
@@ -642,7 +642,7 @@ export default function ServicosPage() {
             </div>
           ))}
           {packages.length === 0 && (
-            <div className="col-span-3 text-center py-16 text-neutral-400">
+            <div className="col-span-3 text-center py-16 text-muted-foreground">
               <PackageIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm font-semibold">Nenhum pacote cadastrado.</p>
               <p className="text-xs mt-1">Crie pacotes com múltiplas sessões de procedimentos.</p>
@@ -659,10 +659,10 @@ export default function ServicosPage() {
             className="bg-white w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
-              <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">
+              <h2 className="text-sm font-black text-foreground uppercase tracking-wide">
                 {editingProc ? "Editar Procedimento" : "Novo Procedimento"}
               </h2>
-              <button type="button" onClick={() => setIsProcModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">
+              <button type="button" onClick={() => setIsProcModalOpen(false)} className="text-muted-foreground hover:text-neutral-700">
                 <XIcon className="h-5 w-5" />
               </button>
             </div>
@@ -725,7 +725,7 @@ export default function ServicosPage() {
                     className="h-7 w-7 rounded-full border border-border cursor-pointer"
                     title="Cor personalizada"
                   />
-                  <span className="text-xs text-neutral-400 ml-1">Prévia:</span>
+                  <span className="text-xs text-muted-foreground ml-1">Prévia:</span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full text-white" style={{ backgroundColor: procColor }}>
                     {procName || "Procedimento"}
                   </span>
@@ -751,8 +751,8 @@ export default function ServicosPage() {
               {/* Status */}
               <div className="flex items-center justify-between rounded-xl bg-neutral-50 border p-3">
                 <div>
-                  <p className="text-xs font-bold text-neutral-800">Procedimento Ativo</p>
-                  <p className="text-[10px] text-neutral-500">Inativos não aparecem em novos agendamentos.</p>
+                  <p className="text-xs font-bold text-foreground">Procedimento Ativo</p>
+                  <p className="text-[10px] text-muted-foreground">Inativos não aparecem em novos agendamentos.</p>
                 </div>
                 <Toggle checked={procAtivo} onChange={() => setProcAtivo(!procAtivo)} />
               </div>
@@ -762,7 +762,7 @@ export default function ServicosPage() {
                 <Label className="text-xs font-bold text-neutral-600 flex items-center gap-1">
                   <UsersIcon className="h-3.5 w-3.5" /> Comissões por Profissional
                 </Label>
-                <p className="text-[10px] text-neutral-400">Configure a comissão (%) ou valor fixo (R$) para cada membro ativo da clínica.</p>
+                <p className="text-[10px] text-muted-foreground">Configure a comissão (%) ou valor fixo (R$) para cada membro ativo da clínica.</p>
                 <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                   {teamMembers.map((member) => {
                     const comm = commissions[member.id] || { type: "percentage", value: "0" };
@@ -800,7 +800,7 @@ export default function ServicosPage() {
                     );
                   })}
                   {teamMembers.length === 0 && (
-                    <p className="text-xs text-neutral-400 italic">Nenhum profissional cadastrado na equipe.</p>
+                    <p className="text-xs text-muted-foreground italic">Nenhum profissional cadastrado na equipe.</p>
                   )}
                 </div>
               </div>
@@ -823,10 +823,10 @@ export default function ServicosPage() {
             className="bg-white w-full max-w-md rounded-2xl border border-border p-6 space-y-4 shadow-2xl text-left"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">
+              <h2 className="text-sm font-black text-foreground uppercase tracking-wide">
                 {editingRoom ? "Editar Sala" : "Nova Sala"}
               </h2>
-              <button type="button" onClick={() => setIsRoomModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">
+              <button type="button" onClick={() => setIsRoomModalOpen(false)} className="text-muted-foreground hover:text-neutral-700">
                 <XIcon className="h-5 w-5" />
               </button>
             </div>
@@ -836,8 +836,8 @@ export default function ServicosPage() {
             </div>
             <div className="flex items-center justify-between rounded-xl bg-neutral-50 border p-3">
               <div>
-                <p className="text-xs font-bold text-neutral-800">Sala Ativa</p>
-                <p className="text-[10px] text-neutral-500">Salas inativas não recebem novos agendamentos.</p>
+                <p className="text-xs font-bold text-foreground">Sala Ativa</p>
+                <p className="text-[10px] text-muted-foreground">Salas inativas não recebem novos agendamentos.</p>
               </div>
               <Toggle checked={roomActive} onChange={() => setRoomActive(!roomActive)} />
             </div>
@@ -856,10 +856,10 @@ export default function ServicosPage() {
             className="bg-white w-full max-w-lg rounded-2xl border border-border shadow-2xl text-left overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
-              <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">
+              <h2 className="text-sm font-black text-foreground uppercase tracking-wide">
                 {editingPkg ? "Editar Pacote" : "Novo Pacote"}
               </h2>
-              <button type="button" onClick={() => setIsPkgModalOpen(false)} className="text-neutral-400 hover:text-neutral-700">
+              <button type="button" onClick={() => setIsPkgModalOpen(false)} className="text-muted-foreground hover:text-neutral-700">
                 <XIcon className="h-5 w-5" />
               </button>
             </div>
@@ -940,7 +940,7 @@ export default function ServicosPage() {
                         />
                       )}
                       <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-[10px] text-neutral-500 font-bold">Sessões:</span>
+                        <span className="text-[10px] text-muted-foreground font-bold">Sessões:</span>
                         <Input
                           type="number"
                           min={1}
@@ -959,7 +959,7 @@ export default function ServicosPage() {
                     </div>
                   ))}
                   {pkgItems.length === 0 && (
-                    <p className="text-xs text-neutral-400 italic text-center py-4">
+                    <p className="text-xs text-muted-foreground italic text-center py-4">
                       Clique em &quot;Adicionar&quot; para incluir serviços no pacote.
                     </p>
                   )}

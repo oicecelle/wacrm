@@ -273,8 +273,8 @@ export default function ScheduledNotificationsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">Agenda de Envios</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Agenda de Envios</h1>
+          <p className="text-sm text-muted-foreground">
             Gerencie as mensagens automáticas de lembretes e aniversariantes programadas pelo sistema.
           </p>
         </div>
@@ -287,9 +287,9 @@ export default function ScheduledNotificationsPage() {
             className="border-border text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             {syncing ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-500 mr-1.5" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground mr-1.5" />
             ) : (
-              <RefreshCw className="h-3.5 w-3.5 text-neutral-500 mr-1.5" />
+              <RefreshCw className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
             )}
             Sincronizar Agora
           </Button>
@@ -320,7 +320,7 @@ export default function ScheduledNotificationsPage() {
                 className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all ${
                   isActive
                     ? 'bg-blue-50 text-blue-600 border-blue-200/50'
-                    : 'text-neutral-500 hover:bg-neutral-50 border-transparent'
+                    : 'text-muted-foreground hover:bg-neutral-50 border-transparent'
                 } border`}
               >
                 {labels[tab]}
@@ -331,12 +331,12 @@ export default function ScheduledNotificationsPage() {
 
         {/* Search */}
         <div className="relative max-w-md sm:w-64">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por paciente ou texto..."
-            className="pl-9 pr-4 py-2 border-border bg-neutral-50 text-xs text-neutral-900 rounded-2xl placeholder:text-neutral-400"
+            className="pl-9 pr-4 py-2 border-border bg-neutral-50 text-xs text-foreground rounded-2xl placeholder:text-muted-foreground"
           />
         </div>
       </div>
@@ -379,8 +379,8 @@ export default function ScheduledNotificationsPage() {
       ) : filteredNotifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-white p-8 text-center">
           <CalendarClock className="h-10 w-10 text-neutral-300 mb-3" />
-          <h3 className="text-sm font-bold text-neutral-800">Nenhum envio encontrado</h3>
-          <p className="text-xs text-neutral-400 mt-1 max-w-sm">
+          <h3 className="text-sm font-bold text-foreground">Nenhum envio encontrado</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm">
             Nenhuma mensagem agendada corresponde aos filtros selecionados neste momento.
           </p>
         </div>
@@ -399,12 +399,12 @@ export default function ScheduledNotificationsPage() {
                     />
                   </TableHead>
                 )}
-                <TableHead className="text-xs font-bold text-neutral-400">Paciente</TableHead>
-                <TableHead className="text-xs font-bold text-neutral-400">Gatilho</TableHead>
-                <TableHead className="text-xs font-bold text-neutral-400">Agendado para</TableHead>
-                <TableHead className="text-xs font-bold text-neutral-400">Texto Mensagem</TableHead>
-                <TableHead className="text-xs font-bold text-neutral-400">Status</TableHead>
-                <TableHead className="w-24 text-right text-xs font-bold text-neutral-400">Ações</TableHead>
+                <TableHead className="text-xs font-bold text-muted-foreground">Paciente</TableHead>
+                <TableHead className="text-xs font-bold text-muted-foreground">Gatilho</TableHead>
+                <TableHead className="text-xs font-bold text-muted-foreground">Agendado para</TableHead>
+                <TableHead className="text-xs font-bold text-muted-foreground">Texto Mensagem</TableHead>
+                <TableHead className="text-xs font-bold text-muted-foreground">Status</TableHead>
+                <TableHead className="w-24 text-right text-xs font-bold text-muted-foreground">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -432,8 +432,8 @@ export default function ScheduledNotificationsPage() {
                     )}
                     <TableCell>
                       <div>
-                        <p className="text-xs font-black text-neutral-800">{notif.recipient_name}</p>
-                        <p className="text-[10px] text-neutral-400 mt-0.5 flex items-center gap-1">
+                        <p className="text-xs font-black text-foreground">{notif.recipient_name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
                           <Phone className="h-3 w-3" />
                           {notif.recipient_phone}
                         </p>
@@ -445,7 +445,7 @@ export default function ScheduledNotificationsPage() {
                           {EVENT_TYPE_LABELS[notif.event_type] || notif.event_type}
                         </p>
                         {notif.template?.name && (
-                          <p className="text-[9px] text-neutral-400 mt-0.5 font-medium">
+                          <p className="text-[9px] text-muted-foreground mt-0.5 font-medium">
                             Template: {notif.template.name}
                           </p>
                         )}
@@ -457,7 +457,7 @@ export default function ScheduledNotificationsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="text-xs text-neutral-500 truncate leading-relaxed" title={notif.message_text}>
+                      <p className="text-xs text-muted-foreground truncate leading-relaxed" title={notif.message_text}>
                         {notif.message_text}
                       </p>
                     </TableCell>
@@ -481,14 +481,14 @@ export default function ScheduledNotificationsPage() {
                             <button
                               onClick={() => startEditing(notif)}
                               title="Editar Envio"
-                              className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+                              className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
                             >
                               <Edit className="h-3.5 w-3.5" />
                             </button>
                             <button
                               onClick={() => handleCancelOne(notif.id)}
                               title="Cancelar Envio"
-                              className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-red-600 transition-colors"
+                              className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-red-600 transition-colors"
                             >
                               <Ban className="h-3.5 w-3.5" />
                             </button>
@@ -498,7 +498,7 @@ export default function ScheduledNotificationsPage() {
                           <button
                             onClick={() => handleReactivateOne(notif.id)}
                             title="Reativar Envio"
-                            className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-blue-600 transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-blue-600 transition-colors"
                           >
                             <RefreshCw className="h-3.5 w-3.5" />
                           </button>
@@ -507,7 +507,7 @@ export default function ScheduledNotificationsPage() {
                           <button
                             onClick={() => handleDeleteOne(notif.id)}
                             title="Excluir Registro"
-                            className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-red-600 transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-red-600 transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -526,10 +526,10 @@ export default function ScheduledNotificationsPage() {
       <Dialog open={!!editingNotif} onOpenChange={(open) => !open && setEditingNotif(null)}>
         <DialogContent className="border-border bg-white sm:max-w-lg rounded-3xl">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-neutral-900 font-black tracking-tight text-lg">
+            <DialogTitle className="text-foreground font-black tracking-tight text-lg">
               Editar Mensagem Agendada
             </DialogTitle>
-            <DialogDescription className="text-neutral-400 text-xs">
+            <DialogDescription className="text-muted-foreground text-xs">
               Modifique a data de disparo ou personalize a mensagem final que será enviada.
             </DialogDescription>
           </DialogHeader>
@@ -542,8 +542,8 @@ export default function ScheduledNotificationsPage() {
                   <User className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-neutral-800">{editingNotif.recipient_name}</p>
-                  <p className="text-[10px] text-neutral-400">{editingNotif.recipient_phone}</p>
+                  <p className="text-xs font-bold text-foreground">{editingNotif.recipient_name}</p>
+                  <p className="text-[10px] text-muted-foreground">{editingNotif.recipient_phone}</p>
                 </div>
               </div>
 
@@ -554,7 +554,7 @@ export default function ScheduledNotificationsPage() {
                   type="datetime-local"
                   value={editScheduledFor}
                   onChange={(e) => setEditScheduledFor(e.target.value)}
-                  className="border-border bg-neutral-50 text-xs text-neutral-900 rounded-xl"
+                  className="border-border bg-neutral-50 text-xs text-foreground rounded-xl"
                 />
               </div>
 
@@ -565,7 +565,7 @@ export default function ScheduledNotificationsPage() {
                   value={editMessageText}
                   onChange={(e) => setEditMessageText(e.target.value)}
                   rows={6}
-                  className="w-full border border-border bg-neutral-50 text-xs text-neutral-900 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"
+                  className="w-full border border-border bg-neutral-50 text-xs text-foreground rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"
                   placeholder="Escreva a mensagem personalizada..."
                 />
               </div>

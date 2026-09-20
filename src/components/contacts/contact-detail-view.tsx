@@ -987,7 +987,7 @@ export function ContactDetailView({
                 {/* Registrar nova transação action */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-500">
+                    <h3 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                       Histórico Financeiro
                     </h3>
                     <button
@@ -1007,7 +1007,7 @@ export function ContactDetailView({
                       
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Tipo</Label>
+                          <Label className="text-muted-foreground text-[10px] font-bold uppercase">Tipo</Label>
                           <select
                             value={txType}
                             onChange={(e) => setTxType(e.target.value as 'receita' | 'despesa')}
@@ -1019,7 +1019,7 @@ export function ContactDetailView({
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Valor</Label>
+                          <Label className="text-muted-foreground text-[10px] font-bold uppercase">Valor</Label>
                           <input
                             type="number"
                             step="0.01"
@@ -1032,7 +1032,7 @@ export function ContactDetailView({
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-neutral-500 text-[10px] font-bold uppercase">Descrição</Label>
+                        <Label className="text-muted-foreground text-[10px] font-bold uppercase">Descrição</Label>
                         <input
                           type="text"
                           placeholder="Ex: Botox - 50U Testa"
@@ -1044,7 +1044,7 @@ export function ContactDetailView({
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Categoria</Label>
+                          <Label className="text-muted-foreground text-[10px] font-bold uppercase">Categoria</Label>
                           <select
                             value={txCategory}
                             onChange={(e) => setTxCategory(e.target.value)}
@@ -1059,7 +1059,7 @@ export function ContactDetailView({
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Método</Label>
+                          <Label className="text-muted-foreground text-[10px] font-bold uppercase">Método</Label>
                           <select
                             value={txMethod}
                             onChange={(e) => setTxMethod(e.target.value)}
@@ -1078,7 +1078,7 @@ export function ContactDetailView({
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Status</Label>
+                          <Label className="text-muted-foreground text-[10px] font-bold uppercase">Status</Label>
                           <select
                             value={txStatus}
                             onChange={(e) => setTxStatus(e.target.value)}
@@ -1092,7 +1092,7 @@ export function ContactDetailView({
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-neutral-500 text-[10px] font-bold uppercase">Data</Label>
+                          <Label className="text-muted-foreground text-[10px] font-bold uppercase">Data</Label>
                           <input
                             type="date"
                             value={txDate}
@@ -1130,7 +1130,7 @@ export function ContactDetailView({
                           paid: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
                           pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
                           overdue: 'bg-red-500/10 text-red-600 border-red-500/20',
-                          cancelled: 'bg-neutral-100 text-neutral-500 border-border dark:border-neutral-800',
+                          cancelled: 'bg-neutral-100 text-muted-foreground border-border dark:border-neutral-800',
                         };
                         const currentStatusColor = statusColors[tx.status as 'paid'|'pending'|'overdue'|'cancelled'] || statusColors.pending;
                         const isRevenue = tx.type === 'receita';

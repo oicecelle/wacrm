@@ -124,7 +124,7 @@ const EVENT_TEMPLATES: CardTemplate[] = [
     name: 'Lembrete de Fatura',
     description: 'Previna inadimplência enviando alertas automáticos sobre vencimento de parcelas.',
     icon: FileText,
-    color: 'from-slate-500/20 to-neutral-500/20 text-neutral-400 border-neutral-700/30'
+    color: 'from-slate-500/20 to-neutral-500/20 text-muted-foreground border-neutral-700/30'
   },
   {
     type: 'pos_procedimento',
@@ -188,8 +188,8 @@ export default function ModelosPage() {
   return (
     <div className="space-y-6 text-left">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-neutral-900">Gerenciador de Modelos</h1>
-        <p className="text-sm text-neutral-500">Configure os templates de disparos e lembretes automáticos do WhatsApp.</p>
+        <h1 className="text-2xl font-black tracking-tight text-foreground">Gerenciador de Modelos</h1>
+        <p className="text-sm text-muted-foreground">Configure os templates de disparos e lembretes automáticos do WhatsApp.</p>
       </div>
 
       <Tabs defaultValue="system" className="space-y-6">
@@ -231,12 +231,12 @@ export default function ModelosPage() {
                               Ativo
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-neutral-100 border border-border/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
+                            <span className="inline-flex items-center rounded-full bg-neutral-100 border border-border/50 px-2.5 py-0.5 text-[9px] font-black text-muted-foreground">
                               Inativo
                             </span>
                           )}
                           {status.active && (
-                            <span className="text-[9px] font-bold text-neutral-400">
+                            <span className="text-[9px] font-bold text-muted-foreground">
                               {status.channel}
                             </span>
                           )}
@@ -244,17 +244,17 @@ export default function ModelosPage() {
                       </div>
 
                       {/* Body Content */}
-                      <h3 className="text-sm font-black text-neutral-800 tracking-tight group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-sm font-black text-foreground tracking-tight group-hover:text-blue-600 transition-colors">
                         {item.name}
                       </h3>
-                      <p className="text-xs text-neutral-500 leading-relaxed mt-1.5 min-h-[48px]">
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1.5 min-h-[48px]">
                         {item.description}
                       </p>
                     </div>
 
                     {/* Footer Action */}
                     <div className="border-t border-neutral-100 pt-4 mt-4 flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-neutral-400">Gatilho Automático</span>
+                      <span className="text-[10px] font-bold text-muted-foreground">Gatilho Automático</span>
                       <button
                         onClick={() => setSelectedTemplate(item)}
                         className="flex items-center gap-1 text-xs font-black text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"

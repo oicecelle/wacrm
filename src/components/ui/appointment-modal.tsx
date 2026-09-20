@@ -155,14 +155,14 @@ function RoundedDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled}
-        className="w-full flex items-center justify-between rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
+        className="w-full flex items-center justify-between rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
       >
         <span>{displayValue}</span>
-        <CalendarDaysIcon className="h-4 w-4 text-neutral-400 shrink-0" />
+        <CalendarDaysIcon className="h-4 w-4 text-muted-foreground shrink-0" />
       </PopoverTrigger>
       <PopoverContent className="rounded-2xl bg-white border border-border p-4 shadow-xl w-64 text-xs z-50">
         <div className="flex items-center justify-between mb-3">
-          <span className="font-extrabold text-neutral-800 capitalize">
+          <span className="font-extrabold text-foreground capitalize">
             {monthNames[currentMonth]} {currentYear}
           </span>
           <div className="flex items-center gap-1">
@@ -183,7 +183,7 @@ function RoundedDatePicker({
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-neutral-400">
+        <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[10px] font-bold text-muted-foreground">
           {weekdayInitials.map((initial, i) => (
             <div key={i}>{initial}</div>
           ))}
@@ -2044,9 +2044,9 @@ Qualquer dúvida, estou à disposição! 😊`;
     if (bodyEvaluations.length < 2) {
       return (
         <div className="flex flex-col items-center justify-center py-8 bg-neutral-50 rounded-xl border border-dashed border-border">
-          <TrendingUpIcon className="h-6 w-6 text-neutral-400 mb-1" />
-          <p className="text-xs text-neutral-500 font-medium">Histórico insuficiente</p>
-          <p className="text-[10px] text-neutral-400 text-center px-4">Cadastre pelo menos 2 avaliações corporais para visualizar o gráfico de evolução.</p>
+          <TrendingUpIcon className="h-6 w-6 text-muted-foreground mb-1" />
+          <p className="text-xs text-muted-foreground font-medium">Histórico insuficiente</p>
+          <p className="text-[10px] text-muted-foreground text-center px-4">Cadastre pelo menos 2 avaliações corporais para visualizar o gráfico de evolução.</p>
         </div>
       );
     }
@@ -2088,12 +2088,12 @@ Qualquer dúvida, estou à disposição! 😊`;
     return (
       <div className="space-y-3 text-left">
         <div className="flex items-center justify-between">
-          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Métrica do Gráfico de Progresso</label>
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Métrica do Gráfico de Progresso</label>
           <Select
             value={selectedChartMetric}
             onValueChange={(val) => setSelectedChartMetric(val as any)}
           >
-            <SelectTrigger className="rounded-lg border border-border bg-white h-8 px-2 text-xs font-semibold text-neutral-800 shadow-xs focus:ring-1 focus:ring-blue-500">
+            <SelectTrigger className="rounded-lg border border-border bg-white h-8 px-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-blue-500">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent className="rounded-xl bg-white border border-border">
@@ -2160,12 +2160,12 @@ Qualquer dúvida, estou à disposição! 😊`;
               <div className="h-6 w-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[10px] font-black text-blue-700 uppercase shrink-0">
                 {getInitials(selectedStaffObj.name)}
               </div>
-              <span className="font-semibold text-neutral-800 text-xs">{selectedStaffObj.name}</span>
+              <span className="font-semibold text-foreground text-xs">{selectedStaffObj.name}</span>
             </div>
           ) : (
-            <span className="text-neutral-400 font-semibold text-xs">Selecione o profissional...</span>
+            <span className="text-muted-foreground font-semibold text-xs">Selecione o profissional...</span>
           )}
-          <ChevronDownIcon className="h-4 w-4 text-neutral-400" />
+          <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
         </button>
 
         {isStaffDropdownOpen && (
@@ -2201,7 +2201,7 @@ Qualquer dúvida, estou à disposição! 😊`;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
-        "bg-white text-neutral-800 transition-all duration-300 overflow-hidden flex flex-col p-0 text-xs font-medium",
+        "bg-white text-foreground transition-all duration-300 overflow-hidden flex flex-col p-0 text-xs font-medium",
         (apptType === "evento" || apptType === "bloqueio") 
           ? "sm:max-w-md p-6 rounded-2xl"
           : (patientId ? "sm:max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-neutral-100" : "sm:max-w-md p-6 rounded-2xl"),
@@ -2215,10 +2215,10 @@ Qualquer dúvida, estou à disposição! 😊`;
           /* Simplified modal layout for blocks and events */
           <div className="space-y-4 text-left">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold text-neutral-900">
+              <DialogTitle className="text-base font-bold text-foreground">
                 {apptType === "evento" ? "Criar Novo Evento" : "Criar Bloqueio de Agenda"}
               </DialogTitle>
-              <DialogDescription className="text-sm text-neutral-500">
+              <DialogDescription className="text-sm text-muted-foreground">
                 Preencha os detalhes do horário reservado na agenda.
               </DialogDescription>
             </DialogHeader>
@@ -2275,7 +2275,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setStartTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -2296,7 +2296,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setEndTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -2325,7 +2325,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
               {/* Color Picker */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider">Cor na Agenda</label>
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">Cor na Agenda</label>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { color: "#3ba2e8", label: "Azul" },
@@ -2358,7 +2358,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={(e) => setAppointmentColor(e.target.value)}
                     />
-                    <span className="text-[10px] text-neutral-400 select-none">+</span>
+                    <span className="text-[10px] text-muted-foreground select-none">+</span>
                   </label>
                 </div>
               </div>
@@ -2382,8 +2382,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             /* Sub-view: Register New Patient */
             <div className="space-y-4 text-left">
               <DialogHeader>
-                <DialogTitle className="text-base font-bold text-neutral-900">Cadastrar Novo Paciente</DialogTitle>
-                <DialogDescription className="text-sm text-neutral-500">
+                <DialogTitle className="text-base font-bold text-foreground">Cadastrar Novo Paciente</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
                   Preencha os dados do paciente para cadastrá-lo e iniciar o agendamento.
                 </DialogDescription>
               </DialogHeader>
@@ -2470,7 +2470,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             /* Initial view: Patient Picker / Search */
             <div className="space-y-4 text-left">
               <DialogHeader>
-                <DialogTitle className="text-base font-black text-neutral-900">Novo Agendamento</DialogTitle>
+                <DialogTitle className="text-base font-black text-foreground">Novo Agendamento</DialogTitle>
               </DialogHeader>
 
               {/* Type Tabs */}
@@ -2490,7 +2490,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
                       apptType === tab.key
                         ? "bg-white shadow-sm text-blue-700 border border-blue-100"
-                        : "text-neutral-500 hover:text-neutral-800"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <span className="mr-1">{tab.emoji}</span>{tab.label}
@@ -2502,7 +2502,7 @@ Qualquer dúvida, estou à disposição! 😊`;
               {/* Color Picker — only for Evento and Bloqueio */}
               {(apptType === "evento" || apptType === "bloqueio") && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider">Cor na Agenda</label>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">Cor na Agenda</label>
                   <div className="flex flex-wrap gap-2">
                     {[
                       { color: "#3ba2e8", label: "Azul" },
@@ -2535,14 +2535,14 @@ Qualquer dúvida, estou à disposição! 😊`;
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         onChange={(e) => setAppointmentColor(e.target.value)}
                       />
-                      <span className="text-[10px] text-neutral-400 select-none">+</span>
+                      <span className="text-[10px] text-muted-foreground select-none">+</span>
                     </label>
                   </div>
                   {appointmentColor && (
-                    <p className="text-[10px] text-neutral-400 flex items-center gap-1.5">
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
                       <span className="inline-block h-3 w-3 rounded-full border border-border" style={{ backgroundColor: appointmentColor }} />
                       Cor selecionada: <span className="font-mono">{appointmentColor}</span>
-                      <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 ml-1 font-black">✕</button>
+                      <button type="button" onClick={() => setAppointmentColor(null)} className="text-muted-foreground hover:text-red-500 ml-1 font-black">✕</button>
                     </p>
                   )}
                 </div>
@@ -2592,7 +2592,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setStartTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -2613,7 +2613,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setEndTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -2632,7 +2632,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     <select
                       value={recurrence}
                       onChange={(e) => setRecurrence(e.target.value as any)}
-                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="none">Não se repete</option>
                       <option value="daily">Diariamente</option>
@@ -2643,16 +2643,16 @@ Qualquer dúvida, estou à disposição! 😊`;
                     </select>
                     {recurrence === "custom" && (
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-neutral-500">Repetir</span>
+                        <span className="text-xs text-muted-foreground">Repetir</span>
                         <input
                           type="number"
                           min={2}
                           max={52}
                           value={recurrenceCount}
                           onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                          className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
-                        <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
+                        <span className="text-xs text-muted-foreground">vezes (semanalmente)</span>
                       </div>
                     )}
                   </div>
@@ -2698,7 +2698,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   </div>
 
                   <div className="relative">
-                    <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                    <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="search-pt"
                       type="text"
@@ -2711,7 +2711,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                   <div className="max-h-[240px] overflow-y-auto divide-y divide-neutral-100 border border-neutral-100 rounded-xl bg-neutral-50/50 shadow-inner">
                     {filteredPatients.length === 0 ? (
-                      <p className="text-xs text-neutral-400 italic p-6 text-center">Nenhum paciente cadastrado encontrado.</p>
+                      <p className="text-xs text-muted-foreground italic p-6 text-center">Nenhum paciente cadastrado encontrado.</p>
                     ) : (
                       filteredPatients.map((p) => (
                         <button
@@ -2729,14 +2729,14 @@ Qualquer dúvida, estou à disposição! 😊`;
                               {p.name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-extrabold text-neutral-800 truncate">{p.name}</p>
-                              <p className="text-[10px] text-neutral-500 truncate">
+                              <p className="text-xs font-extrabold text-foreground truncate">{p.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">
                                 {p.phone ? p.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) $3-$4") : "Sem Telefone"}
                                 {p.email ? ` • ${p.email}` : ""}
                               </p>
                             </div>
                           </div>
-                          <ChevronRightIcon className="h-4 w-4 text-neutral-400 shrink-0" />
+                          <ChevronRightIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                         </button>
                       ))
                     )}
@@ -2755,7 +2755,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-white text-neutral-800 p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
+            <header className="bg-white text-foreground p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
                 <div className="h-12 w-12 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-base font-black shadow-md shrink-0">
@@ -2765,8 +2765,8 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                 <div className="space-y-0.5 text-left min-w-0">
                   <div className="flex items-center flex-wrap gap-2">
-                    <h2 className="text-base font-extrabold tracking-tight truncate text-neutral-800">
-                      {firstName} <span className="font-medium text-neutral-500">{lastName}</span>
+                    <h2 className="text-base font-extrabold tracking-tight truncate text-foreground">
+                      {firstName} <span className="font-medium text-muted-foreground">{lastName}</span>
                     </h2>
                     
                     {/* Documents Alert status badge */}
@@ -2898,11 +2898,11 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <div key={pkg.id} className="flex items-center gap-3 rounded-lg bg-white/80 border border-blue-100/50 p-2.5">
                                   <PackageProgressRing used={pkg.used} total={pkg.total} size={40} strokeWidth={3.5} />
                                   <div className="min-w-0 flex-1">
-                                    <p className="truncate text-xs font-extrabold text-neutral-800">{pkg.name}</p>
+                                    <p className="truncate text-xs font-extrabold text-foreground">{pkg.name}</p>
                                     <p className="text-[10px] font-semibold text-blue-700">
                                       {pkg.total - pkg.used} restante{pkg.total - pkg.used === 1 ? '' : 's'}
                                     </p>
-                                    <p className="text-[9px] font-medium uppercase text-neutral-400">
+                                    <p className="text-[9px] font-medium uppercase text-muted-foreground">
                                       Validade: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem expiração"}
                                     </p>
                                   </div>
@@ -2921,7 +2921,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => handleSelectProcedure(val || "")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o procedimento..." />
                               </SelectTrigger>
                               <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -2949,7 +2949,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione a sala...">
                                   {roomId ? rooms.find((r) => r.id === roomId)?.name ?? "Nenhuma" : "Nenhuma"}
                                 </SelectValue>
@@ -2992,7 +2992,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 onValueChange={(val) => handleSelectStartTime(val || "09:00")}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -3014,7 +3014,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 }}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-white border border-border">
@@ -3039,7 +3039,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 max={480}
                                 value={procedureDuration}
                                 onChange={(e) => handleDurationChange(Number(e.target.value))}
-                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-foreground"
                               />
                             </div>
                             <div className="space-y-1 text-left">
@@ -3050,7 +3050,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={procedureValue}
                                 onChange={(e) => setProcedureValue(e.target.value)}
                                 placeholder="0,00"
-                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-neutral-800"
+                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-foreground"
                               />
                             </div>
                           </div>
@@ -3063,7 +3063,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRecurrence(val as any)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione">
                                   {
                                     {
@@ -3088,16 +3088,16 @@ Qualquer dúvida, estou à disposição! 😊`;
                             </Select>
                             {recurrence === "custom" && (
                               <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs text-neutral-500">Repetir</span>
+                                <span className="text-xs text-muted-foreground">Repetir</span>
                                 <input
                                   type="number"
                                   min={2}
                                   max={52}
                                   value={recurrenceCount}
                                   onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                                  className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                  className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 />
-                                <span className="text-xs text-neutral-500">vezes (semanalmente)</span>
+                                <span className="text-xs text-muted-foreground">vezes (semanalmente)</span>
                               </div>
                             )}
                           </div>
@@ -3110,7 +3110,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setStatus(val || "provisional")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-neutral-800 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-white h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                                 <SelectValue placeholder="Selecione o status" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl bg-white border border-border">
@@ -3177,10 +3177,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               {appointmentColor && (
-                                <p className="text-[10px] text-neutral-500 flex items-center gap-1.5">
+                                <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
                                   <span className="inline-block h-3 w-3 rounded-full border border-border" style={{ backgroundColor: appointmentColor }} />
                                   Cor selecionada: <span className="font-mono">{appointmentColor}</span>
-                                  <button type="button" onClick={() => setAppointmentColor(null)} className="text-neutral-400 hover:text-red-500 underline ml-1">Remover</button>
+                                  <button type="button" onClick={() => setAppointmentColor(null)} className="text-muted-foreground hover:text-red-500 underline ml-1">Remover</button>
                                 </p>
                               )}
                             </div>
@@ -3196,7 +3196,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={appointmentTag}
                                 onChange={(e) => setAppointmentTag(e.target.value)}
                                 placeholder="Ex: Retorno, VIP, Urgente..."
-                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-neutral-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                               />
                               <div className="flex gap-1.5">
                                 {["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#f97316","#ec4899","#6b7280"].map(c => (
@@ -3221,7 +3221,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 >
                                   {appointmentTag}
                                 </span>
-                                <span className="text-[10px] text-neutral-400">{appointmentTag.length}/20 chars</span>
+                                <span className="text-[10px] text-muted-foreground">{appointmentTag.length}/20 chars</span>
                               </div>
                             )}
                           </div>
@@ -3229,11 +3229,11 @@ Qualquer dúvida, estou à disposição! 😊`;
                           {/* Toggle to send auto notification message */}
                           <div className="flex items-center justify-between rounded-xl border border-neutral-100 p-3.5 bg-neutral-50/50 mt-4">
                             <div className="text-left">
-                              <p className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                 Notificar paciente automaticamente no WhatsApp
                               </p>
-                              <p className="text-[10px] text-neutral-500 mt-0.5">
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
                                 O paciente receberá uma mensagem com a data, hora e status da consulta assim que salvar o agendamento.
                               </p>
                             </div>
@@ -3261,31 +3261,31 @@ Qualquer dúvida, estou à disposição! 😊`;
                         {/* Statistics Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
                           <div className="text-left">
-                            <span className="text-[9px] text-neutral-400 font-extrabold uppercase block">Agendamentos</span>
-                            <span className="text-lg font-black text-neutral-800">{historyStats.total}</span>
+                            <span className="text-[9px] text-muted-foreground font-extrabold uppercase block">Agendamentos</span>
+                            <span className="text-lg font-black text-foreground">{historyStats.total}</span>
                           </div>
                           <div className="text-left">
-                            <span className="text-[9px] text-neutral-400 font-extrabold uppercase block">Realizados</span>
+                            <span className="text-[9px] text-muted-foreground font-extrabold uppercase block">Realizados</span>
                             <span className="text-lg font-black text-emerald-600">{historyStats.attended}</span>
                           </div>
                           <div className="text-left">
-                            <span className="text-[9px] text-neutral-400 font-extrabold uppercase block">Não Compareceu</span>
+                            <span className="text-[9px] text-muted-foreground font-extrabold uppercase block">Não Compareceu</span>
                             <span className="text-lg font-black text-amber-600">{historyStats.noShow}</span>
                           </div>
                           <div className="text-left">
-                            <span className="text-[9px] text-neutral-400 font-extrabold uppercase block">Cancelados</span>
+                            <span className="text-[9px] text-muted-foreground font-extrabold uppercase block">Cancelados</span>
                             <span className="text-lg font-black text-rose-600">{historyStats.cancelled}</span>
                           </div>
                         </div>
 
                         <div className="space-y-1 bg-neutral-50/50 p-3 rounded-lg border border-neutral-100 text-[10px] text-neutral-600 font-semibold">
-                          <p><span className="text-neutral-400 font-medium">Último profissional de atendimento:</span> {historyStats.lastProf}</p>
-                          <p><span className="text-neutral-400 font-medium">Último serviço realizado:</span> {historyStats.lastProc}</p>
+                          <p><span className="text-muted-foreground font-medium">Último profissional de atendimento:</span> {historyStats.lastProf}</p>
+                          <p><span className="text-muted-foreground font-medium">Último serviço realizado:</span> {historyStats.lastProc}</p>
                         </div>
 
                         <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider mb-2">Histórico de Consultas</h3>
                         {patientAppointments.length === 0 ? (
-                          <p className="text-xs text-neutral-400 italic">Nenhum agendamento anterior registrado.</p>
+                          <p className="text-xs text-muted-foreground italic">Nenhum agendamento anterior registrado.</p>
                         ) : (
                           <div className="border-l-2 border-border pl-4 space-y-4">
                             {patientAppointments.map((appt) => {
@@ -3309,14 +3309,14 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   {/* Point indicator */}
                                   <div className="absolute -left-[22px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-neutral-400 z-10" />
                                   <div className="flex items-center justify-between gap-4">
-                                    <span className="text-xs font-bold text-neutral-800 capitalize">
+                                    <span className="text-xs font-bold text-foreground capitalize">
                                       {formattedDate} às {formattedTime}
                                     </span>
                                     <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${statusBadge}`}>
                                       {appt.status}
                                     </span>
                                   </div>
-                                  <p className="text-[10px] text-neutral-500">
+                                  <p className="text-[10px] text-muted-foreground">
                                     <span className="font-semibold">Profissional:</span> {(Array.isArray(appt.clinic_users) ? appt.clinic_users[0]?.name : (appt.clinic_users as any)?.name) || "Não atribuído"} | <span className="font-semibold">Procedimento:</span> {appt.type || "Consulta"}
                                   </p>
                                   {appt.notes && (
@@ -3337,14 +3337,14 @@ Qualquer dúvida, estou à disposição! 😊`;
                       <div className="space-y-6 text-left">
                         {/* Templates Checklist & Send */}
                         <div className="space-y-3 border border-border/80 rounded-xl p-4 bg-neutral-50/10 shadow-xs">
-                          <h4 className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                             <SendIcon className="h-3.5 w-3.5 text-blue-600" />
                             Enviar Termo / Contrato Existente
                           </h4>
-                          <p className="text-[10px] text-neutral-500">Marque as opções para gerar e enviar links de assinatura digital via WhatsApp do cliente.</p>
+                          <p className="text-[10px] text-muted-foreground">Marque as opções para gerar e enviar links de assinatura digital via WhatsApp do cliente.</p>
                           
                           {docTemplates.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic">Nenhum template cadastrado no sistema.</p>
+                            <p className="text-xs text-muted-foreground italic">Nenhum template cadastrado no sistema.</p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                               {docTemplates.map((t) => (
@@ -3378,7 +3378,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         <div className="space-y-3">
                           <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Histórico de Documentos</h4>
                           {patientDocs.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic">Nenhum documento gerado para este paciente.</p>
+                            <p className="text-xs text-muted-foreground italic">Nenhum documento gerado para este paciente.</p>
                           ) : (
                             <div className="divide-y divide-neutral-100">
                               {patientDocs.map((doc) => {
@@ -3387,10 +3387,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 return (
                                   <div key={doc.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0 gap-4">
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                      <FileTextIcon className="h-4.5 w-4.5 shrink-0 text-neutral-400" />
+                                      <FileTextIcon className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
                                       <div className="min-w-0 text-left">
-                                        <p className="text-xs font-extrabold text-neutral-800 truncate">{doc.title}</p>
-                                        <p className="text-[9px] text-neutral-400">
+                                        <p className="text-xs font-extrabold text-foreground truncate">{doc.title}</p>
+                                        <p className="text-[9px] text-muted-foreground">
                                           Enviado em: {new Date(doc.created_at || doc.sent_at).toLocaleDateString("pt-BR")}
                                           {isSigned && doc.signed_at && ` • Assinado em: ${new Date(doc.signed_at).toLocaleDateString("pt-BR")}`}
                                         </p>
@@ -3433,15 +3433,15 @@ Qualquer dúvida, estou à disposição! 😊`;
                             <div className="flex items-center gap-2">
                               <FileTextIcon className="h-4.5 w-4.5 text-blue-600 animate-pulse" />
                               <div>
-                                <h3 className="text-xs font-black text-neutral-800">Novo Orçamento</h3>
-                                <p className="text-[10px] text-neutral-400">Monte o orçamento para {selectedPatientInfo?.name || "o paciente"}</p>
+                                <h3 className="text-xs font-black text-foreground">Novo Orçamento</h3>
+                                <p className="text-[10px] text-muted-foreground">Monte o orçamento para {selectedPatientInfo?.name || "o paciente"}</p>
                               </div>
                             </div>
                             <Button
                               type="button"
                               variant="ghost"
                               onClick={() => setIsCreatingQuote(false)}
-                              className="text-neutral-500 hover:text-neutral-800 text-[10px] font-bold h-7 px-2.5 rounded-lg border border-border"
+                              className="text-muted-foreground hover:text-foreground text-[10px] font-bold h-7 px-2.5 rounded-lg border border-border"
                             >
                               ← Voltar
                             </Button>
@@ -3453,7 +3453,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 {/* Left Column: Catalog selection */}
                                 <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-neutral-50/20">
                                   <div>
-                                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
                                       <TagIcon className="h-3 w-3 text-blue-500" /> Procedimentos
                                     </p>
                                     <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
@@ -3465,17 +3465,17 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 border border-neutral-100 bg-white transition-all text-left shadow-xs font-semibold"
                                         >
                                           <span className="truncate">{p.name}</span>
-                                          <span className="text-neutral-400 font-mono shrink-0 ml-2">{fmt(p.valor || p.price || 0)}</span>
+                                          <span className="text-muted-foreground font-mono shrink-0 ml-2">{fmt(p.valor || p.price || 0)}</span>
                                         </button>
                                       ))}
                                       {procedures.length === 0 && (
-                                        <p className="text-[10px] text-neutral-400 italic text-center py-4">Nenhum procedimento.</p>
+                                        <p className="text-[10px] text-muted-foreground italic text-center py-4">Nenhum procedimento.</p>
                                       )}
                                     </div>
                                   </div>
 
                                   <div className="border-t border-neutral-100 pt-3">
-                                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
                                       <PackageIcon className="h-3 w-3 text-purple-500" /> Pacotes Catálogo
                                     </p>
                                     <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
@@ -3487,11 +3487,11 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-purple-50 hover:text-purple-700 border border-neutral-100 bg-white transition-all text-left shadow-xs font-semibold"
                                         >
                                           <span className="truncate">{pkg.name}</span>
-                                          <span className="text-neutral-400 font-mono shrink-0 ml-2">{fmt(pkg.price)}</span>
+                                          <span className="text-muted-foreground font-mono shrink-0 ml-2">{fmt(pkg.price)}</span>
                                         </button>
                                       ))}
                                       {packagesTemplates.length === 0 && (
-                                        <p className="text-[10px] text-neutral-400 italic text-center py-4">Nenhum pacote catalogado.</p>
+                                        <p className="text-[10px] text-muted-foreground italic text-center py-4">Nenhum pacote catalogado.</p>
                                       )}
                                     </div>
                                   </div>
@@ -3500,20 +3500,20 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 {/* Right Column: Cart items & configuration */}
                                 <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-white flex flex-col justify-between">
                                   <div className="space-y-3">
-                                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                       <ClipboardListIcon className="h-3 w-3 text-emerald-500" /> Itens Selecionados
                                     </p>
                                     <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
                                       {quoteItems.length === 0 && (
-                                        <p className="text-[10px] text-neutral-400 italic text-center py-8">
+                                        <p className="text-[10px] text-muted-foreground italic text-center py-8">
                                           Selecione procedimentos ou pacotes ao lado →
                                         </p>
                                       )}
                                       {quoteItems.map((item, idx) => (
                                         <div key={idx} className="flex items-center gap-2 bg-neutral-50/80 rounded-lg p-2 border border-neutral-100 text-[11px]">
                                           <div className="flex-1 min-w-0 text-left">
-                                            <p className="font-extrabold text-neutral-800 truncate">{item.name}</p>
-                                            <p className="text-[9px] text-neutral-400">{fmt(item.unit_price)} cada</p>
+                                            <p className="font-extrabold text-foreground truncate">{item.name}</p>
+                                            <p className="text-[9px] text-muted-foreground">{fmt(item.unit_price)} cada</p>
                                           </div>
                                           <div className="flex items-center gap-1 shrink-0">
                                             <button
@@ -3545,7 +3545,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     {/* Discount Row */}
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="space-y-0.5 text-left">
-                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Desconto</label>
+                                        <label className="text-[9px] font-bold text-muted-foreground uppercase">Desconto</label>
                                         <Select
                                           value={quoteDiscountType}
                                           onValueChange={(val) => setQuoteDiscountType(val as any)}
@@ -3560,7 +3560,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                         </Select>
                                       </div>
                                       <div className="space-y-0.5 text-left">
-                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Valor Desconto</label>
+                                        <label className="text-[9px] font-bold text-muted-foreground uppercase">Valor Desconto</label>
                                         <Input
                                           placeholder="0"
                                           value={quoteDiscountValue}
@@ -3573,7 +3573,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     {/* Special Condition & Validity */}
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="space-y-0.5 text-left">
-                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Condição Especial</label>
+                                        <label className="text-[9px] font-bold text-muted-foreground uppercase">Condição Especial</label>
                                         <Input
                                           placeholder="Ex: 3x sem juros"
                                           value={quoteSpecialCondition}
@@ -3582,19 +3582,19 @@ Qualquer dúvida, estou à disposição! 😊`;
                                         />
                                       </div>
                                       <div className="space-y-0.5 text-left">
-                                        <label className="text-[9px] font-bold text-neutral-500 uppercase">Validade</label>
+                                        <label className="text-[9px] font-bold text-muted-foreground uppercase">Validade</label>
                                         <input
                                           type="date"
                                           value={quoteExpiresAt}
                                           onChange={(e) => setQuoteExpiresAt(e.target.value)}
-                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
                                         />
                                       </div>
                                     </div>
 
                                     {/* Calculations */}
                                     <div className="bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100 text-xs space-y-1 font-semibold">
-                                      <div className="flex justify-between text-neutral-500">
+                                      <div className="flex justify-between text-muted-foreground">
                                         <span>Subtotal</span>
                                         <span className="font-mono">{fmt(subtotal)}</span>
                                       </div>
@@ -3604,7 +3604,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           <span className="font-mono">-{fmt(discountAmount)}</span>
                                         </div>
                                       )}
-                                      <div className="flex justify-between text-neutral-800 font-extrabold border-t border-border/50 pt-1.5">
+                                      <div className="flex justify-between text-foreground font-extrabold border-t border-border/50 pt-1.5">
                                         <span>Total Líquido</span>
                                         <span className="text-blue-700">{fmt(total)}</span>
                                       </div>
@@ -3636,14 +3636,14 @@ Qualquer dúvida, estou à disposição! 😊`;
                             /* Step: message review */
                             <div className="space-y-4">
                               <div className="space-y-1 text-left">
-                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Mensagem Gerada (Edite se necessário)</label>
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Mensagem Gerada (Edite se necessário)</label>
                                 <textarea
                                   value={quoteMessageText}
                                   onChange={(e) => setQuoteMessageText(e.target.value)}
                                   rows={8}
                                   className="w-full text-xs font-mono rounded-xl border border-border bg-neutral-50/50 px-3.5 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
                                 />
-                                <p className="text-[9px] text-neutral-400">Você pode modificar o texto livremente antes de enviar.</p>
+                                <p className="text-[9px] text-muted-foreground">Você pode modificar o texto livremente antes de enviar.</p>
                               </div>
 
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-left">
@@ -3659,7 +3659,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   type="button"
                                   variant="ghost"
                                   onClick={() => setQuoteStep("build")}
-                                  className="text-neutral-500 hover:text-neutral-800 text-xs h-9 rounded-lg border border-border"
+                                  className="text-muted-foreground hover:text-foreground text-xs h-9 rounded-lg border border-border"
                                 >
                                   ← Voltar para Edição
                                 </Button>
@@ -3668,7 +3668,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   <button
                                     type="button"
                                     onClick={handleCopyMessageInline}
-                                    className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
+                                    className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-foreground border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors"
                                   >
                                     {quoteCopied ? <CheckCircle2Icon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}
                                     {quoteCopied ? "Copiado!" : "Copiar"}
@@ -3678,7 +3678,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     type="button"
                                     onClick={handleSaveDraftInline}
                                     disabled={quoteSaving}
-                                    className="text-xs font-bold text-neutral-600 hover:text-neutral-900 border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors disabled:opacity-40"
+                                    className="text-xs font-bold text-neutral-600 hover:text-foreground border border-border rounded-lg px-3 py-2 hover:bg-neutral-100 transition-colors disabled:opacity-40"
                                   >
                                     {quoteSaving ? "Salvando..." : "Salvar Rascunho"}
                                   </button>
@@ -3723,7 +3723,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           <div className="space-y-3">
                             <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Lançamentos Financeiros</h4>
                             {patientTransactions.length === 0 ? (
-                              <p className="text-xs text-neutral-400 italic">Nenhuma transação financeira lançada no histórico.</p>
+                              <p className="text-xs text-muted-foreground italic">Nenhuma transação financeira lançada no histórico.</p>
                             ) : (
                               <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
                                 {patientTransactions.map((tx) => {
@@ -3732,8 +3732,8 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   return (
                                     <div key={tx.id} className="flex items-center justify-between p-3.5 bg-white text-xs gap-4">
                                       <div className="text-left min-w-0">
-                                        <p className="font-extrabold text-neutral-800 truncate">{tx.description || "Transação Sem Título"}</p>
-                                        <p className="text-[9px] text-neutral-400">
+                                        <p className="font-extrabold text-foreground truncate">{tx.description || "Transação Sem Título"}</p>
+                                        <p className="text-[9px] text-muted-foreground">
                                           Data: {new Date(tx.created_at || tx.due_date).toLocaleDateString("pt-BR")}
                                         </p>
                                       </div>
@@ -3773,7 +3773,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                             {/* Quotes stats row */}
                             <div className="grid grid-cols-3 gap-3">
                               <div className="bg-neutral-50 border border-border/50 rounded-xl p-2.5 text-center shadow-xs">
-                                <span className="text-[8px] text-neutral-500 font-extrabold uppercase block tracking-wider">Total</span>
+                                <span className="text-[8px] text-muted-foreground font-extrabold uppercase block tracking-wider">Total</span>
                                 <span className="text-sm font-black text-neutral-700">{quotes.length}</span>
                               </div>
                               <div className="bg-blue-50 border border-blue-100/50 rounded-xl p-2.5 text-center shadow-xs">
@@ -3795,7 +3795,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <Loader2Icon className="h-4 w-4 animate-spin text-blue-600" />
                               </div>
                             ) : quotes.length === 0 ? (
-                              <p className="text-xs text-neutral-400 italic">Nenhum orçamento gerado para este paciente.</p>
+                              <p className="text-xs text-muted-foreground italic">Nenhum orçamento gerado para este paciente.</p>
                             ) : (
                               <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
                                 {quotes.map((q) => {
@@ -3804,13 +3804,13 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   return (
                                     <div key={q.id} className="flex items-center justify-between p-3 bg-white text-xs gap-4">
                                       <div className="text-left min-w-0">
-                                        <p className="font-extrabold text-neutral-800 truncate">
+                                        <p className="font-extrabold text-foreground truncate">
                                           Orçamento #{q.id.substring(0, 6).toUpperCase()}
                                         </p>
                                         {q.special_condition && (
-                                          <p className="text-[9px] text-neutral-500 italic truncate">{q.special_condition}</p>
+                                          <p className="text-[9px] text-muted-foreground italic truncate">{q.special_condition}</p>
                                         )}
-                                        <p className="text-[8px] text-neutral-400 font-medium">
+                                        <p className="text-[8px] text-muted-foreground font-medium">
                                           Gerado em: {new Date(q.created_at || q.sent_at).toLocaleDateString("pt-BR")}
                                         </p>
                                       </div>
@@ -3819,7 +3819,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           R$ {Number(q.total_value || 0).toFixed(2)}
                                         </span>
                                         <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                          isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-blue-50 text-blue-700 border border-blue-100/50" : "bg-neutral-100 text-neutral-500"
+                                          isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-blue-50 text-blue-700 border border-blue-100/50" : "bg-neutral-100 text-muted-foreground"
                                         }`}>
                                           {isAccepted ? "Aprovado" : isSent ? "Enviado" : "Rascunho"}
                                         </span>
@@ -3835,7 +3835,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           <div className="space-y-3 pt-4 border-t border-neutral-100">
                             <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Crédito de Pacotes Contratados</h4>
                             {patientPackages.length === 0 ? (
-                              <p className="text-xs text-neutral-400 italic">Nenhum pacote contratado no momento.</p>
+                              <p className="text-xs text-muted-foreground italic">Nenhum pacote contratado no momento.</p>
                             ) : (
                               <div className="grid grid-cols-1 gap-3">
                                 {patientPackages.map((pkg) => {
@@ -3845,9 +3845,9 @@ Qualquer dúvida, estou à disposição! 😊`;
                                       <PackageProgressRing used={pkg.used} total={pkg.total} size={44} />
                                       <div className="min-w-0 flex-1 space-y-0.5 text-xs">
                                         <div className="flex items-center justify-between gap-2">
-                                          <p className="truncate font-extrabold text-neutral-800">{pkg.name}</p>
+                                          <p className="truncate font-extrabold text-foreground">{pkg.name}</p>
                                           <span className={`shrink-0 text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
-                                            pkg.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-500"
+                                            pkg.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-muted-foreground"
                                           }`}>
                                             {pkg.status === "active" ? "ativo" : pkg.status}
                                           </span>
@@ -3855,7 +3855,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                         <p className="text-blue-700 font-bold text-[10px]">
                                           {remaining} restante{remaining === 1 ? '' : 's'}
                                         </p>
-                                        <p className="text-[8px] text-neutral-400 font-bold uppercase">
+                                        <p className="text-[8px] text-muted-foreground font-bold uppercase">
                                           Expira: {pkg.expires ? new Date(pkg.expires).toLocaleDateString("pt-BR") : "Sem validade"}
                                         </p>
                                       </div>
@@ -3878,7 +3878,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           
                           {/* Create New Clinical note form */}
                           <form onSubmit={handleAddClinicalEvolution} className="bg-neutral-50/70 p-3.5 rounded-xl border border-neutral-100 space-y-3 text-left">
-                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Registrar Nova Evolução Clínica / Notas</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Registrar Nova Evolução Clínica / Notas</p>
                             <Textarea
                               placeholder="Descreva a evolução do cliente, notas de atendimento ou particularidades..."
                               value={newEvolContent}
@@ -3908,12 +3908,12 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                           {/* List of clinical notes */}
                           {clinicalEvolutions.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic">Nenhuma anotação de prontuário clínico registrada.</p>
+                            <p className="text-xs text-muted-foreground italic">Nenhuma anotação de prontuário clínico registrada.</p>
                           ) : (
                             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                               {clinicalEvolutions.map((ev) => (
                                 <div key={ev.id} className="p-3.5 rounded-xl border border-neutral-100 bg-white text-xs space-y-2 shadow-xs">
-                                  <div className="flex items-center justify-between border-b border-neutral-50 pb-1.5 text-[9px] text-neutral-400 font-bold">
+                                  <div className="flex items-center justify-between border-b border-neutral-50 pb-1.5 text-[9px] text-muted-foreground font-bold">
                                     <span className="text-neutral-700">{ev.professional_name}</span>
                                     <span>
                                       {new Date(ev.created_at).toLocaleDateString("pt-BR")} às {new Date(ev.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -3931,7 +3931,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           Aguardando Assinatura do Paciente
                                         </span>
                                       ) : (
-                                        <span className="bg-neutral-50 text-neutral-500 border border-neutral-100 px-1.5 py-0.5 rounded uppercase">
+                                        <span className="bg-neutral-50 text-muted-foreground border border-neutral-100 px-1.5 py-0.5 rounded uppercase">
                                           Ciência Não Solicitada
                                         </span>
                                       )}
@@ -3968,7 +3968,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                             <h3 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Fotos de Acompanhamento</h3>
                             <div className="flex items-center gap-3">
                               {uploadingPhoto ? (
-                                <span className="text-xs font-bold text-neutral-400 flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                                   <Loader2Icon className="h-3.5 w-3.5 animate-spin text-blue-600" />
                                   Processando foto...
                                 </span>
@@ -4042,11 +4042,11 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                           {/* Create New Evaluation Form */}
                           <form onSubmit={handleSaveBodyEval} className="bg-neutral-50/70 p-4 rounded-xl border border-neutral-100 space-y-4">
-                            <p className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider block">Registrar Novas Medidas</p>
+                            <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider block">Registrar Novas Medidas</p>
                             
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Data da Avaliação</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Data da Avaliação</Label>
                                 <Input 
                                   type="date"
                                   value={evalDate}
@@ -4056,7 +4056,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Peso (kg)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Peso (kg)</Label>
                                 <Input 
                                   type="number"
                                   step="0.01"
@@ -4068,7 +4068,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Altura (m) *</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Altura (m) *</Label>
                                 <Input 
                                   type="number"
                                   step="0.01"
@@ -4080,12 +4080,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-400 uppercase block truncate">IMC (Calculado)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase block truncate">IMC (Calculado)</Label>
                                 <Input 
                                   type="text"
                                   value={currentCalculatedImc}
                                   disabled
-                                  className="text-xs h-9 bg-neutral-100 border-border text-neutral-500 font-extrabold"
+                                  className="text-xs h-9 bg-neutral-100 border-border text-muted-foreground font-extrabold"
                                   placeholder="Calcula automático"
                                 />
                               </div>
@@ -4093,7 +4093,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 border-t border-dashed border-border pt-3">
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Braço Dir (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Braço Dir (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 32"
                                   value={evalArmRight} onChange={(e) => setEvalArmRight(e.target.value)}
@@ -4101,7 +4101,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Braço Esq (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Braço Esq (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 32"
                                   value={evalArmLeft} onChange={(e) => setEvalArmLeft(e.target.value)}
@@ -4109,7 +4109,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Cintura (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Cintura (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 75"
                                   value={evalWaist} onChange={(e) => setEvalWaist(e.target.value)}
@@ -4117,7 +4117,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Abdomen (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Abdomen (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 85"
                                   value={evalAbdomen} onChange={(e) => setEvalAbdomen(e.target.value)}
@@ -4125,7 +4125,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Quadril (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Quadril (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 98"
                                   value={evalHip} onChange={(e) => setEvalHip(e.target.value)}
@@ -4133,7 +4133,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Gordura %</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Gordura %</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 22.5"
                                   value={evalFatPercentage} onChange={(e) => setEvalFatPercentage(e.target.value)}
@@ -4144,7 +4144,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Coxa Dir (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Coxa Dir (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 58"
                                   value={evalThighRight} onChange={(e) => setEvalThighRight(e.target.value)}
@@ -4152,7 +4152,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Coxa Esq (cm)</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Coxa Esq (cm)</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 58"
                                   value={evalThighLeft} onChange={(e) => setEvalThighLeft(e.target.value)}
@@ -4160,7 +4160,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Panturrilha Dir</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Panturrilha Dir</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 38"
                                   value={evalCalfRight} onChange={(e) => setEvalCalfRight(e.target.value)}
@@ -4168,7 +4168,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[9px] font-bold text-neutral-500 uppercase">Panturrilha Esq</Label>
+                                <Label className="text-[9px] font-bold text-muted-foreground uppercase">Panturrilha Esq</Label>
                                 <Input 
                                   type="number" step="0.1" placeholder="Ex: 38"
                                   value={evalCalfLeft} onChange={(e) => setEvalCalfLeft(e.target.value)}
@@ -4178,7 +4178,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                             </div>
 
                             <div className="space-y-1">
-                              <Label className="text-[9px] font-bold text-neutral-500 uppercase">Notas Fisiológicas / Detalhamento</Label>
+                              <Label className="text-[9px] font-bold text-muted-foreground uppercase">Notas Fisiológicas / Detalhamento</Label>
                               <Textarea 
                                 placeholder="Observações de postura, dor lombar, evolução geral, etc..."
                                 value={evalNotes}
@@ -4209,30 +4209,30 @@ Qualquer dúvida, estou à disposição! 😊`;
               <aside className="w-80 shrink-0 border-l border-border/80 bg-[#fbfcfc]/60 p-6 overflow-y-auto flex flex-col gap-5">
                 <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-2">
                   <SparklesIcon className="h-4 w-4 text-blue-600 animate-pulse" />
-                  <span className="font-bold text-xs text-neutral-800 uppercase tracking-wider">Painel Inteligente</span>
+                  <span className="font-bold text-xs text-foreground uppercase tracking-wider">Painel Inteligente</span>
                 </div>
 
                 {loadingSmartPanel ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2Icon className="h-5 w-5 animate-spin text-neutral-400" />
+                    <Loader2Icon className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : smartPanelData ? (
                   <div className="space-y-5">
                     {/* Buying Score */}
                     <div className="space-y-2 text-left">
-                      <div className="flex justify-between text-xs text-neutral-500 font-bold">
+                      <div className="flex justify-between text-xs text-muted-foreground font-bold">
                         <span>Score de Compra:</span>
                         <span className="font-extrabold text-blue-600">{smartPanelData.leadScore}%</span>
                       </div>
                       <div className="w-full bg-neutral-200/60 rounded-full h-1.5 overflow-hidden">
                         <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${smartPanelData.leadScore}%` }} />
                       </div>
-                      <p className="text-[9px] text-neutral-400 font-bold capitalize mt-0.5">Estágio CRM: {smartPanelData.stage}</p>
+                      <p className="text-[9px] text-muted-foreground font-bold capitalize mt-0.5">Estágio CRM: {smartPanelData.stage}</p>
                     </div>
 
                     {/* Active tags */}
                     <div className="space-y-2 text-left">
-                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <TagIcon className="h-3.5 w-3.5 text-blue-500" /> Tags Ativas
                       </span>
                       {smartPanelData.tags.length > 0 ? (
@@ -4244,16 +4244,16 @@ Qualquer dúvida, estou à disposição! 😊`;
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10px] text-neutral-400 italic">Nenhuma tag cadastrada.</p>
+                        <p className="text-[10px] text-muted-foreground italic">Nenhuma tag cadastrada.</p>
                       )}
                     </div>
 
                     {/* Remaining package sessions alert summary */}
                     <div className="bg-white p-3 rounded-xl border border-border/70 space-y-1 text-left shadow-xs">
-                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <UserCheckIcon className="h-3.5 w-3.5 text-blue-500" /> Sessões em Aberto
                       </span>
-                      <p className={`text-sm font-black pt-1 ${smartPanelData.remainingSessions > 0 ? "text-emerald-600" : "text-neutral-400"}`}>
+                      <p className={`text-sm font-black pt-1 ${smartPanelData.remainingSessions > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
                         {smartPanelData.remainingSessions} sessões restantes
                       </p>
                     </div>
@@ -4278,23 +4278,23 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                     {/* Last Appointment info */}
                     <div className="space-y-2 text-left">
-                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <CalendarDaysIcon className="h-3.5 w-3.5 text-blue-500" /> Último Atendimento
                       </span>
                       {smartPanelData.lastAppointmentDate ? (
                         <div className="bg-white p-2.5 rounded-xl border border-border/50 text-[10px] shadow-xs space-y-1 font-semibold text-neutral-600">
-                          <p><span className="text-neutral-400">Doutor:</span> {smartPanelData.lastProfessionalName}</p>
+                          <p><span className="text-muted-foreground">Doutor:</span> {smartPanelData.lastProfessionalName}</p>
                           <p>
-                            <span className="text-neutral-400">Data:</span> {new Date(smartPanelData.lastAppointmentDate).toLocaleDateString("pt-BR")} às {new Date(smartPanelData.lastAppointmentDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            <span className="text-muted-foreground">Data:</span> {new Date(smartPanelData.lastAppointmentDate).toLocaleDateString("pt-BR")} às {new Date(smartPanelData.lastAppointmentDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
                       ) : (
-                        <p className="text-[10px] text-neutral-400 italic">Nenhum atendimento anterior.</p>
+                        <p className="text-[10px] text-muted-foreground italic">Nenhum atendimento anterior.</p>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-400 italic text-center py-10">Sem histórico.</p>
+                  <p className="text-xs text-muted-foreground italic text-center py-10">Sem histórico.</p>
                 )}
               </aside>
             </div>

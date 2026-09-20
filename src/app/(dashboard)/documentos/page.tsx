@@ -69,7 +69,7 @@ interface DocTemplate {
 const STATUS_CONFIG: Record<DocStatus, { label: string; cls: string; icon: React.ElementType }> = {
   signed: { label: "Assinado", cls: "text-emerald-600 bg-emerald-50 border-emerald-100", icon: CheckCircle2Icon },
   pending: { label: "Aguardando", cls: "text-amber-600 bg-amber-50 border-amber-100", icon: ClockIcon },
-  expired: { label: "Expirado", cls: "text-neutral-500 bg-neutral-100 border-border", icon: XCircleIcon },
+  expired: { label: "Expirado", cls: "text-muted-foreground bg-neutral-100 border-border", icon: XCircleIcon },
   refused: { label: "Recusado", cls: "text-red-600 bg-red-50 border-red-100", icon: XCircleIcon },
 };
 
@@ -487,10 +487,10 @@ export default function DocumentosPage() {
   if (!permsLoading && !hasPermission("view_documentos", "view")) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <ShieldAlertIcon className="h-10 w-10 text-neutral-400" />
+        <ShieldAlertIcon className="h-10 w-10 text-muted-foreground" />
         <div>
-          <h2 className="text-sm font-bold text-neutral-800">Sem acesso a Documentos</h2>
-          <p className="mt-1 text-xs text-neutral-500">
+          <h2 className="text-sm font-bold text-foreground">Sem acesso a Documentos</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
             Sua função não tem permissão pra ver essa área. Fale com um administrador se precisar
             de acesso.
           </p>
@@ -512,13 +512,13 @@ export default function DocumentosPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <h3 className="text-sm font-bold text-neutral-800">{previewDoc.title}</h3>
-              <button onClick={() => setPreviewDoc(null)} className="text-neutral-400 hover:text-neutral-600 text-xs font-bold bg-transparent border-0 cursor-pointer">
+              <h3 className="text-sm font-bold text-foreground">{previewDoc.title}</h3>
+              <button onClick={() => setPreviewDoc(null)} className="text-muted-foreground hover:text-neutral-600 text-xs font-bold bg-transparent border-0 cursor-pointer">
                 ✕
               </button>
             </div>
             <div className="rounded-xl p-4 overflow-y-auto flex-1 text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap bg-neutral-50/50 border border-neutral-100 mt-4">
-              {previewDoc.content || <span className="text-neutral-400 italic">Sem conteúdo.</span>}
+              {previewDoc.content || <span className="text-muted-foreground italic">Sem conteúdo.</span>}
             </div>
           </div>
         </div>
@@ -532,7 +532,7 @@ export default function DocumentosPage() {
             className="max-w-xl w-full rounded-2xl p-6 bg-white border border-border shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-              <h3 className="text-sm font-bold text-neutral-800">
+              <h3 className="text-sm font-bold text-foreground">
                 {editingTemplate
                   ? editingTemplate.clinic_id === null
                     ? "Clonar e Editar Modelo do Sistema"
@@ -542,7 +542,7 @@ export default function DocumentosPage() {
               <button
                 type="button"
                 onClick={() => setTemplateFormOpen(false)}
-                className="text-neutral-400 hover:text-neutral-600 text-xs font-bold bg-transparent border-0 cursor-pointer"
+                className="text-muted-foreground hover:text-neutral-600 text-xs font-bold bg-transparent border-0 cursor-pointer"
               >
                 ✕
               </button>
@@ -592,7 +592,7 @@ export default function DocumentosPage() {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <Label htmlFor="tmpl-content" className="text-xs font-semibold">Corpo do Modelo *</Label>
-                  <span className="text-[9px] text-neutral-400 font-bold uppercase">
+                  <span className="text-[9px] text-muted-foreground font-bold uppercase">
                     Tags: {"{{nome}}"} | {"{{CPF}}"} | {"{{data_atual}}"}
                   </span>
                 </div>
@@ -612,7 +612,7 @@ export default function DocumentosPage() {
               <button
                 type="button"
                 onClick={() => setTemplateFormOpen(false)}
-                className="rounded-xl border border-border bg-white hover:bg-neutral-50 px-4 py-2 text-xs font-bold text-neutral-500 transition-colors cursor-pointer"
+                className="rounded-xl border border-border bg-white hover:bg-neutral-50 px-4 py-2 text-xs font-bold text-muted-foreground transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -631,10 +631,10 @@ export default function DocumentosPage() {
       {/* Page Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-neutral-900">
+          <h1 className="text-2xl font-black tracking-tight text-foreground">
             Documentos
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Crie, envie e gerencie contratos, termos e fichas de anamnese com assinatura eletrônica.
           </p>
         </div>
@@ -687,13 +687,13 @@ export default function DocumentosPage() {
           {/* Stats Indicators */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Total Geral", value: documents.length, cls: "text-neutral-800" },
+              { label: "Total Geral", value: documents.length, cls: "text-foreground" },
               { label: "Assinados", value: documents.filter((d) => d.status === "signed").length, cls: "text-emerald-600" },
               { label: "Aguardando", value: documents.filter((d) => d.status === "pending").length, cls: "text-amber-600" },
               {
                 label: "Recusados/Expirados",
                 value: documents.filter((d) => d.status === "refused" || d.status === "expired").length,
-                cls: "text-neutral-500",
+                cls: "text-muted-foreground",
               },
             ].map((s) => (
               <div
@@ -701,7 +701,7 @@ export default function DocumentosPage() {
                 className="rounded-xl border border-border bg-white p-4 shadow-xs text-center"
               >
                 <p className={`text-2xl font-black ${s.cls}`}>{s.value}</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{s.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 font-bold">{s.label}</p>
               </div>
             ))}
           </div>
@@ -710,7 +710,7 @@ export default function DocumentosPage() {
             {/* Filters */}
             <div className="flex gap-3 flex-wrap items-center">
               <div className="relative flex-1 min-w-48">
-                <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -726,7 +726,7 @@ export default function DocumentosPage() {
                     className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
                       statusFilter === f
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "border-border text-neutral-500 bg-white hover:bg-neutral-50"
+                        : "border-border text-muted-foreground bg-white hover:bg-neutral-50"
                     }`}
                   >
                     {f === "all" ? "Todos" : STATUS_CONFIG[f]?.label ?? f}
@@ -741,16 +741,16 @@ export default function DocumentosPage() {
                 <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
               </div>
             ) : filtered.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border p-12 text-center text-neutral-400 bg-white shadow-xs">
+              <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground bg-white shadow-xs">
                 <FileTextIcon className="h-10 w-10 mx-auto text-neutral-300 mb-2" />
                 <p className="text-xs font-bold">Nenhum documento encontrado.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filtered.map((doc) => {
-                  const s = STATUS_CONFIG[doc.status] || { label: doc.status, cls: "text-neutral-500 bg-neutral-100", icon: FileTextIcon };
+                  const s = STATUS_CONFIG[doc.status] || { label: doc.status, cls: "text-muted-foreground bg-neutral-100", icon: FileTextIcon };
                   const Icon = s.icon;
-                  const typeClr = TYPE_COLORS[doc.type] || "bg-neutral-50 text-neutral-500 border-neutral-100";
+                  const typeClr = TYPE_COLORS[doc.type] || "bg-neutral-50 text-muted-foreground border-neutral-100";
                   return (
                     <div
                       key={doc.id}
@@ -763,7 +763,7 @@ export default function DocumentosPage() {
                           </div>
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-sm font-extrabold text-neutral-800 truncate">{doc.title}</h3>
+                              <h3 className="text-sm font-extrabold text-foreground truncate">{doc.title}</h3>
                               <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${s.cls}`}>
                                 <Icon className="h-3 w-3" />
                                 {s.label}
@@ -772,10 +772,10 @@ export default function DocumentosPage() {
                                 {TYPE_LABELS[doc.type] || doc.type}
                               </span>
                             </div>
-                            <p className="text-xs font-bold text-neutral-500">
+                            <p className="text-xs font-bold text-muted-foreground">
                               Paciente: <span className="text-neutral-700">{doc.patient_name}</span>
                             </p>
-                            <p className="text-[10px] text-neutral-400">
+                            <p className="text-[10px] text-muted-foreground">
                               Gerado em {new Date(doc.created_at).toLocaleDateString("pt-BR")} às {new Date(doc.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                               {doc.sent_at && !doc.signed_at && ` · Enviado em ${new Date(doc.sent_at).toLocaleDateString("pt-BR")}`}
                               {doc.viewed_at && !doc.signed_at && ` · Visualizado em ${new Date(doc.viewed_at).toLocaleDateString("pt-BR")}`}
@@ -791,7 +791,7 @@ export default function DocumentosPage() {
                               const raw = doc.content?.text || doc.content?.body || "";
                               setPreviewDoc({ title: doc.title, content: raw });
                             }}
-                            className="p-2 border border-border hover:bg-neutral-50 text-neutral-500 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                            className="p-2 border border-border hover:bg-neutral-50 text-muted-foreground rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                             title="Visualizar Conteúdo"
                           >
                             <EyeIcon className="h-4 w-4" />
@@ -832,11 +832,11 @@ export default function DocumentosPage() {
           <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">1</div>
-              <h2 className="text-sm font-black text-neutral-800">Selecionar Paciente</h2>
+              <h2 className="text-sm font-black text-foreground">Selecionar Paciente</h2>
             </div>
             
             <div className="relative">
-              <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={patientSearch}
                 onChange={(e) => {
@@ -860,8 +860,8 @@ export default function DocumentosPage() {
                         setShowPatientDropdown(false);
                       }}
                     >
-                      <span className="font-extrabold text-neutral-800">{p.name}</span>
-                      <span className="text-[10px] text-neutral-400 font-medium mt-0.5">{p.phone}</span>
+                      <span className="font-extrabold text-foreground">{p.name}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium mt-0.5">{p.phone}</span>
                     </button>
                   ))}
                 </div>
@@ -874,8 +874,8 @@ export default function DocumentosPage() {
                   {selectedPatient.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-bold text-neutral-800">{selectedPatient.name}</p>
-                  <p className="text-[11px] text-neutral-500 font-semibold mt-0.5">
+                  <p className="text-sm font-bold text-foreground">{selectedPatient.name}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold mt-0.5">
                     {selectedPatient.phone}
                     {selectedPatient.document ? ` · CPF: ${selectedPatient.document}` : ""}
                     {selectedPatient.birthday ? ` · Nasc: ${new Date(selectedPatient.birthday).toLocaleDateString("pt-BR")}` : ""}
@@ -883,7 +883,7 @@ export default function DocumentosPage() {
                 </div>
                 <button
                   onClick={() => setSelectedPatientId("")}
-                  className="text-neutral-400 hover:text-neutral-600 text-xs font-bold p-1 hover:bg-neutral-100 rounded border-0 bg-transparent cursor-pointer"
+                  className="text-muted-foreground hover:text-neutral-600 text-xs font-bold p-1 hover:bg-neutral-100 rounded border-0 bg-transparent cursor-pointer"
                 >
                   Remover
                 </button>
@@ -895,19 +895,19 @@ export default function DocumentosPage() {
           <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">2</div>
-              <h2 className="text-sm font-black text-neutral-800">Selecionar Modelos de Documento</h2>
-              <span className="text-[10px] font-bold text-neutral-400 ml-auto">
+              <h2 className="text-sm font-black text-foreground">Selecionar Modelos de Documento</h2>
+              <span className="text-[10px] font-bold text-muted-foreground ml-auto">
                 {selectedTemplateIds.length} selecionado(s)
               </span>
             </div>
 
             {templates.length === 0 ? (
-              <p className="text-xs italic text-neutral-400">Nenhum modelo de documento cadastrado.</p>
+              <p className="text-xs italic text-muted-foreground">Nenhum modelo de documento cadastrado.</p>
             ) : (
               <div className="grid gap-2.5">
                 {templates.map((t) => {
                   const selected = selectedTemplateIds.includes(t.id);
-                  const typeClr = TYPE_COLORS[t.type] || "bg-neutral-50 text-neutral-500 border-neutral-100";
+                  const typeClr = TYPE_COLORS[t.type] || "bg-neutral-50 text-muted-foreground border-neutral-100";
                   return (
                     <div
                       key={t.id}
@@ -941,7 +941,7 @@ export default function DocumentosPage() {
                           const raw = t.content?.text || t.content?.body || "";
                           setPreviewDoc({ title: t.name, content: interpolateVars(raw, selectedPatient) });
                         }}
-                        className="shrink-0 p-1.5 rounded-lg border border-border hover:bg-neutral-100 text-neutral-500 transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                        className="shrink-0 p-1.5 rounded-lg border border-border hover:bg-neutral-100 text-muted-foreground transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                         title="Pré-visualizar"
                       >
                         <EyeIcon className="h-3.5 w-3.5" />
@@ -957,14 +957,14 @@ export default function DocumentosPage() {
           <div className="rounded-2xl border border-border bg-white p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">3</div>
-              <h2 className="text-sm font-black text-neutral-800">Conteúdo do Documento</h2>
+              <h2 className="text-sm font-black text-foreground">Conteúdo do Documento</h2>
             </div>
 
             {/* Custom/Manual input */}
             {(addCustom || customContent) && (
               <div className="pt-4 space-y-4 border-t border-neutral-100">
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
                     Título do Documento Customizado
                   </label>
                   <input
@@ -975,7 +975,7 @@ export default function DocumentosPage() {
                   />
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
                     Conteúdo do Documento (Suporta tags: {"{{nome}}"}, {"{{CPF}}"}, {"{{data_atual}}"})
                   </label>
                   <textarea
@@ -1024,7 +1024,7 @@ export default function DocumentosPage() {
                   <button
                     type="button"
                     onClick={() => setPdfUrl("")}
-                    className="text-xs font-bold text-neutral-400 hover:text-red-500 shrink-0"
+                    className="text-xs font-bold text-muted-foreground hover:text-red-500 shrink-0"
                   >
                     Remover
                   </button>
@@ -1042,7 +1042,7 @@ export default function DocumentosPage() {
           {/* Preview list to send */}
           {docsToSend.length > 0 && (
             <div className="rounded-2xl border border-border bg-white p-5 space-y-3 shadow-xs text-left">
-              <h3 className="text-xs font-black text-neutral-800 uppercase tracking-wide">Documentos que serão gerados:</h3>
+              <h3 className="text-xs font-black text-foreground uppercase tracking-wide">Documentos que serão gerados:</h3>
               <div className="divide-y divide-neutral-100">
                 {docsToSend.map((doc, idx) => (
                   <div key={idx} className="py-2.5 flex items-center justify-between gap-3">
@@ -1066,7 +1066,7 @@ export default function DocumentosPage() {
           <div className="flex items-center justify-end gap-3 pt-3">
             <button
               onClick={() => setActiveTab("history")}
-              className="rounded-xl border border-border bg-white hover:bg-neutral-50 px-5 py-3 text-xs font-bold text-neutral-500 transition-colors cursor-pointer"
+              className="rounded-xl border border-border bg-white hover:bg-neutral-50 px-5 py-3 text-xs font-bold text-muted-foreground transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -1090,7 +1090,7 @@ export default function DocumentosPage() {
         <div className="space-y-6">
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-48">
-              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1101,7 +1101,7 @@ export default function DocumentosPage() {
           </div>
 
           {templates.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border p-12 text-center text-neutral-400 bg-white shadow-xs">
+            <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground bg-white shadow-xs">
               <LibraryIcon className="h-10 w-10 mx-auto text-neutral-300 mb-2" />
               <p className="text-xs font-bold">Nenhum modelo de documento cadastrado na biblioteca.</p>
             </div>
@@ -1110,7 +1110,7 @@ export default function DocumentosPage() {
               {templates
                 .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
                 .map((tmpl) => {
-                  const typeClr = TYPE_COLORS[tmpl.type] || "bg-neutral-50 text-neutral-500 border-neutral-100";
+                  const typeClr = TYPE_COLORS[tmpl.type] || "bg-neutral-50 text-muted-foreground border-neutral-100";
                   const isSystem = tmpl.clinic_id === null || !tmpl.clinic_id;
 
                   return (
@@ -1130,7 +1130,7 @@ export default function DocumentosPage() {
                               </span>
                             )}
                             {isSystem ? (
-                              <span className="inline-flex items-center rounded-full bg-neutral-100 border border-border/50 px-2.5 py-0.5 text-[9px] font-black text-neutral-500">
+                              <span className="inline-flex items-center rounded-full bg-neutral-100 border border-border/50 px-2.5 py-0.5 text-[9px] font-black text-muted-foreground">
                                 Sistema
                               </span>
                             ) : (
@@ -1141,10 +1141,10 @@ export default function DocumentosPage() {
                           </div>
                         </div>
 
-                        <h3 className="text-sm font-black text-neutral-800 tracking-tight group-hover:text-blue-600 transition-colors">
+                        <h3 className="text-sm font-black text-foreground tracking-tight group-hover:text-blue-600 transition-colors">
                           {tmpl.name}
                         </h3>
-                        <p className="text-xs text-neutral-500 leading-relaxed mt-1.5 line-clamp-4 min-h-[64px]">
+                        <p className="text-xs text-muted-foreground leading-relaxed mt-1.5 line-clamp-4 min-h-[64px]">
                           {tmpl.content?.text || tmpl.content?.body || ""}
                         </p>
                       </div>
@@ -1155,7 +1155,7 @@ export default function DocumentosPage() {
                             const raw = tmpl.content?.text || tmpl.content?.body || "";
                             setPreviewDoc({ title: tmpl.name, content: raw });
                           }}
-                          className="text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer bg-transparent border-0"
+                          className="text-xs font-bold text-muted-foreground hover:text-neutral-600 transition-colors cursor-pointer bg-transparent border-0"
                         >
                           Visualizar
                         </button>

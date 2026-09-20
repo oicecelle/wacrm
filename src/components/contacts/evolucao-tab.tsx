@@ -78,7 +78,7 @@ function DiffChip({
 }) {
   if (current === null || previous === null) return null;
   const diff = current - previous;
-  if (Math.abs(diff) < 0.01) return <MinusIcon className="h-3 w-3 text-neutral-500" />;
+  if (Math.abs(diff) < 0.01) return <MinusIcon className="h-3 w-3 text-muted-foreground" />;
   const better = smaller ? diff < 0 : diff > 0;
   const color = better ? "text-emerald-400" : "text-rose-400";
   const Icon = diff < 0 ? TrendingDownIcon : TrendingUpIcon;
@@ -322,7 +322,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {FIELDS.map(({ key, label, unit }) => (
                   <div key={key} className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-wide text-neutral-500">
+                    <label className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">
                       {label} {unit && `(${unit})`}
                     </label>
                     <input
@@ -360,7 +360,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
           {!loading && measurements.length > 0 && (
             <div className="rounded-xl p-4 border border-border bg-card shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400">
+                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                   Última medição · {new Date(measurements[0].measured_at).toLocaleDateString("pt-BR")}
                 </p>
                 {measurements.length > 1 && (
@@ -375,7 +375,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
                   const prevVal = previous ? (previous[key] as number | null) : null;
                   return (
                     <div key={key} className="space-y-0.5">
-                      <p className="text-[9px] text-neutral-500 font-bold uppercase">{label}</p>
+                      <p className="text-[9px] text-muted-foreground font-bold uppercase">{label}</p>
                       <div className="flex items-end gap-1.5">
                         <p className="text-sm font-black text-foreground">
                           {val !== null ? `${val}${unit}` : "—"}
@@ -405,14 +405,14 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
             </div>
           ) : measurements.length === 0 ? (
             <div className="text-center py-10 rounded-xl border border-dashed border-border bg-card">
-              <TrendingUpIcon className="h-7 w-7 mx-auto mb-2 text-neutral-400" />
+              <TrendingUpIcon className="h-7 w-7 mx-auto mb-2 text-muted-foreground" />
               <p className="text-xs italic text-neutral-600">
                 Nenhuma medição registrada ainda.
               </p>
             </div>
           ) : measurements.length > 1 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-neutral-500">
+              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                 Histórico ({measurements.length} medições)
               </p>
               {measurements.slice(1).map((m) => {
@@ -436,16 +436,16 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
                         </p>
                       </div>
                       {isExpanded ? (
-                        <ChevronUpIcon className="h-4 w-4 text-neutral-500" />
+                        <ChevronUpIcon className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronDownIcon className="h-4 w-4 text-neutral-500" />
+                        <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
                     {isExpanded && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
                         {filled.map(({ key, label, unit }) => (
                           <div key={key}>
-                            <p className="text-[9px] text-neutral-500 font-bold uppercase">{label}</p>
+                            <p className="text-[9px] text-muted-foreground font-bold uppercase">{label}</p>
                             <p className="text-xs font-bold text-foreground">
                               {(m[key] as number)}
                               {unit}
@@ -482,7 +482,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
                     setSelectedPhotoA(null);
                     setSelectedPhotoB(null);
                   }}
-                  className="text-[10px] font-bold text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                  className="text-[10px] font-bold text-muted-foreground hover:text-red-500 transition-colors cursor-pointer"
                 >
                   Limpar Comparação
                 </button>
@@ -526,7 +526,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
 
           {/* Upload and Camera triggers */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
-            <p className="text-[10px] text-neutral-400 font-black uppercase tracking-wider">
+            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
               📸 Adicionar Nova Foto de Progresso
             </p>
             <div className="flex gap-2">
@@ -579,14 +579,14 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
             </div>
           ) : photos.length === 0 ? (
             <div className="text-center py-10 rounded-xl border border-dashed border-border bg-card">
-              <ImageIcon className="h-7 w-7 mx-auto mb-2 text-neutral-400" />
+              <ImageIcon className="h-7 w-7 mx-auto mb-2 text-muted-foreground" />
               <p className="text-xs italic text-neutral-600">
                 Nenhuma foto registrada para este paciente ainda.
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-neutral-500">
+              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                 Fotos de Evolução ({photos.length}) - Selecione 2 para Comparar
               </p>
               <div className="grid grid-cols-3 gap-3">

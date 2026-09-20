@@ -336,7 +336,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
             </span>
           ))}
           {objList.length > 2 && (
-            <span className="inline-flex items-center bg-neutral-100 text-neutral-500 text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center bg-neutral-100 text-muted-foreground text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
               +{objList.length - 2}
             </span>
           )}

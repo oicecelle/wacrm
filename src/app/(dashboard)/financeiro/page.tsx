@@ -835,7 +835,7 @@ export default function FinanceiroPage() {
                   setFilterStatus("all");
                   setTypeFilter("all");
                 }}
-                className="text-xs font-bold text-neutral-500 hover:text-primary transition-colors hover:underline px-2 cursor-pointer border-0 bg-transparent"
+                className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors hover:underline px-2 cursor-pointer border-0 bg-transparent"
               >
                 Limpar Filtros
               </button>
