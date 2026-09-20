@@ -278,46 +278,13 @@ export default function AdminDashboardPage() {
       }
       setErrors(extractedErrors);
 
-      // 4. Mock support tickets & NPS responses
-      setSupportTickets([
-        {
-          id: "t-1",
-          clinicName: "Clínica Renova Estética",
-          userEmail: "fernanda.souza@renova.com",
-          subject: "Erro ao sincronizar contatos",
-          message: "Estou tentando sincronizar a lista de contatos do WhatsApp mas está travando no meio do processo.",
-          status: "open",
-          created_at: new Date(Date.now() - 1800000).toLocaleString("pt-BR"),
-        },
-        {
-          id: "t-2",
-          clinicName: "Dra. Ana Paula Fisioterapia",
-          userEmail: "contato@draanapaula.com.br",
-          subject: "Dúvida sobre pacotes de sessões",
-          message: "Como faço para lançar uma comissão customizada para o meu assistente na aba de comissões?",
-          status: "resolved",
-          created_at: new Date(Date.now() - 86400000).toLocaleString("pt-BR"),
-        },
-      ]);
-
-      setNpsResponses([
-        {
-          id: "nps-1",
-          userName: "Dra. Mariana Lira",
-          clinicName: "Lira Odontologia",
-          score: 10,
-          feedback: "O copiloto de inteligência artificial economiza horas do meu dia. Fantástico!",
-          created_at: new Date(Date.now() - 5000000).toLocaleDateString("pt-BR"),
-        },
-        {
-          id: "nps-2",
-          userName: "Dr. Roberto Albuquerque",
-          clinicName: "Albuquerque Estética",
-          score: 9,
-          feedback: "Muito bom, o controle financeiro de sinais no WhatsApp facilitou nosso fechamento de caixa.",
-          created_at: new Date(Date.now() - 25000000).toLocaleDateString("pt-BR"),
-        },
-      ]);
+      // Support tickets and NPS: no real collection mechanism exists
+      // yet (support today happens over WhatsApp, and there's no NPS
+      // survey anywhere in the app) — these tabs stay empty and
+      // honest about that instead of showing invented data, which is
+      // what used to be here.
+      setSupportTickets([]);
+      setNpsResponses([]);
 
       // 5. Fetch real system alerts
       const { data: alertsData } = await supabase
@@ -794,7 +761,17 @@ export default function AdminDashboardPage() {
             {/* ── Tab: Support ── */}
             {activeTab === "support" && (
               <div className="space-y-4">
-                {supportTickets.map((ticket) => (
+                {supportTickets.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-neutral-800 bg-neutral-900/40 p-8 text-center">
+                    <p className="text-sm font-bold text-white">Nenhum ticket de suporte ainda</p>
+                    <p className="mt-1 text-xs text-neutral-500 max-w-md mx-auto">
+                      Não existe um sistema de tickets de verdade ainda — o suporte hoje acontece
+                      só pelo WhatsApp (o botão nas telas de erro). Pra ter um histórico real aqui,
+                      seria preciso registrar cada contato recebido numa tabela própria.
+                    </p>
+                  </div>
+                ) : (
+                  supportTickets.map((ticket) => (
                   <div key={ticket.id} className={`rounded-2xl border bg-neutral-900 p-5 space-y-3 ${ticket.status === "open" ? "border-blue-500/30" : "border-neutral-800"}`}>
                     <div className="flex items-start justify-between">
                       <div>
@@ -821,14 +798,25 @@ export default function AdminDashboardPage() {
                       {ticket.message}
                     </p>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
             {/* ── Tab: NPS ── */}
             {activeTab === "nps" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {npsResponses.map((nps) => (
+                {npsResponses.length === 0 ? (
+                  <div className="col-span-2 rounded-2xl border border-dashed border-neutral-800 bg-neutral-900/40 p-8 text-center">
+                    <p className="text-sm font-bold text-white">Nenhuma resposta de NPS ainda</p>
+                    <p className="mt-1 text-xs text-neutral-500 max-w-md mx-auto">
+                      Ainda não existe nenhuma pesquisa de satisfação (NPS) rodando dentro do
+                      sistema — precisaria de uma tela pedindo a nota pro usuário em algum momento
+                      e uma tabela guardando as respostas.
+                    </p>
+                  </div>
+                ) : (
+                  npsResponses.map((nps) => (
                   <div key={nps.id} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 space-y-3 flex flex-col justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -845,7 +833,8 @@ export default function AdminDashboardPage() {
                       Por: <strong className="text-neutral-400">{nps.userName}</strong> • {nps.created_at}
                     </p>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
