@@ -571,7 +571,7 @@ function NodeEditSheet({
             <span>{meta.label}</span>
             {isEntry && (
               <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
-                Entry
+                Entrada
               </span>
             )}
           </SheetTitle>
@@ -592,7 +592,7 @@ function NodeEditSheet({
         <SheetFooter className="border-t border-border px-5 py-3 sm:flex-row sm:justify-between">
           {!isEntry ? (
             <Button variant="ghost" size="sm" onClick={onSetEntry}>
-              Set as entry
+              Definir como entrada
             </Button>
           ) : (
             <span />
@@ -604,7 +604,7 @@ function NodeEditSheet({
             className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Delete node
+            Remover nó
           </Button>
         </SheetFooter>
       </SheetContent>
