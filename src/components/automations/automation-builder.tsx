@@ -611,6 +611,10 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
     setState((s) => ({ ...s, steps: moveAt(s.steps, path, direction) }))
   }
 
+  function moveStepTo(path: StepPath, targetIndex: number) {
+    setState((s) => ({ ...s, steps: moveStepToIndex(s.steps, path, targetIndex) }))
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -718,6 +722,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
               addStepAt={addStepAt}
               deleteStepAt={deleteStepAt}
               moveStepAt={moveStepAt}
+              moveStepTo={moveStepTo}
             />
           </ResourcesProvider>
         </div>
@@ -981,6 +986,7 @@ interface StepListProps {
   addStepAt: (parent: ParentScope, index: number, type: AutomationStepType) => void
   deleteStepAt: (path: StepPath) => void
   moveStepAt: (path: StepPath, direction: -1 | 1) => void
+  moveStepTo: (path: StepPath, targetIndex: number) => void
 }
 
 function StepList(props: StepListProps) {
@@ -994,6 +1000,12 @@ function StepList(props: StepListProps) {
           return { kind: "branch", parentCid: last.parentCid, branch: last.branch } as const
         })()
 
+  // Drag-and-drop reorder state, scoped to this one list (root level,
+  // or a single condition branch) — dragging a step out of its own
+  // list isn't supported, matching moveStepToIndex's scope.
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
   return (
     <div className="flex flex-col items-center">
       <AddButton onPick={(t) => props.addStepAt(parentScope, 0, t)} />
@@ -1005,6 +1017,23 @@ function StepList(props: StepListProps) {
           total={steps.length}
           parentScope={parentScope}
           parentPath={parentPath}
+          isDragging={draggedIdx === idx}
+          isDragOver={dragOverIdx === idx && draggedIdx !== null && draggedIdx !== idx}
+          onDragHandleStart={() => setDraggedIdx(idx)}
+          onDragHandleEnter={() => draggedIdx !== null && setDragOverIdx(idx)}
+          onDragHandleEnd={() => {
+            if (draggedIdx !== null && dragOverIdx !== null && draggedIdx !== dragOverIdx) {
+              const path: StepPath = [
+                ...parentPath,
+                parentScope.kind === "root"
+                  ? { kind: "root" as const, index: draggedIdx }
+                  : { kind: "branch" as const, parentCid: parentScope.parentCid, branch: parentScope.branch, index: draggedIdx },
+              ]
+              props.moveStepTo(path, dragOverIdx)
+            }
+            setDraggedIdx(null)
+            setDragOverIdx(null)
+          }}
           {...rest}
         />
       ))}
@@ -1018,6 +1047,11 @@ function StepRenderer({
   total,
   parentScope,
   parentPath,
+  isDragging,
+  isDragOver,
+  onDragHandleStart,
+  onDragHandleEnter,
+  onDragHandleEnd,
   ...props
 }: {
   step: BuilderStep
@@ -1025,6 +1059,11 @@ function StepRenderer({
   total: number
   parentScope: ParentScope
   parentPath: StepPath
+  isDragging: boolean
+  isDragOver: boolean
+  onDragHandleStart: () => void
+  onDragHandleEnter: () => void
+  onDragHandleEnd: () => void
 } & Omit<StepListProps, "steps" | "parentPath">) {
   const path: StepPath = [
     ...parentPath,
@@ -1045,7 +1084,18 @@ function StepRenderer({
 
   return (
     <>
-      <div className={cn("z-10 flex flex-col", width)}>
+      <div
+        className={cn(
+          "z-10 flex flex-col transition-opacity",
+          width,
+          isDragging && "opacity-40",
+          isDragOver && "ring-2 ring-primary rounded-lg",
+        )}
+        onDragOver={(e) => {
+          e.preventDefault()
+          onDragHandleEnter()
+        }}
+      >
         <div
           className={cn(
             "rounded-lg border border-border border-l-4 bg-card shadow-lg",
@@ -1057,7 +1107,23 @@ function StepRenderer({
             onClick={() => props.setExpandedId(expanded ? null : step.cid)}
             className="flex w-full items-center gap-3 px-4 py-3 text-left"
           >
-            <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
+            <span
+              draggable
+              onClick={(e) => e.stopPropagation()}
+              onDragStart={(e) => {
+                e.stopPropagation()
+                e.dataTransfer.effectAllowed = "move"
+                onDragHandleStart()
+              }}
+              onDragEnd={(e) => {
+                e.stopPropagation()
+                onDragHandleEnd()
+              }}
+              className="cursor-grab touch-none active:cursor-grabbing"
+              aria-label="Arrastar para reordenar"
+            >
+              <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
+            </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
               <Icon className="h-4 w-4" />
             </div>
@@ -1785,6 +1851,63 @@ function moveAt(
     const next = rest.length === 0 ? swap(bucket, head.index) : bucket
     return { ...s, branches: { ...s.branches, [head.branch]: next } }
   })
+}
+
+/**
+ * Drag-and-drop reorder — moves the step at `path` to `targetIndex`
+ * within its own list (same branch/root level only; dragging a step
+ * into a different branch isn't supported). Shares the same
+ * root/branch traversal shape as moveAt, just with a splice-to-index
+ * instead of an adjacent swap.
+ */
+function moveStepToIndex(
+  steps: BuilderStep[],
+  path: StepPath,
+  targetIndex: number,
+): BuilderStep[] {
+  if (path.length === 0) return steps
+  const head = path[0]
+  const rest = path.slice(1)
+  const reorder = <T,>(arr: T[], from: number, to: number) => {
+    if (from === to || from < 0 || from >= arr.length) return arr
+    const copy = [...arr]
+    const [moved] = copy.splice(from, 1)
+    copy.splice(Math.max(0, Math.min(to, copy.length)), 0, moved)
+    return copy
+  }
+  if (head.kind === "root") {
+    if (rest.length === 0) return reorder(steps, head.index, targetIndex)
+    return steps.map((s, i) =>
+      i !== head.index ? s : { ...s, branches: moveInBranchesToIndex(s.branches, rest, targetIndex) },
+    )
+  }
+  return steps.map((s) => {
+    if (s.cid !== head.parentCid || !s.branches) return s
+    const bucket = s.branches[head.branch]
+    const next = rest.length === 0 ? reorder(bucket, head.index, targetIndex) : bucket
+    return { ...s, branches: { ...s.branches, [head.branch]: next } }
+  })
+}
+
+function moveInBranchesToIndex(
+  branches: BuilderStep["branches"],
+  path: StepPath,
+  targetIndex: number,
+): BuilderStep["branches"] {
+  if (!branches) return branches
+  const head = path[0]
+  if (head.kind !== "branch") return branches
+  const rest = path.slice(1)
+  const bucket = branches[head.branch]
+  const reorder = <T,>(arr: T[], from: number, to: number) => {
+    if (from === to || from < 0 || from >= arr.length) return arr
+    const copy = [...arr]
+    const [moved] = copy.splice(from, 1)
+    copy.splice(Math.max(0, Math.min(to, copy.length)), 0, moved)
+    return copy
+  }
+  const next = rest.length === 0 ? reorder(bucket, head.index, targetIndex) : bucket
+  return { ...branches, [head.branch]: next }
 }
 
 function moveInBranches(
