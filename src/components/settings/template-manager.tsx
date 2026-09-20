@@ -497,7 +497,7 @@ export function TemplateManager() {
               <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? 'Sincronizando…' : 'Sincronizar da Meta'}
             </Button>
-            <Button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+            <Button onClick={openCreate} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
               <Plus className="size-4" />
               Novo Modelo
             </Button>

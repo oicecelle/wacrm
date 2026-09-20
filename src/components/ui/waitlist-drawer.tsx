@@ -269,7 +269,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                 <Button
                   size="sm"
                   onClick={handleAdd}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 font-bold rounded-lg px-3"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 font-bold rounded-lg px-3"
                 >
                   Confirmar
                 </Button>
@@ -283,7 +283,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
               <Button
                 size="sm"
                 onClick={() => setShowAddForm(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 gap-1 rounded-lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-bold h-7 gap-1 rounded-lg"
               >
                 <PlusIcon className="h-3.5 w-3.5" />
                 Adicionar à Fila
@@ -335,7 +335,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                       <Button
                         size="sm"
                         onClick={() => handleScheduleClick(item)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 rounded-lg px-2.5 gap-1.5"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-bold h-7 rounded-lg px-2.5 gap-1.5"
                       >
                         <CalendarCheck2Icon className="h-3.5 w-3.5" />
                         Agendar Horário

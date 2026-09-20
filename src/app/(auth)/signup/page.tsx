@@ -136,7 +136,7 @@ function SignupPageInner() {
             <div className="pt-2">
               <Link
                 href="/login"
-                className="inline-flex h-12 w-full items-center justify-center bg-blue-600 text-white hover:bg-blue-700 font-bold rounded-xl transition-all shadow-md shadow-blue-200 text-sm"
+                className="inline-flex h-12 w-full items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-xl transition-all shadow-md shadow-blue-200 text-sm"
               >
                 Voltar para o login
               </Link>
@@ -313,7 +313,7 @@ function SignupPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="h-11 w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 font-bold rounded-xl transition-all shadow-md shadow-blue-200 mt-2 text-xs"
+              className="h-11 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 font-bold rounded-xl transition-all shadow-md shadow-blue-200 mt-2 text-xs"
             >
               {loading ? "Criando Conta..." : "Começar Agora"}
             </Button>

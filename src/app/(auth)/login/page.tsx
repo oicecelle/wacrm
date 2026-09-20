@@ -201,7 +201,7 @@ function LoginPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="h-12 w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 font-bold rounded-xl transition-all shadow-md shadow-blue-200"
+              className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 font-bold rounded-xl transition-all shadow-md shadow-blue-200"
             >
               {loading ? "Entrando..." : "Entrar"}
             </Button>

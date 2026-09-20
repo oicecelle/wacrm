@@ -717,7 +717,7 @@ export default function EquipePage() {
               <Button
                 type="submit"
                 disabled={sendingInvite}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl"
               >
                 {sendingInvite ? (
                   <><Loader2Icon className="h-4 w-4 animate-spin mr-2" />Enviando convite...</>
@@ -852,7 +852,7 @@ export default function EquipePage() {
                 <Button
                   type="submit"
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-10 w-2/3 rounded-xl font-bold"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-10 w-2/3 rounded-xl font-bold"
                 >
                   {saving ? <><Loader2Icon className="h-4 w-4 animate-spin mr-1" /> Salvando...</> : "Salvar Alterações"}
                 </Button>

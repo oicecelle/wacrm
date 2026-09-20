@@ -315,7 +315,7 @@ export default function AutomationsPage() {
               canAct={canCreate}
               gateReason="criar automações"
               onClick={() => router.push("/automations/new")}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md shadow-blue-200"
             >
               <Plus className="h-4 w-4" />
               Criar Automação
@@ -325,7 +325,7 @@ export default function AutomationsPage() {
               canAct={canCreate}
               gateReason="criar fluxos"
               onClick={() => setCreateFlowOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md shadow-blue-200"
             >
               <Plus className="h-4 w-4" />
               Novo Fluxo
@@ -555,7 +555,7 @@ export default function AutomationsPage() {
               <Button
                 disabled={creatingFlow || !newFlowName.trim()}
                 onClick={handleCreateFlow}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 text-xs shrink-0 rounded-xl"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 text-xs shrink-0 rounded-xl"
               >
                 {creatingFlow ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar Fluxo"}
               </Button>

@@ -1631,7 +1631,7 @@ export default function AgendaPage() {
                   setDetailApptId(id);
                   setDetailModalOpen(true);
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-8 rounded-lg"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold h-8 rounded-lg"
               >
                 Detalhes
               </Button>

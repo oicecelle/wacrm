@@ -196,7 +196,7 @@ export default function PortalConfigPage() {
               href={`/portal/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors flex-1 sm:flex-initial h-9"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl transition-colors flex-1 sm:flex-initial h-9"
             >
               <Eye className="h-3.5 w-3.5" />
               Visualizar
@@ -388,7 +388,7 @@ export default function PortalConfigPage() {
         <Button
           onClick={handleSaveSettings}
           disabled={saving || !welcomeTitle.trim()}
-          className="bg-blue-600 text-white hover:bg-blue-700 font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-1.5"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-1.5"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           Salvar Configurações do Portal

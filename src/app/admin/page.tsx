@@ -908,7 +908,7 @@ export default function AdminDashboardPage() {
                   <Button
                     onClick={handleSendAdminCopilotMessage}
                     disabled={sendingChat || !chatInput.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs"
                   >
                     Enviar
                   </Button>

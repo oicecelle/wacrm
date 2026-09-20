@@ -542,7 +542,7 @@ export default function PipelinesPage() {
             gateReason="criar negócios"
             disabled={!selectedPipelineId || stages.length === 0}
             onClick={() => handleAddDeal()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
           >
             <Plus className="mr-1 h-4 w-4" />
             Adicionar Lead

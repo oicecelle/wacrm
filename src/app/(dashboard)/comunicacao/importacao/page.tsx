@@ -544,7 +544,7 @@ export default function MigrationPage() {
               <Button
                 onClick={() => setCurrentStep(2)}
                 disabled={!importType}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-1.5 disabled:opacity-50"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-1.5 disabled:opacity-50"
               >
                 Próximo Passo
                 <ArrowRight className="h-4 w-4" />
@@ -629,7 +629,7 @@ export default function MigrationPage() {
               {file && (
                 <Button
                   onClick={() => setCurrentStep(3)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-1.5"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-1.5"
                 >
                   Mapear Colunas
                   <ArrowRight className="h-4 w-4" />
@@ -751,7 +751,7 @@ export default function MigrationPage() {
               {canStartImport && !importing && (
                 <Button
                   onClick={runImport}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-1.5"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-1.5"
                 >
                   Importar {csvRows.length} registros
                   <ChevronRight className="h-4 w-4" />

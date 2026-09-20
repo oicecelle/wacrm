@@ -386,7 +386,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                     <Button
                       onClick={handleAddProntuario}
                       disabled={savingProntuario || !newProntuario.trim()}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-9"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl h-9"
                     >
                       {savingProntuario ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <><SaveIcon className="h-4 w-4 mr-1.5" /> Salvar Registro</>}
                     </Button>
@@ -423,7 +423,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                     <Button
                       onClick={handleAddEvolucao}
                       disabled={savingEvolucao || !newEvolucao.trim()}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-9"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl h-9"
                     >
                       {savingEvolucao ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <><PlusIcon className="h-4 w-4 mr-1.5" /> Registrar Evolução</>}
                     </Button>

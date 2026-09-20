@@ -316,7 +316,7 @@ export default function LinkBioPage() {
                 Ver página
               </a>
             )}
-            <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+            <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Salvar
             </Button>

@@ -537,7 +537,7 @@ export default function OnboardingPage() {
             <div className="pt-6">
               <Button 
                 onClick={handleNext} 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold h-12 rounded-2xl shadow-lg shadow-blue-500/10 text-xs transition-transform active:scale-98"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-extrabold h-12 rounded-2xl shadow-lg shadow-blue-500/10 text-xs transition-transform active:scale-98"
               >
                 Começar configuração
                 <ArrowRightIcon className="ml-1.5 h-4 w-4" />
@@ -606,7 +606,7 @@ export default function OnboardingPage() {
                   <Button 
                     onClick={handleConnectWhatsApp}
                     disabled={!uazapiPhone.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 text-xs rounded-xl shadow-md disabled:opacity-50"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 text-xs rounded-xl shadow-md disabled:opacity-50"
                   >
                     Gerar QR Code de Conexão
                   </Button>
@@ -686,7 +686,7 @@ export default function OnboardingPage() {
               <Button
                 onClick={handleNext}
                 disabled={waStatus !== "connected"}
-                className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md disabled:opacity-50"
+                className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs shadow-md disabled:opacity-50"
               >
                 Avançar
                 <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
@@ -789,7 +789,7 @@ export default function OnboardingPage() {
                 </button>
                 <Button
                   onClick={handleNext}
-                  className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md"
+                  className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs shadow-md"
                 >
                   Avançar
                   <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
@@ -907,7 +907,7 @@ export default function OnboardingPage() {
                 </button>
                 <Button
                   onClick={handleNext}
-                  className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md"
+                  className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs shadow-md"
                 >
                   Avançar
                   <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
@@ -1048,7 +1048,7 @@ export default function OnboardingPage() {
                 </button>
                 <Button
                   onClick={handleNext}
-                  className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md"
+                  className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs shadow-md"
                 >
                   Avançar
                   <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
@@ -1193,7 +1193,7 @@ export default function OnboardingPage() {
                 </button>
                 <Button
                   onClick={handleNext}
-                  className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md"
+                  className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs shadow-md"
                 >
                   Avançar
                   <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
@@ -1247,7 +1247,7 @@ export default function OnboardingPage() {
             <div className="pt-6">
               <Button
                 onClick={handleComplete}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-2xl shadow-lg shadow-blue-500/10 text-xs transition-transform active:scale-98"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-2xl shadow-lg shadow-blue-500/10 text-xs transition-transform active:scale-98"
               >
                 Ir para minha Agenda
                 <ArrowRightIcon className="ml-1.5 h-4 w-4" />

@@ -584,7 +584,7 @@ export default function ScheduledNotificationsPage() {
             <Button
               onClick={saveEdit}
               disabled={updating || !editMessageText.trim() || !editScheduledFor}
-              className="bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-bold disabled:opacity-50"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-bold disabled:opacity-50"
             >
               {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               Salvar Alterações

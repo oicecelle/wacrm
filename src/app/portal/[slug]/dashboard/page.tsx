@@ -489,7 +489,7 @@ export default function PatientPortalDashboardPage() {
                           size="sm"
                           onClick={handleBookAppointment}
                           disabled={booking}
-                          className="bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold rounded-xl flex items-center gap-1"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold rounded-xl flex items-center gap-1"
                         >
                           {booking && <Loader2 className="h-3 w-3 animate-spin" />}
                           Confirmar Consulta

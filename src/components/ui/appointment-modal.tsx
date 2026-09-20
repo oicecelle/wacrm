@@ -2370,7 +2370,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                 <Button
                   type="submit"
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 font-bold rounded-lg px-4"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-bold rounded-lg px-4"
                 >
                   {saving ? <Loader2Icon className="h-4 w-4 animate-spin mr-2" /> : "Salvar na Agenda"}
                 </Button>
@@ -2452,7 +2452,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   <Button
                     type="submit"
                     disabled={savingNewPatient}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 rounded-lg px-4 font-bold"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 rounded-lg px-4 font-bold"
                   >
                     {savingNewPatient ? (
                       <>
@@ -2674,7 +2674,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   )}
                   <DialogFooter className="flex justify-end gap-2 pt-2">
                     <DialogClose render={<Button variant="outline" className="text-xs h-9 rounded-lg" />}>Cancelar</DialogClose>
-                    <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 font-bold rounded-lg px-4">
+                    <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-bold rounded-lg px-4">
                       {saving ? <Loader2Icon className="h-4 w-4 animate-spin mr-2" /> : null}
                       {saving ? "Salvando..." : (apptType === "evento" ? "Criar Evento" : "Bloquear Horário")}
                     </Button>
@@ -3366,7 +3366,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               type="button"
                               onClick={handleSendSelectedDocuments}
                               disabled={selectedDocs.length === 0 || saving}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] h-8 font-bold gap-1 rounded-lg"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-8 font-bold gap-1 rounded-lg"
                             >
                               <SendIcon className="h-3 w-3" />
                               Gerar & Enviar Selecionados
@@ -3626,7 +3626,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   type="button"
                                   onClick={buildQuoteMessage}
                                   disabled={quoteItems.length === 0}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 font-bold rounded-lg px-4"
+                                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-bold rounded-lg px-4"
                                 >
                                   Gerar Mensagem WhatsApp →
                                 </Button>
@@ -3763,7 +3763,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 onClick={() => {
                                   setQuoteModalOpen(true);
                                 }}
-                                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold h-7 gap-1 rounded-lg"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-bold h-7 gap-1 rounded-lg"
                               >
                                 <PlusIcon className="h-3 w-3" />
                                 Novo Orçamento
@@ -3900,7 +3900,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   Portal do Paciente
                                 </label>
                               </div>
-                              <Button size="sm" type="submit" disabled={evolSaving || !newEvolContent.trim()} className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] h-8 px-4 rounded-lg">
+                              <Button size="sm" type="submit" disabled={evolSaving || !newEvolContent.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] h-8 px-4 rounded-lg">
                                 {evolSaving ? "Processando..." : "Registrar Evolução"}
                               </Button>
                             </div>
@@ -4192,7 +4192,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               <Button
                                 type="submit"
                                 disabled={savingBodyEval}
-                                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] h-8 font-black rounded-lg px-4"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-8 font-black rounded-lg px-4"
                               >
                                 {savingBodyEval ? "Salvando Medidas..." : "Registrar Avaliação Física"}
                               </Button>
@@ -4324,7 +4324,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     type="submit"
                     form="appt-modal-form"
                     disabled={saving || loading || deleting}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 rounded-lg px-5 font-bold"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 rounded-lg px-5 font-bold"
                   >
                     {saving ? (
                       <>

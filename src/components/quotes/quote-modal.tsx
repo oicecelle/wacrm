@@ -677,7 +677,7 @@ export function QuoteModal({
               <Button
                 onClick={buildMessage}
                 disabled={items.length === 0}
-                className="ml-auto bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl"
+                className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl"
               >
                 Gerar mensagem WhatsApp →
               </Button>

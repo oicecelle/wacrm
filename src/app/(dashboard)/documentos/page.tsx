@@ -619,7 +619,7 @@ export default function DocumentosPage() {
               <button
                 type="submit"
                 disabled={savingTemplate}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 px-5 py-2 text-xs font-black transition-all cursor-pointer"
+                className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-5 py-2 text-xs font-black transition-all cursor-pointer"
               >
                 {savingTemplate ? "Salvando..." : "Salvar Modelo"}
               </button>
@@ -642,14 +642,14 @@ export default function DocumentosPage() {
           {activeTab === "modelos" && (
             <button
               onClick={() => handleOpenTemplateForm()}
-              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-sm cursor-pointer border-0"
+              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm cursor-pointer border-0"
             >
               <PlusIcon className="h-4 w-4" /> Criar Modelo
             </button>
           )}
           <button
             onClick={() => setActiveTab(activeTab === "history" ? "novo" : "history")}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-200 cursor-pointer"
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-blue-200 cursor-pointer"
           >
             {activeTab === "novo" ? (
               <><ChevronLeftIcon className="h-4 w-4" /> Voltar ao Histórico</>
@@ -1073,7 +1073,7 @@ export default function DocumentosPage() {
             <button
               onClick={handleSend}
               disabled={sending || docsToSend.length === 0}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 px-6 py-3 text-xs font-black transition-all shadow-md shadow-blue-200 cursor-pointer border-0"
+              className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-6 py-3 text-xs font-black transition-all shadow-md shadow-blue-200 cursor-pointer border-0"
             >
               {sending ? (
                 <><Loader2Icon className="h-4 w-4 animate-spin" /> Enviando...</>

@@ -807,7 +807,7 @@ export default function ServicosPage() {
             </div>
 
             <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50">
-              <Button type="submit" disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl">
+              <Button type="submit" disabled={saving} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl">
                 {saving ? <><Loader2Icon className="h-4 w-4 animate-spin mr-2" />Salvando...</> : "Salvar Procedimento"}
               </Button>
             </div>
@@ -841,7 +841,7 @@ export default function ServicosPage() {
               </div>
               <Toggle checked={roomActive} onChange={() => setRoomActive(!roomActive)} />
             </div>
-            <Button type="submit" disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl">
+            <Button type="submit" disabled={saving} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl">
               {saving ? "Salvando..." : "Salvar Sala"}
             </Button>
           </form>
@@ -968,7 +968,7 @@ export default function ServicosPage() {
             </div>
 
             <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50">
-              <Button type="submit" disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl">
+              <Button type="submit" disabled={saving} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl">
                 {saving ? <><Loader2Icon className="h-4 w-4 animate-spin mr-2" />Salvando...</> : "Salvar Pacote"}
               </Button>
             </div>

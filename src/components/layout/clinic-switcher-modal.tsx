@@ -331,7 +331,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
           <Button
             onClick={handleSwitchClinic}
             disabled={switching || !selectedId}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black py-2.5 h-10 rounded-xl transition-all"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black py-2.5 h-10 rounded-xl transition-all"
           >
             {switching ? "Acessando..." : "Acessar clínica selecionada"}
           </Button>

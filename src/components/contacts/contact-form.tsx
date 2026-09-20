@@ -492,7 +492,7 @@ export function ContactForm({
             <Button
               type="submit"
               disabled={saving || checkingDup || (!isEdit && !!dupMatch?.exact)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
             >
               {saving && <Loader2 className="size-4 animate-spin mr-1" />}
               {isEdit ? 'Salvar Alterações' : 'Criar Contato'}

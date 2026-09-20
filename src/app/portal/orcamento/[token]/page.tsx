@@ -302,7 +302,7 @@ export default function QuotePortalPage() {
               <button
                 onClick={handleAcceptQuote}
                 disabled={submitting}
-                className="w-full h-12 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full h-12 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {submitting ? (
                   <>

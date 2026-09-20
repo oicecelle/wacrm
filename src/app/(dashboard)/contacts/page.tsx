@@ -401,7 +401,7 @@ export default function ContactsPage() {
             canAct={canEdit}
             gateReason="adicionar ou importar contatos"
             onClick={openAddForm}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
           >
             <Plus className="size-4" />
             Adicionar Contato

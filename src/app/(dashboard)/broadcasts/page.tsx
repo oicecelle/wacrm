@@ -208,7 +208,7 @@ export default function BroadcastsPage() {
           canAct={canCreate}
           gateReason="criar disparos"
           onClick={() => router.push('/broadcasts/new')}
-          className="bg-blue-600 text-white hover:bg-blue-700 font-bold"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
         >
           <Plus className="h-4 w-4" />
           Novo Disparo
@@ -244,7 +244,7 @@ export default function BroadcastsPage() {
             canAct={canCreate}
             gateReason="criar disparos"
             onClick={() => router.push('/broadcasts/new')}
-            className="mt-4 bg-blue-600 text-white hover:bg-blue-700 font-bold"
+            className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
           >
             <Plus className="h-4 w-4" />
             Novo Disparo

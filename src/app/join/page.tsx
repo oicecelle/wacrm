@@ -152,7 +152,7 @@ function JoinPageContent() {
           <Button
             onClick={handleAccept}
             disabled={accepting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl"
           >
             {accepting ? (
               <>
@@ -184,7 +184,7 @@ function JoinPageContent() {
       {inviteHeader}
       <CardContent className="flex flex-col gap-3">
         <Link href={signupUrl} className="w-full">
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl">
+          <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl">
             Criar conta e aceitar convite
           </Button>
         </Link>

@@ -235,7 +235,7 @@ export default function PatientPortalLoginPage({ params }: Props) {
             <Button
               type="submit"
               disabled={submitting || !phone.trim()}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl text-xs py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin text-white" />
