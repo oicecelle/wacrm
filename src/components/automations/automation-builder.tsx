@@ -1495,23 +1495,35 @@ function StepEditor({
     case "update_deal_field":
       return (
         <>
-          <FieldBlock label="Campo do negócio">
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+            Atualiza uma informação de qualificação no negócio desse contato no CRM — por
+            exemplo, marcar como &quot;quente&quot; quando ele demonstra urgência, ou registrar de
+            onde ele veio.
+          </p>
+          <FieldBlock label="Qual informação mudar">
             <DealFieldSelect
               value={(cfg.field as string) ?? "temperature"}
               onChange={(v) => set({ field: v })}
             />
           </FieldBlock>
-          <FieldBlock label="Valor">
+          <FieldBlock label="Novo valor">
             <Input
               value={(cfg.value as string) ?? ""}
               onChange={(e) => set({ value: e.target.value })}
-              placeholder="Texto fixo ou {{ vars.x }} / {{ message.text }}"
+              placeholder="Ex: hot, ou Instagram, ou {{message.text}} pra usar o que o paciente escreveu"
               className="bg-muted text-foreground"
             />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Exemplo prático: campo &quot;Temperatura&quot; com valor <code>hot</code> — sempre que
+              esse gatilho disparar, o negócio desse paciente no CRM é marcado como quente. Pra
+              &quot;Origem&quot;, algo como <code>Instagram</code> ou <code>Indicação</code> funciona
+              melhor que uma variável.
+            </p>
           </FieldBlock>
           <p className="text-xs text-muted-foreground">
-            Aplica no negócio aberto mais recente desse contato. Se não houver nenhum, a etapa não
-            faz nada.
+            Isso muda o negócio mais recente e ainda aberto desse contato no funil de vendas
+            (Pipelines). Se o contato não tiver nenhum negócio aberto, essa etapa simplesmente não
+            faz nada — não cria um negócio novo.
           </p>
         </>
       )
