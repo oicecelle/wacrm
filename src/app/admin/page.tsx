@@ -573,7 +573,7 @@ export default function AdminDashboardPage() {
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 space-y-1 shadow-sm">
             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">MRR Estimado</span>
             <p className="text-2xl font-black text-emerald-400">R$ {totalMRR.toLocaleString("pt-BR")}</p>
-            <p className="text-[10px] text-neutral-400">Receita recorrente mensal</p>
+            <p className="text-[10px] text-neutral-400">Estimativa: clínicas ativas × R$299 (não é cobrança real)</p>
           </div>
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 space-y-1 shadow-sm">
             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Logs de Erros (24h)</span>
@@ -698,40 +698,34 @@ export default function AdminDashboardPage() {
             {/* ── Tab: Revenue ── */}
             {activeTab === "revenue" && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 rounded-2xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Histórico de Cobrança da Plataforma</h3>
-                  <div className="space-y-3">
-                    {[
-                      { item: "Assinatura Mensal - Master Renova", val: 399.00, date: "Hoje", state: "recebido" },
-                      { item: "Assinatura Mensal - Dra Ana Paula", val: 299.00, date: "Ontem", state: "recebido" },
-                      { item: "Assinatura Mensal - Lira Odonto", val: 299.00, date: "25/06/2026", state: "atrasado" },
-                    ].map((h, i) => (
-                      <div key={i} className="flex items-center justify-between border-b border-neutral-800/70 pb-3">
-                        <div>
-                          <p className="text-xs font-bold text-white">{h.item}</p>
-                          <p className="text-[10px] text-neutral-500">{h.date}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs font-bold text-white">R$ {h.val.toFixed(2)}</p>
-                          <span className={`text-[9px] font-bold uppercase ${h.state === "recebido" ? "text-emerald-500" : "text-rose-500"}`}>
-                            {h.state}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <div className="lg:col-span-2 rounded-2xl border border-dashed border-neutral-800 bg-neutral-900/40 p-8 text-center">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">
+                    Histórico de Cobrança da Plataforma
+                  </h3>
+                  <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                    Não existe integração com um sistema de pagamento/assinatura de verdade ainda
+                    (Stripe, Asaas, ou similar) — por isso não há histórico real de cobrança pra
+                    mostrar aqui. O número de MRR ao lado é só uma estimativa grosseira (clínicas
+                    ativas × preço médio assumido), não vem de nenhuma cobrança de verdade.
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Receitas Futuras (Previsão de MRR)</h3>
-                  <div className="bg-neutral-950 rounded-xl p-4 border border-neutral-800 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-neutral-500 font-bold uppercase">Previsão MRR Mês Seguinte</p>
-                      <p className="text-2xl font-black text-emerald-400 mt-1">R$ {(totalMRR * 1.05).toLocaleString("pt-BR")}</p>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Clínicas por Status</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-400">Ativas</span>
+                      <span className="font-black text-emerald-400">{activeClinicsCount}</span>
                     </div>
-                    <TrendingUp className="h-6 w-6 text-emerald-400 opacity-60" />
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-400">Total cadastradas</span>
+                      <span className="font-black text-white">{clinics.length}</span>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-neutral-500">Estimativa baseada na taxa de crescimento orgânico de novos cadastros de clínicas.</p>
+                  <p className="text-[10px] text-neutral-500">
+                    Pra ter receita e previsão de verdade aqui, seria preciso conectar um provedor
+                    de pagamento que registre cada assinatura, valor do plano e status de cobrança.
+                  </p>
                 </div>
               </div>
             )}
