@@ -11,7 +11,6 @@ import {
   PercentIcon,
   Loader2Icon,
   XIcon,
-  SendIcon,
   ShieldAlertIcon,
   LinkIcon,
   CheckCircle2Icon,
@@ -159,12 +158,7 @@ export default function EquipePage() {
   const [saving, setSaving] = useState(false);
 
   // Invite modal state
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLinkInviteOpen, setIsLinkInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<Role>("professional");
-  const [inviteName, setInviteName] = useState("");
-  const [sendingInvite, setSendingInvite] = useState(false);
 
   // Form fields
   const [formName, setFormName] = useState("");
@@ -272,63 +266,6 @@ export default function EquipePage() {
   }, [accountId, supabase]);
 
   useEffect(() => { loadTeam(); }, [loadTeam]);
-
-  /* ─── Invite handler ─────────────────────────────────────── */
-  const handleSendInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accountId || !inviteEmail.trim()) return;
-    setSendingInvite(true);
-    try {
-      // 1. Insert the clinic_user record (pending invite)
-      const defaultPerms = DEFAULT_PERMISSIONS[inviteRole] || {};
-      const { data: inserted, error: insertErr } = await supabase
-        .from("clinic_users")
-        .insert({
-          clinic_id: accountId,
-          name: inviteName.trim() || inviteEmail.trim(),
-          role: inviteRole,
-          email: inviteEmail.trim(),
-          invite_email: inviteEmail.trim(),
-          invite_status: "pending",
-          invited_at: new Date().toISOString(),
-          is_active: false,
-          permissions_json: defaultPerms,
-          commission_model: "percentage",
-          commission_rate: 0,
-          commission_fixed: 0,
-        })
-        .select("id")
-        .single();
-
-      if (insertErr) throw insertErr;
-
-      // 2. Send Supabase magic-link invite via server action
-      const res = await fetch("/api/team/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: inviteEmail.trim(),
-          clinic_user_id: inserted.id,
-          name: inviteName.trim(),
-          account_id: accountId,
-        }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error || "Erro ao enviar convite.");
-      }
-
-      toast.success(`Convite enviado para ${inviteEmail}!`);
-      setIsInviteOpen(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("professional");
-      await loadTeam();
-    } catch (err: unknown) {
-      toast.error("Erro: " + (err instanceof Error ? err.message : ""));
-    } finally {
-      setSendingInvite(false);
-    }
-  };
 
   const handleResendInvite = async (member: TeamMember) => {
     if (!member.invite_email && !member.email) return;
@@ -445,17 +382,10 @@ export default function EquipePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsLinkInviteOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white text-neutral-700 px-4 py-2.5 text-xs font-black hover:bg-neutral-50 transition-colors shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2.5 text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
           >
             <LinkIcon className="h-4 w-4" />
             Convidar por Link
-          </button>
-          <button
-            onClick={() => setIsInviteOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2.5 text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <SendIcon className="h-4 w-4" />
-            Convidar por E-mail
           </button>
         </div>
       </div>
@@ -602,7 +532,7 @@ export default function EquipePage() {
           <div className="col-span-3 text-center py-16 text-neutral-400">
             <MailIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm font-semibold">Nenhum colaborador cadastrado.</p>
-            <p className="text-xs mt-1">Clique em &quot;Convidar por E-mail&quot; para adicionar membros à equipe.</p>
+            <p className="text-xs mt-1">Clique em &quot;Convidar por Link&quot; para adicionar membros à equipe.</p>
           </div>
         )}
       </div>
@@ -643,92 +573,6 @@ export default function EquipePage() {
         onOpenChange={setIsLinkInviteOpen}
         onCreated={loadTeam}
       />
-
-      {/* ═══ INVITE MODAL ════════════════════════════════════════ */}
-      {isInviteOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <form
-            onSubmit={handleSendInvite}
-            className="bg-white w-full max-w-md rounded-2xl border border-neutral-200 shadow-2xl overflow-hidden"
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
-              <div>
-                <h2 className="text-sm font-black text-neutral-900 uppercase tracking-wide">Convidar Colaborador</h2>
-                <p className="text-[10px] text-neutral-500 mt-0.5">Um e-mail com link de acesso será enviado automaticamente.</p>
-              </div>
-              <button type="button" onClick={() => setIsInviteOpen(false)} className="text-neutral-400 hover:text-neutral-700">
-                <XIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-neutral-600">Nome do Colaborador</Label>
-                <Input
-                  placeholder="Ex: Dra. Juliana Santos"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  disabled={sendingInvite}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-neutral-600">E-mail *</Label>
-                <Input
-                  type="email"
-                  required
-                  placeholder="colaborador@email.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  disabled={sendingInvite}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-neutral-600">Função / Perfil *</Label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as Role)}
-                  className="w-full text-sm h-9 rounded-lg border border-neutral-200 bg-white px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  disabled={sendingInvite}
-                >
-                  {Object.entries(ROLE_CONFIG).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Preview default permissions */}
-              <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-3 space-y-2">
-                <p className="text-[10px] font-black text-neutral-500 uppercase tracking-wide">Permissões padrão do perfil</p>
-                <div className="grid grid-cols-2 gap-1">
-                  {Object.entries(DEFAULT_PERMISSIONS[inviteRole] || {}).map(([k, v]) => (
-                    <div key={k} className="flex items-center gap-1.5 text-[10px]">
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${v ? "bg-emerald-500" : "bg-neutral-300"}`} />
-                      <span className={v ? "text-neutral-700 font-semibold" : "text-neutral-400"}>
-                        {PERMISSION_LABELS[k] || k}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[9px] text-neutral-400 mt-1">Você poderá ajustar as permissões individualmente após o aceite.</p>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50">
-              <Button
-                type="submit"
-                disabled={sendingInvite}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 rounded-xl"
-              >
-                {sendingInvite ? (
-                  <><Loader2Icon className="h-4 w-4 animate-spin mr-2" />Enviando convite...</>
-                ) : (
-                  <><SendIcon className="h-4 w-4 mr-2" />Enviar Convite por E-mail</>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* ═══ EDIT DRAWER ════════════════════════════════════════ */}
       {isDrawerOpen && (
