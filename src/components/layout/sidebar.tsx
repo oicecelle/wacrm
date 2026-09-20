@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { applySidebarOrder, getSidebarOrder, SIDEBAR_ORDER_CHANGED_EVENT } from "@/lib/sidebar-order";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/ui/logo";
@@ -90,6 +91,7 @@ interface SubItem {
 }
 
 interface MenuItem {
+  key: string;
   href?: string;
   label: string;
   icon: any;
@@ -155,17 +157,20 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
   }, [open, onClose]);
 
   // Main menu item definitions in the requested exact order (1 to 14)
-  const menuItems: MenuItem[] = [
-    { href: "/agenda", label: "Agenda", icon: Calendar },
-    { href: "/inbox", label: "Caixa de Entrada", icon: MessageSquare },
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/pipelines", label: "CRM", icon: GitBranch },
-    { href: "/contacts", label: "Contatos", icon: Users },
-    { href: "/financeiro", label: "Financeiro", icon: DollarSign },
-    { href: "/documentos", label: "Documentos", icon: FileText },
-    { href: "/equipe", label: "Equipe", icon: UsersRound },
-    { href: "/servicos", label: "Serviços", icon: Briefcase },
+  // — this is the default/fallback order; applySidebarOrder below
+  // re-sorts it per the user's own saved preference, if any.
+  const defaultMenuItems: MenuItem[] = [
+    { key: "/agenda", href: "/agenda", label: "Agenda", icon: Calendar },
+    { key: "/inbox", href: "/inbox", label: "Caixa de Entrada", icon: MessageSquare },
+    { key: "/dashboard", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "/pipelines", href: "/pipelines", label: "CRM", icon: GitBranch },
+    { key: "/contacts", href: "/contacts", label: "Contatos", icon: Users },
+    { key: "/financeiro", href: "/financeiro", label: "Financeiro", icon: DollarSign },
+    { key: "/documentos", href: "/documentos", label: "Documentos", icon: FileText },
+    { key: "/equipe", href: "/equipe", label: "Equipe", icon: UsersRound },
+    { key: "/servicos", href: "/servicos", label: "Serviços", icon: Briefcase },
     {
+      key: "marketing-group",
       label: "Marketing",
       icon: Megaphone,
       subItems: [
@@ -175,12 +180,29 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         { href: "/comunicacao/agendados", label: "Notificações Automáticas", icon: CalendarClock },
       ],
     },
-    { href: "/automations", label: "Automações", icon: Zap },
-    { href: "/relatorios", label: "Relatórios", icon: TrendingUp },
-    { href: "/comunicacao/importacao", label: "Migração", icon: Upload },
-    { href: "/comunicacao/portal-config", label: "Configurar Portal", icon: Globe },
-    { href: "/comunicacao/link-bio", label: "Link na Bio", icon: Link2 },
+    { key: "/automations", href: "/automations", label: "Automações", icon: Zap },
+    { key: "/relatorios", href: "/relatorios", label: "Relatórios", icon: TrendingUp },
+    { key: "/comunicacao/importacao", href: "/comunicacao/importacao", label: "Migração", icon: Upload },
+    { key: "/comunicacao/portal-config", href: "/comunicacao/portal-config", label: "Configurar Portal", icon: Globe },
+    { key: "/comunicacao/link-bio", href: "/comunicacao/link-bio", label: "Link na Bio", icon: Link2 },
   ];
+
+  // Re-read whenever the saved order changes — including from another
+  // tab/the Settings page in this same tab, via the custom event
+  // setSidebarOrder dispatches, so a reorder shows up immediately
+  // without a full page reload.
+  const [savedOrder, setSavedOrder] = useState<string[]>(() => getSidebarOrder());
+  useEffect(() => {
+    const onChange = () => setSavedOrder(getSidebarOrder());
+    window.addEventListener(SIDEBAR_ORDER_CHANGED_EVENT, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(SIDEBAR_ORDER_CHANGED_EVENT, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  }, []);
+
+  const menuItems = applySidebarOrder(defaultMenuItems, savedOrder);
 
   const bottomNavItems = [
     { href: "/settings", label: "Configurações", icon: Settings },
