@@ -145,7 +145,7 @@ export function NodeConfigForm({
                   var_key: e.target.value.replace(/[^a-zA-Z0-9_]/g, ""),
                 })
               }
-              placeholder="e.g. name, email, company"
+              placeholder="ex: nome, email, empresa"
               className="bg-muted font-mono text-xs"
             />
             <p className="mt-1 text-[10px] text-muted-foreground">
@@ -695,7 +695,7 @@ function ConditionForm({
               onChange={(e) =>
                 onUpdateConfig({ subject_key: e.target.value })
               }
-              placeholder={subject === "var" ? "e.g. email" : "tag UUID"}
+              placeholder={subject === "var" ? "ex: email" : "UUID da tag"}
               className="bg-muted font-mono text-xs"
             />
           )}
@@ -1049,7 +1049,7 @@ function SendMediaForm({
           <Input
             value={cfg.filename ?? ""}
             onChange={(e) => onUpdateConfig({ filename: e.target.value })}
-            placeholder="invoice.pdf"
+            placeholder="recibo.pdf"
             className="bg-muted text-xs"
           />
         </div>
