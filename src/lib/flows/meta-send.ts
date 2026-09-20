@@ -306,7 +306,7 @@ async function sendInteractive(
 
       if (input.kind === 'buttons') {
         const buttonsFormatted = input.buttons
-          .map((b) => `👉 [${b.title}]`)
+          .map((b, idx) => `${idx + 1}️⃣ [${b.title}]`)
           .join('\n')
         resolvedText += `\n\n${buttonsFormatted}`
       } else {
@@ -318,6 +318,7 @@ async function sendInteractive(
       }
 
       if (input.footerText) resolvedText += `\n\n_${input.footerText}_`
+      resolvedText += `\n\n_Responda com o número da opção._`
 
       const result = await dispatchSendMessage({
         config: {

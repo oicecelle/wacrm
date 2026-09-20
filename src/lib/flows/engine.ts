@@ -89,6 +89,71 @@ export function matchReplyId(
 }
 
 /**
+ * Text-based equivalent of matchReplyId — needed because Uazapi has
+ * no real interactive button/list tap event. Its outbound fallback
+ * (meta-send.ts) sends buttons and list rows as a numbered plain-text
+ * message ("1️⃣ [Título]"), so the customer's reply always arrives as
+ * an ordinary text message, never as `interactive_reply`. Without
+ * this, a Uazapi-connected account's flow could send a nicely
+ * formatted button/list prompt but could never advance past it —
+ * every reply would silently fall through to the fallback policy
+ * (reprompt/end/handoff) instead of continuing the flow.
+ *
+ * Matches, in order: the option's position number (1-indexed, as
+ * printed in the fallback text), then an exact title match, then a
+ * loose contains-match — a customer replying "quero a 2" or pasting
+ * the button's title back should still land correctly.
+ */
+export function matchReplyText(
+  node: { node_type: string; config: Record<string, unknown> },
+  replyText: string,
+): string | null {
+  const options: { title: string; next_node_key: string }[] = [];
+  if (node.node_type === "send_buttons") {
+    const cfg = node.config as unknown as SendButtonsNodeConfig;
+    for (const b of cfg.buttons ?? []) options.push({ title: b.title, next_node_key: b.next_node_key });
+  } else if (node.node_type === "send_list") {
+    const cfg = node.config as unknown as SendListNodeConfig;
+    for (const section of cfg.sections ?? []) {
+      for (const r of section.rows ?? []) options.push({ title: r.title, next_node_key: r.next_node_key });
+    }
+  } else {
+    return null;
+  }
+  if (options.length === 0) return null;
+
+  const cleaned = replyText.trim();
+  if (!cleaned) return null;
+
+  // 1) A bare number, or a number embedded anywhere in a short reply
+  // ("2", "opção 2", "quero a 2ª") — most common real-world reply.
+  const numberMatch = cleaned.match(/\d+/);
+  if (numberMatch) {
+    const idx = Number(numberMatch[0]) - 1;
+    if (idx >= 0 && idx < options.length) return options[idx].next_node_key;
+  }
+
+  // 2) Exact title match, case/accent-insensitive.
+  const normalize = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  const normalizedReply = normalize(cleaned);
+  const exact = options.find((o) => normalize(o.title) === normalizedReply);
+  if (exact) return exact.next_node_key;
+
+  // 3) Loose containment either direction — customer pasted the
+  // button text back, possibly with extra words, or typed a
+  // recognisable substring of a longer title.
+  const loose = options.find(
+    (o) => normalizedReply.includes(normalize(o.title)) || normalize(o.title).includes(normalizedReply),
+  );
+  return loose?.next_node_key ?? null;
+}
+
+/**
  * Case-insensitive contains/exact match against a list of keywords.
  * Used by the trigger evaluator. Stable enough that the v3 builder
  * UI can preview matches by passing canned strings.
@@ -965,6 +1030,14 @@ async function handleReplyForActiveRun(
       currentNode.node_type === "send_list")
   ) {
     matched = matchReplyId(currentNode, message.reply_id);
+  } else if (
+    message.kind === "text" &&
+    (currentNode.node_type === "send_buttons" ||
+      currentNode.node_type === "send_list")
+  ) {
+    // Uazapi accounts have no real button/list tap — see
+    // matchReplyText's own comment for why this branch exists at all.
+    matched = matchReplyText(currentNode, message.text);
   } else if (
     message.kind === "text" &&
     currentNode.node_type === "collect_input"
