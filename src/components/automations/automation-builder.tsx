@@ -9,6 +9,7 @@ import {
 } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { AutomationDiagramView } from "./automation-diagram-view"
 import { toast } from "sonner"
 import {
   ArrowLeft,
@@ -88,14 +89,14 @@ export interface BuilderInitial {
 // Step metadata — one source of truth for icon + label + border color
 // ------------------------------------------------------------
 
-interface StepMeta {
+export interface StepMeta {
   label: string
   icon: typeof Zap
   /** Left-border accent color per spec. */
   border: string
 }
 
-const STEP_META: Record<AutomationStepType, StepMeta> = {
+export const STEP_META: Record<AutomationStepType, StepMeta> = {
   send_message: { label: "Enviar mensagem", icon: MessageSquare, border: "border-l-blue-600" },
   send_template: { label: "Enviar Modelo Salvo", icon: FileText, border: "border-l-indigo-600" },
   send_media: { label: "Enviar Foto / Anexo", icon: ImagePlus, border: "border-l-cyan-600" },
@@ -820,6 +821,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [state, setState] = useState<BuilderInitial>(initial)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"list" | "diagram">("list")
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
     setState((s) => ({ ...s, [key]: value }))
@@ -923,6 +925,28 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           placeholder="Automação sem título"
           className="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 text-sm font-semibold text-foreground placeholder:text-muted-foreground focus:bg-muted focus:outline-none sm:text-base"
         />
+        <div className="hidden items-center gap-0.5 rounded-lg bg-muted p-0.5 sm:flex">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-bold transition-colors",
+              viewMode === "list" ? "bg-card shadow-xs text-foreground" : "text-muted-foreground",
+            )}
+          >
+            Lista
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("diagram")}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-bold transition-colors",
+              viewMode === "diagram" ? "bg-card shadow-xs text-foreground" : "text-muted-foreground",
+            )}
+          >
+            Diagrama
+          </button>
+        </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="hidden sm:inline">Ativo</span>
           <Switch
@@ -943,28 +967,43 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
 
       {/* Canvas */}
       <div className="relative flex-1 overflow-y-auto">
-        <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10">
-          <ResourcesProvider>
-            <TriggerCard
-              type={state.trigger_type}
-              config={state.trigger_config}
-              onTypeChange={(t) => patchTop("trigger_type", t)}
-              onConfigChange={(c) => patchTop("trigger_config", c)}
-            />
-            <StepList
+        {viewMode === "list" ? (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
+            <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10">
+              <ResourcesProvider>
+                <TriggerCard
+                  type={state.trigger_type}
+                  config={state.trigger_config}
+                  onTypeChange={(t) => patchTop("trigger_type", t)}
+                  onConfigChange={(c) => patchTop("trigger_config", c)}
+                />
+                <StepList
+                  steps={state.steps}
+                  parentPath={[]}
+                  expandedId={expandedId}
+                  setExpandedId={setExpandedId}
+                  updateStep={updateStep}
+                  addStepAt={addStepAt}
+                  deleteStepAt={deleteStepAt}
+                  moveStepAt={moveStepAt}
+                  moveStepTo={moveStepTo}
+                />
+              </ResourcesProvider>
+            </div>
+          </>
+        ) : (
+          <div className="mx-auto max-w-5xl px-4 py-6">
+            <AutomationDiagramView
               steps={state.steps}
-              parentPath={[]}
-              expandedId={expandedId}
-              setExpandedId={setExpandedId}
-              updateStep={updateStep}
-              addStepAt={addStepAt}
-              deleteStepAt={deleteStepAt}
-              moveStepAt={moveStepAt}
-              moveStepTo={moveStepTo}
+              triggerLabel={TRIGGER_OPTIONS.find((o) => o.value === state.trigger_type)?.label ?? state.trigger_type}
+              onEditStep={(cid) => {
+                setViewMode("list");
+                setExpandedId(cid);
+              }}
             />
-          </ResourcesProvider>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1926,7 +1965,7 @@ function FieldBlock({
   )
 }
 
-function previewFor(step: BuilderStep): string {
+export function previewFor(step: BuilderStep): string {
   switch (step.step_type) {
     case "send_message":
       return (step.step_config.text as string) || "sem texto ainda"
