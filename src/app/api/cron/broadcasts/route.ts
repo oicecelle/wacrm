@@ -5,7 +5,6 @@ import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
 import { sendOneBroadcastRecipient } from '@/lib/whatsapp/broadcast-sender'
 import { GET as automationsCronGET } from '@/app/api/automations/cron/route'
 import { GET as flowsCronGET } from '@/app/api/flows/cron/route'
-import { GET as followupsCronGET } from '@/app/api/cron/followups/route'
 import { GET as notificationsCronGET } from '@/app/api/cron/notifications/route'
 import { GET as appointmentRemindersCronGET } from '@/app/api/cron/appointment-reminders/route'
 
@@ -203,6 +202,17 @@ export async function GET(request: Request) {
   // check, just satisfied with a locally-built Request carrying the
   // right secret. Wrapped individually so one slow/failing job never
   // blocks the others or this route's own broadcast work above.
+  //
+  // followups (deal_followups auto-generation) is deliberately left
+  // OUT of this list: unlike every other cron here, it has no
+  // per-account opt-in flag — every account in the database already
+  // has followup_use_ai=true and followup_delay_hours=4 as inherited
+  // defaults, none of them explicitly set. Wiring it in would start
+  // silently AI-generating and sending WhatsApp follow-ups on real
+  // open deals across every account the moment this deploys, which
+  // nobody asked for or reviewed. Needs a real enabled flag (and a
+  // decision on rolling it out per-account) before it's safe to run
+  // unattended — see the account's Settings once that flag exists.
   const automationSecret = getEnv('AUTOMATION_CRON_SECRET', '')
   const legacyCronSecret = getEnv('CRON_SECRET', 'leadpluz_cron_secret_key_123')
   const otherCrons: { name: string; run: () => Promise<Response> }[] = [
@@ -219,13 +229,6 @@ export async function GET(request: Request) {
         flowsCronGET(new Request(request.url, { headers: { 'x-cron-secret': automationSecret } })),
     },
     {
-      name: 'followups',
-      run: () =>
-        followupsCronGET(
-          new Request(request.url, { headers: { 'x-cron-secret': automationSecret } }),
-        ),
-    },
-    {
       name: 'notifications',
       run: () =>
         notificationsCronGET(
@@ -236,7 +239,7 @@ export async function GET(request: Request) {
       name: 'appointment_reminders',
       run: () =>
         appointmentRemindersCronGET(
-          new Request(request.url, { headers: { 'x-cron-secret': legacyCronSecret } }),
+          new Request(request.url, { headers: { authorization: `Bearer ${legacyCronSecret}` } }),
         ),
     },
   ]
