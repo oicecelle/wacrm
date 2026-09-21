@@ -118,6 +118,8 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "send_message",
   "send_template",
   "send_media",
+  "wait",
+  "condition",
   "update_contact_field",
   "update_deal_field",
   "add_tag",
