@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -173,9 +173,16 @@ export default function EquipePage() {
   const [formPermissions, setFormPermissions] = useState<Record<string, boolean>>({});
 
   /* ─── Load team ─────────────────────────────────────────── */
+  const hasLoadedTeamOnce = useRef(false);
   const loadTeam = useCallback(async () => {
     if (!accountId) return;
-    setLoading(true);
+    // Only the very first load takes over the whole screen with a
+    // spinner. Later calls (e.g. right after creating an invite link,
+    // via onCreated) are a background refresh — swapping the entire
+    // page for a spinner mid-refresh was unmounting the invite dialog
+    // along with everything else, closing it before its "link
+    // created" result screen ever got to render.
+    if (!hasLoadedTeamOnce.current) setLoading(true);
     setError(null);
     try {
       const { data: users, error: usersErr } = await supabase
@@ -262,6 +269,7 @@ export default function EquipePage() {
       setError(err instanceof Error ? err.message : "Erro ao carregar equipe.");
     } finally {
       setLoading(false);
+      hasLoadedTeamOnce.current = true;
     }
   }, [accountId, supabase]);
 
