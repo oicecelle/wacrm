@@ -27,7 +27,9 @@ interface Campaign {
   is_active: boolean;
   days_of_week: number[];
   time_of_day: string;
+  audience_type: "tag" | "appointments_relative";
   filter_tag_id: string | null;
+  appointment_day_offset: number;
   action_type: "send_template" | "send_media";
   action_config: { template_name?: string };
   apply_tag_id: string | null;
@@ -44,7 +46,9 @@ function newCampaignDraft(): Omit<Campaign, "id" | "last_run_date" | "last_run_s
     is_active: true,
     days_of_week: [1, 2, 3, 4, 5, 6],
     time_of_day: "15:00",
+    audience_type: "tag",
     filter_tag_id: null,
+    appointment_day_offset: 1,
     action_type: "send_template",
     action_config: {},
     apply_tag_id: null,
@@ -88,7 +92,7 @@ export function ScheduledCampaignsTab() {
       toast.error("Dê um nome pra campanha.");
       return;
     }
-    if (!editing.filter_tag_id) {
+    if (editing.audience_type === "tag" && !editing.filter_tag_id) {
       toast.error("Escolha a tag que filtra quem recebe.");
       return;
     }
@@ -108,11 +112,13 @@ export function ScheduledCampaignsTab() {
         is_active: editing.is_active,
         days_of_week: editing.days_of_week,
         time_of_day: editing.time_of_day,
-        filter_tag_id: editing.filter_tag_id,
+        audience_type: editing.audience_type,
+        filter_tag_id: editing.audience_type === "tag" ? editing.filter_tag_id : null,
+        appointment_day_offset: editing.appointment_day_offset,
         action_type: editing.action_type,
         action_config: editing.action_config,
         apply_tag_id: editing.apply_tag_id,
-        remove_filter_tag: editing.remove_filter_tag,
+        remove_filter_tag: editing.audience_type === "tag" ? editing.remove_filter_tag : false,
       };
       if ("id" in editing) {
         const { error } = await supabase.from("scheduled_campaigns").update(payload).eq("id", editing.id);
@@ -213,7 +219,20 @@ export function ScheduledCampaignsTab() {
                 <p className="text-xs text-muted-foreground">
                   {c.days_of_week.slice().sort().map((d) => DOW_LABELS[d]).join(", ")} às {c.time_of_day.slice(0, 5)}
                   {" · "}
-                  <TagIcon className="inline h-3 w-3" /> {tagName(c.filter_tag_id)}
+                  {c.audience_type === "appointments_relative" ? (
+                    <>
+                      <CalendarClock className="inline h-3 w-3" />{" "}
+                      {c.appointment_day_offset === 0
+                        ? "Quem tem agendamento hoje"
+                        : c.appointment_day_offset === 1
+                          ? "Quem tem agendamento amanhã"
+                          : `Quem tem agendamento em ${c.appointment_day_offset} dias`}
+                    </>
+                  ) : (
+                    <>
+                      <TagIcon className="inline h-3 w-3" /> {tagName(c.filter_tag_id)}
+                    </>
+                  )}
                   {c.action_config.template_name && ` · modelo "${c.action_config.template_name}"`}
                   {c.apply_tag_id && ` · marca como "${tagName(c.apply_tag_id)}" depois`}
                 </p>
@@ -355,21 +374,62 @@ function CampaignEditor({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold text-muted-foreground">
-              Quem recebe (contatos com esta tag)
-            </label>
-            <select
-              value={draft.filter_tag_id ?? ""}
-              onChange={(e) => onChange({ ...draft, filter_tag_id: e.target.value || null })}
-              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground"
-            >
-              <option value="">Selecione uma tag…</option>
-              {tags.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <label className="mb-1 block text-xs font-bold text-muted-foreground">Quem recebe</label>
+            <div className="mb-2 flex gap-1 rounded-lg bg-muted p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => onChange({ ...draft, audience_type: "tag" })}
+                className={cn(
+                  "flex-1 rounded-md py-1.5 font-bold transition-colors",
+                  draft.audience_type === "tag" ? "bg-card shadow-xs text-foreground" : "text-muted-foreground",
+                )}
+              >
+                Contatos com uma tag
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ ...draft, audience_type: "appointments_relative" })}
+                className={cn(
+                  "flex-1 rounded-md py-1.5 font-bold transition-colors",
+                  draft.audience_type === "appointments_relative" ? "bg-card shadow-xs text-foreground" : "text-muted-foreground",
+                )}
+              >
+                Quem tem agendamento em...
+              </button>
+            </div>
+
+            {draft.audience_type === "tag" ? (
+              <select
+                value={draft.filter_tag_id ?? ""}
+                onChange={(e) => onChange({ ...draft, filter_tag_id: e.target.value || null })}
+                className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">Selecione uma tag…</option>
+                {tags.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={draft.appointment_day_offset}
+                onChange={(e) => onChange({ ...draft, appointment_day_offset: Number(e.target.value) })}
+                className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground"
+              >
+                <option value={0}>Agendamento hoje</option>
+                <option value={1}>Agendamento amanhã</option>
+                <option value={2}>Agendamento em 2 dias</option>
+                <option value={3}>Agendamento em 3 dias</option>
+                <option value={7}>Agendamento em 7 dias</option>
+              </select>
+            )}
+            {draft.audience_type === "appointments_relative" && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                A lista é recalculada toda vez que a campanha roda — direto da agenda, sem
+                precisar marcar tag em ninguém.
+              </p>
+            )}
           </div>
 
           <div>
@@ -409,21 +469,25 @@ function CampaignEditor({
             </select>
           </div>
 
-          <label className="flex items-center gap-2.5">
-            <input
-              type="checkbox"
-              checked={draft.remove_filter_tag}
-              onChange={(e) => onChange({ ...draft, remove_filter_tag: e.target.checked })}
-              className="h-4 w-4 rounded border-border"
-            />
-            <span className="text-xs font-bold text-foreground">
-              Remover a tag de filtro depois de enviar
-            </span>
-          </label>
-          <p className="-mt-2 pl-6 text-[10px] text-muted-foreground">
-            Recomendado: sem isso, o mesmo contato recebe de novo amanhã, todo dia, enquanto tiver
-            a tag.
-          </p>
+          {draft.audience_type === "tag" && (
+            <>
+              <label className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={draft.remove_filter_tag}
+                  onChange={(e) => onChange({ ...draft, remove_filter_tag: e.target.checked })}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <span className="text-xs font-bold text-foreground">
+                  Remover a tag de filtro depois de enviar
+                </span>
+              </label>
+              <p className="-mt-2 pl-6 text-[10px] text-muted-foreground">
+                Recomendado: sem isso, o mesmo contato recebe de novo amanhã, todo dia, enquanto tiver
+                a tag.
+              </p>
+            </>
+          )}
 
           <label className="flex items-center gap-2.5">
             <input

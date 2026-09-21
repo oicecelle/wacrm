@@ -88,7 +88,29 @@ export async function GET(request: Request) {
       }
 
       let contactIds: string[] = []
-      if (campaign.filter_tag_id) {
+      if (campaign.audience_type === 'appointments_relative') {
+        // "Everyone with an appointment tomorrow" — computed fresh
+        // every run from real scheduling data, not a tag anyone has
+        // to remember to apply. Day boundaries in the clinic's own
+        // local sense aren't tracked per-account here, so this uses
+        // UTC calendar days; a clinic whose day genuinely spans a UTC
+        // boundary at an inconvenient moment could see a same-day
+        // shift, an acceptable tradeoff against real timezone data
+        // this table doesn't store.
+        const targetDate = new Date(now)
+        targetDate.setUTCDate(targetDate.getUTCDate() + (campaign.appointment_day_offset ?? 1))
+        const dayStart = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate()))
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+
+        const { data: appts } = await admin
+          .from('appointments')
+          .select('patient_id')
+          .eq('clinic_id', campaign.account_id)
+          .neq('status', 'cancelled')
+          .gte('start_time', dayStart.toISOString())
+          .lt('start_time', dayEnd.toISOString())
+        contactIds = [...new Set((appts ?? []).map((a) => a.patient_id).filter(Boolean))]
+      } else if (campaign.filter_tag_id) {
         const { data: tagged } = await admin
           .from('contact_tags')
           .select('contact_id')
