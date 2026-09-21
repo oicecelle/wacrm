@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
+import { runScheduledCampaigns } from '@/lib/automations/scheduled-campaigns'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
  * on a schedule (Vercel Cron / external pinger) — requires a shared
  * secret via the `x-cron-secret` header to match
  * `AUTOMATION_CRON_SECRET`.
+ *
+ * Also runs the scheduled-campaigns check (recurring tag/agenda-
+ * filtered broadcasts) on every tick — folded in here rather than
+ * needing its own separate cron-job.org entry, since this endpoint
+ * is already polled frequently for `wait`-step resumption and shares
+ * the same secret.
  *
  * The claim step (status = 'running') serves as a simple lock so
  * overlapping invocations don't double-process rows. Best-effort
@@ -34,10 +41,9 @@ export async function GET(request: Request) {
     .limit(50)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!due || due.length === 0) return NextResponse.json({ processed: 0 })
 
   let processed = 0
-  for (const row of due) {
+  for (const row of due ?? []) {
     const { data: claim } = await admin
       .from('automation_pending_executions')
       .update({ status: 'running' })
@@ -64,5 +70,7 @@ export async function GET(request: Request) {
     processed++
   }
 
-  return NextResponse.json({ processed })
+  const campaignResults = await runScheduledCampaigns()
+
+  return NextResponse.json({ processed, scheduled_campaigns: campaignResults })
 }
