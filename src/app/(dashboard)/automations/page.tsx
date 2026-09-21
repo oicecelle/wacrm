@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ScheduledCampaignsTab } from "@/components/automations/scheduled-campaigns-tab";
 import {
   Zap,
   Plus,
@@ -111,7 +112,7 @@ export default function AutomationsPage() {
   const { accountId } = useAuth();
   const { hasPermission, loading: permsLoading } = usePermissions();
   const canCreate = !permsLoading && hasPermission("configurar_marketing", "edit");
-  const [activeTab, setActiveTab] = useState<"rules" | "flows">("rules");
+  const [activeTab, setActiveTab] = useState<"rules" | "flows" | "campaigns">("rules");
 
   /* --- Automation Rules state --- */
   const [automations, setAutomations] = useState<Automation[] | null>(null);
@@ -360,6 +361,17 @@ export default function AutomationsPage() {
             BETA
           </Badge>
         </button>
+        <button
+          onClick={() => setActiveTab("campaigns")}
+          className={cn(
+            "px-4 py-2.5 text-xs font-bold transition-all border-b-2",
+            activeTab === "campaigns"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Campanhas Agendadas
+        </button>
       </div>
 
       {/* Render tab content */}
@@ -423,7 +435,7 @@ export default function AutomationsPage() {
             </>
           )}
         </div>
-      ) : (
+      ) : activeTab === "flows" ? (
         /* --- TAB 2: FLOWS --- */
         <div className="space-y-6">
           {loadingFlows ? (
@@ -459,6 +471,9 @@ export default function AutomationsPage() {
             </div>
           )}
         </div>
+      ) : (
+        /* --- TAB 3: SCHEDULED CAMPAIGNS --- */
+        <ScheduledCampaignsTab />
       )}
 
       {/* Delete Rule Confirmation Dialog */}
