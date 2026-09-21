@@ -3,6 +3,11 @@ import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { getEnv } from '@/lib/env'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
 import { sendOneBroadcastRecipient } from '@/lib/whatsapp/broadcast-sender'
+import { GET as automationsCronGET } from '@/app/api/automations/cron/route'
+import { GET as flowsCronGET } from '@/app/api/flows/cron/route'
+import { GET as followupsCronGET } from '@/app/api/cron/followups/route'
+import { GET as notificationsCronGET } from '@/app/api/cron/notifications/route'
+import { GET as appointmentRemindersCronGET } from '@/app/api/cron/appointment-reminders/route'
 
 // GET /api/cron/broadcasts
 // Protected by x-cron-secret header. Call this on a schedule (e.g. every
@@ -189,5 +194,67 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ success: true, ...summary })
+  // ─── Fold in every other cron job ──────────────────────────────
+  // This is the ONLY cron entry actually registered in cron-job.org
+  // (runs every minute) — rather than asking for five more entries
+  // to be registered separately, each other cron's own route handler
+  // is called directly, in-process, right here. No network hop, no
+  // change needed to any of those files; each keeps its own auth
+  // check, just satisfied with a locally-built Request carrying the
+  // right secret. Wrapped individually so one slow/failing job never
+  // blocks the others or this route's own broadcast work above.
+  const automationSecret = getEnv('AUTOMATION_CRON_SECRET', '')
+  const legacyCronSecret = getEnv('CRON_SECRET', 'leadpluz_cron_secret_key_123')
+  const otherCrons: { name: string; run: () => Promise<Response> }[] = [
+    {
+      name: 'automations',
+      run: () =>
+        automationsCronGET(
+          new Request(request.url, { headers: { 'x-cron-secret': automationSecret } }),
+        ),
+    },
+    {
+      name: 'flows',
+      run: () =>
+        flowsCronGET(new Request(request.url, { headers: { 'x-cron-secret': automationSecret } })),
+    },
+    {
+      name: 'followups',
+      run: () =>
+        followupsCronGET(
+          new Request(request.url, { headers: { 'x-cron-secret': automationSecret } }),
+        ),
+    },
+    {
+      name: 'notifications',
+      run: () =>
+        notificationsCronGET(
+          new Request(request.url, { headers: { 'x-cron-secret': automationSecret } }),
+        ),
+    },
+    {
+      name: 'appointment_reminders',
+      run: () =>
+        appointmentRemindersCronGET(
+          new Request(request.url, { headers: { 'x-cron-secret': legacyCronSecret } }),
+        ),
+    },
+  ]
+
+  const otherResults: Record<string, unknown> = {}
+  for (const job of otherCrons) {
+    if (timeLeft() <= 0) {
+      otherResults[job.name] = { skipped: 'out of time budget' }
+      continue
+    }
+    try {
+      const res = await job.run()
+      otherResults[job.name] = await res.json().catch(() => ({ ok: res.ok }))
+    } catch (err) {
+      console.error(`[cron/broadcasts] sub-cron "${job.name}" failed:`, err)
+      otherResults[job.name] = { error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  return NextResponse.json({ success: true, ...summary, other_crons: otherResults })
 }
