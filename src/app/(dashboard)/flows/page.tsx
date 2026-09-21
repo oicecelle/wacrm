@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Workflow,
   Plus,
@@ -175,14 +176,12 @@ export default function FlowsPage() {
     }
   }
 
+  const [pendingDelete, setPendingDelete] = useState<FlowRow | null>(null);
+
   async function handleDelete(flow: FlowRow) {
-    const yes = window.confirm(
-      `Excluir "${flow.name}"? Qualquer execução em andamento vai parar imediatamente.`,
-    );
-    if (!yes) return;
     try {
       const res = await fetch(`/api/flows/${flow.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      if (!res.ok) throw new Error(`Falha ao excluir: ${res.status}`);
       setFlows((prev) => prev.filter((f) => f.id !== flow.id));
       toast.success("Fluxo excluído.");
     } catch (err) {
@@ -236,7 +235,7 @@ export default function FlowsPage() {
               key={flow.id}
               flow={flow}
               onEdit={() => router.push(`/flows/${flow.id}`)}
-              onDelete={() => handleDelete(flow)}
+              onDelete={() => setPendingDelete(flow)}
             />
           ))}
         </div>
@@ -309,15 +308,30 @@ export default function FlowsPage() {
               onClick={() => setCreateOpen(false)}
               disabled={creating}
             >
-              Cancel
+              Cancelar
             </Button>
             <Button onClick={handleCreate} disabled={!newName.trim() || creating}>
               {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-              Create blank flow
+              Criar fluxo em branco
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+        title="Excluir fluxo"
+        description={
+          pendingDelete
+            ? `Excluir "${pendingDelete.name}"? Qualquer execução em andamento vai parar imediatamente.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        onConfirm={() => {
+          if (pendingDelete) handleDelete(pendingDelete);
+        }}
+      />
     </div>
   );
 }

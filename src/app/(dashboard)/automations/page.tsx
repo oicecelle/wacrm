@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Zap,
   Plus,
@@ -272,14 +273,12 @@ export default function AutomationsPage() {
     }
   }
 
+  const [pendingDeleteFlow, setPendingDeleteFlow] = useState<FlowRow | null>(null);
+
   async function handleDeleteFlow(flow: FlowRow) {
-    const yes = window.confirm(
-      `Excluir o fluxo "${flow.name}"? Qualquer execução ativa será encerrada imediatamente.`
-    );
-    if (!yes) return;
     try {
       const res = await fetch(`/api/flows/${flow.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      if (!res.ok) throw new Error(`Falha ao excluir: ${res.status}`);
       setFlows((prev) => prev.filter((f) => f.id !== flow.id));
       toast.success("Fluxo excluído com sucesso.");
     } catch (err) {
@@ -454,7 +453,7 @@ export default function AutomationsPage() {
                   key={flow.id}
                   flow={flow}
                   onEdit={() => router.push(`/flows/${flow.id}`)}
-                  onDelete={() => handleDeleteFlow(flow)}
+                  onDelete={() => setPendingDeleteFlow(flow)}
                 />
               ))}
             </div>
@@ -563,6 +562,21 @@ export default function AutomationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!pendingDeleteFlow}
+        onOpenChange={(open) => !open && setPendingDeleteFlow(null)}
+        title="Excluir fluxo"
+        description={
+          pendingDeleteFlow
+            ? `Excluir o fluxo "${pendingDeleteFlow.name}"? Qualquer execução ativa será encerrada imediatamente.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        onConfirm={() => {
+          if (pendingDeleteFlow) handleDeleteFlow(pendingDeleteFlow);
+        }}
+      />
     </div>
   );
 }

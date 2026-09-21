@@ -401,11 +401,9 @@ export function FlowEditorProvider({
   );
 
   // ---- Delete ----
+  // Confirmation now lives in the consuming component (header.tsx),
+  // via ConfirmDialog — this hook just does the deletion when asked.
   const deleteFlow = useCallback(async () => {
-    const yes = window.confirm(
-      `Excluir "${state.name}"? Qualquer execução em andamento vai parar imediatamente. Isso não pode ser desfeito.`,
-    );
-    if (!yes) return;
     try {
       const res = await fetch(`/api/flows/${initialFlow.id}`, {
         method: "DELETE",
@@ -416,7 +414,7 @@ export function FlowEditorProvider({
       const msg = err instanceof Error ? err.message : "Falha ao excluir";
       toast.error(msg);
     }
-  }, [initialFlow.id, router, state.name]);
+  }, [initialFlow.id, router]);
 
   // ---- Node mutations ----
   const updateNode = useCallback(

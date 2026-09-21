@@ -15,6 +15,7 @@
  * /flows/[id]/runs) — those don't belong in the hook.
  */
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -30,6 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import {
   useFlowEditor,
@@ -38,6 +40,7 @@ import {
 
 export function EditorHeader() {
   const router = useRouter();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const {
     flow,
     state,
@@ -98,7 +101,7 @@ export function EditorHeader() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => void deleteFlow()}
+            onClick={() => setShowDeleteConfirm(true)}
             className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -155,6 +158,15 @@ export function EditorHeader() {
         }
         placeholder="Descrição opcional (interna — o paciente não vê isso)"
         className="bg-card text-sm"
+      />
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Excluir fluxo"
+        description={`Excluir "${state.name}"? Qualquer execução em andamento vai parar imediatamente. Isso não pode ser desfeito.`}
+        confirmLabel="Excluir"
+        onConfirm={() => void deleteFlow()}
       />
     </div>
   );
