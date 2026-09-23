@@ -123,7 +123,7 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "update_deal_status",
-      description: "Atualiza o status, interesse ou temperatura de um lead no CRM.",
+      description: "Atualiza campos de qualificação de um lead/negócio no CRM.",
       parameters: {
         type: "object",
         properties: {
@@ -131,6 +131,8 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
           temperature: { type: "string", enum: ["hot", "warm", "cold"] },
           interest: { type: "string" },
           next_action: { type: "string" },
+          source: { type: "string", description: "Origem do lead, ex: Instagram, Indicação, Site" },
+          main_objection: { type: "string", description: "Principal objeção do lead" },
         },
         required: ["contact_name"],
       },
@@ -572,6 +574,51 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "manage_contact_tag",
+      description: "Adiciona ou remove uma tag de um contato.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_name: { type: "string", description: "Nome do contato" },
+          tag_name: { type: "string", description: "Nome da tag" },
+          action: { type: "string", enum: ["add", "remove"] },
+        },
+        required: ["contact_name", "tag_name", "action"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "move_deal_stage",
+      description: "Move o negócio de um contato pra outra etapa do funil de vendas (Pipelines).",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_name: { type: "string", description: "Nome do contato" },
+          stage_name: { type: "string", description: "Nome da etapa de destino (ex: Negociação, Fechado, Perdido)" },
+        },
+        required: ["contact_name", "stage_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_deal_details",
+      description: "Mostra o resumo completo do CRM de um contato: temperatura, interesse, origem, objeção, próxima ação, etapa do funil e tags.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_name: { type: "string", description: "Nome do contato" },
+        },
+        required: ["contact_name"],
+      },
+    },
+  },
 ];
 
 // ─── Tool executor ────────────────────────────────────────────────────────────
@@ -897,7 +944,7 @@ async function executeTool(
 
     // ── update_deal_status ───────────────────────────────────────────────────
     if (toolName === "update_deal_status") {
-      const { contact_name, temperature, interest, next_action } = args as Record<string, string>;
+      const { contact_name, temperature, interest, next_action, source, main_objection } = args as Record<string, string>;
       const { data: contacts } = await supabase.from("contacts").select("id").eq("account_id", accountId).ilike("name", `%${contact_name}%`).limit(1);
       if (!contacts?.length) return `Não encontrei "${contact_name}".`;
 
@@ -906,6 +953,8 @@ async function executeTool(
       if (temperature) { updates.temperature = temperature; descList.push(`temperatura → "${temperature}"`); }
       if (interest) { updates.interest = interest; descList.push(`interesse → "${interest}"`); }
       if (next_action) { updates.next_action = next_action; descList.push(`próxima ação → "${next_action}"`); }
+      if (source) { updates.source = source; descList.push(`origem → "${source}"`); }
+      if (main_objection) { updates.main_objection = main_objection; descList.push(`objeção → "${main_objection}"`); }
 
       const { error } = await supabase.from("deals").update(updates).eq("account_id", accountId).eq("contact_id", contacts[0].id);
       if (error) return `Erro: ${error.message}`;
@@ -1903,6 +1952,85 @@ async function executeTool(
       return `📢 Disparo "${b.name}" — ${statusLabels[b.status] || b.status}:\n• Público: ${b.total_recipients}\n• Enviados: ${b.sent_count}\n• Entregues: ${b.delivered_count}\n• Lidos: ${b.read_count}\n• Responderam: ${b.replied_count}\n• Falharam: ${b.failed_count}`;
     }
 
+    // ── manage_contact_tag ───────────────────────────────────────────────────
+    if (toolName === "manage_contact_tag") {
+      const { contact_name, tag_name, action } = args as Record<string, string>;
+      const { data: contacts } = await supabase.from("contacts").select("id, name").eq("account_id", accountId).ilike("name", `%${contact_name}%`).limit(1);
+      if (!contacts?.length) return `Não encontrei "${contact_name}".`;
+
+      const { data: tag } = await supabase.from("tags").select("id").eq("account_id", accountId).ilike("name", tag_name).maybeSingle();
+      if (!tag) return `Não encontrei nenhuma tag chamada "${tag_name}".`;
+
+      const contact = contacts[0];
+      if (action === "add") {
+        const { error } = await supabase.from("contact_tags").upsert({ contact_id: contact.id, tag_id: tag.id }, { onConflict: "contact_id,tag_id" });
+        if (error) return `Erro: ${error.message}`;
+        return `✅ ${LIA_UPDATED_LABEL} — Tag "${tag_name}" adicionada a "${contact.name}".`;
+      } else {
+        const { error } = await supabase.from("contact_tags").delete().eq("contact_id", contact.id).eq("tag_id", tag.id);
+        if (error) return `Erro: ${error.message}`;
+        return `✅ ${LIA_UPDATED_LABEL} — Tag "${tag_name}" removida de "${contact.name}".`;
+      }
+    }
+
+    // ── move_deal_stage ──────────────────────────────────────────────────────
+    if (toolName === "move_deal_stage") {
+      const { contact_name, stage_name } = args as Record<string, string>;
+      const { data: contacts } = await supabase.from("contacts").select("id, name").eq("account_id", accountId).ilike("name", `%${contact_name}%`).limit(1);
+      if (!contacts?.length) return `Não encontrei "${contact_name}".`;
+
+      const { data: stages } = await supabase
+        .from("pipeline_stages")
+        .select("id, name, pipelines!inner(account_id)")
+        .eq("pipelines.account_id", accountId)
+        .ilike("name", `%${stage_name}%`)
+        .limit(2);
+
+      if (!stages?.length) return `Não encontrei nenhuma etapa chamada "${stage_name}" no funil.`;
+      if (stages.length > 1) return `Achei mais de uma etapa com "${stage_name}": ${stages.map((s: { name: string }) => s.name).join(", ")}. Qual delas?`;
+
+      const contact = contacts[0];
+      const stage = stages[0];
+      const { error } = await supabase.from("deals").update({ stage_id: stage.id }).eq("account_id", accountId).eq("contact_id", contact.id);
+      if (error) return `Erro: ${error.message}`;
+
+      await supabase.from("contact_timeline").insert({
+        account_id: accountId,
+        contact_id: contact.id,
+        event_type: "deal_stage_change",
+        title: `${LIA_UPDATED_LABEL} — Etapa alterada pelo Copiloto`,
+        description: `Movido pra "${stage.name}"`,
+        metadata: { by: "LIA" },
+      });
+
+      return `✅ ${LIA_UPDATED_LABEL} — Negócio de "${contact.name}" movido pra "${stage.name}".`;
+    }
+
+    // ── get_deal_details ─────────────────────────────────────────────────────
+    if (toolName === "get_deal_details") {
+      const { contact_name } = args as Record<string, string>;
+      const { data: contacts } = await supabase.from("contacts").select("id, name").eq("account_id", accountId).ilike("name", `%${contact_name}%`).limit(1);
+      if (!contacts?.length) return `Não encontrei "${contact_name}".`;
+
+      const contact = contacts[0];
+      const { data: deal } = await supabase
+        .from("deals")
+        .select("temperature, interest, source, main_objection, next_action, stage_id, pipeline_stages(name)")
+        .eq("account_id", accountId)
+        .eq("contact_id", contact.id)
+        .maybeSingle();
+
+      const { data: tagRows } = await supabase.from("contact_tags").select("tags(name)").eq("contact_id", contact.id);
+      const tagNames = (tagRows || []).map((t: { tags: { name: string } | { name: string }[] }) => Array.isArray(t.tags) ? t.tags[0]?.name : t.tags?.name).filter(Boolean);
+
+      if (!deal) return `"${contact.name}" ainda não tem um negócio aberto no CRM.${tagNames.length ? ` Tags: ${tagNames.join(", ")}.` : ""}`;
+
+      const stageName = Array.isArray(deal.pipeline_stages) ? deal.pipeline_stages[0]?.name : deal.pipeline_stages?.name;
+      const tempLabels: Record<string, string> = { hot: "🔥 Quente", warm: "🌤️ Morno", cold: "❄️ Frio" };
+
+      return `📋 CRM de "${contact.name}":\n• Temperatura: ${tempLabels[deal.temperature] || deal.temperature || "não definida"}\n• Etapa: ${stageName || "não definida"}\n• Origem: ${deal.source || "não informada"}\n• Interesse: ${deal.interest || "não informado"}\n• Objeção: ${deal.main_objection || "nenhuma registrada"}\n• Próxima ação: ${deal.next_action || "não definida"}\n• Tags: ${tagNames.length ? tagNames.join(", ") : "nenhuma"}`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -1998,7 +2126,8 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `Você é a LIA — Assistente Inteligente do LeadPluz CRM para clínicas de saúde, beleza e estética.
-Você pode executar ações diretamente na plataforma: buscar contatos, criar/cancelar/remarcar agendamentos, consultar confirmações, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores (faturamento, comparecimento, origem de leads, desempenho por profissional, funil de vendas), consultar/pausar/ativar/editar/criar automações, consultar/pausar/ativar/editar/criar fluxos de mensagens, e criar/consultar disparos em massa.
+Você pode executar ações diretamente na plataforma: buscar contatos, criar/cancelar/remarcar agendamentos, consultar confirmações, registrar pagamentos, atualizar o CRM (qualificação, tags, etapa do funil), listar serviços, mostrar indicadores (faturamento, comparecimento, origem de leads, desempenho por profissional, funil de vendas), consultar/pausar/ativar/editar/criar automações, consultar/pausar/ativar/editar/criar fluxos de mensagens, e criar/consultar disparos em massa.
+
 Para qualquer pergunta de número ou indicador, SEMPRE use a ferramenta certa (get_revenue_report, get_attendance_rate, get_lead_sources, get_professional_performance, get_crm_funnel, get_dashboard_summary) em vez de estimar ou calcular por conta própria — nunca invente ou arredonde um número que devia vir de uma consulta real.
 
 DISPAROS EM MASSA SÃO A AÇÃO DE MAIOR RISCO: sempre chame preview_broadcast_audience primeiro, mostre o número exato de pessoas e a mensagem que vai sair pro usuário, e só chame create_broadcast depois de confirmação explícita — nunca crie um disparo sem ter mostrado o tamanho do público antes.
