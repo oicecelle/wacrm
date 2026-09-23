@@ -424,9 +424,112 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_revenue_report",
+      description: "Relatório de faturamento: total recebido, pendente, e quebra por forma de pagamento no período.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["today", "this_week", "this_month", "last_month", "last_30_days"], description: "Período do relatório. Padrão: este mês." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_attendance_rate",
+      description: "Taxa de comparecimento: quantos agendamentos foram atendidos vs. faltaram (no-show) no período.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["today", "this_week", "this_month", "last_month", "last_30_days"], description: "Período. Padrão: este mês." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_lead_sources",
+      description: "De onde vieram os leads/negócios cadastrados no período (Instagram, indicação, etc), do mais pro menos comum.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["today", "this_week", "this_month", "last_month", "last_30_days"], description: "Período. Padrão: este mês." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_professional_performance",
+      description: "Quantos atendimentos e quanto cada profissional da equipe fechou no período.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["today", "this_week", "this_month", "last_month", "last_30_days"], description: "Período. Padrão: este mês." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_crm_funnel",
+      description: "Quantos negócios estão em cada etapa do funil de vendas (Pipelines) agora.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
 ];
 
 // ─── Tool executor ────────────────────────────────────────────────────────────
+
+/**
+ * Resolves a period keyword (as offered in each metrics tool's enum)
+ * into a concrete [startISO, endISO) range, anchored to "now" at call
+ * time. Every metrics tool takes the same small vocabulary so the
+ * model doesn't have to compute dates itself — it just picks a label.
+ */
+function resolvePeriod(period: string | undefined): { startISO: string; endISO: string; label: string } {
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+  switch (period) {
+    case "today":
+      return { startISO: startOfDay(now).toISOString(), endISO: endOfDay(now).toISOString(), label: "hoje" };
+    case "this_week": {
+      const dow = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((dow + 6) % 7));
+      return { startISO: startOfDay(monday).toISOString(), endISO: endOfDay(now).toISOString(), label: "esta semana" };
+    }
+    case "last_month": {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      return { startISO: start.toISOString(), endISO: end.toISOString(), label: "mês passado" };
+    }
+    case "last_30_days": {
+      const start = new Date(now);
+      start.setDate(now.getDate() - 30);
+      return { startISO: startOfDay(start).toISOString(), endISO: endOfDay(now).toISOString(), label: "últimos 30 dias" };
+    }
+    case "this_month":
+    default: {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { startISO: start.toISOString(), endISO: endOfDay(now).toISOString(), label: "este mês" };
+    }
+  }
+}
+
 async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
@@ -1356,6 +1459,138 @@ async function executeTool(
       return `✅ ${LIA_LABEL} — Fluxo "${name}" criado como RASCUNHO (ainda pausado):\n\n${summaryLines.join("\n")}\n\nQuer que eu já ative ele?`;
     }
 
+    // ── get_revenue_report ───────────────────────────────────────────────────
+    if (toolName === "get_revenue_report") {
+      const { startISO, endISO, label } = resolvePeriod(args.period as string | undefined);
+      const { data: txs } = await supabase
+        .from("financial_transactions")
+        .select("value, status, method, type")
+        .eq("clinic_id", accountId)
+        .gte("date", startISO.slice(0, 10))
+        .lte("date", endISO.slice(0, 10));
+
+      const rows = (txs || []) as { value: number; status: string; method: string | null; type: string }[];
+      const paid = rows.filter((t) => t.status === "paid");
+      const totalPaid = paid.reduce((s, t) => s + (t.value || 0), 0);
+      const totalPending = rows.filter((t) => t.status !== "paid").reduce((s, t) => s + (t.value || 0), 0);
+
+      const byMethod: Record<string, number> = {};
+      for (const t of paid) byMethod[t.method || "não informado"] = (byMethod[t.method || "não informado"] || 0) + (t.value || 0);
+
+      const methodLines = Object.entries(byMethod)
+        .sort((a, b) => b[1] - a[1])
+        .map(([m, v]) => `  • ${m}: R$ ${v.toFixed(2)}`)
+        .join("\n");
+
+      return `💰 Faturamento (${label}):\n• Recebido: R$ ${totalPaid.toFixed(2)}\n• Pendente: R$ ${totalPending.toFixed(2)}${methodLines ? `\n\nPor forma de pagamento:\n${methodLines}` : ""}`;
+    }
+
+    // ── get_attendance_rate ──────────────────────────────────────────────────
+    if (toolName === "get_attendance_rate") {
+      const { startISO, endISO, label } = resolvePeriod(args.period as string | undefined);
+      const { data: appts } = await supabase
+        .from("appointments")
+        .select("status")
+        .eq("clinic_id", accountId)
+        .gte("start_time", startISO)
+        .lte("start_time", endISO)
+        .in("status", ["attended", "no_show"]);
+
+      const rows = (appts || []) as { status: string }[];
+      const attended = rows.filter((a) => a.status === "attended").length;
+      const noShow = rows.filter((a) => a.status === "no_show").length;
+      const total = attended + noShow;
+
+      if (total === 0) return `Sem agendamentos concluídos (atendidos ou faltas) registrados ${label} ainda.`;
+
+      const rate = ((attended / total) * 100).toFixed(1);
+      return `📅 Comparecimento (${label}):\n• Atendidos: ${attended}\n• Faltas (no-show): ${noShow}\n• Taxa de comparecimento: ${rate}%`;
+    }
+
+    // ── get_lead_sources ──────────────────────────────────────────────────────
+    if (toolName === "get_lead_sources") {
+      const { startISO, endISO, label } = resolvePeriod(args.period as string | undefined);
+      const { data: deals } = await supabase
+        .from("deals")
+        .select("source, created_at")
+        .eq("account_id", accountId)
+        .gte("created_at", startISO)
+        .lte("created_at", endISO);
+
+      const rows = (deals || []) as { source: string | null }[];
+      if (!rows.length) return `Nenhum negócio novo cadastrado ${label}.`;
+
+      const bySource: Record<string, number> = {};
+      for (const d of rows) bySource[d.source || "não informado"] = (bySource[d.source || "não informado"] || 0) + 1;
+
+      const lines = Object.entries(bySource)
+        .sort((a, b) => b[1] - a[1])
+        .map(([s, c]) => `• ${s}: ${c} lead(s) (${((c / rows.length) * 100).toFixed(0)}%)`)
+        .join("\n");
+
+      return `📊 Origem dos leads (${label}, total ${rows.length}):\n${lines}`;
+    }
+
+    // ── get_professional_performance ─────────────────────────────────────────
+    if (toolName === "get_professional_performance") {
+      const { startISO, endISO, label } = resolvePeriod(args.period as string | undefined);
+      const { data: appts } = await supabase
+        .from("appointments")
+        .select("professional_id, status")
+        .eq("clinic_id", accountId)
+        .gte("start_time", startISO)
+        .lte("start_time", endISO)
+        .eq("status", "attended");
+
+      const rows = (appts || []) as { professional_id: string | null }[];
+      if (!rows.length) return `Nenhum atendimento concluído ${label} ainda.`;
+
+      const byProf: Record<string, number> = {};
+      for (const a of rows) {
+        const key = a.professional_id || "sem profissional definido";
+        byProf[key] = (byProf[key] || 0) + 1;
+      }
+
+      const profIds = Object.keys(byProf).filter((k) => k !== "sem profissional definido");
+      const { data: profs } = profIds.length
+        ? await supabase.from("profiles").select("user_id, full_name").in("user_id", profIds)
+        : { data: [] };
+      const nameMap = new Map((profs || []).map((p: { user_id: string; full_name: string }) => [p.user_id, p.full_name]));
+
+      const lines = Object.entries(byProf)
+        .sort((a, b) => b[1] - a[1])
+        .map(([id, c]) => `• ${nameMap.get(id) || id}: ${c} atendimento(s)`)
+        .join("\n");
+
+      return `👥 Desempenho por profissional (${label}):\n${lines}`;
+    }
+
+    // ── get_crm_funnel ────────────────────────────────────────────────────────
+    if (toolName === "get_crm_funnel") {
+      const { data: stages } = await supabase
+        .from("pipeline_stages")
+        .select("id, name, position, pipelines!inner(account_id)")
+        .eq("pipelines.account_id", accountId)
+        .order("position");
+
+      if (!stages?.length) return "Nenhum funil de vendas configurado ainda.";
+
+      const stageRows = stages as { id: string; name: string }[];
+      const { data: deals } = await supabase
+        .from("deals")
+        .select("stage_id")
+        .eq("account_id", accountId)
+        .in("stage_id", stageRows.map((s) => s.id));
+
+      const counts: Record<string, number> = {};
+      for (const d of (deals || []) as { stage_id: string }[]) counts[d.stage_id] = (counts[d.stage_id] || 0) + 1;
+
+      const lines = stageRows.map((s) => `• ${s.name}: ${counts[s.id] || 0} negócio(s)`).join("\n");
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+      return `🔻 Funil de vendas (total ${total} negócios abertos):\n${lines}`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -1451,7 +1686,8 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `Você é a LIA — Assistente Inteligente do LeadPluz CRM para clínicas de saúde, beleza e estética.
-Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores, consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar/editar/criar fluxos de mensagens.
+Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores (faturamento, comparecimento, origem de leads, desempenho por profissional, funil de vendas), consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar/editar/criar fluxos de mensagens.
+Para qualquer pergunta de número ou indicador, SEMPRE use a ferramenta certa (get_revenue_report, get_attendance_rate, get_lead_sources, get_professional_performance, get_crm_funnel, get_dashboard_summary) em vez de estimar ou calcular por conta própria — nunca invente ou arredonde um número que devia vir de uma consulta real.
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
 Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber. A mesma cautela vale pra pausar um fluxo de mensagens ativo.
