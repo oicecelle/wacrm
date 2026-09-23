@@ -199,7 +199,39 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
-
+  {
+    type: "function",
+    function: {
+      name: "get_automation_details",
+      description: "Mostra a estrutura completa de uma automação: gatilho e cada etapa (com um id interno pra cada uma), pra poder editar depois com update_automation_step. Use antes de qualquer edição.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) da automação" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_automation_step",
+      description: "Edita uma etapa específica de uma automação já existente, usando o id retornado por get_automation_details. Só envie os campos que realmente mudam.",
+      parameters: {
+        type: "object",
+        properties: {
+          step_id: { type: "string", description: "O id da etapa, obtido antes via get_automation_details" },
+          text: { type: "string", description: "Novo texto (etapas de enviar mensagem)" },
+          wait_amount: { type: "number", description: "Nova quantidade de espera (etapa Aguardar)" },
+          wait_unit: { type: "string", enum: ["minutes", "hours", "days"], description: "Nova unidade de espera (etapa Aguardar)" },
+          tag_id: { type: "string", description: "Novo id de tag (etapa Adicionar tag) — use search_contacts ou peça pro usuário confirmar o nome exato se não tiver o id" },
+          template_name: { type: "string", description: "Novo nome de modelo (etapas de enviar modelo)" },
+        },
+        required: ["step_id"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -549,6 +581,100 @@ async function executeTool(
       return `📊 Desempenho de "${automation.name}":\n• Status: ${automation.is_active ? "🟢 Ativa" : "⏸️ Pausada"}\n• Total de execuções: ${automation.execution_count || 0}\n• Última execução: ${automation.last_executed_at ? new Date(automation.last_executed_at).toLocaleString("pt-BR") : "nunca rodou"}${errors.length ? `\n• ⚠️ ${errors.length} erro(s) recente(s): ${errors[0].error_message || "sem detalhe"}` : ""}`;
     }
 
+    // ── get_automation_details ───────────────────────────────────────────────
+    if (toolName === "get_automation_details") {
+      const { name } = args as Record<string, string>;
+      const { data: autoMatches } = await supabase
+        .from("automations")
+        .select("id, name, is_active, trigger_type, trigger_config")
+        .eq("account_id", accountId)
+        .ilike("name", `%${name}%`)
+        .limit(2);
+
+      if (!autoMatches?.length) return `Não encontrei nenhuma automação chamada "${name}".`;
+      if (autoMatches.length > 1) {
+        return `Achei mais de uma automação com "${name}": ${autoMatches.map((m: { name: string }) => m.name).join(", ")}. Qual delas você quer dizer?`;
+      }
+
+      const automation = autoMatches[0];
+      const { data: steps } = await supabase
+        .from("automation_steps")
+        .select("id, parent_step_id, branch, step_type, step_config, position")
+        .eq("automation_id", automation.id)
+        .order("position");
+
+      const stepLabels: Record<string, string> = {
+        send_message: "Enviar mensagem",
+        send_template: "Enviar modelo salvo",
+        send_media: "Enviar foto/anexo",
+        wait: "Aguardar",
+        condition: "Condição",
+        add_tag: "Adicionar tag",
+        update_deal_field: "Mudar qualificação do negócio",
+        create_appointment: "Criar agendamento",
+      };
+
+      function describeStep(s: { id: string; step_type: string; step_config: Record<string, unknown> }): string {
+        const cfg = s.step_config || {};
+        if (s.step_type === "wait") return `Aguardar ${cfg.amount} ${cfg.unit}`;
+        if (s.step_type === "send_message") return `Enviar mensagem: "${String(cfg.text || "").slice(0, 60)}"`;
+        if (s.step_type === "condition") return `Condição — assunto: ${cfg.subject}`;
+        if (s.step_type === "add_tag") return `Adicionar tag (id: ${cfg.tag_id})`;
+        return stepLabels[s.step_type] || s.step_type;
+      }
+
+      function renderTree(parentId: string | null, branch: string | null, indent: string): string {
+        const children = (steps || []).filter(
+          (s: { parent_step_id: string | null; branch: string | null }) => s.parent_step_id === parentId && s.branch === branch,
+        );
+        return children
+          .map((s: { id: string; step_type: string; step_config: Record<string, unknown> }) => {
+            let line = `${indent}[id: ${s.id}] ${stepLabels[s.step_type] || s.step_type} — ${describeStep(s)}`;
+            if (s.step_type === "condition") {
+              line += `\n${indent}  Sim:\n${renderTree(s.id, "yes", indent + "    ")}`;
+              line += `\n${indent}  Não:\n${renderTree(s.id, "no", indent + "    ")}`;
+            }
+            return line;
+          })
+          .join("\n");
+      }
+
+      const tree = renderTree(null, null, "");
+
+      return `Automação "${automation.name}" (${automation.is_active ? "Ativa" : "Pausada"})\nGatilho: ${automation.trigger_type}\n\n${tree || "Nenhuma etapa cadastrada ainda."}`;
+    }
+
+    // ── update_automation_step ───────────────────────────────────────────────
+    if (toolName === "update_automation_step") {
+      const { step_id, text, wait_amount, wait_unit, tag_id, template_name } = args as Record<string, string | number | undefined>;
+
+      const { data: stepRow } = await supabase
+        .from("automation_steps")
+        .select("id, automation_id, step_type, step_config, automations!inner(account_id)")
+        .eq("id", step_id)
+        .maybeSingle();
+
+      if (!stepRow) return `Não encontrei nenhuma etapa com esse id.`;
+      // Guard against editing a step belonging to another account.
+      const owningAccountId = Array.isArray(stepRow.automations) ? stepRow.automations[0]?.account_id : stepRow.automations?.account_id;
+      if (owningAccountId !== accountId) return `Não encontrei nenhuma etapa com esse id.`;
+
+      const newConfig: Record<string, unknown> = { ...(stepRow.step_config || {}) };
+      const changed: string[] = [];
+      if (text !== undefined) { newConfig.text = text; changed.push(`texto → "${text}"`); }
+      if (wait_amount !== undefined) { newConfig.amount = wait_amount; changed.push(`quantidade → ${wait_amount}`); }
+      if (wait_unit !== undefined) { newConfig.unit = wait_unit; changed.push(`unidade → ${wait_unit}`); }
+      if (tag_id !== undefined) { newConfig.tag_id = tag_id; changed.push(`tag → ${tag_id}`); }
+      if (template_name !== undefined) { newConfig.template_name = template_name; changed.push(`modelo → "${template_name}"`); }
+
+      if (changed.length === 0) return "Nenhuma mudança informada.";
+
+      const { error } = await supabase.from("automation_steps").update({ step_config: newConfig }).eq("id", step_id);
+      if (error) return `Erro ao atualizar: ${error.message}`;
+
+      return `✅ ${LIA_UPDATED_LABEL} — Etapa atualizada: ${changed.join(", ")}.`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -648,6 +774,7 @@ Você pode executar ações diretamente na plataforma: buscar contatos, criar e 
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
 Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber.
+Antes de editar uma etapa de automação (update_automation_step), sempre chame get_automation_details primeiro pra ver a etapa certa, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — nunca edite direto sem mostrar o que vai mudar.
 Após executar qualquer ação, informe que foi feita com o rótulo "⚡ Criado pela LIA" ou "⚡ Atualizado pela LIA".
 ${contactContext ? contactContext : ""}`;
 
