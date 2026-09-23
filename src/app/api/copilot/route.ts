@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
+import { validateStepsForActivation, validateTriggerForActivation } from "@/lib/automations/validate";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "mock-openai-key-for-build" });
 
@@ -229,6 +230,55 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
           template_name: { type: "string", description: "Novo nome de modelo (etapas de enviar modelo)" },
         },
         required: ["step_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_automation",
+      description: "Cria uma automação nova a partir da descrição do usuário. SEMPRE criada como rascunho (pausada) — nunca ativa sozinha. Explique o resumo do que vai criar e peça confirmação antes de chamar essa função.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome curto e descritivo pra automação" },
+          trigger_type: {
+            type: "string",
+            enum: ["keyword_match", "new_message_received", "first_inbound_message", "tag_added"],
+            description: "keyword_match: dispara quando uma palavra/frase aparece na mensagem. new_message_received: qualquer mensagem nova do contato. first_inbound_message: só a primeira mensagem já enviada por esse contato. tag_added: quando uma tag é adicionada ao contato.",
+          },
+          trigger_keywords: { type: "array", items: { type: "string" }, description: "Palavras/frases-gatilho (só pra trigger_type=keyword_match)" },
+          trigger_tag_name: { type: "string", description: "Nome da tag que dispara (só pra trigger_type=tag_added)" },
+          steps: {
+            type: "array",
+            description: "Sequência de etapas, na ordem em que devem rodar.",
+            items: {
+              type: "object",
+              properties: {
+                step_type: {
+                  type: "string",
+                  enum: ["send_message", "wait", "condition", "add_tag", "update_deal_field"],
+                },
+                text: { type: "string", description: "Texto da mensagem (send_message)" },
+                wait_amount: { type: "number", description: "Quantidade de espera (wait)" },
+                wait_unit: { type: "string", enum: ["minutes", "hours", "days"], description: "Unidade de espera (wait)" },
+                condition_subject: {
+                  type: "string",
+                  enum: ["no_reply_since", "time_of_day", "tag_presence"],
+                  description: "Assunto da condição (condition). no_reply_since = ainda sem resposta desde o início da automação.",
+                },
+                condition_operand: { type: "string", description: "Ex: para time_of_day, algo como '09:30-23:59'; para tag_presence, o nome da tag" },
+                tag_name: { type: "string", description: "Nome da tag a adicionar (add_tag)" },
+                deal_field: { type: "string", enum: ["source", "interest", "crm_stage", "temperature", "main_objection", "next_action"], description: "Campo do negócio a mudar (update_deal_field)" },
+                deal_value: { type: "string", description: "Novo valor do campo (update_deal_field)" },
+                yes_steps: { type: "array", items: { type: "object" }, description: "Etapas do ramo 'Sim', só se step_type=condition. Mesmo formato desta lista." },
+                no_steps: { type: "array", items: { type: "object" }, description: "Etapas do ramo 'Não', só se step_type=condition. Mesmo formato desta lista." },
+              },
+              required: ["step_type"],
+            },
+          },
+        },
+        required: ["name", "trigger_type", "steps"],
       },
     },
   },
@@ -675,6 +725,191 @@ async function executeTool(
       return `✅ ${LIA_UPDATED_LABEL} — Etapa atualizada: ${changed.join(", ")}.`;
     }
 
+    // ── create_automation ────────────────────────────────────────────────────
+    if (toolName === "create_automation") {
+      interface PlanStep {
+        step_type: string;
+        text?: string;
+        wait_amount?: number;
+        wait_unit?: string;
+        condition_subject?: string;
+        condition_operand?: string;
+        tag_name?: string;
+        deal_field?: string;
+        deal_value?: string;
+        yes_steps?: PlanStep[];
+        no_steps?: PlanStep[];
+      }
+      const {
+        name,
+        trigger_type,
+        trigger_keywords,
+        trigger_tag_name,
+        steps,
+      } = args as unknown as {
+        name: string;
+        trigger_type: string;
+        trigger_keywords?: string[];
+        trigger_tag_name?: string;
+        steps: PlanStep[];
+      };
+
+      // Resolve any tag NAME the model used into a real tag_id — LIA
+      // reasons in names, the schema stores ids. Cache lookups since
+      // the same tag can appear more than once in one plan.
+      const tagCache = new Map<string, string | null>();
+      async function resolveTagId(tagName: string): Promise<string | null> {
+        if (tagCache.has(tagName)) return tagCache.get(tagName)!;
+        const { data } = await supabase
+          .from("tags")
+          .select("id")
+          .eq("account_id", accountId)
+          .ilike("name", tagName)
+          .maybeSingle();
+        const id = data?.id ?? null;
+        tagCache.set(tagName, id);
+        return id;
+      }
+
+      // ── Build trigger_config ──
+      let triggerConfig: Record<string, unknown> = {};
+      if (trigger_type === "keyword_match") {
+        if (!trigger_keywords?.length) return "Preciso de pelo menos uma palavra-chave pra esse tipo de gatilho.";
+        triggerConfig = { keywords: trigger_keywords, match_type: "contains" };
+      } else if (trigger_type === "tag_added") {
+        if (!trigger_tag_name) return "Preciso saber qual tag dispara essa automação.";
+        const tagId = await resolveTagId(trigger_tag_name);
+        if (!tagId) return `Não encontrei nenhuma tag chamada "${trigger_tag_name}".`;
+        triggerConfig = { tag_id: tagId };
+      }
+
+      // ── Build step rows (flat, with parent/branch) + a readable summary ──
+      const missingTags: string[] = [];
+      const rows: { step_type: string; step_config: Record<string, unknown>; parent_step_id: null; branch: null; position: number; _cid: string; _parentCid: string | null; _branch: "yes" | "no" | null }[] = [];
+      let cidCounter = 0;
+      const summaryLines: string[] = [];
+
+      async function walk(list: PlanStep[], parentCid: string | null, branch: "yes" | "no" | null, indent: string) {
+        let pos = 0;
+        for (const s of list) {
+          const cid = `s${cidCounter++}`;
+          const cfg: Record<string, unknown> = {};
+          let label = s.step_type;
+          if (s.step_type === "send_message") {
+            cfg.text = s.text ?? "";
+            label = `Enviar mensagem: "${(s.text ?? "").slice(0, 50)}"`;
+          } else if (s.step_type === "wait") {
+            cfg.amount = s.wait_amount ?? 1;
+            cfg.unit = s.wait_unit ?? "hours";
+            label = `Aguardar ${cfg.amount} ${cfg.unit}`;
+          } else if (s.step_type === "condition") {
+            cfg.subject = s.condition_subject ?? "no_reply_since";
+            cfg.operand = s.condition_operand ?? "";
+            label = `Condição: ${cfg.subject}${s.condition_operand ? ` (${s.condition_operand})` : ""}`;
+          } else if (s.step_type === "add_tag") {
+            const tagId = s.tag_name ? await resolveTagId(s.tag_name) : null;
+            if (s.tag_name && !tagId) missingTags.push(s.tag_name);
+            cfg.tag_id = tagId ?? "";
+            label = `Adicionar tag: ${s.tag_name ?? "?"}`;
+          } else if (s.step_type === "update_deal_field") {
+            cfg.field = s.deal_field ?? "temperature";
+            cfg.value = s.deal_value ?? "";
+            label = `Mudar ${cfg.field} → ${cfg.value}`;
+          }
+
+          rows.push({
+            step_type: s.step_type,
+            step_config: cfg,
+            parent_step_id: null,
+            branch: null,
+            position: pos++,
+            _cid: cid,
+            _parentCid: parentCid,
+            _branch: branch,
+          });
+          summaryLines.push(`${indent}${label}`);
+
+          if (s.step_type === "condition") {
+            if (s.yes_steps?.length) {
+              summaryLines.push(`${indent}  Sim:`);
+              await walk(s.yes_steps, cid, "yes", indent + "    ");
+            }
+            if (s.no_steps?.length) {
+              summaryLines.push(`${indent}  Não:`);
+              await walk(s.no_steps, cid, "no", indent + "    ");
+            }
+          }
+        }
+      }
+      await walk(steps, null, null, "");
+
+      if (missingTags.length) {
+        return `Não encontrei essas tags: ${missingTags.join(", ")}. Confirma o nome exato ou crie a tag antes em Configurações → Campos e Tags.`;
+      }
+
+      // ── Validate with the same rules the builder itself enforces ──
+      function toValidateTree(parentCid: string | null, branch: "yes" | "no" | null): { step_type: string; step_config: Record<string, unknown>; branches?: { yes: unknown[]; no: unknown[] } }[] {
+        return rows
+          .filter((r) => r._parentCid === parentCid && r._branch === branch)
+          .map((r) => {
+            const node: { step_type: string; step_config: Record<string, unknown>; branches?: { yes: unknown[]; no: unknown[] } } = {
+              step_type: r.step_type,
+              step_config: r.step_config,
+            };
+            if (r.step_type === "condition") {
+              node.branches = { yes: toValidateTree(r._cid, "yes"), no: toValidateTree(r._cid, "no") };
+            }
+            return node;
+          });
+      }
+      const stepIssues = validateStepsForActivation(toValidateTree(null, null) as never);
+      const triggerIssues = validateTriggerForActivation(trigger_type as never, triggerConfig);
+      if (stepIssues.length || triggerIssues.length) {
+        return `Não deu pra montar essa automação: ${[...stepIssues, ...triggerIssues].map((i) => i.message).join("; ")}.`;
+      }
+
+      // ── Persist: automation row first, then steps two-pass (create
+      // all rows, then patch parent_step_id using the real DB ids) ──
+      const { data: newAutomation, error: autoErr } = await supabase
+        .from("automations")
+        .insert({
+          account_id: accountId,
+          name,
+          trigger_type,
+          trigger_config: triggerConfig,
+          is_active: false, // ALWAYS created paused — see system prompt: activation is a separate, explicit step.
+        })
+        .select("id")
+        .single();
+
+      if (autoErr || !newAutomation) return `Erro ao criar automação: ${autoErr?.message}`;
+
+      const cidToRealId = new Map<string, string>();
+      for (const r of rows) {
+        const { data: inserted, error: stepErr } = await supabase
+          .from("automation_steps")
+          .insert({
+            automation_id: newAutomation.id,
+            step_type: r.step_type,
+            step_config: r.step_config,
+            position: r.position,
+            parent_step_id: r._parentCid ? cidToRealId.get(r._parentCid) ?? null : null,
+            branch: r._branch,
+          })
+          .select("id")
+          .single();
+        if (stepErr || !inserted) {
+          // Roll back the partially-created automation rather than
+          // leaving a broken draft behind.
+          await supabase.from("automations").delete().eq("id", newAutomation.id);
+          return `Erro ao criar etapa: ${stepErr?.message}`;
+        }
+        cidToRealId.set(r._cid, inserted.id);
+      }
+
+      return `✅ ${LIA_LABEL} — Automação "${name}" criada como RASCUNHO (ainda pausada):\n\n${summaryLines.join("\n")}\n\nQuer que eu já ative ela?`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -775,6 +1010,8 @@ Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
 Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber.
 Antes de editar uma etapa de automação (update_automation_step), sempre chame get_automation_details primeiro pra ver a etapa certa, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — nunca edite direto sem mostrar o que vai mudar.
+Ao criar uma automação nova (create_automation): monte o gatilho e as etapas a partir do que o usuário descreveu, mas SEMPRE explique o resumo em linguagem simples e peça confirmação antes de chamar a função — nunca crie direto na primeira mensagem. A automação sempre nasce pausada (rascunho); depois de criar, pergunte se o usuário quer ativar agora (e só ative com toggle_automation se ele confirmar).
+
 Após executar qualquer ação, informe que foi feita com o rótulo "⚡ Criado pela LIA" ou "⚡ Atualizado pela LIA".
 ${contactContext ? contactContext : ""}`;
 
