@@ -659,6 +659,69 @@ export default function AgendaPage() {
         }
       `}</style>
 
+      {/* Header: page title + Criar Novo (replaces the old floating FAB) */}
+      <div className="relative flex items-center justify-between">
+        <h1 className="text-2xl font-black tracking-tight text-foreground">Agenda</h1>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
+            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-colors hover:bg-blue-700"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Criar Novo
+          </button>
+          {isFabMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFabMenuOpen(false)} />
+              <div className="absolute right-0 top-[calc(100%+8px)] z-50 flex w-52 flex-col gap-1 rounded-2xl border border-border bg-card p-2 text-left shadow-2xl duration-150 animate-in fade-in slide-in-from-top-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDefaultType("consulta");
+                    const dateStr = selectedDate.toISOString().slice(0, 10);
+                    handleAddAppointment(dateStr);
+                    setIsFabMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  <PlusIcon className="h-4 w-4 text-blue-600" />
+                  <span>Marcar Consulta (Lead)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDefaultType("evento");
+                    const dateStr = selectedDate.toISOString().slice(0, 10);
+                    handleAddAppointment(dateStr);
+                    setIsFabMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  <SparklesIcon className="h-4 w-4 text-indigo-500" />
+                  <span>Criar Evento</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDefaultType("bloqueio");
+                    const dateStr = selectedDate.toISOString().slice(0, 10);
+                    handleAddAppointment(dateStr);
+                    setIsFabMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  <ClockIcon className="h-4 w-4 text-amber-500" />
+                  <span>Bloqueio de Agenda</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Mobile-only view layout */}
       <div className="lg:hidden space-y-4">
         {/* Mini Calendar (Month selector + cells) */}
@@ -1339,68 +1402,6 @@ export default function AgendaPage() {
             </div>
           )}
         </main>
-      </div>
-
-      {/* Floating Action Buttons bottom-right */}
-      <div className="fixed bottom-6 right-6 flex flex-col items-center gap-3 z-50">
-        {/* Popover Menu above the FAB */}
-        {isFabMenuOpen && (
-          <>
-            <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFabMenuOpen(false)} />
-            <div className="absolute bottom-[calc(100%+12px)] right-0 bg-card border border-border shadow-2xl rounded-2xl p-2 z-50 w-52 flex flex-col gap-1 text-left animate-in fade-in slide-in-from-bottom-5 duration-150">
-              <button
-                type="button"
-                onClick={() => {
-                  setModalDefaultType("consulta");
-                  const dateStr = selectedDate.toISOString().slice(0, 10);
-                  handleAddAppointment(dateStr);
-                  setIsFabMenuOpen(false);
-                }}
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <PlusIcon className="h-4 w-4 text-blue-600" />
-                <span>Marcar Consulta (Lead)</span>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => {
-                  setModalDefaultType("evento");
-                  const dateStr = selectedDate.toISOString().slice(0, 10);
-                  handleAddAppointment(dateStr);
-                  setIsFabMenuOpen(false);
-                }}
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <SparklesIcon className="h-4 w-4 text-indigo-500" />
-                <span>Criar Evento</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setModalDefaultType("bloqueio");
-                  const dateStr = selectedDate.toISOString().slice(0, 10);
-                  handleAddAppointment(dateStr);
-                  setIsFabMenuOpen(false);
-                }}
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <ClockIcon className="h-4 w-4 text-amber-500" />
-                <span>Bloqueio de Agenda</span>
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Plus FAB Button */}
-        <button
-          onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-          className={`h-12 w-12 shrink-0 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all duration-200 ${isFabMenuOpen ? 'rotate-45 bg-neutral-800' : ''}`}
-          title="Novo Agendamento"
-        >
-          <PlusIcon className="h-6 w-6" />
-        </button>
       </div>
 
       {/* Appointment Modal Form */}

@@ -213,7 +213,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         )}
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 animate-fade-in">
+        <main className="flex-1 overflow-y-auto p-4 pb-20 sm:p-6 sm:pb-24 animate-fade-in">
           {/* Active System Alerts Banner */}
           {alerts.length > 0 && (
             <div className="mb-4 space-y-2">
