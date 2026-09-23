@@ -285,6 +285,49 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "list_flows",
+      description: "Lista os fluxos de mensagens (conversas automáticas com botões/coleta de resposta) cadastrados, com status e quantas vezes já rodaram.",
+      parameters: {
+        type: "object",
+        properties: {
+          only_active: { type: "boolean", description: "Se true, mostra só os ativos. Padrão: mostra todos." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "toggle_flow",
+      description: "Ativa ou pausa um fluxo de mensagens existente pelo nome.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) do fluxo" },
+          active: { type: "boolean", description: "true para ativar, false para pausar (volta a rascunho)" },
+        },
+        required: ["name", "active"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_flow_executions",
+      description: "Mostra quantas pessoas passaram por um fluxo, quantas terminaram, e em qual etapa as pessoas mais travam (não concluíram).",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) do fluxo" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_upcoming_appointments",
       description: "Retorna os próximos agendamentos do dia ou período.",
       parameters: {
@@ -910,6 +953,91 @@ async function executeTool(
       return `✅ ${LIA_LABEL} — Automação "${name}" criada como RASCUNHO (ainda pausada):\n\n${summaryLines.join("\n")}\n\nQuer que eu já ative ela?`;
     }
 
+    // ── list_flows ────────────────────────────────────────────────────────────
+    if (toolName === "list_flows") {
+      const onlyActive = args.only_active === true;
+      let query = supabase
+        .from("flows")
+        .select("name, status, trigger_type, execution_count, last_executed_at")
+        .eq("account_id", accountId)
+        .order("name");
+      if (onlyActive) query = query.eq("status", "active");
+      const { data } = await query;
+      if (!data?.length) return onlyActive ? "Nenhum fluxo ativo no momento." : "Nenhum fluxo cadastrado ainda.";
+      const statusEmoji: Record<string, string> = { active: "🟢 Ativo", draft: "⏸️ Rascunho/Pausado", archived: "🗄️ Arquivado" };
+      return `Fluxos de mensagens (${data.length}):\n${data
+        .map((f: { name: string; status: string; trigger_type: string; execution_count: number; last_executed_at: string | null }) =>
+          `• ${f.name} — ${statusEmoji[f.status] || f.status} — gatilho: ${f.trigger_type} — rodou ${f.execution_count || 0}x${f.last_executed_at ? ` (última vez: ${new Date(f.last_executed_at).toLocaleDateString("pt-BR")})` : ""}`
+        )
+        .join("\n")}`;
+    }
+
+    // ── toggle_flow ───────────────────────────────────────────────────────────
+    if (toolName === "toggle_flow") {
+      const { name, active } = args as unknown as { name: string; active: boolean };
+      const { data: matches } = await supabase
+        .from("flows")
+        .select("id, name, status")
+        .eq("account_id", accountId)
+        .ilike("name", `%${name}%`)
+        .limit(2);
+
+      if (!matches?.length) return `Não encontrei nenhum fluxo chamado "${name}".`;
+      if (matches.length > 1) {
+        return `Achei mais de um fluxo com "${name}": ${matches.map((m: { name: string }) => m.name).join(", ")}. Qual deles você quer dizer?`;
+      }
+
+      const flow = matches[0];
+      const { error } = await supabase.from("flows").update({ status: active ? "active" : "draft" }).eq("id", flow.id);
+      if (error) return `Erro ao atualizar: ${error.message}`;
+
+      return `✅ ${LIA_UPDATED_LABEL} — Fluxo "${flow.name}" agora está ${active ? "🟢 ativo" : "⏸️ pausado"}.`;
+    }
+
+    // ── get_flow_executions ──────────────────────────────────────────────────
+    if (toolName === "get_flow_executions") {
+      const { name } = args as Record<string, string>;
+      const { data: matches } = await supabase
+        .from("flows")
+        .select("id, name, status, execution_count, last_executed_at")
+        .eq("account_id", accountId)
+        .ilike("name", `%${name}%`)
+        .limit(2);
+
+      if (!matches?.length) return `Não encontrei nenhum fluxo chamado "${name}".`;
+      if (matches.length > 1) {
+        return `Achei mais de um fluxo com "${name}": ${matches.map((m: { name: string }) => m.name).join(", ")}. Qual deles você quer dizer?`;
+      }
+
+      const flow = matches[0];
+      const { data: runs } = await supabase
+        .from("flow_runs")
+        .select("status, current_node_key")
+        .eq("flow_id", flow.id)
+        .limit(500);
+
+      const statusCounts: Record<string, number> = {};
+      const stuckAt: Record<string, number> = {};
+      for (const r of runs || []) {
+        statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+        if (r.status === "active" || r.status === "timed_out") {
+          stuckAt[r.current_node_key] = (stuckAt[r.current_node_key] || 0) + 1;
+        }
+      }
+      const topStuck = Object.entries(stuckAt).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+      const statusLabels: Record<string, string> = {
+        active: "em andamento",
+        completed: "concluídos",
+        handed_off: "transferidos pra atendente",
+        timed_out: "expiraram sem responder",
+        paused_by_agent: "pausados por atendente",
+        failed: "falharam",
+      };
+
+      return `📊 Fluxo "${flow.name}" (${flow.status}):\n• Total de execuções: ${flow.execution_count || 0}\n• Última execução: ${flow.last_executed_at ? new Date(flow.last_executed_at).toLocaleString("pt-BR") : "nunca rodou"}\n${Object.entries(statusCounts).map(([s, c]) => `• ${statusLabels[s] || s}: ${c}`).join("\n")}${topStuck.length ? `\n\n⚠️ Onde mais travam (sem concluir):\n${topStuck.map(([node, c]) => `• ${node}: ${c} pessoa(s)`).join("\n")}` : ""}`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -1005,10 +1133,10 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `Você é a LIA — Assistente Inteligente do LeadPluz CRM para clínicas de saúde, beleza e estética.
-Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores, e consultar/pausar/ativar automações.
+Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores, consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar fluxos de mensagens.
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
-Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber.
+Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber. A mesma cautela vale pra pausar um fluxo de mensagens ativo.
 Antes de editar uma etapa de automação (update_automation_step), sempre chame get_automation_details primeiro pra ver a etapa certa, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — nunca edite direto sem mostrar o que vai mudar.
 Ao criar uma automação nova (create_automation): monte o gatilho e as etapas a partir do que o usuário descreveu, mas SEMPRE explique o resumo em linguagem simples e peça confirmação antes de chamar a função — nunca crie direto na primeira mensagem. A automação sempre nasce pausada (rascunho); depois de criar, pergunte se o usuário quer ativar agora (e só ative com toggle_automation se ele confirmar).
 
