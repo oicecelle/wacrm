@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
 import { validateStepsForActivation, validateTriggerForActivation } from "@/lib/automations/validate";
+import { validateFlowForActivation } from "@/lib/flows/validate";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "mock-openai-key-for-build" });
 
@@ -355,6 +356,56 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
           note: { type: "string", description: "Nova observação interna (nó de transferir pra atendente)" },
         },
         required: ["flow_name", "node_key"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_flow",
+      description: "Cria um fluxo de mensagens (conversa automática) novo a partir da descrição do usuário. SEMPRE criado como rascunho — nunca ativa sozinho. Explique o resumo do que vai criar e peça confirmação antes de chamar essa função.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome curto e descritivo pro fluxo" },
+          trigger_type: {
+            type: "string",
+            enum: ["keyword", "first_inbound_message", "manual"],
+            description: "keyword: dispara quando uma palavra/frase aparece na mensagem. first_inbound_message: primeira mensagem já enviada por esse contato. manual: só dispara se alguém iniciar manualmente.",
+          },
+          trigger_keywords: { type: "array", items: { type: "string" }, description: "Palavras/frases-gatilho (só pra trigger_type=keyword)" },
+          entry_node_key: { type: "string", description: "Qual node_key (dos nós abaixo) é o primeiro a rodar" },
+          nodes: {
+            type: "array",
+            description: "Todos os nós do fluxo. Cada um precisa de um node_key único (ex: 'pergunta_nome', 'msg_boas_vindas') escolhido por você. Nós que avançam pro próximo (send_message, send_media, collect_input, set_tag, set_crm_status) precisam apontar pro próximo node_key em 'next_node_key'. O último nó do caminho deve apontar pra um nó do tipo 'end'.",
+            items: {
+              type: "object",
+              properties: {
+                node_key: { type: "string" },
+                node_type: {
+                  type: "string",
+                  enum: ["send_message", "collect_input", "condition", "set_tag", "set_crm_status", "handoff", "end"],
+                },
+                text: { type: "string", description: "Texto da mensagem (send_message)" },
+                next_node_key: { type: "string", description: "Próximo nó (send_message, collect_input, set_tag, set_crm_status)" },
+                prompt_text: { type: "string", description: "Pergunta enviada ao paciente (collect_input)" },
+                var_key: { type: "string", description: "Nome da variável pra guardar a resposta (collect_input), ex: 'nome_paciente'" },
+                condition_subject: { type: "string", enum: ["var", "tag", "contact_field", "crm_status"], description: "Assunto da condição (condition)" },
+                condition_subject_key: { type: "string", description: "Nome da variável (se subject=var), nome da tag (se subject=tag), ou campo do contato (se subject=contact_field: name/email/phone/company)" },
+                condition_operator: { type: "string", enum: ["equals", "contains", "present", "absent"], description: "Operador da condição" },
+                condition_value: { type: "string", description: "Valor pra comparar (só operators equals/contains)" },
+                condition_true_next: { type: "string", description: "Próximo nó se a condição for verdadeira (condition)" },
+                condition_false_next: { type: "string", description: "Próximo nó se a condição for falsa (condition)" },
+                tag_name: { type: "string", description: "Nome da tag (set_tag)" },
+                tag_mode: { type: "string", enum: ["add", "remove"], description: "Adicionar ou remover a tag (set_tag)" },
+                crm_stage: { type: "string", description: "Nova etapa do CRM (set_crm_status)" },
+                handoff_note: { type: "string", description: "Observação interna pro atendente (handoff)" },
+              },
+              required: ["node_key", "node_type"],
+            },
+          },
+        },
+        required: ["name", "trigger_type", "entry_node_key", "nodes"],
       },
     },
   },
@@ -1165,6 +1216,146 @@ async function executeTool(
       return `✅ ${LIA_UPDATED_LABEL} — Nó "${node_key}" do fluxo "${flow.name}" atualizado: ${changed.join(", ")}.`;
     }
 
+    // ── create_flow ──────────────────────────────────────────────────────────
+    if (toolName === "create_flow") {
+      interface PlanNode {
+        node_key: string;
+        node_type: string;
+        text?: string;
+        next_node_key?: string;
+        prompt_text?: string;
+        var_key?: string;
+        condition_subject?: string;
+        condition_subject_key?: string;
+        condition_operator?: string;
+        condition_value?: string;
+        condition_true_next?: string;
+        condition_false_next?: string;
+        tag_name?: string;
+        tag_mode?: string;
+        crm_stage?: string;
+        handoff_note?: string;
+      }
+      const { name, trigger_type, trigger_keywords, entry_node_key, nodes } = args as unknown as {
+        name: string;
+        trigger_type: string;
+        trigger_keywords?: string[];
+        entry_node_key: string;
+        nodes: PlanNode[];
+      };
+
+      if (!nodes?.length) return "Preciso de pelo menos um nó pra criar o fluxo.";
+
+      // Same name -> id resolution pattern as create_automation.
+      const tagCache = new Map<string, string | null>();
+      async function resolveTagId(tagName: string): Promise<string | null> {
+        if (tagCache.has(tagName)) return tagCache.get(tagName)!;
+        const { data } = await supabase.from("tags").select("id").eq("account_id", accountId).ilike("name", tagName).maybeSingle();
+        const id = data?.id ?? null;
+        tagCache.set(tagName, id);
+        return id;
+      }
+
+      const triggerConfig: Record<string, unknown> = trigger_type === "keyword" ? { keywords: trigger_keywords ?? [] } : {};
+
+      const missingTags: string[] = [];
+      const summaryLines: string[] = [];
+      const nodeTypeLabels: Record<string, string> = {
+        send_message: "Enviar mensagem",
+        collect_input: "Coletar resposta",
+        condition: "Condição",
+        set_tag: "Adicionar/remover tag",
+        set_crm_status: "Alterar status no CRM",
+        handoff: "Transferir pra atendente",
+        end: "Fim",
+      };
+
+      // Build each node's real config, resolving tag names to ids.
+      const builtNodes: { node_key: string; node_type: string; config: Record<string, unknown> }[] = [];
+      for (const n of nodes) {
+        const cfg: Record<string, unknown> = {};
+        let label = nodeTypeLabels[n.node_type] || n.node_type;
+        if (n.node_type === "send_message") {
+          cfg.text = n.text ?? "";
+          cfg.next_node_key = n.next_node_key ?? "";
+          label += `: "${(n.text ?? "").slice(0, 50)}"`;
+        } else if (n.node_type === "collect_input") {
+          cfg.prompt_text = n.prompt_text ?? "";
+          cfg.var_key = n.var_key ?? "resposta";
+          cfg.next_node_key = n.next_node_key ?? "";
+          label += `: "${(n.prompt_text ?? "").slice(0, 50)}" → {{${cfg.var_key}}}`;
+        } else if (n.node_type === "condition") {
+          cfg.subject = n.condition_subject ?? "var";
+          cfg.subject_key = n.condition_subject_key ?? "";
+          cfg.operator = n.condition_operator ?? "present";
+          if (n.condition_value !== undefined) cfg.value = n.condition_value;
+          cfg.true_next = n.condition_true_next ?? "";
+          cfg.false_next = n.condition_false_next ?? "";
+          label += `: ${cfg.subject}(${cfg.subject_key}) ${cfg.operator}`;
+        } else if (n.node_type === "set_tag") {
+          const tagId = n.tag_name ? await resolveTagId(n.tag_name) : null;
+          if (n.tag_name && !tagId) missingTags.push(n.tag_name);
+          cfg.mode = n.tag_mode ?? "add";
+          cfg.tag_id = tagId ?? "";
+          cfg.next_node_key = n.next_node_key ?? "";
+          label += `: ${cfg.mode} "${n.tag_name ?? "?"}"`;
+        } else if (n.node_type === "set_crm_status") {
+          cfg.crm_stage = n.crm_stage ?? "";
+          cfg.next_node_key = n.next_node_key ?? "";
+          label += `: → ${cfg.crm_stage}`;
+        } else if (n.node_type === "handoff") {
+          if (n.handoff_note) cfg.note = n.handoff_note;
+        }
+        // end: no config.
+
+        builtNodes.push({ node_key: n.node_key, node_type: n.node_type, config: cfg });
+        summaryLines.push(`• [${n.node_key}]${n.node_key === entry_node_key ? " (entrada)" : ""} ${label}`);
+      }
+
+      if (missingTags.length) {
+        return `Não encontrei essas tags: ${missingTags.join(", ")}. Confirma o nome exato ou crie a tag antes em Configurações → Campos e Tags.`;
+      }
+
+      // Validate with the exact same rules the manual builder enforces.
+      const issues = validateFlowForActivation(
+        { name, trigger_type: trigger_type as "keyword" | "first_inbound_message" | "manual", trigger_config: triggerConfig, entry_node_id: entry_node_key },
+        builtNodes,
+      );
+      const errors = issues.filter((i) => i.severity === "error");
+      if (errors.length) {
+        return `Não deu pra montar esse fluxo: ${errors.map((i) => i.message).join("; ")}.`;
+      }
+
+      // Persist: flow row (draft, no entry yet — flow_nodes need the
+      // flow_id first) then all nodes, then patch entry_node_id.
+      const { data: newFlow, error: flowErr } = await supabase
+        .from("flows")
+        .insert({
+          account_id: accountId,
+          name,
+          status: "draft", // ALWAYS created paused — same rule as create_automation.
+          trigger_type,
+          trigger_config: triggerConfig,
+        })
+        .select("id")
+        .single();
+
+      if (flowErr || !newFlow) return `Erro ao criar fluxo: ${flowErr?.message}`;
+
+      const { error: nodesErr } = await supabase.from("flow_nodes").insert(
+        builtNodes.map((n) => ({ flow_id: newFlow.id, node_key: n.node_key, node_type: n.node_type, config: n.config })),
+      );
+      if (nodesErr) {
+        await supabase.from("flows").delete().eq("id", newFlow.id);
+        return `Erro ao criar os nós: ${nodesErr.message}`;
+      }
+
+      const { error: entryErr } = await supabase.from("flows").update({ entry_node_id: entry_node_key }).eq("id", newFlow.id);
+      if (entryErr) return `Fluxo criado, mas houve um erro ao definir a entrada: ${entryErr.message}`;
+
+      return `✅ ${LIA_LABEL} — Fluxo "${name}" criado como RASCUNHO (ainda pausado):\n\n${summaryLines.join("\n")}\n\nQuer que eu já ative ele?`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -1260,13 +1451,14 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `Você é a LIA — Assistente Inteligente do LeadPluz CRM para clínicas de saúde, beleza e estética.
-Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores, consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar fluxos de mensagens.
+Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores, consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar/editar/criar fluxos de mensagens.
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
 Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber. A mesma cautela vale pra pausar um fluxo de mensagens ativo.
 Antes de editar uma etapa de automação (update_automation_step), sempre chame get_automation_details primeiro pra ver a etapa certa, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — nunca edite direto sem mostrar o que vai mudar.
 Ao criar uma automação nova (create_automation): monte o gatilho e as etapas a partir do que o usuário descreveu, mas SEMPRE explique o resumo em linguagem simples e peça confirmação antes de chamar a função — nunca crie direto na primeira mensagem. A automação sempre nasce pausada (rascunho); depois de criar, pergunte se o usuário quer ativar agora (e só ative com toggle_automation se ele confirmar).
 Antes de editar um nó de fluxo (update_flow_node), sempre chame get_flow_details primeiro pra ver o nó certo, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — mesma cautela usada pra editar etapa de automação.
+Ao criar um fluxo novo (create_flow): esse é o mais complexo dos dois (a estrutura é um grafo, cada nó precisa apontar explicitamente pro próximo pelo node_key) — monte com cuidado, dê node_keys curtos e descritivos, e SEMPRE explique o resumo do fluxo (a sequência de nós, na ordem) em linguagem simples antes de chamar a função, pedindo confirmação. Nunca crie direto na primeira mensagem. O fluxo sempre nasce pausado (rascunho); depois de criar, pergunte se o usuário quer ativar agora (e só ative com toggle_flow se ele confirmar). Se a criação falhar por erro de validação, ajuste a estrutura e explique a mudança antes de tentar de novo — nunca insista silenciosamente.
 
 Após executar qualquer ação, informe que foi feita com o rótulo "⚡ Criado pela LIA" ou "⚡ Atualizado pela LIA".
 ${contactContext ? contactContext : ""}`;
