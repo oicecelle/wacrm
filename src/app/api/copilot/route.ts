@@ -62,6 +62,37 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "reschedule_appointment",
+      description: "Remarca um agendamento existente de um paciente pra nova data/hora.",
+      parameters: {
+        type: "object",
+        properties: {
+          contact_name: { type: "string", description: "Nome do paciente" },
+          new_date: { type: "string", description: "Nova data no formato YYYY-MM-DD" },
+          new_time: { type: "string", description: "Nova hora de início no formato HH:MM" },
+          appointment_id: { type: "string", description: "ID do agendamento (se souber; caso contrário usa o próximo agendamento futuro do paciente)" },
+        },
+        required: ["contact_name", "new_date", "new_time"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_appointment_confirmations",
+      description: "Mostra quantos agendamentos de uma data estão confirmados, aguardando confirmação, ou cancelados. Útil pra perguntas tipo 'quantos confirmaram amanhã'.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "Data no formato YYYY-MM-DD (opcional, padrão: amanhã)" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_hot_leads",
       description: "Retorna os leads mais quentes (alta temperatura / score alto).",
       parameters: {
@@ -565,9 +596,27 @@ async function executeTool(
 
       const contact = contacts[0];
       const startTime = new Date(`${date}T${time}:00`);
-      const endDateTime = end_time
-        ? new Date(`${date}T${end_time}:00`)
-        : new Date(startTime.getTime() + 60 * 60 * 1000);
+      let endDateTime: Date;
+      if (end_time) {
+        endDateTime = new Date(`${date}T${end_time}:00`);
+      } else {
+        // Same rule as the automation engine: pull the real
+        // configured length from Serviços instead of guessing — a
+        // 90-minute procedure and a 20-minute one shouldn't both
+        // silently become "1 hour" just because no end time was
+        // typed.
+        let durationMinutes = 60;
+        if (procedure) {
+          const { data: proc } = await supabase
+            .from("procedures")
+            .select("duration_minutes")
+            .eq("clinic_id", accountId)
+            .ilike("name", procedure)
+            .maybeSingle();
+          if (proc?.duration_minutes) durationMinutes = proc.duration_minutes;
+        }
+        endDateTime = new Date(startTime.getTime() + durationMinutes * 60_000);
+      }
 
       // Get default professional
       const { data: prof } = await supabase
@@ -632,6 +681,86 @@ async function executeTool(
       }).eq("id", apptToCancel.id);
 
       return `✅ ${LIA_UPDATED_LABEL} — Agendamento de "${contact_name}" (${new Date(apptToCancel.start_time).toLocaleDateString("pt-BR")}) cancelado.`;
+    }
+
+    // ── reschedule_appointment ───────────────────────────────────────────────
+    if (toolName === "reschedule_appointment") {
+      const { contact_name, new_date, new_time, appointment_id } = args as Record<string, string>;
+
+      let apptToMove: { id: string; start_time: string; end_time: string } | null = null;
+
+      if (appointment_id) {
+        const { data } = await supabase.from("appointments").select("id, start_time, end_time").eq("id", appointment_id).single();
+        apptToMove = data;
+      } else {
+        const { data: contacts } = await supabase.from("contacts").select("id").eq("account_id", accountId).ilike("name", `%${contact_name}%`).limit(1);
+        if (!contacts?.length) return `Não encontrei contato "${contact_name}".`;
+        const { data: appts } = await supabase
+          .from("appointments")
+          .select("id, start_time, end_time")
+          .eq("patient_id", contacts[0].id)
+          .gte("start_time", new Date().toISOString())
+          .order("start_time", { ascending: true })
+          .limit(1);
+        apptToMove = appts?.[0] ?? null;
+      }
+
+      if (!apptToMove) return `Não encontrei agendamentos futuros para "${contact_name}".`;
+
+      // Keep the original duration, just shift both timestamps to the
+      // new start — same length appointment, new slot.
+      const durationMs = new Date(apptToMove.end_time).getTime() - new Date(apptToMove.start_time).getTime();
+      const newStart = new Date(`${new_date}T${new_time}:00`);
+      const newEnd = new Date(newStart.getTime() + durationMs);
+
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          start_time: newStart.toISOString(),
+          end_time: newEnd.toISOString(),
+          ai_label: LIA_UPDATED_LABEL,
+        })
+        .eq("id", apptToMove.id);
+
+      if (error) return `Erro ao remarcar: ${error.message}`;
+
+      return `✅ ${LIA_UPDATED_LABEL} — Agendamento de "${contact_name}" remarcado pra ${newStart.toLocaleDateString("pt-BR")} às ${new_time}.`;
+    }
+
+    // ── get_appointment_confirmations ────────────────────────────────────────
+    if (toolName === "get_appointment_confirmations") {
+      const dateStr = String(args.date || (() => {
+        const t = new Date();
+        t.setDate(t.getDate() + 1);
+        return t.toISOString().slice(0, 10);
+      })());
+
+      const { data: appts } = await supabase
+        .from("appointments")
+        .select("status")
+        .eq("clinic_id", accountId)
+        .gte("start_time", `${dateStr}T00:00:00`)
+        .lte("start_time", `${dateStr}T23:59:59`);
+
+      const rows = (appts || []) as { status: string }[];
+      if (!rows.length) return `Nenhum agendamento em ${new Date(`${dateStr}T00:00:00`).toLocaleDateString("pt-BR")}.`;
+
+      const statusLabels: Record<string, string> = {
+        confirmed: "Confirmados",
+        provisional: "Aguardando confirmação",
+        cancelled: "Cancelados",
+        attended: "Já atendidos",
+        no_show: "Faltaram",
+        scheduled: "Agendados (sem confirmar ainda)",
+      };
+      const counts: Record<string, number> = {};
+      for (const a of rows) counts[a.status] = (counts[a.status] || 0) + 1;
+
+      const lines = Object.entries(counts)
+        .map(([s, c]) => `• ${statusLabels[s] || s}: ${c}`)
+        .join("\n");
+
+      return `📅 Agendamentos de ${new Date(`${dateStr}T00:00:00`).toLocaleDateString("pt-BR")} (total ${rows.length}):\n${lines}`;
     }
 
     // ── get_hot_leads ────────────────────────────────────────────────────────
@@ -1689,7 +1818,8 @@ export async function POST(req: NextRequest) {
 Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores (faturamento, comparecimento, origem de leads, desempenho por profissional, funil de vendas), consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar/editar/criar fluxos de mensagens.
 Para qualquer pergunta de número ou indicador, SEMPRE use a ferramenta certa (get_revenue_report, get_attendance_rate, get_lead_sources, get_professional_performance, get_crm_funnel, get_dashboard_summary) em vez de estimar ou calcular por conta própria — nunca invente ou arredonde um número que devia vir de uma consulta real.
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
-IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
+IMPORTANTE: Só crie ou remarque agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado. Ao remarcar, confirme a nova data/hora antes de aplicar.
+
 Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber. A mesma cautela vale pra pausar um fluxo de mensagens ativo.
 Antes de editar uma etapa de automação (update_automation_step), sempre chame get_automation_details primeiro pra ver a etapa certa, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — nunca edite direto sem mostrar o que vai mudar.
 Ao criar uma automação nova (create_automation): monte o gatilho e as etapas a partir do que o usuário descreveu, mas SEMPRE explique o resumo em linguagem simples e peça confirmação antes de chamar a função — nunca crie direto na primeira mensagem. A automação sempre nasce pausada (rascunho); depois de criar, pergunte se o usuário quer ativar agora (e só ative com toggle_automation se ele confirmar).
