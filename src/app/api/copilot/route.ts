@@ -519,6 +519,59 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
       parameters: { type: "object", properties: {}, required: [] },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "preview_broadcast_audience",
+      description: "Calcula quantos contatos vão receber um disparo, ANTES de criar. SEMPRE use isso primeiro e mostre o número ao usuário antes de chamar create_broadcast.",
+      parameters: {
+        type: "object",
+        properties: {
+          audience_type: {
+            type: "string",
+            enum: ["all_contacts", "tag", "no_recent_appointment"],
+            description: "all_contacts: todos os contatos. tag: quem tem uma tag específica. no_recent_appointment: quem não agenda há N dias.",
+          },
+          tag_name: { type: "string", description: "Nome da tag (só pra audience_type=tag)" },
+          no_appointment_days: { type: "number", description: "Quantos dias sem agendar (só pra audience_type=no_recent_appointment)" },
+        },
+        required: ["audience_type"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_broadcast",
+      description: "Cria e agenda um disparo em massa. SÓ chame depois de já ter usado preview_broadcast_audience e o usuário ter confirmado explicitamente o tamanho do público e a mensagem.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome curto pro disparo (aparece no histórico)" },
+          audience_type: { type: "string", enum: ["all_contacts", "tag", "no_recent_appointment"] },
+          tag_name: { type: "string", description: "Nome da tag (só pra audience_type=tag)" },
+          no_appointment_days: { type: "number", description: "Quantos dias sem agendar (só pra audience_type=no_recent_appointment)" },
+          template_name: { type: "string", description: "Nome do modelo de mensagem salvo a enviar" },
+          scheduled_at: { type: "string", description: "Data/hora ISO pra agendar o envio (opcional — padrão: agora)" },
+        },
+        required: ["name", "audience_type", "template_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_broadcast_status",
+      description: "Mostra o status de um disparo: quantos enviados, entregues, lidos, responderam, falharam.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) do disparo. Se não informado, usa o mais recente." },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ─── Tool executor ────────────────────────────────────────────────────────────
@@ -559,6 +612,52 @@ function resolvePeriod(period: string | undefined): { startISO: string; endISO: 
       return { startISO: start.toISOString(), endISO: endOfDay(now).toISOString(), label: "este mês" };
     }
   }
+}
+
+/**
+ * Resolves a broadcast audience description into real contact rows.
+ * Shared by preview_broadcast_audience (which only reports the count)
+ * and create_broadcast (which uses the same ids) so the number shown
+ * to the user for confirmation is guaranteed to match what actually
+ * gets messaged — no separate code path that could drift.
+ */
+async function resolveBroadcastAudience(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  accountId: string,
+  audienceType: string,
+  tagName: string | undefined,
+  noAppointmentDays: number | undefined,
+): Promise<{ contacts: { id: string; phone: string | null; name: string }[]; error?: string; label: string }> {
+  if (audienceType === "tag") {
+    if (!tagName) return { contacts: [], error: "Preciso saber qual tag define o público.", label: "" };
+    const { data: tag } = await supabase.from("tags").select("id").eq("account_id", accountId).ilike("name", tagName).maybeSingle();
+    if (!tag) return { contacts: [], error: `Não encontrei nenhuma tag chamada "${tagName}".`, label: "" };
+    const { data: tagged } = await supabase.from("contact_tags").select("contact_id").eq("tag_id", tag.id);
+    const ids = (tagged || []).map((t: { contact_id: string }) => t.contact_id);
+    if (!ids.length) return { contacts: [], label: `com a tag "${tagName}"` };
+    const { data: contacts } = await supabase.from("contacts").select("id, phone, name").eq("account_id", accountId).in("id", ids);
+    return { contacts: contacts || [], label: `com a tag "${tagName}"` };
+  }
+
+  if (audienceType === "no_recent_appointment") {
+    const days = noAppointmentDays ?? 60;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const { data: recentAppts } = await supabase
+      .from("appointments")
+      .select("patient_id")
+      .eq("clinic_id", accountId)
+      .gte("start_time", cutoff.toISOString());
+    const recentIds = new Set((recentAppts || []).map((a: { patient_id: string }) => a.patient_id));
+    const { data: allContacts } = await supabase.from("contacts").select("id, phone, name").eq("account_id", accountId);
+    const contacts = (allContacts || []).filter((c: { id: string }) => !recentIds.has(c.id));
+    return { contacts, label: `sem agendamento há ${days}+ dias` };
+  }
+
+  // all_contacts
+  const { data: contacts } = await supabase.from("contacts").select("id, phone, name").eq("account_id", accountId);
+  return { contacts: contacts || [], label: "todos os contatos" };
 }
 
 async function executeTool(
@@ -1720,6 +1819,90 @@ async function executeTool(
       return `🔻 Funil de vendas (total ${total} negócios abertos):\n${lines}`;
     }
 
+    // ── preview_broadcast_audience ───────────────────────────────────────────
+    if (toolName === "preview_broadcast_audience") {
+      const { audience_type, tag_name, no_appointment_days } = args as { audience_type: string; tag_name?: string; no_appointment_days?: number };
+      const { contacts, error, label } = await resolveBroadcastAudience(supabase, accountId, audience_type, tag_name, no_appointment_days);
+      if (error) return error;
+
+      const withPhone = contacts.filter((c) => c.phone);
+      const withoutPhone = contacts.length - withPhone.length;
+      const sample = withPhone.slice(0, 5).map((c) => c.name).join(", ");
+
+      return `📢 Público "${label}": ${withPhone.length} contato(s) com telefone válido${withoutPhone ? ` (${withoutPhone} sem telefone, não vão receber)` : ""}.${sample ? `\nExemplos: ${sample}${withPhone.length > 5 ? "..." : ""}` : ""}`;
+    }
+
+    // ── create_broadcast ──────────────────────────────────────────────────────
+    if (toolName === "create_broadcast") {
+      const { name, audience_type, tag_name, no_appointment_days, template_name, scheduled_at } = args as {
+        name: string;
+        audience_type: string;
+        tag_name?: string;
+        no_appointment_days?: number;
+        template_name: string;
+        scheduled_at?: string;
+      };
+
+      const { data: config } = await supabase.from("whatsapp_config").select("id").eq("account_id", accountId).maybeSingle();
+      if (!config) return "WhatsApp não configurado nessa conta ainda — não dá pra disparar.";
+
+      const { contacts, error } = await resolveBroadcastAudience(supabase, accountId, audience_type, tag_name, no_appointment_days);
+      if (error) return error;
+
+      const validContacts = contacts.filter((c) => c.phone);
+      if (!validContacts.length) return "Nenhum contato com telefone válido nesse público — nada pra disparar.";
+
+      const scheduledDate = scheduled_at ? new Date(scheduled_at) : new Date();
+      if (Number.isNaN(scheduledDate.getTime())) return "Data/hora de agendamento inválida.";
+
+      const { data: broadcast, error: bErr } = await supabase
+        .from("broadcasts")
+        .insert({
+          account_id: accountId,
+          name,
+          template_name,
+          template_language: "pt_BR",
+          status: "scheduled",
+          scheduled_at: scheduledDate.toISOString(),
+          interval_seconds: 5,
+          total_recipients: validContacts.length,
+          sent_count: 0,
+        })
+        .select("id")
+        .single();
+
+      if (bErr || !broadcast) return `Erro ao criar disparo: ${bErr?.message}`;
+
+      const { error: recErr } = await supabase.from("broadcast_recipients").insert(
+        validContacts.map((c) => ({ broadcast_id: broadcast.id, contact_id: c.id, status: "pending", params: {} })),
+      );
+      if (recErr) {
+        await supabase.from("broadcasts").delete().eq("id", broadcast.id);
+        return `Erro ao criar destinatários: ${recErr.message}`;
+      }
+
+      return `✅ ${LIA_LABEL} — Disparo "${name}" agendado pra ${validContacts.length} contato(s), começando ${scheduled_at ? scheduledDate.toLocaleString("pt-BR") : "agora"}. Acompanha o andamento em Disparos → Histórico.`;
+    }
+
+    // ── get_broadcast_status ─────────────────────────────────────────────────
+    if (toolName === "get_broadcast_status") {
+      const { name } = args as { name?: string };
+      let query = supabase
+        .from("broadcasts")
+        .select("name, status, total_recipients, sent_count, delivered_count, read_count, replied_count, failed_count, created_at")
+        .eq("account_id", accountId)
+        .order("created_at", { ascending: false });
+
+      if (name) query = query.ilike("name", `%${name}%`);
+      const { data } = await query.limit(1);
+
+      if (!data?.length) return name ? `Não encontrei nenhum disparo chamado "${name}".` : "Nenhum disparo criado ainda.";
+
+      const b = data[0];
+      const statusLabels: Record<string, string> = { scheduled: "Agendado", sending: "Enviando", completed: "Concluído", failed: "Falhou" };
+      return `📢 Disparo "${b.name}" — ${statusLabels[b.status] || b.status}:\n• Público: ${b.total_recipients}\n• Enviados: ${b.sent_count}\n• Entregues: ${b.delivered_count}\n• Lidos: ${b.read_count}\n• Responderam: ${b.replied_count}\n• Falharam: ${b.failed_count}`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -1815,8 +1998,10 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `Você é a LIA — Assistente Inteligente do LeadPluz CRM para clínicas de saúde, beleza e estética.
-Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores (faturamento, comparecimento, origem de leads, desempenho por profissional, funil de vendas), consultar/pausar/ativar/editar/criar automações, e consultar/pausar/ativar/editar/criar fluxos de mensagens.
+Você pode executar ações diretamente na plataforma: buscar contatos, criar/cancelar/remarcar agendamentos, consultar confirmações, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores (faturamento, comparecimento, origem de leads, desempenho por profissional, funil de vendas), consultar/pausar/ativar/editar/criar automações, consultar/pausar/ativar/editar/criar fluxos de mensagens, e criar/consultar disparos em massa.
 Para qualquer pergunta de número ou indicador, SEMPRE use a ferramenta certa (get_revenue_report, get_attendance_rate, get_lead_sources, get_professional_performance, get_crm_funnel, get_dashboard_summary) em vez de estimar ou calcular por conta própria — nunca invente ou arredonde um número que devia vir de uma consulta real.
+
+DISPAROS EM MASSA SÃO A AÇÃO DE MAIOR RISCO: sempre chame preview_broadcast_audience primeiro, mostre o número exato de pessoas e a mensagem que vai sair pro usuário, e só chame create_broadcast depois de confirmação explícita — nunca crie um disparo sem ter mostrado o tamanho do público antes.
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie ou remarque agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado. Ao remarcar, confirme a nova data/hora antes de aplicar.
 
