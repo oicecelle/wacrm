@@ -159,6 +159,50 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "list_automations",
+      description: "Lista as automações (Regras de Automação) cadastradas na clínica, com status (ativa/pausada), gatilho e quantas vezes já rodaram.",
+      parameters: {
+        type: "object",
+        properties: {
+          only_active: { type: "boolean", description: "Se true, mostra só as ativas. Padrão: mostra todas." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "toggle_automation",
+      description: "Ativa ou pausa uma automação existente pelo nome. Use quando o usuário pedir pra ligar/desligar/pausar/ativar uma automação.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) da automação" },
+          active: { type: "boolean", description: "true para ativar, false para pausar" },
+        },
+        required: ["name", "active"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_automation_performance",
+      description: "Mostra o desempenho de uma automação: quantas vezes rodou, quando foi a última vez, e erros recentes se houver.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) da automação" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+
+  {
+    type: "function",
+    function: {
       name: "get_upcoming_appointments",
       description: "Retorna os próximos agendamentos do dia ou período.",
       parameters: {
@@ -430,6 +474,81 @@ async function executeTool(
       return `Serviços cadastrados:\n${procs.map((p: { name: string; valor: number; price: number; category: string }) => `• ${p.name}${p.category ? ` (${p.category})` : ""} — R$ ${(p.valor || p.price || 0).toFixed(2)}`).join("\n")}`;
     }
 
+    // ── list_automations ─────────────────────────────────────────────────────
+    if (toolName === "list_automations") {
+      const onlyActive = args.only_active === true;
+      let query = supabase
+        .from("automations")
+        .select("name, is_active, trigger_type, execution_count, last_executed_at")
+        .eq("account_id", accountId)
+        .order("name");
+      if (onlyActive) query = query.eq("is_active", true);
+      const { data } = await query;
+      if (!data?.length) return onlyActive ? "Nenhuma automação ativa no momento." : "Nenhuma automação cadastrada ainda.";
+      const triggerLabels: Record<string, string> = {
+        keyword_match: "palavra-chave",
+        new_message_received: "nova mensagem",
+        first_inbound_message: "primeiro contato",
+        tag_added: "tag adicionada",
+        deal_stage_change: "mudança de etapa",
+      };
+      return `Automações (${data.length}):\n${data
+        .map((a: { name: string; is_active: boolean; trigger_type: string; execution_count: number; last_executed_at: string | null }) =>
+          `• ${a.name} — ${a.is_active ? "🟢 Ativa" : "⏸️ Pausada"} — gatilho: ${triggerLabels[a.trigger_type] || a.trigger_type} — rodou ${a.execution_count || 0}x${a.last_executed_at ? ` (última vez: ${new Date(a.last_executed_at).toLocaleDateString("pt-BR")})` : ""}`
+        )
+        .join("\n")}`;
+    }
+
+    // ── toggle_automation ────────────────────────────────────────────────────
+    if (toolName === "toggle_automation") {
+      const { name, active } = args as unknown as { name: string; active: boolean };
+      const { data: matches } = await supabase
+        .from("automations")
+        .select("id, name, is_active")
+        .eq("account_id", accountId)
+        .ilike("name", `%${name}%`)
+        .limit(2);
+
+      if (!matches?.length) return `Não encontrei nenhuma automação chamada "${name}".`;
+      if (matches.length > 1) {
+        return `Achei mais de uma automação com "${name}": ${matches.map((m: { name: string }) => m.name).join(", ")}. Qual delas você quer dizer?`;
+      }
+
+      const automation = matches[0];
+      const { error } = await supabase.from("automations").update({ is_active: active }).eq("id", automation.id);
+      if (error) return `Erro ao atualizar: ${error.message}`;
+
+      return `✅ ${LIA_UPDATED_LABEL} — Automação "${automation.name}" agora está ${active ? "🟢 ativa" : "⏸️ pausada"}.`;
+    }
+
+    // ── get_automation_performance ───────────────────────────────────────────
+    if (toolName === "get_automation_performance") {
+      const { name } = args as Record<string, string>;
+      const { data: matches } = await supabase
+        .from("automations")
+        .select("id, name, is_active, execution_count, last_executed_at")
+        .eq("account_id", accountId)
+        .ilike("name", `%${name}%`)
+        .limit(2);
+
+      if (!matches?.length) return `Não encontrei nenhuma automação chamada "${name}".`;
+      if (matches.length > 1) {
+        return `Achei mais de uma automação com "${name}": ${matches.map((m: { name: string }) => m.name).join(", ")}. Qual delas você quer dizer?`;
+      }
+
+      const automation = matches[0];
+      const { data: recentLogs } = await supabase
+        .from("automation_logs")
+        .select("status, error_message, created_at")
+        .eq("automation_id", automation.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const errors = (recentLogs || []).filter((l: { status: string }) => l.status === "failed" || l.status === "error");
+
+      return `📊 Desempenho de "${automation.name}":\n• Status: ${automation.is_active ? "🟢 Ativa" : "⏸️ Pausada"}\n• Total de execuções: ${automation.execution_count || 0}\n• Última execução: ${automation.last_executed_at ? new Date(automation.last_executed_at).toLocaleString("pt-BR") : "nunca rodou"}${errors.length ? `\n• ⚠️ ${errors.length} erro(s) recente(s): ${errors[0].error_message || "sem detalhe"}` : ""}`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -525,9 +644,10 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `Você é a LIA — Assistente Inteligente do LeadPluz CRM para clínicas de saúde, beleza e estética.
-Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços e mostrar indicadores.
+Você pode executar ações diretamente na plataforma: buscar contatos, criar e cancelar agendamentos, registrar pagamentos, atualizar o CRM, listar serviços, mostrar indicadores, e consultar/pausar/ativar automações.
 Responda sempre em português brasileiro. Seja direta, útil e profissional.
 IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicitamente que o horário está marcado.
+Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber.
 Após executar qualquer ação, informe que foi feita com o rótulo "⚡ Criado pela LIA" ou "⚡ Atualizado pela LIA".
 ${contactContext ? contactContext : ""}`;
 

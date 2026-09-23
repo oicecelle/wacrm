@@ -22,8 +22,8 @@ interface Message {
 const SUGGESTIONS = [
   "Mostre os leads mais quentes",
   "Resumo do dashboard",
+  "Quais automações estão ativas?",
   "Buscar contato...",
-  "Criar lembrete...",
 ];
 
 export function CopilotChat() {
