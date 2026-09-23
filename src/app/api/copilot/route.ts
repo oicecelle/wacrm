@@ -328,6 +328,39 @@ const TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "get_flow_details",
+      description: "Mostra todos os nós de um fluxo de mensagens (chave, tipo, resumo do conteúdo), pra poder editar depois com update_flow_node. Use antes de qualquer edição.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome (ou parte do nome) do fluxo" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_flow_node",
+      description: "Edita um nó específico de um fluxo já existente, usando a chave (node_key) retornada por get_flow_details. Só envie os campos que realmente mudam.",
+      parameters: {
+        type: "object",
+        properties: {
+          flow_name: { type: "string", description: "Nome (ou parte do nome) do fluxo" },
+          node_key: { type: "string", description: "A chave do nó, obtida antes via get_flow_details" },
+          text: { type: "string", description: "Novo texto (nó de enviar mensagem)" },
+          prompt_text: { type: "string", description: "Nova pergunta enviada ao paciente (nó de coletar resposta)" },
+          crm_stage: { type: "string", description: "Nova etapa do CRM (nó de alterar status no CRM)" },
+          note: { type: "string", description: "Nova observação interna (nó de transferir pra atendente)" },
+        },
+        required: ["flow_name", "node_key"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_upcoming_appointments",
       description: "Retorna os próximos agendamentos do dia ou período.",
       parameters: {
@@ -1038,6 +1071,100 @@ async function executeTool(
       return `📊 Fluxo "${flow.name}" (${flow.status}):\n• Total de execuções: ${flow.execution_count || 0}\n• Última execução: ${flow.last_executed_at ? new Date(flow.last_executed_at).toLocaleString("pt-BR") : "nunca rodou"}\n${Object.entries(statusCounts).map(([s, c]) => `• ${statusLabels[s] || s}: ${c}`).join("\n")}${topStuck.length ? `\n\n⚠️ Onde mais travam (sem concluir):\n${topStuck.map(([node, c]) => `• ${node}: ${c} pessoa(s)`).join("\n")}` : ""}`;
     }
 
+    // ── get_flow_details ─────────────────────────────────────────────────────
+    if (toolName === "get_flow_details") {
+      const { name } = args as Record<string, string>;
+      const { data: flowMatches } = await supabase
+        .from("flows")
+        .select("id, name, status, entry_node_id")
+        .eq("account_id", accountId)
+        .ilike("name", `%${name}%`)
+        .limit(2);
+
+      if (!flowMatches?.length) return `Não encontrei nenhum fluxo chamado "${name}".`;
+      if (flowMatches.length > 1) {
+        return `Achei mais de um fluxo com "${name}": ${flowMatches.map((m: { name: string }) => m.name).join(", ")}. Qual deles você quer dizer?`;
+      }
+
+      const flow = flowMatches[0];
+      const { data: nodes } = await supabase
+        .from("flow_nodes")
+        .select("node_key, node_type, config")
+        .eq("flow_id", flow.id);
+
+      if (!nodes?.length) return `Fluxo "${flow.name}" (${flow.status}) ainda não tem nenhum nó.`;
+
+      const nodeTypeLabels: Record<string, string> = {
+        start: "Início",
+        send_message: "Enviar mensagem",
+        send_media: "Enviar foto/anexo",
+        collect_input: "Coletar resposta",
+        condition: "Condição",
+        set_tag: "Adicionar tag",
+        set_crm_status: "Alterar status no CRM",
+        handoff: "Transferir pra atendente",
+        end: "Fim",
+      };
+
+      function describeNode(n: { node_type: string; config: Record<string, unknown> }): string {
+        const cfg = n.config || {};
+        if (n.node_type === "send_message") return `"${String(cfg.text || "").slice(0, 60)}"`;
+        if (n.node_type === "collect_input") return `pergunta: "${String(cfg.prompt_text || "").slice(0, 60)}" → guarda em {{${cfg.var_key}}}`;
+        if (n.node_type === "set_crm_status") return `etapa → ${cfg.crm_stage}`;
+        if (n.node_type === "handoff") return cfg.note ? `nota: "${cfg.note}"` : "sem observação";
+        return "";
+      }
+
+      const list = nodes
+        .map((n: { node_key: string; node_type: string; config: Record<string, unknown> }) =>
+          `• [${n.node_key}] ${nodeTypeLabels[n.node_type] || n.node_type}${n.node_key === flow.entry_node_id ? " (entrada)" : ""} — ${describeNode(n)}`
+        )
+        .join("\n");
+
+      return `Fluxo "${flow.name}" (${flow.status}):\n${list}`;
+    }
+
+    // ── update_flow_node ─────────────────────────────────────────────────────
+    if (toolName === "update_flow_node") {
+      const { flow_name, node_key, text, prompt_text, crm_stage, note } = args as Record<string, string | undefined>;
+
+      const { data: flowMatches } = await supabase
+        .from("flows")
+        .select("id, name")
+        .eq("account_id", accountId)
+        .ilike("name", `%${flow_name}%`)
+        .limit(2);
+
+      if (!flowMatches?.length) return `Não encontrei nenhum fluxo chamado "${flow_name}".`;
+      if (flowMatches.length > 1) {
+        return `Achei mais de um fluxo com "${flow_name}": ${flowMatches.map((m: { name: string }) => m.name).join(", ")}. Qual deles você quer dizer?`;
+      }
+
+      const flow = flowMatches[0];
+      const { data: nodeRow } = await supabase
+        .from("flow_nodes")
+        .select("id, node_type, config")
+        .eq("flow_id", flow.id)
+        .eq("node_key", node_key)
+        .maybeSingle();
+
+      if (!nodeRow) return `Não encontrei o nó "${node_key}" no fluxo "${flow.name}".`;
+
+      const newConfig: Record<string, unknown> = { ...(nodeRow.config || {}) };
+      const changed: string[] = [];
+      if (text !== undefined) { newConfig.text = text; changed.push(`texto → "${text}"`); }
+      if (prompt_text !== undefined) { newConfig.prompt_text = prompt_text; changed.push(`pergunta → "${prompt_text}"`); }
+      if (crm_stage !== undefined) { newConfig.crm_stage = crm_stage; changed.push(`etapa do CRM → "${crm_stage}"`); }
+      if (note !== undefined) { newConfig.note = note; changed.push(`observação → "${note}"`); }
+
+      if (changed.length === 0) return "Nenhuma mudança informada.";
+
+      const { error } = await supabase.from("flow_nodes").update({ config: newConfig }).eq("id", nodeRow.id);
+      if (error) return `Erro ao atualizar: ${error.message}`;
+
+      return `✅ ${LIA_UPDATED_LABEL} — Nó "${node_key}" do fluxo "${flow.name}" atualizado: ${changed.join(", ")}.`;
+    }
+
     // ── get_upcoming_appointments ────────────────────────────────────────────
     if (toolName === "get_upcoming_appointments") {
       const date = String(args.date || new Date().toISOString().slice(0, 10));
@@ -1139,6 +1266,7 @@ IMPORTANTE: Só crie agendamentos quando a equipe da clínica confirmar explicit
 Antes de pausar uma automação que está ativa, confirme rapidamente com o usuário se ele tem certeza — pausar pode interromper mensagens automáticas que pacientes esperam receber. A mesma cautela vale pra pausar um fluxo de mensagens ativo.
 Antes de editar uma etapa de automação (update_automation_step), sempre chame get_automation_details primeiro pra ver a etapa certa, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — nunca edite direto sem mostrar o que vai mudar.
 Ao criar uma automação nova (create_automation): monte o gatilho e as etapas a partir do que o usuário descreveu, mas SEMPRE explique o resumo em linguagem simples e peça confirmação antes de chamar a função — nunca crie direto na primeira mensagem. A automação sempre nasce pausada (rascunho); depois de criar, pergunte se o usuário quer ativar agora (e só ative com toggle_automation se ele confirmar).
+Antes de editar um nó de fluxo (update_flow_node), sempre chame get_flow_details primeiro pra ver o nó certo, explique em uma frase o que vai mudar, e só edite depois que o usuário confirmar — mesma cautela usada pra editar etapa de automação.
 
 Após executar qualquer ação, informe que foi feita com o rótulo "⚡ Criado pela LIA" ou "⚡ Atualizado pela LIA".
 ${contactContext ? contactContext : ""}`;
