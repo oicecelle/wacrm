@@ -63,8 +63,15 @@ export function CopilotChat() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<{ url: string; name: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,12 +101,17 @@ export function CopilotChat() {
   }, []);
 
   const handleSend = async (text?: string) => {
-    const msg = (text || input).trim();
-    if (!msg || loading || !accountId) return;
+    const baseMsg = (text || input).trim();
+    if ((!baseMsg && !pendingAttachment) || loading || !accountId) return;
+    const msg = pendingAttachment
+      ? `${baseMsg || "Veja o arquivo anexado."}\n\n[Arquivo anexado: ${pendingAttachment.url}]`
+      : baseMsg;
     setInput("");
+    setPendingAttachment(null);
     if (collapsed) setCollapsedAndPersist(false);
 
-    const newMessages: Message[] = [...messages, { role: "user", content: msg }];
+    const displayMsg = pendingAttachment ? `${baseMsg || "Veja o arquivo anexado."} 📎 ${pendingAttachment.name}` : msg;
+    const newMessages: Message[] = [...messages, { role: "user", content: displayMsg }];
     setMessages(newMessages);
     setLoading(true);
 
@@ -108,7 +120,7 @@ export function CopilotChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          messages: [...newMessages.slice(0, -1), { role: "user", content: msg }].map((m) => ({ role: m.role, content: m.content })),
           account_id: accountId,
         }),
       });
@@ -130,7 +142,70 @@ export function CopilotChat() {
     }
   };
 
-  const notYetAvailable = () => toast("Em breve — por enquanto, só texto mesmo.");
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo maior que 16 MB — escolhe um menor.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { uploadAccountMedia } = await import("@/lib/storage/upload-media");
+      const { publicUrl } = await uploadAccountMedia("chat-media", file);
+      setPendingAttachment({ url: publicUrl, name: file.name });
+      if (collapsed) setCollapsedAndPersist(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar o arquivo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function toggleRecording() {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 1000) return; // too short to be real speech
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "gravacao.webm");
+          const res = await fetch("/api/copilot/transcribe", { method: "POST", body: form });
+          const data = await res.json();
+          if (data.text) {
+            setInput((prev) => (prev ? `${prev} ${data.text}` : data.text));
+            inputRef.current?.focus();
+          } else {
+            toast.error(data.error || "Não entendi o áudio — tenta de novo?");
+          }
+        } catch {
+          toast.error("Falha ao transcrever o áudio.");
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+      if (collapsed) setCollapsedAndPersist(false);
+    } catch {
+      toast.error("Não consegui acessar o microfone — verifique a permissão do navegador.");
+    }
+  }
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-3 sm:px-4 sm:pb-4">
@@ -208,14 +283,31 @@ export function CopilotChat() {
 
         {/* Input row — always visible, even collapsed, so typing works either way */}
         <div className="border-t border-neutral-100 p-2.5 sm:p-3">
+          {pendingAttachment && (
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-700">
+              <span className="flex items-center gap-1.5 truncate">
+                <PaperclipIcon className="h-3 w-3 shrink-0" />
+                <span className="truncate">{pendingAttachment.name}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setPendingAttachment(null)}
+                className="ml-2 shrink-0 font-bold text-blue-700 hover:underline"
+              >
+                Remover
+              </button>
+            </div>
+          )}
+          <input ref={fileInputRef} type="file" onChange={handleFileSelected} className="hidden" accept="image/*,video/*,application/pdf" />
           <div className="flex items-center gap-1.5 rounded-xl border border-border bg-neutral-50 px-2 py-1.5 transition-all focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-300 sm:px-3 sm:py-2">
             <button
               type="button"
-              onClick={notYetAvailable}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
               aria-label="Anexar arquivo"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-neutral-200 hover:text-foreground"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-neutral-200 hover:text-foreground disabled:opacity-50"
             >
-              <PaperclipIcon className="h-3.5 w-3.5" />
+              {uploading ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <PaperclipIcon className="h-3.5 w-3.5" />}
             </button>
             <input
               ref={inputRef}
@@ -223,21 +315,24 @@ export function CopilotChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Fale com a LIA — pergunte ou peça algo..."
-              disabled={loading}
+              placeholder={transcribing ? "Transcrevendo o áudio..." : "Fale com a LIA — pergunte ou peça algo..."}
+              disabled={loading || transcribing}
               className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:opacity-50"
             />
             <button
               type="button"
-              onClick={notYetAvailable}
-              aria-label="Gravar áudio"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-neutral-200 hover:text-foreground"
+              onClick={toggleRecording}
+              disabled={transcribing}
+              aria-label={recording ? "Parar gravação" : "Gravar áudio"}
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-50 ${
+                recording ? "bg-red-100 text-red-600 animate-pulse" : "text-muted-foreground hover:bg-neutral-200 hover:text-foreground"
+              }`}
             >
-              <MicIcon className="h-3.5 w-3.5" />
+              {transcribing ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <MicIcon className="h-3.5 w-3.5" />}
             </button>
             <button
               onClick={() => handleSend()}
-              disabled={loading || !input.trim()}
+              disabled={loading || (!input.trim() && !pendingAttachment)}
               aria-label="Enviar mensagem"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
             >
