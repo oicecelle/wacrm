@@ -56,6 +56,45 @@ export async function findExistingContact(
 }
 
 /**
+ * Batch version of findExistingContact — used when resolving many
+ * phones at once (e.g. a pasted broadcast audience list) where doing
+ * one round-trip per phone would be slow. Fetches every contact's
+ * id/phone/name once (cheap — two short columns) and matches
+ * everything in JS with the same `phonesMatch` fuzziness
+ * findExistingContact uses, so a broadcast list and an organic
+ * WhatsApp message agree on what counts as "the same number" even
+ * across formatting differences or a missing/extra trunk-prefix "0".
+ *
+ * Returns a Map keyed by `normalizeKey` of each INPUT phone (not the
+ * matched contact's own phone) — look up with the same key you'd get
+ * from `normalizeKey(inputPhone)`.
+ */
+export async function findExistingContactsBatch(
+  db: SupabaseClient,
+  accountId: string,
+  phones: string[],
+): Promise<Map<string, ExistingContact>> {
+  const result = new Map<string, ExistingContact>();
+  const validPhones = phones.filter((p) => normalizeKey(p));
+  if (validPhones.length === 0) return result;
+
+  const { data, error } = await db
+    .from("contacts")
+    .select("*")
+    .eq("account_id", accountId);
+  if (error || !data) return result;
+
+  const candidates = data as ExistingContact[];
+  for (const phone of validPhones) {
+    const key = normalizeKey(phone);
+    if (result.has(key)) continue;
+    const match = candidates.find((c) => phonesMatch(c.phone, phone));
+    if (match) result.set(key, match);
+  }
+  return result;
+}
+
+/**
  * True when an existing contact is an *exact* normalized match for
  * `phone` (vs only a fuzzy trunk-variant match). The form hard-blocks
  * exact matches but only warns on fuzzy ones.

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Contact, MessageTemplate } from '@/types';
+import { dedupeByPhone, findExistingContactsBatch, normalizeKey } from '@/lib/contacts/dedupe';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type CustomFieldOperator = 'is' | 'is_not' | 'contains';
 
@@ -274,54 +276,31 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       throw new Error('Seu perfil não está vinculado a uma conta.');
     }
 
-    // De-duplicate by phone within the CSV (users can paste duplicates).
-    // Keyed by the SAME normalization the database itself applies
-    // (contacts.phone_normalized is a generated column stripping
-    // everything but digits, with a unique index on account_id +
-    // phone_normalized) — comparing raw phone strings here missed
-    // existing contacts whenever the pasted number was formatted
-    // differently from how it's stored ("+55 21 99999-9999" vs
-    // "5521999999999" vs "(21) 99999-9999"), so the code thought the
-    // contact was new, tried to insert it, and the database rejected
-    // the insert as a duplicate — the exact error the person hit.
-    const normalizePhone = (p: string) => p.replace(/\D/g, "");
-    const uniqueByPhone = new Map<string, { phone: string; name?: string }>();
-    for (const row of csvRows) {
-      const normalized = row.phone ? normalizePhone(row.phone) : "";
-      if (normalized) uniqueByPhone.set(normalized, row);
-    }
-    const normalizedPhones = [...uniqueByPhone.keys()];
-
-    // Single round-trip lookup of existing contacts by phone. Scoped
-    // by account_id, not user_id — the same user can own multiple
-    // accounts (e.g. managing several clinics), and user_id alone
-    // would match contacts across all of them instead of just the
-    // one currently being sent from.
-    const { data: existing, error: lookupErr } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('account_id', accountId)
-      .in('phone_normalized', normalizedPhones);
-    if (lookupErr) {
-      throw new Error(`Falha ao buscar contatos da lista: ${lookupErr.message}`);
-    }
-
-    const byPhone = new Map<string, Contact>();
-    for (const c of (existing ?? []) as Contact[]) {
-      if (c.phone) byPhone.set(normalizePhone(c.phone), c);
-    }
+    // De-dup within the pasted list, and match against existing
+    // contacts, using the exact same helpers the WhatsApp webhook,
+    // the manual contact form, and CSV import already use (see
+    // lib/contacts/dedupe.ts) — one shared definition of "same
+    // number" everywhere in the app, formatting differences and
+    // trunk-prefix "0" variants included, instead of a broadcast-only
+    // copy that could drift from the others over time.
+    const { unique } = dedupeByPhone(csvRows);
+    const existingByKey = await findExistingContactsBatch(
+      supabase as unknown as SupabaseClient,
+      accountId,
+      unique.map((r) => r.phone),
+    );
 
     // Insert only missing contacts, in one batch per 200 rows (PostgREST
     // has a default payload cap — 200 keeps individual requests small).
-    const missing = normalizedPhones
-      .filter((p) => !byPhone.has(p))
-      .map((normalized) => ({
-        user_id: user.id,
-        account_id: accountId,
-        phone: uniqueByPhone.get(normalized)?.phone ?? normalized,
-        name: uniqueByPhone.get(normalized)?.name ?? null,
-      }));
+    const missingRows = unique.filter((r) => !existingByKey.has(normalizeKey(r.phone)));
+    const missing = missingRows.map((row) => ({
+      user_id: user.id,
+      account_id: accountId,
+      phone: row.phone,
+      name: row.name ?? null,
+    }));
 
+    const resultByKey = new Map<string, Contact>(existingByKey as unknown as Map<string, Contact>);
     const INSERT_CHUNK = 200;
     for (let i = 0; i < missing.length; i += INSERT_CHUNK) {
       const chunk = missing.slice(i, i + INSERT_CHUNK);
@@ -332,19 +311,19 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       if (insertErr) {
         // A duplicate can still slip through here in a genuine race
         // (two people pasting overlapping lists at the same moment) —
-        // that's a real conflict, not the normalization bug, so it's
+        // that's a real conflict, not a normalization gap, so it's
         // still surfaced, but distinctly so it's not confused with
         // the (now fixed) systematic cause.
         throw new Error(`Falha ao criar contatos da lista: ${insertErr.message}`);
       }
       for (const c of (inserted ?? []) as Contact[]) {
-        if (c.phone) byPhone.set(normalizePhone(c.phone), c);
+        if (c.phone) resultByKey.set(normalizeKey(c.phone), c);
       }
     }
 
     // Preserve input order so analytics roughly matches the CSV order.
-    return normalizedPhones
-      .map((p) => byPhone.get(p))
+    return unique
+      .map((r) => resultByKey.get(normalizeKey(r.phone)))
       .filter((c): c is Contact => Boolean(c));
   }
 
