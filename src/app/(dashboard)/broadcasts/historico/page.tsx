@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { getBroadcastStatus, getRecipientStatus } from '@/lib/broadcast-status';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import {
   ChevronDown,
@@ -27,6 +28,7 @@ import {
   Users,
   Search,
   PlayCircle,
+  PauseCircle,
   Send,
   RotateCw,
 } from 'lucide-react';
@@ -79,6 +81,7 @@ export default function BroadcastHistoryPage() {
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busyRecipientId, setBusyRecipientId] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<{ title: string; description: string; confirmLabel?: string; onConfirm: () => void } | null>(null);
 
   const [editingRecipient, setEditingRecipient] = useState<RecipientRow | null>(null);
   const [editRecipientName, setEditRecipientName] = useState('');
@@ -202,8 +205,16 @@ export default function BroadcastHistoryPage() {
     }
   }
 
+  function requestCancelRecipient(r: RecipientRow) {
+    setPendingConfirm({
+      title: "Cancelar envio",
+      description: `Cancelar o envio para ${r.contact?.name || r.contact?.phone || "este contato"}?`,
+      confirmLabel: "Cancelar envio",
+      onConfirm: () => cancelRecipient(r),
+    });
+  }
+
   async function cancelRecipient(r: RecipientRow) {
-    if (!confirm(`Cancelar o envio para ${r.contact?.name || r.contact?.phone || 'este contato'}?`)) return;
     setBusyRecipientId(r.id);
     try {
       const res = await fetch(`/api/broadcasts/recipients/${r.id}/cancel`, { method: 'POST' });
@@ -278,10 +289,16 @@ export default function BroadcastHistoryPage() {
     }
   }
 
+  function requestCancelBroadcast(broadcast: Broadcast) {
+    setPendingConfirm({
+      title: "Cancelar disparo",
+      description: `Cancelar o disparo "${broadcast.name}"? Contatos que ainda não receberam a mensagem não vão mais recebê-la.`,
+      confirmLabel: "Cancelar disparo",
+      onConfirm: () => cancelBroadcast(broadcast),
+    });
+  }
+
   async function cancelBroadcast(broadcast: Broadcast) {
-    if (!confirm(`Cancelar o disparo "${broadcast.name}"? Contatos que ainda não receberam a mensagem não vão mais recebê-la.`)) {
-      return;
-    }
     setBusyId(broadcast.id);
     try {
       const supabase = createClient();
@@ -300,10 +317,54 @@ export default function BroadcastHistoryPage() {
     }
   }
 
-  async function sendNowBroadcast(broadcast: Broadcast) {
-    if (!confirm(`Enviar "${broadcast.name}" agora, pulando o horário agendado?`)) {
-      return;
+  async function pauseBroadcast(broadcast: Broadcast) {
+    setBusyId(broadcast.id);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('broadcasts')
+        .update({ status: 'paused' })
+        .eq('id', broadcast.id)
+        .eq('account_id', accountId);
+      if (error) throw error;
+      toast.success('Disparo pausado. Retome quando quiser — o intervalo entre mensagens continua sendo respeitado.');
+      fetchBroadcasts();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao pausar disparo');
+    } finally {
+      setBusyId(null);
     }
+  }
+
+  async function resumeBroadcast(broadcast: Broadcast) {
+    setBusyId(broadcast.id);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('broadcasts')
+        .update({ status: 'sending' })
+        .eq('id', broadcast.id)
+        .eq('account_id', accountId);
+      if (error) throw error;
+      toast.success('Disparo retomado.');
+      fetchBroadcasts();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao retomar disparo');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function requestSendNowBroadcast(broadcast: Broadcast) {
+    setPendingConfirm({
+      title: "Enviar agora",
+      description: `Enviar "${broadcast.name}" agora, pulando o horário agendado?`,
+      confirmLabel: "Enviar agora",
+      onConfirm: () => sendNowBroadcast(broadcast),
+    });
+  }
+
+  async function sendNowBroadcast(broadcast: Broadcast) {
     setBusyId(broadcast.id);
     try {
       const res = await fetch(`/api/broadcasts/${broadcast.id}/send-now`, { method: 'POST' });
@@ -322,10 +383,16 @@ export default function BroadcastHistoryPage() {
     }
   }
 
+  function requestRetryFailedBroadcast(broadcast: Broadcast) {
+    setPendingConfirm({
+      title: "Tentar reenviar",
+      description: `Tentar reenviar as ${broadcast.failed_count} mensagens que falharam em "${broadcast.name}"?`,
+      confirmLabel: "Reenviar",
+      onConfirm: () => retryFailedBroadcast(broadcast),
+    });
+  }
+
   async function retryFailedBroadcast(broadcast: Broadcast) {
-    if (!confirm(`Tentar reenviar as ${broadcast.failed_count} mensagens que falharam em "${broadcast.name}"?`)) {
-      return;
-    }
     setBusyId(broadcast.id);
     try {
       const res = await fetch(`/api/broadcasts/${broadcast.id}/retry-failed`, { method: 'POST' });
@@ -478,7 +545,7 @@ export default function BroadcastHistoryPage() {
             const status = getBroadcastStatus(broadcast.status);
             const isExpanded = expandedId === broadcast.id;
             const isBusy = busyId === broadcast.id;
-            const canEditOrCancel = ['scheduled', 'sending', 'draft'].includes(broadcast.status);
+            const canEditOrCancel = ['scheduled', 'sending', 'paused', 'draft'].includes(broadcast.status);
 
             return (
               <div key={broadcast.id} className="rounded-xl border border-border bg-card/50">
@@ -504,7 +571,7 @@ export default function BroadcastHistoryPage() {
 
                   <div className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
                     <Users className="h-3.5 w-3.5" />
-                    {broadcast.status === 'sending'
+                    {(broadcast.status === 'sending' || broadcast.status === 'paused')
                       ? `${(broadcast.sent_count + broadcast.failed_count).toLocaleString()} / ${broadcast.total_recipients.toLocaleString()}`
                       : broadcast.total_recipients.toLocaleString()}
                     {broadcast.failed_count > 0 && (
@@ -512,7 +579,7 @@ export default function BroadcastHistoryPage() {
                     )}
                   </div>
 
-                  {broadcast.status === 'sending' && broadcast.total_recipients > 0 && (
+                  {(broadcast.status === 'sending' || broadcast.status === 'paused') && broadcast.total_recipients > 0 && (
                     <div className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-muted sm:block">
                       <div
                         className="h-full bg-primary transition-all"
@@ -545,9 +612,29 @@ export default function BroadcastHistoryPage() {
                         Continuar
                       </button>
                     )}
+                    {broadcast.status === 'sending' && (
+                      <button
+                        onClick={() => pauseBroadcast(broadcast)}
+                        title="Pausar envio"
+                        disabled={isBusy}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-orange-400"
+                      >
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PauseCircle className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
+                    {broadcast.status === 'paused' && (
+                      <button
+                        onClick={() => resumeBroadcast(broadcast)}
+                        title="Retomar envio"
+                        disabled={isBusy}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                      >
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     {broadcast.status === 'scheduled' && (
                       <button
-                        onClick={() => sendNowBroadcast(broadcast)}
+                        onClick={() => requestSendNowBroadcast(broadcast)}
                         title="Enviar agora"
                         disabled={isBusy}
                         className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"
@@ -557,7 +644,7 @@ export default function BroadcastHistoryPage() {
                     )}
                     {broadcast.failed_count > 0 && (
                       <button
-                        onClick={() => retryFailedBroadcast(broadcast)}
+                        onClick={() => requestRetryFailedBroadcast(broadcast)}
                         title={`Reenviar as ${broadcast.failed_count} que falharam`}
                         disabled={isBusy}
                         className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"
@@ -575,7 +662,7 @@ export default function BroadcastHistoryPage() {
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => cancelBroadcast(broadcast)}
+                          onClick={() => requestCancelBroadcast(broadcast)}
                           title="Cancelar"
                           disabled={isBusy}
                           className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-red-400"
@@ -671,7 +758,7 @@ export default function BroadcastHistoryPage() {
                                         )}
                                       </button>
                                       <button
-                                        onClick={() => cancelRecipient(r)}
+                                        onClick={() => requestCancelRecipient(r)}
                                         title="Cancelar"
                                         disabled={isRecipientBusy}
                                         className="rounded p-1 text-muted-foreground hover:bg-background hover:text-red-400"
@@ -799,6 +886,15 @@ export default function BroadcastHistoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        onOpenChange={(open) => !open && setPendingConfirm(null)}
+        title={pendingConfirm?.title ?? ""}
+        description={pendingConfirm?.description ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+      />
     </div>
   );
 }
