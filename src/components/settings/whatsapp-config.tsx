@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Eye,
   EyeOff,
@@ -414,11 +415,9 @@ export function WhatsAppConfig() {
     }
   }
 
-  async function handleReset() {
-    if (!confirm('This will delete the current WhatsApp config so you can re-enter it. Continue?')) {
-      return;
-    }
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  async function handleReset() {
     try {
       setResetting(true);
       const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
@@ -647,7 +646,7 @@ export function WhatsAppConfig() {
                   {statusMessage}
                 </AlertDescription>
                 <Button
-                  onClick={handleReset}
+                  onClick={() => setShowResetConfirm(true)}
                   disabled={resetting}
                   size="sm"
                   className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
@@ -975,7 +974,7 @@ export function WhatsAppConfig() {
           {config && (
             <Button
               variant="outline"
-              onClick={handleReset}
+              onClick={() => setShowResetConfirm(true)}
               disabled={resetting}
               className="border-red-900 text-red-400 hover:text-red-300 hover:bg-red-950/40"
             >
@@ -1092,6 +1091,15 @@ export function WhatsAppConfig() {
         </Card>
       </div>
     </div>
+
+    <ConfirmDialog
+      open={showResetConfirm}
+      onOpenChange={setShowResetConfirm}
+      title="Redefinir configuração do WhatsApp"
+      description="Isso vai apagar a configuração atual do WhatsApp pra você digitar de novo. Continuar?"
+      confirmLabel="Redefinir"
+      onConfirm={handleReset}
+    />
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   CalendarIcon,
   CheckCircle2Icon,
@@ -87,9 +88,10 @@ export function GoogleCalendarPanel() {
     window.location.href = '/api/integrations/google/auth';
   };
 
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+
   const handleDisconnect = async () => {
     if (!tokenId) return;
-    if (!confirm('Deseja realmente desconectar a integração com o Google Agenda? Seus agendamentos não serão mais sincronizados.')) return;
 
     setDisconnecting(true);
     try {
@@ -152,7 +154,7 @@ export function GoogleCalendarPanel() {
               <Button
                 variant="destructive"
                 disabled={disconnecting}
-                onClick={handleDisconnect}
+                onClick={() => setShowDisconnectConfirm(true)}
                 className="text-xs font-bold h-9 rounded-lg gap-1.5"
               >
                 {disconnecting ? (
@@ -202,6 +204,15 @@ export function GoogleCalendarPanel() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showDisconnectConfirm}
+        onOpenChange={setShowDisconnectConfirm}
+        title="Desconectar Google Agenda"
+        description="Deseja realmente desconectar a integração com o Google Agenda? Seus agendamentos não serão mais sincronizados."
+        confirmLabel="Desconectar"
+        onConfirm={handleDisconnect}
+      />
     </div>
   );
 }

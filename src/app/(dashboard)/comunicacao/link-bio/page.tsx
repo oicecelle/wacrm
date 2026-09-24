@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Loader2,
   CheckCircle2,
@@ -96,6 +97,7 @@ export default function LinkBioPage() {
   const [isPublished, setIsPublished] = useState(false);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [forms, setForms] = useState<BioForm[]>([]);
+  const [pendingConfirm, setPendingConfirm] = useState<{ title: string; description: string; confirmLabel?: string; onConfirm: () => void } | null>(null);
 
   /* ─── Load ─── */
   useEffect(() => {
@@ -215,8 +217,16 @@ export default function LinkBioPage() {
     );
   };
 
+  const requestRemoveForm = (form: BioForm) => {
+    setPendingConfirm({
+      title: "Remover formulário",
+      description: `Remover o formulário "${form.name}"? Cards que apontam pra ele vão parar de funcionar.`,
+      confirmLabel: "Remover",
+      onConfirm: () => removeForm(form),
+    });
+  };
+
   const removeForm = async (form: BioForm) => {
-    if (!confirm(`Remover o formulário "${form.name}"? Cards que apontam pra ele vão parar de funcionar.`)) return;
     if (!form.isNew) {
       await supabase.from('bio_forms').delete().eq('id', form.id);
     }
@@ -479,7 +489,7 @@ export default function LinkBioPage() {
               key={form.id}
               form={form}
               onChange={(patch) => updateForm(form.id, patch)}
-              onRemove={() => removeForm(form)}
+              onRemove={() => requestRemoveForm(form)}
               onAddField={() => addFormField(form.id)}
               onRemoveField={(fieldId) => removeFormField(form.id, fieldId)}
               onUpdateField={(fieldId, patch) => updateFormField(form.id, fieldId, patch)}
@@ -487,6 +497,15 @@ export default function LinkBioPage() {
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        onOpenChange={(open) => !open && setPendingConfirm(null)}
+        title={pendingConfirm?.title ?? ""}
+        description={pendingConfirm?.description ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+      />
     </div>
   );
 }

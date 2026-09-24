@@ -19,6 +19,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function PatientPortalDashboardPage() {
   const params = useParams();
@@ -173,9 +174,9 @@ export default function PatientPortalDashboardPage() {
     }
   };
 
-  const handleCancelAppointment = async (apptId: string) => {
-    if (!confirm('Deseja realmente cancelar este agendamento?')) return;
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
 
+  const handleCancelAppointment = async (apptId: string) => {
     const token = localStorage.getItem(`portal_token_${slug}`);
     try {
       const res = await fetch('/api/portal/appointment', {
@@ -546,7 +547,7 @@ export default function PatientPortalDashboardPage() {
                         <div className="pt-2 flex justify-end">
                           <button
                             type="button"
-                            onClick={() => handleCancelAppointment(appt.id)}
+                            onClick={() => setPendingCancelId(appt.id)}
                             className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline flex items-center gap-1"
                           >
                             <Trash className="h-3 w-3" />
@@ -678,6 +679,17 @@ export default function PatientPortalDashboardPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!pendingCancelId}
+        onOpenChange={(open) => !open && setPendingCancelId(null)}
+        title="Cancelar agendamento"
+        description="Deseja realmente cancelar este agendamento?"
+        confirmLabel="Cancelar agendamento"
+        onConfirm={() => {
+          if (pendingCancelId) handleCancelAppointment(pendingCancelId);
+        }}
+      />
     </div>
   );
 }
