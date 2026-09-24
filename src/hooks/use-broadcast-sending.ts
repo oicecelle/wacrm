@@ -275,11 +275,22 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     }
 
     // De-duplicate by phone within the CSV (users can paste duplicates).
+    // Keyed by the SAME normalization the database itself applies
+    // (contacts.phone_normalized is a generated column stripping
+    // everything but digits, with a unique index on account_id +
+    // phone_normalized) — comparing raw phone strings here missed
+    // existing contacts whenever the pasted number was formatted
+    // differently from how it's stored ("+55 21 99999-9999" vs
+    // "5521999999999" vs "(21) 99999-9999"), so the code thought the
+    // contact was new, tried to insert it, and the database rejected
+    // the insert as a duplicate — the exact error the person hit.
+    const normalizePhone = (p: string) => p.replace(/\D/g, "");
     const uniqueByPhone = new Map<string, { phone: string; name?: string }>();
     for (const row of csvRows) {
-      if (row.phone) uniqueByPhone.set(row.phone, row);
+      const normalized = row.phone ? normalizePhone(row.phone) : "";
+      if (normalized) uniqueByPhone.set(normalized, row);
     }
-    const phones = [...uniqueByPhone.keys()];
+    const normalizedPhones = [...uniqueByPhone.keys()];
 
     // Single round-trip lookup of existing contacts by phone. Scoped
     // by account_id, not user_id — the same user can own multiple
@@ -290,25 +301,25 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       .from('contacts')
       .select('*')
       .eq('account_id', accountId)
-      .in('phone', phones);
+      .in('phone_normalized', normalizedPhones);
     if (lookupErr) {
       throw new Error(`Falha ao buscar contatos da lista: ${lookupErr.message}`);
     }
 
     const byPhone = new Map<string, Contact>();
     for (const c of (existing ?? []) as Contact[]) {
-      if (c.phone) byPhone.set(c.phone, c);
+      if (c.phone) byPhone.set(normalizePhone(c.phone), c);
     }
 
     // Insert only missing contacts, in one batch per 200 rows (PostgREST
     // has a default payload cap — 200 keeps individual requests small).
-    const missing = phones
+    const missing = normalizedPhones
       .filter((p) => !byPhone.has(p))
-      .map((phone) => ({
+      .map((normalized) => ({
         user_id: user.id,
         account_id: accountId,
-        phone,
-        name: uniqueByPhone.get(phone)?.name ?? null,
+        phone: uniqueByPhone.get(normalized)?.phone ?? normalized,
+        name: uniqueByPhone.get(normalized)?.name ?? null,
       }));
 
     const INSERT_CHUNK = 200;
@@ -319,15 +330,20 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .insert(chunk)
         .select();
       if (insertErr) {
+        // A duplicate can still slip through here in a genuine race
+        // (two people pasting overlapping lists at the same moment) —
+        // that's a real conflict, not the normalization bug, so it's
+        // still surfaced, but distinctly so it's not confused with
+        // the (now fixed) systematic cause.
         throw new Error(`Falha ao criar contatos da lista: ${insertErr.message}`);
       }
       for (const c of (inserted ?? []) as Contact[]) {
-        if (c.phone) byPhone.set(c.phone, c);
+        if (c.phone) byPhone.set(normalizePhone(c.phone), c);
       }
     }
 
     // Preserve input order so analytics roughly matches the CSV order.
-    return phones
+    return normalizedPhones
       .map((p) => byPhone.get(p))
       .filter((c): c is Contact => Boolean(c));
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -158,6 +158,26 @@ export function AudienceListBuilder({
     setHasHeaderRow(assumeHeader);
     setColumnMap(headers.map((h) => guessMapping(h, templateVariables)));
   }
+
+  // What "Confirmar e adicionar" will actually add — rows with no
+  // phone in the selected column are dropped, and repeated phones
+  // (after the same normalization used everywhere else in this
+  // flow) collapse into one contact, same as confirmMapping()
+  // itself does. Showing rawRows.length here instead was the "wrong
+  // count when pasting a list" bug: a paste with blank rows or
+  // repeated numbers always showed more than what actually landed
+  // in the list.
+  const willActuallyAddCount = useMemo(() => {
+    if (!rawRows) return 0;
+    const phoneCol = columnMap.indexOf('__phone');
+    if (phoneCol === -1) return 0;
+    const normalized = new Set<string>();
+    for (const row of rawRows) {
+      const phone = row[phoneCol]?.trim();
+      if (phone) normalized.add(normalizeBrazilianPhone(phone));
+    }
+    return normalized.size;
+  }, [rawRows, columnMap]);
 
   function processPaste() {
     const rows = splitPastedText(pasteText);
@@ -428,7 +448,11 @@ export function AudienceListBuilder({
         <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
           <p className="text-sm font-medium text-foreground">
             Confirme o que cada coluna representa ({rawRows.length} linha
-            {rawRows.length === 1 ? '' : 's'} detectada{rawRows.length === 1 ? '' : 's'})
+            {rawRows.length === 1 ? '' : 's'} detectada{rawRows.length === 1 ? '' : 's'}
+            {columnMap.includes('__phone') && willActuallyAddCount !== rawRows.length
+              ? ` — ${willActuallyAddCount} contato${willActuallyAddCount === 1 ? '' : 's'} único${willActuallyAddCount === 1 ? '' : 's'} depois de remover vazios/repetidos`
+              : ''}
+            )
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {rawHeaders.map((header, i) => (
@@ -462,7 +486,7 @@ export function AudienceListBuilder({
           )}
           <div className="flex gap-2">
             <Button onClick={confirmMapping} disabled={!columnMap.includes('__phone')} size="sm">
-              Confirmar e adicionar ({rawRows.length})
+              Confirmar e adicionar ({willActuallyAddCount})
             </Button>
             <Button onClick={cancelMapping} variant="outline" size="sm">
               Cancelar

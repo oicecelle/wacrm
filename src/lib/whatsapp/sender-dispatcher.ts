@@ -64,11 +64,51 @@ export function interpolateNamedTemplateBody(bodyText: string, params: Record<st
   return bodyText.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key: string) => params[key] ?? '');
 }
 
-/** Sorts named-variable keys back into Meta's positional order — "1",
- *  "2", … first (numeric ascending), then any remaining keys
- *  alphabetically. Used when a Meta-provider send receives the same
- *  named Record<string,string> shape the rest of the app now uses. */
-export function namedParamsToPositional(params: Record<string, string>): string[] {
+/**
+ * Sorts named-variable values into Meta's positional order (the
+ * {{1}}, {{2}}, … a Meta template body actually contains).
+ *
+ * When `bodyText` is given, the order comes from where each
+ * `{{varname}}` placeholder FIRST appears in that text, left to
+ * right — the only order that can be correct, since that's the
+ * order Meta itself assigns {{1}}/{{2}}/… when the template's named
+ * placeholders get mapped to positional ones. Falls back to
+ * alphabetical-by-key only when no body text is available (a
+ * defensive fallback, not a real ordering — every real call site
+ * should pass bodyText).
+ *
+ * This replaces a prior version that always sorted keys
+ * alphabetically regardless of the template's actual variable
+ * order — harmless for a template whose variable names happened to
+ * already be alphabetical in reading order ("data" before "nome"
+ * before "servico", say), but silently swapped values into the
+ * wrong position for any template where they weren't (e.g. "Olá
+ * {{nome}}, seu horário é {{data}}" sorts as data, nome — value for
+ * {{1}} on Meta's side would receive the date, not the name — the
+ * exact "variable sent as the wrong thing, seemingly at random"
+ * behavior reported: it wasn't random, it depended entirely on
+ * whether a given template's variable names happened to sort the
+ * same way they read).
+ */
+export function namedParamsToPositional(params: Record<string, string>, bodyText?: string): string[] {
+  if (bodyText) {
+    const order: string[] = [];
+    const seen = new Set<string>();
+    const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(bodyText))) {
+      const key = m[1];
+      if (!seen.has(key) && Number.isNaN(Number(key))) {
+        seen.add(key);
+        order.push(key);
+      }
+    }
+    if (order.length > 0) {
+      return order.map((key) => params[key] ?? '');
+    }
+    // Body text had no named placeholders (e.g. already positional,
+    // or plain text) — fall through to the key-sort fallback below.
+  }
   return Object.keys(params)
     .sort((a, b) => {
       const an = Number(a);

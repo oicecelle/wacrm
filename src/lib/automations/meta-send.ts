@@ -175,6 +175,19 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
       return result.messageId || ''
     }
 
+    let metaTemplateBody: string | undefined
+    if (isTemplate) {
+      const tplArgs = input as SendTemplateArgs
+      const { data: row } = await db
+        .from('message_templates')
+        .select('body_text')
+        .eq('account_id', input.accountId)
+        .eq('name', tplArgs.templateName)
+        .eq('language', tplArgs.language || 'pt_BR')
+        .maybeSingle()
+      metaTemplateBody = row?.body_text
+    }
+
     const result = await dispatchSendMessage({
       config: {
         provider_type: config.provider_type,
@@ -189,7 +202,7 @@ async function send(input: SendInput): Promise<{ whatsapp_message_id: string }> 
       content_text: isTemplate ? null : (input as SendTextArgs).text,
       template_name: isTemplate ? (input as SendTemplateArgs).templateName : null,
       template_language: isTemplate ? (input as SendTemplateArgs).language || 'pt_BR' : null,
-      template_params: isTemplate ? namedParamsToPositional((input as SendTemplateArgs).variables ?? {}) : [],
+      template_params: isTemplate ? namedParamsToPositional((input as SendTemplateArgs).variables ?? {}, metaTemplateBody) : [],
     })
 
     if (!result.success) {

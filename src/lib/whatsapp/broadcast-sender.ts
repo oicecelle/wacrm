@@ -100,7 +100,7 @@ export async function sendOneBroadcastRecipient(
             messageType: 'template',
             template_name: broadcast.template_name,
             template_language: broadcast.template_language,
-            template_params: namedParamsToPositional(namedParams),
+            template_params: namedParamsToPositional(namedParams, templateRow?.body_text ?? undefined),
             templateRow,
           })
   }
