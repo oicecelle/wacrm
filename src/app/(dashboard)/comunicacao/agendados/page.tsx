@@ -39,6 +39,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   aniversario: 'Aniversariantes',
@@ -72,6 +73,7 @@ export default function ScheduledNotificationsPage() {
   const [statusFilter, setStatusFilter] = useState<'pending' | 'sent' | 'cancelled' | 'failed' | 'all'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pendingConfirm, setPendingConfirm] = useState<{ title: string; description: string; confirmLabel?: string; onConfirm: () => void } | null>(null);
 
   // Edit State
   const [editingNotif, setEditingNotif] = useState<any | null>(null);
@@ -140,10 +142,18 @@ export default function ScheduledNotificationsPage() {
     setSelectedIds(next);
   };
 
+  const requestBulkCancel = () => {
+    if (selectedIds.size === 0) return;
+    setPendingConfirm({
+      title: "Cancelar envios selecionados",
+      description: `Deseja mesmo cancelar os ${selectedIds.size} envios selecionados?`,
+      confirmLabel: "Cancelar envios",
+      onConfirm: handleBulkCancel,
+    });
+  };
+
   const handleBulkCancel = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Deseja mesmo cancelar os ${selectedIds.size} envios selecionados?`)) return;
-
     try {
       const { error } = await supabase
         .from('scheduled_notifications')
@@ -161,8 +171,16 @@ export default function ScheduledNotificationsPage() {
   };
 
   // Action actions
+  const requestCancelOne = (id: string) => {
+    setPendingConfirm({
+      title: "Cancelar envio",
+      description: "Deseja mesmo cancelar este envio?",
+      confirmLabel: "Cancelar envio",
+      onConfirm: () => handleCancelOne(id),
+    });
+  };
+
   const handleCancelOne = async (id: string) => {
-    if (!confirm('Deseja mesmo cancelar este envio?')) return;
     try {
       const { error } = await supabase
         .from('scheduled_notifications')
@@ -194,8 +212,16 @@ export default function ScheduledNotificationsPage() {
     }
   };
 
+  const requestDeleteOne = (id: string) => {
+    setPendingConfirm({
+      title: "Excluir registro",
+      description: "Deseja excluir permanentemente este registro do histórico?",
+      confirmLabel: "Excluir",
+      onConfirm: () => handleDeleteOne(id),
+    });
+  };
+
   const handleDeleteOne = async (id: string) => {
-    if (!confirm('Deseja excluir permanentemente este registro do histórico?')) return;
     try {
       const { error } = await supabase
         .from('scheduled_notifications')
@@ -352,7 +378,7 @@ export default function ScheduledNotificationsPage() {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={handleBulkCancel}
+                onClick={requestBulkCancel}
                 className="bg-red-600 text-white hover:bg-red-700 h-8 rounded-xl text-xs font-bold"
               >
                 <Ban className="h-3.5 w-3.5 mr-1" />
@@ -486,7 +512,7 @@ export default function ScheduledNotificationsPage() {
                               <Edit className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => handleCancelOne(notif.id)}
+                              onClick={() => requestCancelOne(notif.id)}
                               title="Cancelar Envio"
                               className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-red-600 transition-colors"
                             >
@@ -505,7 +531,7 @@ export default function ScheduledNotificationsPage() {
                         )}
                         {(notif.status === 'sent' || notif.status === 'cancelled' || notif.status === 'failed') && (
                           <button
-                            onClick={() => handleDeleteOne(notif.id)}
+                            onClick={() => requestDeleteOne(notif.id)}
                             title="Excluir Registro"
                             className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-red-600 transition-colors"
                           >
@@ -592,6 +618,15 @@ export default function ScheduledNotificationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        onOpenChange={(open) => !open && setPendingConfirm(null)}
+        title={pendingConfirm?.title ?? ""}
+        description={pendingConfirm?.description ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+      />
     </div>
   );
 }
