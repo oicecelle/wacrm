@@ -12,6 +12,7 @@ import {
   ChevronUpIcon,
   PaperclipIcon,
   MicIcon,
+  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +29,7 @@ const SUGGESTIONS = [
 ];
 
 const COLLAPSED_STORAGE_KEY = "lia-chat-collapsed";
+const CLOSED_STORAGE_KEY = "lia-chat-closed";
 
 function getStoredCollapsed(): boolean | null {
   if (typeof window === "undefined") return null;
@@ -35,6 +37,11 @@ function getStoredCollapsed(): boolean | null {
   if (raw === "true") return true;
   if (raw === "false") return false;
   return null;
+}
+
+function getStoredClosed(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(CLOSED_STORAGE_KEY) === "true";
 }
 
 /**
@@ -45,9 +52,15 @@ function getStoredCollapsed(): boolean | null {
  * the choice is remembered per browser. Defaults to collapsed on
  * narrow (mobile) viewports on first visit only — after that, the
  * person's own last choice always wins, on any device.
+ *
+ * A separate "closed" state (via the × button) shrinks the whole
+ * thing down to the small round floating bubble this used to be —
+ * for anyone who wants LIA fully out of the way rather than just
+ * collapsed to its input row. Also remembered per browser.
  */
 export function CopilotChat() {
   const { accountId } = useAuth();
+  const [closed, setClosed] = useState<boolean>(getStoredClosed);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     const stored = getStoredCollapsed();
     if (stored !== null) return stored;
@@ -94,10 +107,29 @@ export function CopilotChat() {
     }
   }
 
+  function setClosedAndPersist(next: boolean) {
+    setClosed(next);
+    try {
+      window.localStorage.setItem(CLOSED_STORAGE_KEY, String(next));
+    } catch {
+      // See setCollapsedAndPersist — same non-fatal storage caveat.
+    }
+    if (!next && !collapsed) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }
+
   useEffect(() => {
-    const handleOpenCopilot = () => setCollapsedAndPersist(false);
+    const handleOpenCopilot = () => {
+      setClosedAndPersist(false);
+      setCollapsedAndPersist(false);
+    };
     window.addEventListener("open-copilot", handleOpenCopilot);
     return () => window.removeEventListener("open-copilot", handleOpenCopilot);
+    // Registering once on mount is intentional — this only needs to
+    // exist for the component's lifetime, not resubscribe on every
+    // render just because these setters get new identities each time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSend = async (text?: string) => {
@@ -207,24 +239,52 @@ export function CopilotChat() {
     }
   }
 
+  if (closed) {
+    return (
+      <button
+        onClick={() => setClosedAndPersist(false)}
+        aria-label="Abrir a LIA"
+        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-2xl transition-transform hover:scale-105 active:scale-95"
+      >
+        <SparklesIcon className="h-5 w-5" />
+      </button>
+    );
+  }
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-3 sm:px-4 sm:pb-4">
       <div className="pointer-events-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Collapse toggle strip */}
-        <button
-          onClick={() => setCollapsedAndPersist(!collapsed)}
-          aria-label={collapsed ? "Abrir LIA" : "Recolher LIA"}
-          className="flex w-full items-center justify-between bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-white"
-        >
-          <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-between bg-gradient-to-r from-blue-600 to-violet-600 pl-4 pr-1.5 py-1.5 text-white">
+          <button
+            onClick={() => setCollapsedAndPersist(!collapsed)}
+            aria-label={collapsed ? "Abrir LIA" : "Recolher LIA"}
+            className="flex flex-1 items-center gap-2 py-1"
+          >
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-card/20">
               <SparklesIcon className="h-3.5 w-3.5" />
             </div>
             <span className="text-xs font-black leading-none">LIA</span>
             <span className="text-[10px] leading-none text-white/70">Assistente do LeadPluz</span>
+          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setCollapsedAndPersist(!collapsed)}
+              aria-label={collapsed ? "Abrir LIA" : "Recolher LIA"}
+              className="flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-white/15"
+            >
+              {collapsed ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => setClosedAndPersist(true)}
+              aria-label="Fechar a LIA"
+              title="Fechar"
+              className="flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-white/15"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
           </div>
-          {collapsed ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
-        </button>
+        </div>
 
         {!collapsed && (
           <>
