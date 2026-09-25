@@ -408,11 +408,28 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       // things like "serviço" or "profissional" that live on the
       // campaign list, not on the contact record. Those values win
       // over the campaign-wide mapping for whichever keys they set.
+      //
+      // Keyed by normalizeKey (digits-only), not the raw phone
+      // string: `row.phone` here is whatever normalizeBrazilianPhone
+      // produced when the list was pasted, but `c.phone` below comes
+      // from the CONTACT RECORD — which, for a contact that already
+      // existed (e.g. they'd messaged in before), keeps whatever
+      // format it was originally saved in, not this list's format.
+      // Comparing the raw strings directly meant a merely differently
+      // -formatted phone silently failed to find its row here, so
+      // the manual override never applied — the per-contact "nome"
+      // typed into the pasted list was quietly dropped and the
+      // campaign-wide default (the contact's own saved name — often
+      // their WhatsApp push name, not what was typed) went out
+      // instead. Same root cause behind both "sends the WhatsApp
+      // name instead of what I typed" and "sends blank" — it's the
+      // same lookup, just landing on a fallback in one case and
+      // nothing in the other.
       const manualVariablesByPhone = new Map<string, Record<string, string>>();
       if (payload.audience.type === 'csv') {
         for (const row of payload.audience.csvContacts ?? []) {
           if (row.phone && row.variables) {
-            manualVariablesByPhone.set(row.phone, row.variables);
+            manualVariablesByPhone.set(normalizeKey(row.phone), row.variables);
           }
         }
       }
@@ -425,7 +442,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           name: c.name ?? undefined,
           params: {
             ...resolveVariables(payload.variables, c, customValueIndex.get(c.id)),
-            ...(c.phone ? manualVariablesByPhone.get(c.phone) : undefined),
+            ...(c.phone ? manualVariablesByPhone.get(normalizeKey(c.phone)) : undefined),
           },
         }));
 

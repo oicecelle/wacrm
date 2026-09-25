@@ -209,18 +209,38 @@ export function AudienceListBuilder({
       .map((m, i) => ({ m, i }))
       .filter(({ m }) => m.startsWith('var:'));
 
+    // The template's own "nome" variable (if it has one) is what
+    // actually lands in the sent message — mapping a column as
+    // "Nome" (__name) only ever fed the contact RECORD's name (used
+    // when creating a brand-new contact), never the message itself.
+    // For an existing contact, that record's name usually stays
+    // whatever it already was (often the WhatsApp push name), so the
+    // "Nome" column silently had no effect on what got sent — the
+    // person had typed a name into the list and it was simply never
+    // used for the message. Feeding it into the same var:nome slot
+    // here means "Nome" and an explicit "nome" variable column both
+    // reach the message the same way; an explicit var:nome column,
+    // if also mapped, still wins (this only fills the value when
+    // that slot is otherwise empty for the row).
+    const hasExplicitNomeVar = varCols.some(({ m }) => m === 'var:nome');
+    const templateWantsNome = !hasExplicitNomeVar && templateVariables.some((v) => normalize(v) === 'nome');
+
     const imported: ManualContact[] = rawRows
       .map((row): ManualContact | null => {
         const phone = row[phoneCol]?.trim();
         if (!phone) return null;
+        const name = nameCol >= 0 && row[nameCol]?.trim() ? firstNameCapitalized(row[nameCol]) : undefined;
         const variables: Record<string, string> = {};
         for (const { m, i } of varCols) {
           const key = m.replace('var:', '');
           if (row[i]?.trim()) variables[key] = row[i].trim();
         }
+        if (templateWantsNome && name && !variables.nome) {
+          variables.nome = name;
+        }
         return {
           phone: normalizeBrazilianPhone(phone),
-          name: nameCol >= 0 && row[nameCol]?.trim() ? firstNameCapitalized(row[nameCol]) : undefined,
+          name,
           variables,
         };
       })
