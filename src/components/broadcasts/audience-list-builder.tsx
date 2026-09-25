@@ -134,7 +134,9 @@ export function AudienceListBuilder({
         phone: normalizeBrazilianPhone(manualRow.phone),
         name: manualRow.name.trim() ? firstNameCapitalized(manualRow.name) : undefined,
         variables: Object.fromEntries(
-          Object.entries(manualRow.variables).filter(([, v]) => v.trim() !== ''),
+          Object.entries(manualRow.variables)
+            .filter(([, v]) => v.trim() !== '')
+            .map(([k, v]) => [k, k === 'nome' ? firstNameCapitalized(v) : v.trim()]),
         ),
       },
     ]);
@@ -233,7 +235,15 @@ export function AudienceListBuilder({
         const variables: Record<string, string> = {};
         for (const { m, i } of varCols) {
           const key = m.replace('var:', '');
-          if (row[i]?.trim()) variables[key] = row[i].trim();
+          if (row[i]?.trim()) {
+            // A "nome" variable is, by convention, a first name used
+            // for a greeting — clean it up the same way regardless of
+            // whether it arrived via the dedicated "Nome" column or a
+            // column mapped straight to var:nome, so "JESSICA
+            // VASCONCELOS" becomes "Jessica" either way instead of
+            // going out to the message exactly as typed/pasted.
+            variables[key] = key === 'nome' ? firstNameCapitalized(row[i]) : row[i].trim();
+          }
         }
         if (templateWantsNome && name && !variables.nome) {
           variables.nome = name;
@@ -296,10 +306,13 @@ export function AudienceListBuilder({
   function saveEdit(originalPhone: string) {
     const newPhone = normalizeBrazilianPhone(editDraft.phone);
     if (!newPhone) return;
+    const cleanedVariables = Object.fromEntries(
+      Object.entries(editDraft.variables).map(([k, v]) => [k, k === 'nome' ? firstNameCapitalized(v) : v]),
+    );
     onChange(
       contacts.map((c) =>
         c.phone === originalPhone
-          ? { phone: newPhone, name: editDraft.name.trim() || undefined, variables: editDraft.variables }
+          ? { phone: newPhone, name: editDraft.name.trim() || undefined, variables: cleanedVariables }
           : c,
       ),
     );
