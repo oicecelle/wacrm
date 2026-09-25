@@ -121,7 +121,7 @@ export async function POST(request: Request) {
 
     // Validate + sanitize phones up front so a typo doesn't silently
     // eat one recipient at send time with no way to see why.
-    const validRecipients: { phone: string; params: Record<string, string> }[] = []
+    const validRecipients: { phone: string; contactId?: string | null; params: Record<string, string> }[] = []
     const invalidRecipients: { phone: string; reason: string }[] = []
 
     for (const r of recipients) {
@@ -135,6 +135,20 @@ export async function POST(request: Request) {
       }
       validRecipients.push({
         phone: sanitized,
+        // The caller (use-broadcast-sending.ts) already resolved this
+        // recipient to a real contact — same lookup this route used
+        // to redo below with a plain `.in('phone', phones)` raw
+        // string match, which is why it kept failing: the ALREADY
+        // -matched contact's own stored phone can be formatted
+        // differently from this request's sanitized E.164 string
+        // (missing "55", a stray trunk "0", etc — the account's
+        // contact list has both old and new formats depending on how
+        // each one was created), so the raw comparison found nothing,
+        // treated an existing contact as brand new, and the insert
+        // collided with the database's own duplicate-phone check.
+        // Trusting the id the client already resolved skips that
+        // redo entirely for every recipient that has one.
+        contactId: r.contact_id ?? null,
         params: r.params && typeof r.params === 'object' ? r.params : {},
       })
     }
@@ -162,44 +176,53 @@ export async function POST(request: Request) {
       )
     }
 
-    // Contacts need a resolvable id for broadcast_recipients FK. Match
-    // by phone against the account's contact list; recipients pasted
-    // or imported without a pre-existing contact get created here so
-    // the broadcast has something to point at.
-    const phones = validRecipients.map((r) => r.phone)
-    const { data: existingContacts } = await supabase
-      .from('contacts')
-      .select('id, phone')
-      .eq('account_id', accountId)
-      .in('phone', phones)
-
+    // Contacts need a resolvable id for broadcast_recipients FK.
+    // Recipients that already carry a contactId (the normal case —
+    // use-broadcast-sending.ts resolves every recipient to a real
+    // contact before calling this route) use it directly, no lookup
+    // needed. Only recipients without one (any other caller of this
+    // API) get matched by phone here — via the same fuzzy, shared
+    // matcher the rest of the app uses (lib/contacts/dedupe.ts),
+    // not a raw string comparison that a differently-formatted
+    // stored phone would silently miss.
     const contactIdByPhone = new Map<string, string>()
-    for (const c of existingContacts ?? []) {
-      if (c.phone) contactIdByPhone.set(c.phone, c.id)
-    }
+    const needsPhoneLookup = validRecipients.filter((r) => !r.contactId)
 
-    const missingPhones = phones.filter((p) => !contactIdByPhone.has(p))
-    if (missingPhones.length > 0) {
-      const inputByPhone = new Map(recipients.map((r) => [sanitizePhoneForMeta(r.phone ?? ''), r]))
-      const newContactRows = missingPhones.map((phone) => ({
-        account_id: accountId,
-        user_id: user.id,
-        phone,
-        name: inputByPhone.get(phone)?.name || phone,
-      }))
-      const { data: createdContacts, error: createContactsError } = await supabase
-        .from('contacts')
-        .insert(newContactRows)
-        .select('id, phone')
-
-      if (createContactsError) {
-        return NextResponse.json(
-          { error: `Falha ao criar contatos para os novos destinatários: ${createContactsError.message}` },
-          { status: 500 },
-        )
+    if (needsPhoneLookup.length > 0) {
+      const { findExistingContactsBatch, normalizeKey } = await import('@/lib/contacts/dedupe')
+      const existingByKey = await findExistingContactsBatch(
+        supabase,
+        accountId,
+        needsPhoneLookup.map((r) => r.phone),
+      )
+      for (const r of needsPhoneLookup) {
+        const match = existingByKey.get(normalizeKey(r.phone))
+        if (match) contactIdByPhone.set(r.phone, match.id)
       }
-      for (const c of createdContacts ?? []) {
-        if (c.phone) contactIdByPhone.set(c.phone, c.id)
+
+      const stillMissing = needsPhoneLookup.filter((r) => !contactIdByPhone.has(r.phone))
+      if (stillMissing.length > 0) {
+        const inputByPhone = new Map(recipients.map((r) => [sanitizePhoneForMeta(r.phone ?? ''), r]))
+        const newContactRows = stillMissing.map((r) => ({
+          account_id: accountId,
+          user_id: user.id,
+          phone: r.phone,
+          name: inputByPhone.get(r.phone)?.name || r.phone,
+        }))
+        const { data: createdContacts, error: createContactsError } = await supabase
+          .from('contacts')
+          .insert(newContactRows)
+          .select('id, phone')
+
+        if (createContactsError) {
+          return NextResponse.json(
+            { error: `Falha ao criar contatos para os novos destinatários: ${createContactsError.message}` },
+            { status: 500 },
+          )
+        }
+        for (const c of createdContacts ?? []) {
+          if (c.phone) contactIdByPhone.set(c.phone, c.id)
+        }
       }
     }
 
@@ -235,7 +258,7 @@ export async function POST(request: Request) {
 
     const recipientRows = validRecipients.map((r) => ({
       broadcast_id: broadcast.id,
-      contact_id: contactIdByPhone.get(r.phone),
+      contact_id: r.contactId ?? contactIdByPhone.get(r.phone),
       status: 'pending' as const,
       params: r.params,
     }))
