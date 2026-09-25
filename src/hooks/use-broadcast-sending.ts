@@ -153,10 +153,13 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  async function resolveAudience(audience: AudienceConfig): Promise<Contact[]> {
+  async function resolveAudience(
+    audience: AudienceConfig,
+  ): Promise<{ contacts: Contact[]; csvVariablesByContactId: Map<string, Record<string, string>> }> {
     const supabase = createClient();
 
     let contacts: Contact[] = [];
+    let csvVariablesByContactId = new Map<string, Record<string, string>>();
 
     if (audience.type === 'all') {
       const { data, error } = await supabase
@@ -222,7 +225,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         const { data: matchedDeals } = await dealsQuery;
         const matchedContactIds = [...new Set((matchedDeals ?? []).map((d) => d.contact_id))];
         if (matchedContactIds.length === 0) {
-          return [];
+          return { contacts: [], csvVariablesByContactId: new Map() };
         }
         query = query.in('id', matchedContactIds);
       }
@@ -231,7 +234,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       if (error) throw new Error(`Falha ao buscar contatos filtrados: ${error.message}`);
       contacts = data ?? [];
     } else if (audience.type === 'csv' && audience.csvContacts) {
-      contacts = await upsertCsvContacts(supabase, audience.csvContacts);
+      const result = await upsertCsvContacts(supabase, audience.csvContacts);
+      contacts = result.contacts;
+      csvVariablesByContactId = result.variablesByContactId;
     }
 
     // Apply exclude tags (works across all contact-derived audience
@@ -245,7 +250,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       contacts = contacts.filter((c) => !excludedIds.has(c.id));
     }
 
-    return contacts;
+    return { contacts, csvVariablesByContactId };
   }
 
   /**
@@ -262,8 +267,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
   async function upsertCsvContacts(
     supabase: ReturnType<typeof createClient>,
     csvRows: ManualContact[],
-  ): Promise<Contact[]> {
-    if (csvRows.length === 0) return [];
+  ): Promise<{ contacts: Contact[]; variablesByContactId: Map<string, Record<string, string>> }> {
+    if (csvRows.length === 0) return { contacts: [], variablesByContactId: new Map() };
 
     const {
       data: { session },
@@ -321,10 +326,32 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       }
     }
 
-    // Preserve input order so analytics roughly matches the CSV order.
-    return unique
-      .map((r) => resultByKey.get(normalizeKey(r.phone)))
-      .filter((c): c is Contact => Boolean(c));
+    // Build the per-contact variable overrides HERE, while each row's
+    // resolved Contact is still known from the SAME lookup that found
+    // it (resultByKey, keyed by the row's OWN normalized phone) —
+    // rather than re-matching by phone a second time later. That
+    // second match used to compare normalizeKey(theContactsStoredPhone)
+    // against normalizeKey(thePastedPhone): fine when they're digit
+    // -for-digit identical, but findExistingContactsBatch's own match
+    // is deliberately fuzzier than that (phonesMatch tolerates a
+    // missing/extra "55" country code or trunk "0") — so a contact
+    // found via that fuzzier rule could still fail this second,
+    // stricter re-comparison and silently lose its row's variables,
+    // landing back on the campaign-wide default (often the contact's
+    // own saved name). Keying by contact_id instead removes the
+    // chance of the two matching passes disagreeing.
+    const variablesByContactId = new Map<string, Record<string, string>>();
+    const contacts: Contact[] = [];
+    for (const row of unique) {
+      const contact = resultByKey.get(normalizeKey(row.phone));
+      if (!contact) continue;
+      contacts.push(contact);
+      if (row.variables && Object.keys(row.variables).length > 0) {
+        variablesByContactId.set(contact.id, row.variables);
+      }
+    }
+
+    return { contacts, variablesByContactId };
   }
 
   async function resolveCustomFieldAudience(
@@ -388,7 +415,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // ── Step 1: Resolve audience contacts ─────────────────────────
       setProgress(5);
-      const contacts = await resolveAudience(payload.audience);
+      const { contacts, csvVariablesByContactId } = await resolveAudience(payload.audience);
 
       if (contacts.length === 0) {
         throw new Error('Nenhum contato encontrado para essa audiência.');
@@ -409,31 +436,21 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       // campaign list, not on the contact record. Those values win
       // over the campaign-wide mapping for whichever keys they set.
       //
-      // Keyed by normalizeKey (digits-only), not the raw phone
-      // string: `row.phone` here is whatever normalizeBrazilianPhone
-      // produced when the list was pasted, but `c.phone` below comes
-      // from the CONTACT RECORD — which, for a contact that already
-      // existed (e.g. they'd messaged in before), keeps whatever
-      // format it was originally saved in, not this list's format.
-      // Comparing the raw strings directly meant a merely differently
-      // -formatted phone silently failed to find its row here, so
-      // the manual override never applied — the per-contact "nome"
-      // typed into the pasted list was quietly dropped and the
-      // campaign-wide default (the contact's own saved name — often
-      // their WhatsApp push name, not what was typed) went out
-      // instead. Same root cause behind both "sends the WhatsApp
-      // name instead of what I typed" and "sends blank" — it's the
-      // same lookup, just landing on a fallback in one case and
-      // nothing in the other.
-      const manualVariablesByPhone = new Map<string, Record<string, string>>();
-      if (payload.audience.type === 'csv') {
-        for (const row of payload.audience.csvContacts ?? []) {
-          if (row.phone && row.variables) {
-            manualVariablesByPhone.set(normalizeKey(row.phone), row.variables);
-          }
-        }
-      }
-
+      // csvVariablesByContactId comes straight from resolveAudience,
+      // already keyed by contact.id — not re-matched by phone here.
+      // An earlier version re-compared phone strings at this point
+      // (normalizeKey(c.phone) against the pasted row's own
+      // normalizeKey), which looked safe but wasn't: the CONTACT was
+      // found via findExistingContactsBatch's deliberately fuzzier
+      // phonesMatch (tolerant of a missing/extra "55" country code or
+      // trunk "0"), so a contact matched that way could still fail
+      // this second, stricter re-comparison — silently losing its
+      // row's variables and falling back to the campaign-wide default
+      // (often the contact's own saved name, e.g. their WhatsApp push
+      // name, not what was typed in the list). Carrying the
+      // association forward as contact_id, decided once during that
+      // same original match, removes the chance of the two passes
+      // disagreeing.
       const apiRecipients = contacts
         .filter((c) => c.phone)
         .map((c) => ({
@@ -442,7 +459,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           name: c.name ?? undefined,
           params: {
             ...resolveVariables(payload.variables, c, customValueIndex.get(c.id)),
-            ...(c.phone ? manualVariablesByPhone.get(normalizeKey(c.phone)) : undefined),
+            ...csvVariablesByContactId.get(c.id),
           },
         }));
 
