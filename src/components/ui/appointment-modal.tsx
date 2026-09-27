@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Dialog,
@@ -243,7 +244,7 @@ interface AppointmentModalProps {
    *  context that isn't about one specific appointment (e.g. the
    *  Contatos screen), so the person lands on the contact's activity
    *  history instead of a booking form. */
-  initialTab?: "details" | "timeline" | "tags" | "notes" | "history" | "documents" | "financial" | "prontuario";
+  initialTab?: "details" | "timeline" | "tags" | "notes" | "custom" | "deals" | "history" | "documents" | "financial" | "prontuario";
   onSave: () => void;
 }
 
@@ -285,7 +286,7 @@ export function AppointmentModal({
   onSave,
 }: AppointmentModalProps) {
   const supabase = createClient();
-  const { profile, accountId, user } = useAuth();
+  const { profile, accountId, user, defaultCurrency } = useAuth();
   const clinicId = accountId;
   const profileName = profile?.full_name || "Sistema";
   const [originalStatus, setOriginalStatus] = useState<string>("");
@@ -369,7 +370,7 @@ export function AppointmentModal({
   const [error, setError] = useState<string | null>(null);
 
   // Tabs navigation
-  const [activeTab, setActiveTab] = useState<"details" | "timeline" | "tags" | "notes" | "history" | "documents" | "financial" | "prontuario">(initialTab);
+  const [activeTab, setActiveTab] = useState<"details" | "timeline" | "tags" | "notes" | "custom" | "deals" | "history" | "documents" | "financial" | "prontuario">(initialTab);
 
   // Sub-details state (fetched when patient is selected)
   const [selectedPatientInfo, setSelectedPatientInfo] = useState<any>(null);
@@ -383,6 +384,12 @@ export function AppointmentModal({
   const [loadingContactNotes, setLoadingContactNotes] = useState(false);
   const [newContactNote, setNewContactNote] = useState("");
   const [savingContactNote, setSavingContactNote] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState<{ id: string; field_name: string }[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [loadingCustomFields, setLoadingCustomFields] = useState(false);
+  const [savingCustomFields, setSavingCustomFields] = useState(false);
+  const [contactDeals, setContactDeals] = useState<any[]>([]);
+  const [loadingContactDeals, setLoadingContactDeals] = useState(false);
 
   const [patientPackages, setPatientPackages] = useState<any[]>([]);
   const [docTemplates, setDocTemplates] = useState<any[]>([]);
@@ -726,6 +733,9 @@ export function AppointmentModal({
       setAllTags([]);
       setContactTagIds([]);
       setContactNotes([]);
+      setCustomFieldDefs([]);
+      setCustomFieldValues({});
+      setContactDeals([]);
       return;
     }
 
@@ -759,6 +769,31 @@ export function AppointmentModal({
         .then(({ data }) => {
           setContactNotes(data || []);
           setLoadingContactNotes(false);
+        });
+
+      setLoadingCustomFields(true);
+      Promise.all([
+        supabase.from("custom_fields").select("id, field_name").order("field_name"),
+        supabase.from("contact_custom_values").select("*").eq("contact_id", patientId),
+      ]).then(([fieldsRes, valuesRes]) => {
+        setCustomFieldDefs(fieldsRes.data || []);
+        const map: Record<string, string> = {};
+        (valuesRes.data || []).forEach((v: { custom_field_id: string; value: string | null }) => {
+          map[v.custom_field_id] = v.value ?? "";
+        });
+        setCustomFieldValues(map);
+        setLoadingCustomFields(false);
+      });
+
+      setLoadingContactDeals(true);
+      supabase
+        .from("deals")
+        .select("*, stage:pipeline_stages(*)")
+        .eq("contact_id", patientId)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          setContactDeals(data || []);
+          setLoadingContactDeals(false);
         });
 
       try {
@@ -1546,6 +1581,26 @@ Qualquer dúvida, estou à disposição! 😊`;
     const { error } = await supabase.from("contact_notes").delete().eq("id", noteId);
     if (error) toast.error("Falha ao excluir nota.");
     else setContactNotes((prev) => prev.filter((n) => n.id !== noteId));
+  }
+
+  async function saveContactCustomFields() {
+    if (!patientId) return;
+    setSavingCustomFields(true);
+    try {
+      await supabase.from("contact_custom_values").delete().eq("contact_id", patientId);
+      const rows = Object.entries(customFieldValues)
+        .filter(([, val]) => val.trim())
+        .map(([fieldId, val]) => ({ contact_id: patientId, custom_field_id: fieldId, value: val.trim() }));
+      if (rows.length > 0) {
+        const { error } = await supabase.from("contact_custom_values").insert(rows);
+        if (error) throw error;
+      }
+      toast.success("Campos personalizados salvos.");
+    } catch {
+      toast.error("Falha ao salvar campos personalizados.");
+    } finally {
+      setSavingCustomFields(false);
+    }
   }
 
   const handleDelete = async () => {
@@ -2953,6 +3008,8 @@ Qualquer dúvida, estou à disposição! 😊`;
                   { id: "timeline", label: "Linha do Tempo", icon: Hourglass },
                   { id: "tags", label: "Tags", icon: TagIcon },
                   { id: "notes", label: "Notas", icon: ClipboardListIcon },
+                  { id: "custom", label: "Campos", icon: TagIcon },
+                  { id: "deals", label: "CRM", icon: TrendingUpIcon },
                   { id: "history", label: "Histórico", icon: ClockIcon },
                   { id: "documents", label: "Documentos", icon: FileTextIcon },
                   { id: "financial", label: "Financeiro", icon: DollarSignIcon },
@@ -3519,6 +3576,77 @@ Qualquer dúvida, estou à disposição! 😊`;
                             ))
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {activeTab === "custom" && (
+                      <div className="text-left">
+                        {loadingCustomFields ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2Icon className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : customFieldDefs.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Nenhum campo personalizado definido. Crie em Configurações.
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {customFieldDefs.map((field) => (
+                              <div key={field.id} className="space-y-1.5">
+                                <Label className="text-muted-foreground text-xs capitalize">{field.field_name}</Label>
+                                <Input
+                                  value={customFieldValues[field.id] ?? ""}
+                                  onChange={(e) => setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                                  placeholder={`Digite ${field.field_name}...`}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                            ))}
+                            <Button onClick={saveContactCustomFields} disabled={savingCustomFields} size="sm" className="w-full gap-1.5">
+                              {savingCustomFields ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SendIcon className="h-3.5 w-3.5" />}
+                              Salvar Campos Personalizados
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "deals" && (
+                      <div className="text-left">
+                        {loadingContactDeals ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2Icon className="h-5 w-5 animate-spin text-primary" />
+                          </div>
+                        ) : contactDeals.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Nenhum negócio ainda.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {contactDeals.map((deal) => (
+                              <div key={deal.id} className="rounded-lg border border-border bg-neutral-50 p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-sm font-medium text-foreground">{deal.title}</p>
+                                  {deal.stage && (
+                                    <span
+                                      className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                      style={{ backgroundColor: `${deal.stage.color}20`, color: deal.stage.color }}
+                                    >
+                                      {deal.stage.name}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <DollarSignIcon className="h-3 w-3" />
+                                    {formatCurrency(deal.value ?? 0, deal.currency || defaultCurrency)}
+                                  </span>
+                                  {deal.status && deal.status !== "open" && (
+                                    <span className={deal.status === "won" ? "text-primary" : "text-red-400"}>{deal.status}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
