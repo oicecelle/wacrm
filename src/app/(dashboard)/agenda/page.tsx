@@ -21,6 +21,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   PlusIcon,
+  CalendarIcon,
   SparklesIcon,
   ClockIcon,
   Loader2Icon,
@@ -45,6 +46,7 @@ interface Appointment {
   end_time: string;
   tag?: string | null;
   tag_color?: string | null;
+  procedure_id?: string | null;
   patients: {
     name: string;
     phone: string;
@@ -356,6 +358,7 @@ export default function AgendaPage() {
           end_time,
           tag,
           tag_color,
+          procedure_id,
           patients (
             name,
             phone,
@@ -571,6 +574,49 @@ export default function AgendaPage() {
       return displayedDates.some((d) => d.toDateString() === startLocal.toDateString());
     });
   }, [appointments, displayedDates]);
+
+  // Day/week summary (count + predicted revenue) shown near the top
+  // of the screen, independent of which calendar view (dia/semana)
+  // is currently open — "day" always means selectedDate, "week"
+  // always means the calendar week that contains it, regardless of
+  // the visible grid. Revenue is a best-effort estimate: it only
+  // sums appointments that have a resolved procedure_id (see
+  // migration 059) — an appointment whose type never matched a real
+  // registered procedure (a typo, a composed description) contributes
+  // nothing here rather than a guessed number.
+  const procedureValueById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of procedures) {
+      if (p.valor !== undefined && p.valor !== null) m.set(p.id, p.valor);
+    }
+    return m;
+  }, [procedures]);
+
+  const scheduleSummary = useMemo(() => {
+    const isCountable = (status: string) => status !== "cancelled";
+    const revenueOf = (appt: Appointment) =>
+      appt.procedure_id ? procedureValueById.get(appt.procedure_id) || 0 : 0;
+
+    const dayAppts = appointments.filter(
+      (a) => new Date(a.start_time).toDateString() === selectedDate.toDateString() && isCountable(a.status),
+    );
+
+    const weekStart = new Date(selectedDate);
+    weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    const weekAppts = appointments.filter((a) => {
+      const d = new Date(a.start_time);
+      return d >= weekStart && d < weekEnd && isCountable(a.status);
+    });
+
+    return {
+      day: { count: dayAppts.length, revenue: dayAppts.reduce((sum, a) => sum + revenueOf(a), 0) },
+      week: { count: weekAppts.length, revenue: weekAppts.reduce((sum, a) => sum + revenueOf(a), 0) },
+    };
+  }, [appointments, selectedDate, procedureValueById]);
 
   // Client side filtering
   const filteredAppointments = appointments.filter((appt) => {
@@ -811,6 +857,50 @@ export default function AgendaPage() {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* Day/week summary — count + estimated revenue */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
+            <CalendarIcon className="h-5 w-5 text-blue-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-lg font-black leading-none text-foreground">{scheduleSummary.day.count}</p>
+            <p className="truncate text-[10px] font-semibold text-muted-foreground">Agendamentos hoje</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+            <span className="text-base font-black text-emerald-600">R$</span>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-black leading-none text-foreground">
+              {scheduleSummary.day.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="truncate text-[10px] font-semibold text-muted-foreground">Previsto hoje</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10">
+            <CalendarIcon className="h-5 w-5 text-purple-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-lg font-black leading-none text-foreground">{scheduleSummary.week.count}</p>
+            <p className="truncate text-[10px] font-semibold text-muted-foreground">Agendamentos na semana</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+            <span className="text-base font-black text-emerald-600">R$</span>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-black leading-none text-foreground">
+              {scheduleSummary.week.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="truncate text-[10px] font-semibold text-muted-foreground">Previsto na semana</p>
+          </div>
         </div>
       </div>
 
