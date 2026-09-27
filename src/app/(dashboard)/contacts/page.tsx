@@ -55,7 +55,7 @@ import {
 } from 'lucide-react';
 import { QuoteModal } from '@/components/quotes/quote-modal';
 import { ContactForm } from '@/components/contacts/contact-form';
-import { ContactDetailView } from '@/components/contacts/contact-detail-view';
+import { AppointmentModal } from '@/components/ui/appointment-modal';
 import { ImportModal } from '@/components/contacts/import-modal';
 import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -834,12 +834,16 @@ export default function ContactsPage() {
         }}
       />
 
-      {/* Contact Detail Sheet */}
-      <ContactDetailView
+      {/* Contact Detail — unified modal (same component the Agenda
+          uses), opened with no appointmentId and starting on the
+          Timeline tab, matching what this screen used to show. */}
+      <AppointmentModal
         open={detailOpen}
         onOpenChange={setDetailOpen}
-        contactId={detailContactId}
-        onUpdated={fetchContacts}
+        appointmentId={null}
+        defaultPatientId={detailContactId ?? undefined}
+        initialTab="timeline"
+        onSave={fetchContacts}
       />
 
       {/* Import Modal */}
