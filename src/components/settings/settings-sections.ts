@@ -10,6 +10,7 @@ import {
   Calendar,
   CreditCard,
   Bell,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export const SETTINGS_SECTIONS = [
   'templates',
   'fields',
   'deals',
+  'payment_methods',
   'google',
   'reminders',
 ] as const;
@@ -57,6 +59,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   templates: { id: 'templates', label: 'Modelos de Mensagem', icon: FileText, group: 'workspace' },
   fields: { id: 'fields', label: 'Campos e Tags', icon: Tags, group: 'workspace' },
   deals: { id: 'deals', label: 'Negócios e Moeda', icon: Coins, group: 'workspace' },
+  payment_methods: { id: 'payment_methods', label: 'Formas de Pagamento', icon: Wallet, group: 'workspace' },
   google: { id: 'google', label: 'Google Agenda', icon: Calendar, group: 'workspace' },
   reminders: { id: 'reminders', label: 'Lembretes de Consulta', icon: Bell, group: 'workspace' },
 };
