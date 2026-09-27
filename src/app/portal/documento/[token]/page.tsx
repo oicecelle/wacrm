@@ -22,6 +22,13 @@ export default function DocumentSigningPortalPage() {
   const [document, setDocument] = useState<any>(null);
   const [patient, setPatient] = useState<any>(null);
   const [clinic, setClinic] = useState<any>(null);
+  const [templateVariables, setTemplateVariables] = useState<
+    { key: string; label: string; type: "text" | "procedure"; fill_by: "staff" | "patient" }[]
+  >([]);
+  const [patientFormValues, setPatientFormValues] = useState<Record<string, string>>({});
+  const [savingVariables, setSavingVariables] = useState(false);
+  const [variablesResolved, setVariablesResolved] = useState(false);
+  const [procedureOptions, setProcedureOptions] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Signature pad state
@@ -54,6 +61,33 @@ export default function DocumentSigningPortalPage() {
         }
 
         setDocument(doc);
+
+        // If this document came from a template, load its variable
+        // definitions — needed to know which {{placeholders}}, if
+        // any, are meant to be filled in by the contact themselves
+        // before they see the document at all.
+        if (doc.template_id) {
+          const { data: tmpl } = await supabase
+            .from("document_templates")
+            .select("variables")
+            .eq("id", doc.template_id)
+            .maybeSingle();
+          const vars = tmpl?.variables || [];
+          setTemplateVariables(vars);
+
+          const needsProcedures = vars.some(
+            (v: { type: string; fill_by: string }) => v.type === "procedure" && v.fill_by === "patient",
+          );
+          if (needsProcedures && doc.clinic_id) {
+            const { data: procs } = await supabase
+              .from("procedures")
+              .select("id, name")
+              .eq("clinic_id", doc.clinic_id)
+              .eq("ativo", true)
+              .order("name");
+            setProcedureOptions(procs || []);
+          }
+        }
 
         // First open of this link — mark it viewed (fire-and-forget;
         // the signing flow shouldn't block or fail on this).
@@ -246,6 +280,97 @@ export default function DocumentSigningPortalPage() {
     documentText = document.content.text || document.content.body || JSON.stringify(document.content);
   } else {
     documentText = document.content || "";
+  }
+
+  // Only variables that (a) are meant for the contact to fill and
+  // (b) still literally appear as {{key}} in the text — a document
+  // reloaded after already being resolved once shouldn't ask again.
+  const pendingPatientVars = templateVariables.filter(
+    (v) => v.fill_by === "patient" && documentText.includes(`{{${v.key}}}`),
+  );
+  const needsPatientForm = pendingPatientVars.length > 0 && !variablesResolved && !isSigned;
+
+  async function handleSubmitPatientForm() {
+    const missing = pendingPatientVars.find((v) => !patientFormValues[v.key]?.trim());
+    if (missing) {
+      alert(`Preencha "${missing.label}" antes de continuar.`);
+      return;
+    }
+    setSavingVariables(true);
+    try {
+      let filledText = documentText;
+      for (const v of pendingPatientVars) {
+        filledText = filledText.replace(
+          new RegExp(`\\{\\{${v.key}\\}\\}`, "gi"),
+          patientFormValues[v.key] || "",
+        );
+      }
+      const mergedValues = { ...(document.variable_values || {}), ...patientFormValues };
+      const { error: updateErr } = await supabase
+        .from("documents")
+        .update({ content: { text: filledText }, variable_values: mergedValues })
+        .eq("id", document.id);
+      if (updateErr) throw updateErr;
+
+      setDocument((prev: any) => ({ ...prev, content: { text: filledText }, variable_values: mergedValues }));
+      setVariablesResolved(true);
+    } catch (err) {
+      console.error("Error saving patient-filled variables:", err);
+      alert("Não conseguimos salvar essas informações. Tente novamente.");
+    } finally {
+      setSavingVariables(false);
+    }
+  }
+
+  if (needsPatientForm) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+          <div className="text-center space-y-1">
+            <ShieldCheckIcon className="h-8 w-8 text-blue-600 mx-auto" />
+            <h1 className="text-base font-black text-slate-800">Antes de continuar</h1>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Preencha essas informações pra gente montar o documento certinho pra você.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {pendingPatientVars.map((v) => (
+              <div key={v.key}>
+                <label className="text-xs font-semibold text-slate-700">{v.label}</label>
+                {v.type === "procedure" ? (
+                  <select
+                    value={patientFormValues[v.key] || ""}
+                    onChange={(e) => setPatientFormValues((prev) => ({ ...prev, [v.key]: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  >
+                    <option value="">Selecione...</option>
+                    {procedureOptions.map((p) => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={patientFormValues[v.key] || ""}
+                    onChange={(e) => setPatientFormValues((prev) => ({ ...prev, [v.key]: e.target.value }))}
+                    placeholder={v.label}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={handleSubmitPatientForm}
+            disabled={savingVariables}
+            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {savingVariables ? <Loader2Icon className="h-4 w-4 animate-spin" /> : "Continuar"}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
