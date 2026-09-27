@@ -43,7 +43,9 @@ import {
   Camera,
   CopyIcon,
   TrashIcon,
-  ClipboardListIcon
+  ClipboardListIcon,
+  Hourglass,
+  X as XIcon,
 } from "lucide-react";
 import { generateAIDocument } from "@/app/actions/ai-actions";
 import { cn } from "@/lib/utils";
@@ -235,6 +237,12 @@ interface AppointmentModalProps {
   defaultPatientPhone?: string;
   defaultProfessionalId?: string;
   defaultProcedureName?: string;
+  /** Which tab opens first. Defaults to "details" (the scheduling
+   *  form) — pass "timeline" when opening this same modal from a
+   *  context that isn't about one specific appointment (e.g. the
+   *  Contatos screen), so the person lands on the contact's activity
+   *  history instead of a booking form. */
+  initialTab?: "details" | "timeline" | "history" | "documents" | "financial" | "prontuario";
   onSave: () => void;
 }
 
@@ -272,6 +280,7 @@ export function AppointmentModal({
   defaultPatientPhone = "",
   defaultProfessionalId = "",
   defaultProcedureName = "",
+  initialTab = "details",
   onSave,
 }: AppointmentModalProps) {
   const supabase = createClient();
@@ -359,11 +368,13 @@ export function AppointmentModal({
   const [error, setError] = useState<string | null>(null);
 
   // Tabs navigation
-  const [activeTab, setActiveTab] = useState<"details" | "history" | "documents" | "financial" | "prontuario">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "timeline" | "history" | "documents" | "financial" | "prontuario">(initialTab);
 
   // Sub-details state (fetched when patient is selected)
   const [selectedPatientInfo, setSelectedPatientInfo] = useState<any>(null);
   const [patientAppointments, setPatientAppointments] = useState<any[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [patientPackages, setPatientPackages] = useState<any[]>([]);
   const [docTemplates, setDocTemplates] = useState<any[]>([]);
   const [patientDocs, setPatientDocs] = useState<any[]>([]);
@@ -440,6 +451,7 @@ export function AppointmentModal({
   // Load selection options (patients, staff, procedures, rooms)
   useEffect(() => {
     if (!open || !profile) return;
+    setActiveTab(initialTab);
 
     const loadOptions = async () => {
       try {
@@ -701,11 +713,22 @@ export function AppointmentModal({
       setPatientPhotos([]);
       setPatientTransactions([]);
       setQuotes([]);
+      setTimelineEvents([]);
       return;
     }
 
     const loadPatientSubDetails = async () => {
       setLoadingDetails(true);
+      setLoadingTimeline(true);
+      supabase
+        .from("contact_timeline")
+        .select("*")
+        .eq("contact_id", patientId)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          setTimelineEvents(data || []);
+          setLoadingTimeline(false);
+        });
       try {
         // 1. Patient basic profile
         let { data: patient } = await supabase
@@ -2849,6 +2872,7 @@ Qualquer dúvida, estou à disposição! 😊`;
               <nav className="flex flex-wrap gap-1.5 self-center">
                 {[
                   { id: "details", label: "Agendamento", icon: CalendarDaysIcon },
+                  { id: "timeline", label: "Linha do Tempo", icon: Hourglass },
                   { id: "history", label: "Histórico", icon: ClockIcon },
                   { id: "documents", label: "Documentos", icon: FileTextIcon },
                   { id: "financial", label: "Financeiro", icon: DollarSignIcon },
@@ -3264,6 +3288,77 @@ Qualquer dúvida, estou à disposição! 😊`;
                     )}
 
                     {/* Tab: HISTORY (Appointments timeline & statistics) */}
+                    {activeTab === "timeline" && (
+                      <div className="text-left">
+                        {loadingTimeline ? (
+                          <div className="flex items-center justify-center py-10">
+                            <Loader2Icon className="h-5 w-5 animate-spin text-primary" />
+                          </div>
+                        ) : timelineEvents.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <Hourglass className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                            <p className="text-sm font-semibold text-foreground">Nenhum evento registrado</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              A linha do tempo do paciente é gerada automaticamente com base nas interações com a clínica.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border/60">
+                            {timelineEvents.map((evt) => {
+                              const getEventConfig = (type: string) => {
+                                switch (type) {
+                                  case "message":
+                                    return { icon: MessageSquareIcon, color: "bg-emerald-500 text-white ring-emerald-500/20" };
+                                  case "appointment":
+                                    return { icon: CalendarDaysIcon, color: "bg-blue-500 text-white ring-blue-500/20" };
+                                  case "appointment_cancelled":
+                                    return { icon: XIcon, color: "bg-red-500 text-white ring-red-500/20" };
+                                  case "appointment_rescheduled":
+                                    return { icon: CalendarDaysIcon, color: "bg-amber-500 text-white ring-amber-500/20" };
+                                  case "document_sent":
+                                    return { icon: FileTextIcon, color: "bg-indigo-500 text-white ring-indigo-500/20" };
+                                  case "document_signed":
+                                    return { icon: CheckCircle2Icon, color: "bg-violet-500 text-white ring-violet-500/20" };
+                                  case "payment":
+                                    return { icon: DollarSignIcon, color: "bg-green-600 text-white ring-green-600/20" };
+                                  case "quote_sent":
+                                  case "quote_accepted":
+                                    return { icon: DollarSignIcon, color: "bg-cyan-500 text-white ring-cyan-500/20" };
+                                  case "status_change":
+                                  case "deal_stage_change":
+                                    return { icon: TrendingUpIcon, color: "bg-sky-500 text-white ring-sky-500/20" };
+                                  case "note":
+                                    return { icon: FileTextIcon, color: "bg-neutral-500 text-white ring-neutral-500/20" };
+                                  default:
+                                    return { icon: ClockIcon, color: "bg-neutral-500 text-white ring-neutral-500/20" };
+                                }
+                              };
+                              const config = getEventConfig(evt.event_type);
+                              const Icon = config.icon;
+                              return (
+                                <div key={evt.id} className="relative group">
+                                  <span className={`absolute -left-[21px] top-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4 ${config.color}`}>
+                                    <Icon className="h-3 w-3" />
+                                  </span>
+                                  <div className="rounded-xl border border-neutral-100 bg-neutral-50/20 p-3.5 transition-all group-hover:border-border">
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                      <h4 className="text-xs font-bold text-foreground">{evt.title}</h4>
+                                      <span className="text-[10px] text-muted-foreground font-medium shrink-0">
+                                        {new Date(evt.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                      </span>
+                                    </div>
+                                    {evt.description && (
+                                      <p className="text-xs text-muted-foreground leading-relaxed">{evt.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {activeTab === "history" && (
                       <div className="space-y-5 text-left">
                         {/* Statistics Grid */}
