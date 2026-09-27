@@ -29,6 +29,7 @@ import {
   DollarSign,
   FileText,
   Briefcase,
+  Boxes,
   TrendingUp,
   ArrowLeftRight,
   Lock,
@@ -170,6 +171,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     { key: "/documentos", href: "/documentos", label: "Documentos", icon: FileText },
     { key: "/equipe", href: "/equipe", label: "Equipe", icon: UsersRound },
     { key: "/servicos", href: "/servicos", label: "Serviços", icon: Briefcase },
+    { key: "/estoque", href: "/estoque", label: "Estoque", icon: Boxes },
     {
       key: "marketing-group",
       label: "Marketing",
