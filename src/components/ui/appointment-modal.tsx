@@ -396,6 +396,7 @@ export function AppointmentModal({
   const [editContactEmail, setEditContactEmail] = useState("");
   const [editContactCompany, setEditContactCompany] = useState("");
   const [savingContactDetails, setSavingContactDetails] = useState(false);
+  const [whatsappAvatarUrl, setWhatsappAvatarUrl] = useState<string | null>(null);
 
   const [patientPackages, setPatientPackages] = useState<any[]>([]);
   const [docTemplates, setDocTemplates] = useState<any[]>([]);
@@ -1046,6 +1047,20 @@ export function AppointmentModal({
 
     loadPatientSubDetails();
   }, [patientId, open]);
+
+  // WhatsApp profile picture for the avatar circle — fetched
+  // separately (not inside loadPatientSubDetails above) because it
+  // depends on selectedPatientInfo.phone, which that same effect only
+  // finishes setting asynchronously.
+  useEffect(() => {
+    setWhatsappAvatarUrl(null);
+    const phone = selectedPatientInfo?.phone;
+    if (!phone || !clinicId) return;
+    fetch(`/api/whatsapp/profile-picture?phone=${encodeURIComponent(phone)}&account_id=${clinicId}`)
+      .then((res) => res.json())
+      .then((data) => setWhatsappAvatarUrl(data?.url || null))
+      .catch(() => setWhatsappAvatarUrl(null));
+  }, [selectedPatientInfo?.phone, clinicId]);
 
   // Load Smart Panel details when patientId is selected
   useEffect(() => {
@@ -2973,9 +2988,21 @@ Qualquer dúvida, estou à disposição! 😊`;
             <header className="bg-card text-foreground p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
-                <div className="h-12 w-12 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center text-base font-black shadow-md shrink-0">
-                  {firstName.charAt(0).toUpperCase()}
-                  {lastName.charAt(0).toUpperCase()}
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-md">
+                  {whatsappAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- external WhatsApp-hosted URL, not a local/optimizable asset
+                    <img
+                      src={whatsappAvatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={() => setWhatsappAvatarUrl(null)}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-blue-600 text-base font-black text-white">
+                      {firstName.charAt(0).toUpperCase()}
+                      {lastName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-0.5 text-left min-w-0">
