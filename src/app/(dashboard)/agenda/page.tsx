@@ -49,6 +49,7 @@ interface Appointment {
     name: string;
     phone: string;
     avatar_url?: string | null;
+    birthday?: string | null;
   } | null;
 }
 
@@ -77,9 +78,21 @@ export default function AgendaPage() {
       default: return "#f59e0b";
     }
   }, []);
+
+  // patients.birthday is stored as YYYY-MM-DD (year is often a
+  // placeholder when only month/day were collected) — only the month
+  // matters here, matching the same logic the birthday-notification
+  // cron already uses.
+  const isBirthdayMonth = useCallback((birthday: string | null | undefined) => {
+    if (!birthday) return false;
+    const month = Number(birthday.split("-")[1]);
+    if (!month) return false;
+    return month === new Date().getMonth() + 1;
+  }, []);
   const { accountId } = useAuth();
   const { hasPermission, loading: permsLoading } = usePermissions();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [visitNumberByAppt, setVisitNumberByAppt] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
   // Main Calendar State
@@ -345,7 +358,8 @@ export default function AgendaPage() {
           tag_color,
           patients (
             name,
-            phone
+            phone,
+            birthday
           )
         `)
         .eq("clinic_id", accountId)
@@ -354,7 +368,35 @@ export default function AgendaPage() {
         .order("start_time", { ascending: true });
 
       if (error) throw error;
-      setAppointments((data || []) as any[]);
+      const rows = (data || []) as any[];
+      setAppointments(rows);
+
+      // Visit number (1ª, 2ª, ...) per appointment card. Needs each
+      // patient's FULL appointment history, not just what's visible
+      // in the current month grid, so a returning patient's very
+      // first visible appointment doesn't get mislabeled "1ª" just
+      // because their real first visit was last month.
+      const patientIds = [...new Set(rows.map((r) => r.patient_id).filter(Boolean))];
+      if (patientIds.length > 0) {
+        const { data: historyRows } = await supabase
+          .from("appointments")
+          .select("id, patient_id, start_time")
+          .eq("clinic_id", accountId)
+          .in("patient_id", patientIds)
+          .in("status", ["confirmed", "attended", "provisional", "scheduled"])
+          .order("start_time", { ascending: true });
+
+        const counters = new Map<string, number>();
+        const numberByAppt = new Map<string, number>();
+        for (const row of historyRows || []) {
+          const n = (counters.get(row.patient_id) || 0) + 1;
+          counters.set(row.patient_id, n);
+          numberByAppt.set(row.id, n);
+        }
+        setVisitNumberByAppt(numberByAppt);
+      } else {
+        setVisitNumberByAppt(new Map());
+      }
     } catch (err) {
       console.error("Error fetching appointments:", err);
     } finally {
@@ -568,6 +610,56 @@ export default function AgendaPage() {
     setModalDefaultProcedureName("");
     setModalOpen(true);
   };
+
+  // Drag-to-reschedule (like Google Calendar): drop position → new
+  // start time, same duration preserved, snapped to 15-minute slots
+  // so it doesn't land on an odd time from an imprecise drop.
+  const [draggedApptId, setDraggedApptId] = useState<string | null>(null);
+
+  async function handleDropReschedule(apptId: string, dayDate: Date, clientY: number, columnTop: number) {
+    const appt = appointments.find((a) => a.id === apptId);
+    if (!appt) return;
+
+    const gridStart = 480; // 08:00 in minutes — matches the card layout above
+    const gridEnd = 1200; // 20:00
+    const pxPerMin = 1.6667;
+    const rawMinutes = gridStart + (clientY - columnTop) / pxPerMin;
+    const snapped = Math.round(rawMinutes / 15) * 15;
+    const clampedMinutes = Math.max(gridStart, Math.min(gridEnd, snapped));
+
+    const oldStart = new Date(appt.start_time);
+    const oldEnd = new Date(appt.end_time);
+    const durationMs = oldEnd.getTime() - oldStart.getTime();
+
+    const newStart = new Date(dayDate);
+    newStart.setHours(0, Math.round(clampedMinutes), 0, 0);
+    const newEnd = new Date(newStart.getTime() + durationMs);
+
+    // Dropped on the exact same slot it already occupied — nothing to do.
+    if (newStart.getTime() === oldStart.getTime()) return;
+
+    const previous = { start_time: appt.start_time, end_time: appt.end_time };
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === apptId ? { ...a, start_time: newStart.toISOString(), end_time: newEnd.toISOString() } : a,
+      ),
+    );
+
+    const { error } = await supabase
+      .from("appointments")
+      .update({ start_time: newStart.toISOString(), end_time: newEnd.toISOString() })
+      .eq("id", apptId);
+
+    if (error) {
+      toast.error("Não deu pra remarcar. Tente de novo.");
+      setAppointments((prev) => prev.map((a) => (a.id === apptId ? { ...a, ...previous } : a)));
+      return;
+    }
+
+    const hh = String(Math.floor(clampedMinutes / 60)).padStart(2, "0");
+    const mm = String(Math.round(clampedMinutes) % 60).padStart(2, "0");
+    toast.success(`Remarcado para ${newStart.toLocaleDateString("pt-BR")} às ${hh}:${mm}.`);
+  }
 
   const triggerCopilot = () => {
     window.dispatchEvent(new Event("open-copilot"));
@@ -1292,10 +1384,27 @@ export default function AgendaPage() {
                   return (
                     <div
                       key={dayIdx}
-                      className="relative h-full select-none cursor-pointer hover:bg-neutral-50/20"
+                      className={cn(
+                        "relative h-full select-none cursor-pointer hover:bg-neutral-50/20",
+                        draggedApptId && "hover:bg-blue-50/40",
+                      )}
                       onClick={() => {
                         const dayStr = dayDate.toISOString().slice(0, 10);
                         handleAddAppointment(dayStr);
+                      }}
+                      onDragOver={(e) => {
+                        if (!draggedApptId) return;
+                        e.preventDefault(); // required for onDrop to fire at all
+                        e.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation(); // don't also trigger the column's "add appointment" click
+                        const apptId = e.dataTransfer.getData("text/plain");
+                        if (!apptId) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        handleDropReschedule(apptId, dayDate, e.clientY, rect.top);
+                        setDraggedApptId(null);
                       }}
                     >
 
@@ -1338,14 +1447,25 @@ export default function AgendaPage() {
 
                         const styles = getCardStatusStyles(appt.status, appt.type);
                         const formattedTime = `${String(startHours).padStart(2, "0")}:${String(startMins).padStart(2, "0")} - ${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                        const visitNumber = visitNumberByAppt.get(appt.id);
+                        const isBirthday = isBirthdayMonth(appt.patients?.birthday);
 
                         return (
                           <div
                             key={appt.id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", appt.id);
+                              e.dataTransfer.effectAllowed = "move";
+                              setDraggedApptId(appt.id);
+                            }}
+                            onDragEnd={() => setDraggedApptId(null)}
                             style={{
                               top: `${topPx}px`,
                               height: `${heightPx}px`,
-                              ...styles.bgStyle
+                              ...styles.bgStyle,
+                              borderLeft: `4px solid ${getStatusColor(appt.status)}`,
+                              opacity: draggedApptId === appt.id ? 0.4 : 1,
                             }}
                             onMouseEnter={(e) => {
                               handleApptMouseEnter(appt, e);
@@ -1355,15 +1475,33 @@ export default function AgendaPage() {
                               e.stopPropagation();
                               handleEditAppointment(appt.id);
                             }}
-                            className="absolute left-1 right-1 rounded-2xl shadow-sm transition-all duration-200 text-left border p-2.5 z-10 select-none cursor-pointer hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between"
+                            className="absolute left-1 right-1 rounded-2xl shadow-sm transition-all duration-200 text-left border p-2.5 z-10 select-none cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-[1.01] overflow-hidden flex flex-col justify-between"
                           >
+                            {/* Visit count badge — top-right corner, out of the way of the text */}
+                            {visitNumber !== undefined && (
+                              <span
+                                title={visitNumber === 1 ? "Primeira vez" : `${visitNumber}ª visita`}
+                                className={`absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[8px] font-black text-white shadow-sm ${
+                                  visitNumber === 1 ? "bg-blue-500" : "bg-neutral-500"
+                                }`}
+                              >
+                                {visitNumber === 1 ? "1ª" : visitNumber}
+                              </span>
+                            )}
+
                             <div className="space-y-0.5 min-w-0">
                               {/* Line 1: Status Dot & Patient Name */}
-                              <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0 pr-4">
                                 <span style={styles.dotStyle} className="h-2 w-2 shrink-0 rounded-full shadow-2xs" />
                                 <span className="text-[11px] font-bold text-foreground truncate flex-1 leading-tight">
                                   {appt.patients?.name || "Sem Nome"}
                                 </span>
+                                {isBirthday && (
+                                  <CakeIcon className="h-3 w-3 shrink-0 text-pink-500" aria-label="Aniversariante do mês" />
+                                )}
+                                {appt.notes && (
+                                  <ClipboardList className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="Tem observação registrada" />
+                                )}
                                 {appt.status === "provisional" && (
                                   <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
                                 )}
