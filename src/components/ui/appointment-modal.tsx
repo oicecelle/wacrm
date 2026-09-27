@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Dialog,
@@ -242,7 +243,7 @@ interface AppointmentModalProps {
    *  context that isn't about one specific appointment (e.g. the
    *  Contatos screen), so the person lands on the contact's activity
    *  history instead of a booking form. */
-  initialTab?: "details" | "timeline" | "history" | "documents" | "financial" | "prontuario";
+  initialTab?: "details" | "timeline" | "tags" | "notes" | "history" | "documents" | "financial" | "prontuario";
   onSave: () => void;
 }
 
@@ -368,13 +369,21 @@ export function AppointmentModal({
   const [error, setError] = useState<string | null>(null);
 
   // Tabs navigation
-  const [activeTab, setActiveTab] = useState<"details" | "timeline" | "history" | "documents" | "financial" | "prontuario">(initialTab);
+  const [activeTab, setActiveTab] = useState<"details" | "timeline" | "tags" | "notes" | "history" | "documents" | "financial" | "prontuario">(initialTab);
 
   // Sub-details state (fetched when patient is selected)
   const [selectedPatientInfo, setSelectedPatientInfo] = useState<any>(null);
   const [patientAppointments, setPatientAppointments] = useState<any[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
+  const [allTags, setAllTags] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [contactTagIds, setContactTagIds] = useState<string[]>([]);
+  const [savingTags, setSavingTags] = useState(false);
+  const [contactNotes, setContactNotes] = useState<{ id: string; note_text: string; created_at: string }[]>([]);
+  const [loadingContactNotes, setLoadingContactNotes] = useState(false);
+  const [newContactNote, setNewContactNote] = useState("");
+  const [savingContactNote, setSavingContactNote] = useState(false);
+
   const [patientPackages, setPatientPackages] = useState<any[]>([]);
   const [docTemplates, setDocTemplates] = useState<any[]>([]);
   const [patientDocs, setPatientDocs] = useState<any[]>([]);
@@ -714,6 +723,9 @@ export function AppointmentModal({
       setPatientTransactions([]);
       setQuotes([]);
       setTimelineEvents([]);
+      setAllTags([]);
+      setContactTagIds([]);
+      setContactNotes([]);
       return;
     }
 
@@ -729,6 +741,26 @@ export function AppointmentModal({
           setTimelineEvents(data || []);
           setLoadingTimeline(false);
         });
+
+      Promise.all([
+        supabase.from("tags").select("id, name, color").order("name"),
+        supabase.from("contact_tags").select("tag_id").eq("contact_id", patientId),
+      ]).then(([tagsRes, contactTagsRes]) => {
+        setAllTags(tagsRes.data || []);
+        setContactTagIds((contactTagsRes.data || []).map((ct: { tag_id: string }) => ct.tag_id));
+      });
+
+      setLoadingContactNotes(true);
+      supabase
+        .from("contact_notes")
+        .select("*")
+        .eq("contact_id", patientId)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          setContactNotes(data || []);
+          setLoadingContactNotes(false);
+        });
+
       try {
         // 1. Patient basic profile
         let { data: patient } = await supabase
@@ -1470,6 +1502,52 @@ Qualquer dúvida, estou à disposição! 😊`;
   };
 
   // Delete appointment
+  async function toggleTag(tagId: string) {
+    if (!patientId) return;
+    setSavingTags(true);
+    const isSelected = contactTagIds.includes(tagId);
+    if (isSelected) {
+      const { error } = await supabase.from("contact_tags").delete().eq("contact_id", patientId).eq("tag_id", tagId);
+      if (!error) setContactTagIds((prev) => prev.filter((id) => id !== tagId));
+      else toast.error("Falha ao remover tag.");
+    } else {
+      const { error } = await supabase.from("contact_tags").insert({ contact_id: patientId, tag_id: tagId });
+      if (!error) setContactTagIds((prev) => [...prev, tagId]);
+      else toast.error("Falha ao adicionar tag.");
+    }
+    setSavingTags(false);
+  }
+
+  async function addContactNote() {
+    if (!patientId || !newContactNote.trim() || !accountId || !user) return;
+    setSavingContactNote(true);
+    const { error } = await supabase.from("contact_notes").insert({
+      contact_id: patientId,
+      account_id: accountId,
+      user_id: user.id,
+      note_text: newContactNote.trim(),
+    });
+    if (error) {
+      toast.error("Falha ao adicionar nota.");
+    } else {
+      setNewContactNote("");
+      const { data } = await supabase
+        .from("contact_notes")
+        .select("*")
+        .eq("contact_id", patientId)
+        .order("created_at", { ascending: false });
+      setContactNotes(data || []);
+      toast.success("Nota adicionada.");
+    }
+    setSavingContactNote(false);
+  }
+
+  async function deleteContactNote(noteId: string) {
+    const { error } = await supabase.from("contact_notes").delete().eq("id", noteId);
+    if (error) toast.error("Falha ao excluir nota.");
+    else setContactNotes((prev) => prev.filter((n) => n.id !== noteId));
+  }
+
   const handleDelete = async () => {
     if (!appointmentId) return;
     if (!confirm("Tem certeza que deseja excluir este agendamento?")) return;
@@ -2873,6 +2951,8 @@ Qualquer dúvida, estou à disposição! 😊`;
                 {[
                   { id: "details", label: "Agendamento", icon: CalendarDaysIcon },
                   { id: "timeline", label: "Linha do Tempo", icon: Hourglass },
+                  { id: "tags", label: "Tags", icon: TagIcon },
+                  { id: "notes", label: "Notas", icon: ClipboardListIcon },
                   { id: "history", label: "Histórico", icon: ClockIcon },
                   { id: "documents", label: "Documentos", icon: FileTextIcon },
                   { id: "financial", label: "Financeiro", icon: DollarSignIcon },
@@ -3356,6 +3436,89 @@ Qualquer dúvida, estou à disposição! 😊`;
                             })}
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {activeTab === "tags" && (
+                      <div className="text-left space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          Clique numa tag pra adicionar ou remover do contato.
+                        </p>
+                        {allTags.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            Nenhuma tag cadastrada. Crie tags em Configurações.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {allTags.map((tag) => {
+                              const selected = contactTagIds.includes(tag.id);
+                              return (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  onClick={() => toggleTag(tag.id)}
+                                  disabled={savingTags}
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
+                                    selected ? "ring-2 ring-primary ring-offset-1 ring-offset-border" : "opacity-50 hover:opacity-80"
+                                  }`}
+                                  style={{ backgroundColor: tag.color + "20", color: tag.color }}
+                                >
+                                  {tag.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "notes" && (
+                      <div className="text-left space-y-3">
+                        <Textarea
+                          value={newContactNote}
+                          onChange={(e) => setNewContactNote(e.target.value)}
+                          placeholder="Escreva uma nota..."
+                          className="min-h-[60px] text-sm resize-none"
+                        />
+                        <Button
+                          type="button"
+                          onClick={addContactNote}
+                          disabled={!newContactNote.trim() || savingContactNote}
+                          size="sm"
+                          className="gap-1.5"
+                        >
+                          {savingContactNote ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <PlusIcon className="h-3.5 w-3.5" />}
+                          Adicionar Nota
+                        </Button>
+
+                        <div className="space-y-2 pt-2">
+                          {loadingContactNotes ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2Icon className="h-5 w-5 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : contactNotes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma nota ainda.</p>
+                          ) : (
+                            contactNotes.map((note) => (
+                              <div key={note.id} className="rounded-lg bg-neutral-50 border border-border/50 p-3 group">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">{note.note_text}</p>
+                                  <button
+                                    onClick={() => deleteContactNote(note.id)}
+                                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all shrink-0"
+                                  >
+                                    <Trash2Icon className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1.5">
+                                  {new Date(note.created_at).toLocaleDateString("pt-BR", {
+                                    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
 
