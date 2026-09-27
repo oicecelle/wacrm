@@ -63,6 +63,20 @@ interface DocTemplate {
   content: { text?: string; body?: string } | null;
   is_default?: boolean;
   clinic_id?: string | null;
+  variables?: DocTemplateVariable[];
+}
+
+/** A configurable {{placeholder}} beyond the 5 built-in ones. `type:
+ *  'procedure'` shows a dropdown of the clinic's registered
+ *  services when filling it in, instead of a free-text field.
+ *  `fill_by` decides WHERE it gets filled: 'staff' happens right
+ *  before sending (a quick form), 'patient' happens on the public
+ *  signing page, before they see the document at all. */
+interface DocTemplateVariable {
+  key: string;
+  label: string;
+  type: "text" | "procedure";
+  fill_by: "staff" | "patient";
 }
 
 /* ─── Constants ──────────────────────────────────────────── */
@@ -88,16 +102,151 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 /* ─── Variable interpolation ─────────────────────────────── */
-function interpolateVars(text: string, patient: Patient | null): string {
-  if (!patient) return text;
-  const today = new Date().toLocaleDateString("pt-BR");
-  return text
-    .replace(/\{\{nome\}\}/gi, patient.name || "")
-    .replace(/\{\{CPF\}\}/gi, patient.document || "—")
-    .replace(/\{\{data_nascimento\}\}/gi,
-      patient.birthday ? new Date(patient.birthday).toLocaleDateString("pt-BR") : "—")
-    .replace(/\{\{telefone\}\}/gi, patient.phone || "—")
-    .replace(/\{\{data_atual\}\}/gi, today);
+function interpolateVars(
+  text: string,
+  patient: Patient | null,
+  customValues?: Record<string, string>,
+): string {
+  let result = text;
+  if (patient) {
+    const today = new Date().toLocaleDateString("pt-BR");
+    result = result
+      .replace(/\{\{nome\}\}/gi, patient.name || "")
+      .replace(/\{\{CPF\}\}/gi, patient.document || "—")
+      .replace(/\{\{data_nascimento\}\}/gi,
+        patient.birthday ? new Date(patient.birthday).toLocaleDateString("pt-BR") : "—")
+      .replace(/\{\{telefone\}\}/gi, patient.phone || "—")
+      .replace(/\{\{data_atual\}\}/gi, today);
+  }
+  // Custom template variables (staff-filled ones only get here —
+  // patient-filled ones are deliberately absent from customValues,
+  // so their {{placeholder}} stays untouched until the signing page
+  // collects them).
+  if (customValues) {
+    for (const [key, value] of Object.entries(customValues)) {
+      result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "gi"), value || "");
+    }
+  }
+  return result;
+}
+
+/** Lets a template author add {{placeholders}} beyond the 5
+ *  built-in ones, choosing whether each is free text or a dropdown
+ *  of the clinic's registered procedures, and who fills it in —
+ *  the staff (right before sending) or the contact themselves (on
+ *  the public signing page, before they see the document). */
+function TemplateVariablesEditor({
+  variables,
+  onChange,
+  onInsert,
+}: {
+  variables: DocTemplateVariable[];
+  onChange: (v: DocTemplateVariable[]) => void;
+  onInsert: (key: string) => void;
+}) {
+  const [draftLabel, setDraftLabel] = useState("");
+  const [draftType, setDraftType] = useState<"text" | "procedure">("text");
+  const [draftFillBy, setDraftFillBy] = useState<"staff" | "patient">("staff");
+
+  function slugify(label: string) {
+    return label
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function addVariable() {
+    const key = slugify(draftLabel);
+    if (!key) return;
+    if (variables.some((v) => v.key === key)) {
+      toast.error("Já existe uma variável com esse nome nesse modelo.");
+      return;
+    }
+    onChange([...variables, { key, label: draftLabel.trim(), type: draftType, fill_by: draftFillBy }]);
+    setDraftLabel("");
+    setDraftType("text");
+    setDraftFillBy("staff");
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-card/50 p-3">
+      <Label className="text-xs font-semibold">Variáveis personalizadas</Label>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        Além de {"{{nome}}"}/{"{{CPF}}"}/{"{{data_atual}}"}, adicione campos próprios deste
+        modelo — texto livre, ou uma lista dos seus procedimentos já cadastrados.
+      </p>
+
+      {variables.length > 0 && (
+        <div className="space-y-1.5">
+          {variables.map((v) => (
+            <div key={v.key} className="flex items-center gap-2 rounded-lg bg-card px-2.5 py-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => onInsert(v.key)}
+                title="Inserir no texto do modelo"
+                className="min-w-0 flex-1 truncate text-left font-mono text-blue-600 hover:underline"
+              >
+                {"{{"}
+                {v.key}
+                {"}}"}
+              </button>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">{v.label}</span>
+              <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                {v.type === "procedure" ? "Procedimento" : "Texto"}
+              </span>
+              <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                {v.fill_by === "staff" ? "Equipe preenche" : "Contato preenche"}
+              </span>
+              <button
+                type="button"
+                onClick={() => onChange(variables.filter((x) => x.key !== v.key))}
+                className="shrink-0 text-red-400 hover:text-red-600"
+                title="Remover variável"
+              >
+                <Trash2Icon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-1.5 pt-1">
+        <Input
+          value={draftLabel}
+          onChange={(e) => setDraftLabel(e.target.value)}
+          placeholder="Ex: Valor do contrato"
+          className="col-span-2 h-8 text-xs"
+        />
+        <select
+          value={draftType}
+          onChange={(e) => setDraftType(e.target.value as "text" | "procedure")}
+          className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+        >
+          <option value="text">Texto livre</option>
+          <option value="procedure">Procedimento (dropdown)</option>
+        </select>
+        <select
+          value={draftFillBy}
+          onChange={(e) => setDraftFillBy(e.target.value as "staff" | "patient")}
+          className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+        >
+          <option value="staff">Equipe preenche (antes de enviar)</option>
+          <option value="patient">Contato preenche (antes de assinar)</option>
+        </select>
+      </div>
+      <button
+        type="button"
+        onClick={addVariable}
+        disabled={!draftLabel.trim()}
+        className="w-full rounded-lg border border-dashed border-border py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+      >
+        + Adicionar variável
+      </button>
+    </div>
+  );
 }
 
 export default function DocumentosPage() {
@@ -118,6 +267,10 @@ export default function DocumentosPage() {
 
   /* New document form */
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [procedures, setProcedures] = useState<{ id: string; name: string }[]>([]);
+  // Keyed "templateId::variableKey" so two selected templates can't
+  // collide even if they happen to use the same variable name.
+  const [staffVarValues, setStaffVarValues] = useState<Record<string, string>>({});
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -147,6 +300,7 @@ export default function DocumentosPage() {
   const [tmplFormType, setTmplFormType] = useState("contrato");
   const [tmplFormContent, setTmplFormContent] = useState("");
   const [tmplFormIsDefault, setTmplFormIsDefault] = useState(false);
+  const [tmplFormVariables, setTmplFormVariables] = useState<DocTemplateVariable[]>([]);
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   /* ── Load history ── */
@@ -211,12 +365,14 @@ export default function DocumentosPage() {
     if (!accountId) return;
 
     const loadOptions = async () => {
-      const [{ data: pts }, { data: tmps }] = await Promise.all([
+      const [{ data: pts }, { data: tmps }, { data: procs }] = await Promise.all([
         supabase.from("patients").select("id, name, phone, email, document, birthday").eq("clinic_id", accountId).order("name"),
-        supabase.from("document_templates").select("id, name, type, content, is_default, clinic_id").or(`clinic_id.is.null,clinic_id.eq.${accountId}`).order("name"),
+        supabase.from("document_templates").select("id, name, type, content, is_default, clinic_id, variables").or(`clinic_id.is.null,clinic_id.eq.${accountId}`).order("name"),
+        supabase.from("procedures").select("id, name").eq("clinic_id", accountId).eq("ativo", true).order("name"),
       ]);
       setPatients(pts || []);
       setTemplates(tmps || []);
+      setProcedures(procs || []);
     };
 
     loadOptions();
@@ -235,14 +391,20 @@ export default function DocumentosPage() {
       const tmpl = templates.find((t) => t.id === id);
       if (!tmpl) return null;
       const raw = tmpl.content?.text || tmpl.content?.body || "";
+      const staffVars = (tmpl.variables || []).filter((v) => v.fill_by === "staff");
+      const customValues: Record<string, string> = {};
+      for (const v of staffVars) {
+        customValues[v.key] = staffVarValues[`${tmpl.id}::${v.key}`] || "";
+      }
       return {
         title: tmpl.name,
         type: tmpl.type,
-        content: interpolateVars(raw, selectedPatient),
+        content: interpolateVars(raw, selectedPatient, customValues),
         template_id: tmpl.id,
         pdf_url: "",
+        variable_values: customValues,
       };
-    }).filter(Boolean) as { title: string; type: string; content: string; template_id: string; pdf_url: string }[];
+    }).filter(Boolean) as { title: string; type: string; content: string; template_id: string; pdf_url: string; variable_values: Record<string, string> }[];
 
     if (addCustom && customTitle.trim() && customContent.trim()) {
       fromTemplates.push({
@@ -251,6 +413,7 @@ export default function DocumentosPage() {
         content: interpolateVars(customContent, selectedPatient),
         template_id: "",
         pdf_url: "",
+        variable_values: {},
       });
     }
 
@@ -261,11 +424,31 @@ export default function DocumentosPage() {
         content: "",
         template_id: "",
         pdf_url: pdfUrl,
+        variable_values: {},
       });
     }
 
     return fromTemplates;
-  }, [selectedTemplateIds, templates, selectedPatient, addCustom, customTitle, customContent, customType, pdfUrl]);
+  }, [selectedTemplateIds, templates, selectedPatient, addCustom, customTitle, customContent, customType, pdfUrl, staffVarValues]);
+
+  // Every staff-fill variable, across all currently selected
+  // templates, that still needs a value before sending — drives
+  // both the "fill this in" form and the send button's disabled state.
+  const pendingStaffVariables = useMemo(() => {
+    const out: { templateId: string; templateName: string; variable: DocTemplateVariable }[] = [];
+    for (const id of selectedTemplateIds) {
+      const tmpl = templates.find((t) => t.id === id);
+      if (!tmpl) continue;
+      for (const v of tmpl.variables || []) {
+        if (v.fill_by === "staff") out.push({ templateId: tmpl.id, templateName: tmpl.name, variable: v });
+      }
+    }
+    return out;
+  }, [selectedTemplateIds, templates]);
+
+  const missingStaffVariables = pendingStaffVariables.filter(
+    ({ templateId, variable }) => !staffVarValues[`${templateId}::${variable.key}`]?.trim(),
+  );
 
   /* ── Handlers ── */
   const handleUploadPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,6 +515,12 @@ export default function DocumentosPage() {
       toast.error("Selecione ao menos um modelo de documento ou crie um personalizado.");
       return;
     }
+    if (missingStaffVariables.length > 0) {
+      toast.error(
+        `Preencha "${missingStaffVariables[0].variable.label}" (${missingStaffVariables[0].templateName}) antes de enviar.`,
+      );
+      return;
+    }
 
     setSending(true);
     setSentOk(false);
@@ -350,6 +539,7 @@ export default function DocumentosPage() {
           public_token: token,
           content: doc.pdf_url ? {} : { text: doc.content },
           pdf_url: doc.pdf_url || null,
+          variable_values: doc.variable_values || {},
         });
         if (insertErr) throw insertErr;
 
@@ -402,12 +592,14 @@ export default function DocumentosPage() {
       setTmplFormType(tmpl.type);
       setTmplFormContent(tmpl.content?.text || tmpl.content?.body || "");
       setTmplFormIsDefault(tmpl.is_default || false);
+      setTmplFormVariables(tmpl.variables || []);
     } else {
       setEditingTemplate(null);
       setTmplFormName("");
       setTmplFormType("contrato");
       setTmplFormContent("");
       setTmplFormIsDefault(false);
+      setTmplFormVariables([]);
     }
     setTemplateFormOpen(true);
   };
@@ -426,6 +618,7 @@ export default function DocumentosPage() {
         content: { text: tmplFormContent.trim() },
         is_default: tmplFormIsDefault,
         clinic_id: accountId,
+        variables: tmplFormVariables,
       };
 
       if (editingTemplate && editingTemplate.clinic_id !== null) {
@@ -606,6 +799,12 @@ export default function DocumentosPage() {
                   required
                 />
               </div>
+
+              <TemplateVariablesEditor
+                variables={tmplFormVariables}
+                onChange={setTmplFormVariables}
+                onInsert={(key) => setTmplFormContent((prev) => `${prev}{{${key}}}`)}
+              />
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-3">
@@ -953,6 +1152,51 @@ export default function DocumentosPage() {
             )}
           </div>
 
+          {pendingStaffVariables.length > 0 && (
+            <div className="rounded-2xl border border-amber-300/60 bg-amber-50/40 p-5 space-y-3 shadow-xs">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-amber-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">
+                  !
+                </div>
+                <h2 className="text-sm font-black text-foreground">
+                  Preencha antes de enviar
+                </h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {pendingStaffVariables.map(({ templateId, templateName, variable }) => {
+                  const stateKey = `${templateId}::${variable.key}`;
+                  return (
+                    <div key={stateKey}>
+                      <Label className="text-xs font-semibold">
+                        {variable.label}
+                        <span className="ml-1 font-normal text-muted-foreground">({templateName})</span>
+                      </Label>
+                      {variable.type === "procedure" ? (
+                        <select
+                          value={staffVarValues[stateKey] || ""}
+                          onChange={(e) => setStaffVarValues((prev) => ({ ...prev, [stateKey]: e.target.value }))}
+                          className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Selecione um procedimento...</option>
+                          {procedures.map((p) => (
+                            <option key={p.id} value={p.name}>{p.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          value={staffVarValues[stateKey] || ""}
+                          onChange={(e) => setStaffVarValues((prev) => ({ ...prev, [stateKey]: e.target.value }))}
+                          placeholder={variable.label}
+                          className="mt-1"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Step 3: Write document content */}
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
@@ -1072,7 +1316,7 @@ export default function DocumentosPage() {
             </button>
             <button
               onClick={handleSend}
-              disabled={sending || docsToSend.length === 0}
+              disabled={sending || docsToSend.length === 0 || missingStaffVariables.length > 0}
               className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-6 py-3 text-xs font-black transition-all shadow-md shadow-blue-200 cursor-pointer border-0"
             >
               {sending ? (
