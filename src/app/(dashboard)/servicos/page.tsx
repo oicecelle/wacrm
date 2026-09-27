@@ -41,6 +41,7 @@ interface Procedure {
   tempo_reserva_minutos: number;
   is_active: boolean;
   ativo: boolean;
+  default_room_id?: string | null;
 }
 
 interface Room {
@@ -121,6 +122,7 @@ export default function ServicosPage() {
   const [activeTab, setActiveTab] = useState<Tab>("procedures");
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [stockProducts, setStockProducts] = useState<{ id: string; name: string; unit: string }[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +139,9 @@ export default function ServicosPage() {
   const [procDuration, setProcDuration] = useState("60");
   const [procDescription, setProcDescription] = useState("");
   const [procAtivo, setProcAtivo] = useState(true);
+  const [procRoomId, setProcRoomId] = useState<string>("");
   const [commissions, setCommissions] = useState<Record<string, { type: "percentage" | "fixed"; value: string }>>({});
+  const [stockItems, setStockItems] = useState<{ product_id: string; quantity: string }[]>([]);
 
   /* ─── Room form state ─── */
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -160,9 +164,10 @@ export default function ServicosPage() {
     setLoading(true);
     setError(null);
     try {
-      const [procRes, roomRes] = await Promise.all([
+      const [procRes, roomRes, stockRes] = await Promise.all([
         supabase.from("procedures").select("*").eq("clinic_id", accountId).order("name"),
         supabase.from("rooms").select("*").eq("clinic_id", accountId).order("name"),
+        supabase.from("stock_products").select("id, name, unit").eq("clinic_id", accountId).order("name"),
       ]);
 
       if (procRes.error) throw procRes.error;
@@ -170,6 +175,7 @@ export default function ServicosPage() {
 
       setProcedures(procRes.data || []);
       setRooms(roomRes.data || []);
+      setStockProducts(stockRes.data || []);
 
       // Safe optional fetch for packages and team
       try {
@@ -201,7 +207,9 @@ export default function ServicosPage() {
     setProcName(""); setProcCategory(""); setProcColor("#3b82f6");
     setProcValue(""); setProcDuration("60"); setProcDescription("");
     setProcAtivo(true);
+    setProcRoomId("");
     setCommissions({});
+    setStockItems([]);
     setIsProcModalOpen(true);
   };
 
@@ -214,8 +222,22 @@ export default function ServicosPage() {
     setProcDuration((p.duration_minutes || p.tempo_reserva_minutos || 60).toString());
     setProcDescription(p.description || "");
     setProcAtivo(p.is_active !== false && p.ativo !== false);
+    setProcRoomId(p.default_room_id || "");
     setCommissions({});
+    setStockItems([]);
     setIsProcModalOpen(true);
+
+    try {
+      const { data: stockData } = await supabase
+        .from("procedure_stock_items")
+        .select("stock_product_id, quantity_used")
+        .eq("procedure_id", p.id);
+      if (stockData) {
+        setStockItems(stockData.map((s) => ({ product_id: s.stock_product_id, quantity: String(s.quantity_used) })));
+      }
+    } catch (err) {
+      console.error("Error loading procedure stock items:", err);
+    }
 
     try {
       const { data } = await supabase
@@ -250,6 +272,7 @@ export default function ServicosPage() {
         price: v, valor: v,
         duration_minutes: d, tempo_reserva_minutos: d,
         is_active: procAtivo, ativo: procAtivo,
+        default_room_id: procRoomId || null,
       };
       let procId = editingProc?.id;
       if (editingProc) {
@@ -279,6 +302,20 @@ export default function ServicosPage() {
         if (commissionInserts.length > 0) {
           const { error: commErr } = await supabase.from("procedure_commissions").insert(commissionInserts);
           if (commErr) throw commErr;
+        }
+
+        const stockInserts = stockItems
+          .filter((s) => s.product_id && parseFloat(s.quantity.replace(",", ".")) > 0)
+          .map((s) => ({
+            procedure_id: procId,
+            stock_product_id: s.product_id,
+            quantity_used: parseFloat(s.quantity.replace(",", ".")) || 1,
+          }));
+
+        await supabase.from("procedure_stock_items").delete().eq("procedure_id", procId);
+        if (stockInserts.length > 0) {
+          const { error: stockErr } = await supabase.from("procedure_stock_items").insert(stockInserts);
+          if (stockErr) throw stockErr;
         }
       }
 
@@ -748,6 +785,23 @@ export default function ServicosPage() {
                 </div>
               </div>
 
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-neutral-600 flex items-center gap-1">
+                  <MapPinIcon className="h-3.5 w-3.5" /> Sala/Unidade padrão
+                </Label>
+                <select
+                  value={procRoomId}
+                  onChange={(e) => setProcRoomId(e.target.value)}
+                  disabled={saving}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Nenhuma / a definir na hora do agendamento</option>
+                  {rooms.filter((r) => r.is_active).map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Status */}
               <div className="flex items-center justify-between rounded-xl bg-neutral-50 border p-3">
                 <div>
@@ -801,6 +855,73 @@ export default function ServicosPage() {
                   })}
                   {teamMembers.length === 0 && (
                     <p className="text-xs text-muted-foreground italic">Nenhum profissional cadastrado na equipe.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Stock items consumed by this procedure */}
+              <div className="space-y-3 pt-2 border-t border-neutral-100">
+                <Label className="text-xs font-bold text-neutral-600 flex items-center gap-1">
+                  <PackageIcon className="h-3.5 w-3.5" /> Produtos/Insumos Consumidos
+                </Label>
+                <p className="text-[10px] text-muted-foreground -mt-2">
+                  Ao fechar uma venda desse procedimento, essa quantidade é abatida do estoque
+                  automaticamente.
+                </p>
+                <div className="space-y-2">
+                  {stockItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <select
+                        value={item.product_id}
+                        onChange={(e) => {
+                          const next = [...stockItems];
+                          next[idx] = { ...next[idx], product_id: e.target.value };
+                          setStockItems(next);
+                        }}
+                        className="flex-1 rounded-lg border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">Selecione um produto...</option>
+                        {stockProducts.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        placeholder="Qtd."
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const next = [...stockItems];
+                          next[idx] = { ...next[idx], quantity: e.target.value };
+                          setStockItems(next);
+                        }}
+                        className="h-8 w-20 text-xs"
+                      />
+                      {stockProducts.find((p) => p.id === item.product_id)?.unit && (
+                        <span className="w-10 shrink-0 text-[10px] text-muted-foreground">
+                          {stockProducts.find((p) => p.id === item.product_id)?.unit}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setStockItems(stockItems.filter((_, i) => i !== idx))}
+                        className="shrink-0 text-red-400 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setStockItems([...stockItems, { product_id: "", quantity: "1" }])}
+                    className="w-full rounded-lg border border-dashed border-border py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-neutral-50"
+                  >
+                    + Adicionar produto
+                  </button>
+                  {stockProducts.length === 0 && (
+                    <p className="text-[10px] italic text-muted-foreground">
+                      Nenhum produto cadastrado no estoque ainda.
+                    </p>
                   )}
                 </div>
               </div>
