@@ -267,6 +267,22 @@ Responda APENAS com um JSON válido seguindo este schema exato:
       const endTime = ca.end_time || new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString();
       const apptType = ca.type || "Consulta";
 
+      // Best-effort link to a real registered procedure — the AI
+      // only extracted free text from the conversation, so this can
+      // legitimately miss (compound descriptions, typos, a service
+      // that isn't registered yet); a miss just leaves procedure_id
+      // null, same as any appointment created without a match.
+      let matchedProcedureId: string | null = null;
+      if (ca.type) {
+        const { data: proc } = await db
+          .from("procedures")
+          .select("id")
+          .eq("clinic_id", accountId)
+          .ilike("name", ca.type)
+          .maybeSingle();
+        matchedProcedureId = proc?.id ?? null;
+      }
+
       const { data: newAppt, error: apptErr } = await db
         .from("appointments")
         .insert({
@@ -277,6 +293,7 @@ Responda APENAS com um JSON válido seguindo este schema exato:
           end_time: endTime,
           status: "provisional",
           type: apptType,
+          procedure_id: matchedProcedureId,
           notes: ca.notes
             ? `${ca.notes}\n\n${LIA_LABEL}`
             : LIA_LABEL,

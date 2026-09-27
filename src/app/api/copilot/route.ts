@@ -742,6 +742,23 @@ async function executeTool(
 
       const contact = contacts[0];
       const startTime = new Date(`${date}T${time}:00`);
+
+      // Resolved once regardless of whether an explicit end_time was
+      // given — the appointment should link to the real procedure
+      // record either way, not just when duration needs guessing.
+      let matchedProcedureId: string | null = null;
+      let procedureDurationMinutes = 60;
+      if (procedure) {
+        const { data: proc } = await supabase
+          .from("procedures")
+          .select("id, duration_minutes")
+          .eq("clinic_id", accountId)
+          .ilike("name", procedure)
+          .maybeSingle();
+        matchedProcedureId = proc?.id ?? null;
+        if (proc?.duration_minutes) procedureDurationMinutes = proc.duration_minutes;
+      }
+
       let endDateTime: Date;
       if (end_time) {
         endDateTime = new Date(`${date}T${end_time}:00`);
@@ -751,17 +768,7 @@ async function executeTool(
         // 90-minute procedure and a 20-minute one shouldn't both
         // silently become "1 hour" just because no end time was
         // typed.
-        let durationMinutes = 60;
-        if (procedure) {
-          const { data: proc } = await supabase
-            .from("procedures")
-            .select("duration_minutes")
-            .eq("clinic_id", accountId)
-            .ilike("name", procedure)
-            .maybeSingle();
-          if (proc?.duration_minutes) durationMinutes = proc.duration_minutes;
-        }
-        endDateTime = new Date(startTime.getTime() + durationMinutes * 60_000);
+        endDateTime = new Date(startTime.getTime() + procedureDurationMinutes * 60_000);
       }
 
       // Get default professional
@@ -782,6 +789,7 @@ async function executeTool(
         end_time: endDateTime.toISOString(),
         status: "confirmed",
         type: procedure || null,
+        procedure_id: matchedProcedureId,
         notes: notes ? `${notes}\n\n${LIA_LABEL}` : LIA_LABEL,
         created_by_ai: true,
         ai_label: LIA_LABEL,

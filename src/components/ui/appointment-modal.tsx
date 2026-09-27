@@ -315,6 +315,7 @@ export function AppointmentModal({
   const [patientId, setPatientId] = useState("");
   const [professionalId, setProfessionalId] = useState("");
   const [procedureName, setProcedureName] = useState("");
+  const [procedureId, setProcedureId] = useState<string | null>(null);
   const [roomId, setRoomId] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -533,6 +534,7 @@ export function AppointmentModal({
       }
       setProfessionalId(defaultProfessionalId || user?.id || "");
       setProcedureName(defaultProcedureName || "");
+      setProcedureId(null);
       setRoomId("");
       setStatus("provisional");
       setNotes("");
@@ -587,6 +589,7 @@ export function AppointmentModal({
         setPatientId(appt.patient_id || "");
         setProfessionalId(appt.professional_id || "");
         setProcedureName(appt.type || "");
+        setProcedureId(appt.procedure_id || null);
         setRoomId(appt.room_id || "");
         
         const formatISOToLocalInput = (str: string) => {
@@ -633,6 +636,7 @@ export function AppointmentModal({
     setAiDocProcedure(cleanName);
 
     const proc = procedures.find((p) => p.name === cleanName);
+    setProcedureId(proc?.id ?? null);
     let duration = procedureDuration || 60;
     if (proc) {
       if (proc.duration_minutes) duration = proc.duration_minutes;
@@ -1244,6 +1248,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             status,
             notes,
             type: procedureName || null,
+            procedure_id: procedureId,
             room_id: roomId || null,
             color: appointmentColor || null,
             tag: appointmentTag || null,
@@ -1332,6 +1337,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             status,
             notes,
             type: procedureName || null,
+            procedure_id: procedureId,
             room_id: roomId || null,
             color: appointmentColor || null,
             tag: appointmentTag || null,
