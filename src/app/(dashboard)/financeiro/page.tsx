@@ -328,6 +328,7 @@ export default function FinanceiroPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [commissionRecords, setCommissionRecords] = useState<{ amount: number; created_at: string }[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [futureReceivables, setFutureReceivables] = useState(0);
   const [professionals, setProfessionals] = useState<{ name: string; commission: number }[]>([]);
@@ -375,8 +376,19 @@ export default function FinanceiroPage() {
         status: tx.status as any,
         contactName: tx.patient_id ? patientsMap[tx.patient_id] : undefined,
         installments: tx.installments_total > 1 ? { total: tx.installments_total, paid: tx.installments_paid || 1 } : undefined,
+        fee_amount: Number(tx.fee_amount || 0),
       }));
       setTransactions(formattedTx);
+
+      // Real per-item commission (see migration 062 / Fechar Compra) —
+      // replaces what used to be a flat, made-up 15%-of-revenue guess
+      // in the DRE below. created_at doubles as the date to filter by
+      // period, since a commission record has no date field of its own.
+      const { data: commData } = await supabase
+        .from("commission_records")
+        .select("amount, created_at")
+        .eq("clinic_id", clinicId);
+      setCommissionRecords(commData || []);
 
       // 2. Fetch packages & patient packages
       const { data: pPkgsData, error: pPkgsErr } = await supabase
@@ -674,6 +686,13 @@ export default function FinanceiroPage() {
     .filter((t) => (t.type === "receita" || t.type === "sinal") && t.status === "paid")
     .reduce((a, t) => a + (t.fee_amount || 0), 0);
 
+  // Real commission owed, per item actually sold via Fechar Compra
+  // (commission_records), filtered by the same period as everything
+  // else in this report.
+  const comissoesPagas = commissionRecords
+    .filter((c) => checkDateInRange(c.created_at, filterPeriod))
+    .reduce((a, c) => a + (c.amount || 0), 0);
+
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -686,7 +705,7 @@ export default function FinanceiroPage() {
 
   // DRE dynamically computed over filtered variables
   const totalFaturamento = receita + sinais;
-  const mc = totalFaturamento - taxasPagamento - (receita * 0.15);
+  const mc = totalFaturamento - taxasPagamento - comissoesPagas;
   const lucro = mc - despesa;
 
   const dreRows = [
@@ -694,7 +713,7 @@ export default function FinanceiroPage() {
     { label: "Receita de Procedimentos", value: receita, indent: true },
     { label: "Sinais (Depósitos)", value: sinais, indent: true },
     { label: "(-) Taxas de Pagamento", value: -taxasPagamento, type: "cost" as const },
-    { label: "(-) Comissões Profissionais (estimado)", value: -(receita * 0.15), type: "cost" as const },
+    { label: "(-) Comissões Profissionais", value: -comissoesPagas, type: "cost" as const },
     { label: "Margem de Contribuição", value: mc, type: "result" as const },
     { label: "(-) Custos Fixos (aluguel, salários)", value: -despesa, type: "cost" as const },
     { label: "Lucro Líquido", value: lucro, type: "result" as const },
