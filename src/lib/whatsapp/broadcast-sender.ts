@@ -16,8 +16,8 @@ import { sendUazapiTextMessage, sendUazapiMediaMessage } from '@/lib/whatsapp/ua
 export async function sendOneBroadcastRecipient(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: SupabaseClient<any, any, any>,
-  broadcast: { id: string; template_name: string; template_language: string | null },
-  recipient: { id: string; params: Record<string, string>; phone: string | null },
+  broadcast: { id: string; account_id?: string; template_name: string; template_language: string | null },
+  recipient: { id: string; contact_id?: string | null; params: Record<string, string>; phone: string | null },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,6 +115,24 @@ export async function sendOneBroadcastRecipient(
         error_message: null,
       })
       .eq('id', recipient.id)
+
+    // Only templates explicitly marked prevent_resend get logged —
+    // this table exists purely to answer "has this contact already
+    // gotten THIS template", so logging every send unconditionally
+    // would just be a write nobody reads for the common case.
+    if (templateRow?.prevent_resend && templateRow?.id && recipient.contact_id && broadcast.account_id) {
+      await admin
+        .from('template_send_log')
+        .upsert(
+          {
+            account_id: broadcast.account_id,
+            contact_id: recipient.contact_id,
+            template_id: templateRow.id,
+            last_sent_at: new Date().toISOString(),
+          },
+          { onConflict: 'account_id,contact_id,template_id', ignoreDuplicates: false },
+        )
+    }
   } else {
     await admin
       .from('broadcast_recipients')

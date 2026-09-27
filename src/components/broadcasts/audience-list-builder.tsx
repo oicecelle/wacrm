@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { normalizeBrazilianPhone } from '@/lib/whatsapp/phone-utils';
+import { findExistingContactsBatch, normalizeKey } from '@/lib/contacts/dedupe';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +17,12 @@ interface AudienceListBuilderProps {
   onChange: (contacts: ManualContact[]) => void;
   /** Variable names declared on the selected template, e.g. ['nome', 'servico']. */
   templateVariables: string[];
+  /** The selected template's id and prevent_resend flag — when set,
+   *  contacts who already received THIS template get held out of the
+   *  active list by default, with a banner offering to add them
+   *  anyway. Templates without prevent_resend skip this entirely. */
+  templateId?: string;
+  preventResend?: boolean;
 }
 
 type SourceTab = 'search' | 'manual' | 'paste' | 'excel';
@@ -82,9 +89,13 @@ export function AudienceListBuilder({
   contacts,
   onChange,
   templateVariables,
+  templateId,
+  preventResend,
 }: AudienceListBuilderProps) {
   const { profile } = useAuth();
   const [tab, setTab] = useState<SourceTab>('search');
+  const [excludedContacts, setExcludedContacts] = useState<ManualContact[]>([]);
+  const [checkingResend, setCheckingResend] = useState(false);
 
   // ── Search existing contacts ──────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
@@ -271,17 +282,85 @@ export function AudienceListBuilder({
   }
 
   // ── Shared list mutation ────────────────────────────────────────────
-  function mergeContacts(toAdd: ManualContact[]) {
+  async function mergeContacts(toAdd: ManualContact[]) {
     const byPhone = new Map(contacts.map((c) => [c.phone, c]));
+    const merged: { phone: string; name?: string; variables: Record<string, string> }[] = [];
     for (const c of toAdd) {
       const existing = byPhone.get(c.phone);
-      byPhone.set(c.phone, {
+      const row = {
         phone: c.phone,
         name: c.name ?? existing?.name,
         variables: { ...existing?.variables, ...c.variables },
-      });
+      };
+      byPhone.set(c.phone, row);
+      merged.push(row);
     }
-    onChange(Array.from(byPhone.values()));
+
+    // Templates without prevent_resend skip this check entirely — no
+    // extra round trip, no banner, nothing changes from before.
+    if (!preventResend || !templateId || !profile?.account_id) {
+      onChange(Array.from(byPhone.values()));
+      return;
+    }
+
+    setCheckingResend(true);
+    try {
+      // Match against the account's contacts the same fuzzy way the
+      // rest of the app resolves "is this the same person" (formatting
+      // differences, missing "55", etc.) — not a raw phone comparison.
+      const existingByKey = await findExistingContactsBatch(
+        createClient() as unknown as Parameters<typeof findExistingContactsBatch>[0],
+        profile.account_id,
+        merged.map((r) => r.phone),
+      );
+      const contactIds = [...existingByKey.values()].map((c) => c.id);
+
+      let alreadySentIds = new Set<string>();
+      if (contactIds.length > 0) {
+        const { data: logRows } = await createClient()
+          .from('template_send_log')
+          .select('contact_id')
+          .eq('account_id', profile.account_id)
+          .eq('template_id', templateId)
+          .in('contact_id', contactIds);
+        alreadySentIds = new Set((logRows ?? []).map((r) => r.contact_id));
+      }
+
+      const toKeep: typeof merged = [];
+      const toExclude: typeof merged = [];
+      for (const row of merged) {
+        const match = existingByKey.get(normalizeKey(row.phone));
+        if (match && alreadySentIds.has(match.id)) {
+          toExclude.push(row);
+        } else {
+          toKeep.push(row);
+        }
+      }
+
+      if (toExclude.length > 0) {
+        setExcludedContacts((prev) => {
+          const byPhoneExcl = new Map(prev.map((c) => [c.phone, c]));
+          for (const row of toExclude) byPhoneExcl.set(row.phone, row);
+          return Array.from(byPhoneExcl.values());
+        });
+      }
+      // Rebuild the active map without the excluded rows before saving.
+      for (const row of toExclude) byPhone.delete(row.phone);
+      onChange(Array.from(byPhone.values()));
+    } finally {
+      setCheckingResend(false);
+    }
+  }
+
+  function addExcludedAnyway(phone: string) {
+    const row = excludedContacts.find((c) => c.phone === phone);
+    if (!row) return;
+    setExcludedContacts((prev) => prev.filter((c) => c.phone !== phone));
+    onChange([...contacts, row]);
+  }
+
+  function dismissExcluded(phone: string) {
+    setExcludedContacts((prev) => prev.filter((c) => c.phone !== phone));
   }
 
   function removeContact(phone: string) {
@@ -524,6 +603,44 @@ export function AudienceListBuilder({
             <Button onClick={cancelMapping} variant="outline" size="sm">
               Cancelar
             </Button>
+          </div>
+        </div>
+      )}
+
+      {checkingResend && (
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Verificando quem já recebeu este modelo...
+        </div>
+      )}
+
+      {excludedContacts.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <p className="mb-2 text-sm font-medium text-amber-700">
+            {excludedContacts.length} contato{excludedContacts.length === 1 ? '' : 's'} removido
+            {excludedContacts.length === 1 ? '' : 's'} da lista — já recebeu este modelo antes
+          </p>
+          <div className="space-y-1.5">
+            {excludedContacts.map((c) => (
+              <div key={c.phone} className="flex items-center justify-between rounded-lg bg-card px-3 py-2 text-xs">
+                <span className="text-foreground">{c.name || c.phone}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => addExcludedAnyway(c.phone)}
+                    className="font-semibold text-amber-700 hover:underline"
+                  >
+                    Adicionar mesmo assim
+                  </button>
+                  <button
+                    onClick={() => dismissExcluded(c.phone)}
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Descartar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

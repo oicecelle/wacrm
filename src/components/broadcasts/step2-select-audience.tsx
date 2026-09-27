@@ -590,6 +590,8 @@ export function Step2SelectAudience({
           contacts={audience.csvContacts ?? []}
           onChange={(csvContacts) => onUpdate({ ...audience, csvContacts })}
           templateVariables={template?.variables ?? []}
+          templateId={template?.id}
+          preventResend={template?.prevent_resend ?? false}
         />
       )}
 

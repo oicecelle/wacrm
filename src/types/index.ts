@@ -280,6 +280,10 @@ export interface MessageTemplate {
   buttons?: TemplateButton[];
   sample_values?: TemplateSampleValues;
   status?: MessageTemplateStatus;
+  /** When true, this template's audience-building step excludes
+   *  contacts who already received it (with an "add anyway" option),
+   *  using template_send_log to know who's already gotten it. */
+  prevent_resend?: boolean;
   meta_template_id?: string;
   rejection_reason?: string;
   quality_score?: 'GREEN' | 'YELLOW' | 'RED';

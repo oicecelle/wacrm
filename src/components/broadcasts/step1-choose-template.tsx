@@ -17,7 +17,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Loader2, FileText, ArrowRight, Plus, Save } from 'lucide-react';
+import { Loader2, FileText, ArrowRight, Plus, Save, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const categoryColors: Record<string, string> = {
@@ -64,6 +64,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newBody, setNewBody] = useState('');
+  const [newPreventResend, setNewPreventResend] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function fetchTemplates() {
@@ -142,6 +143,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
           language: 'pt_BR',
           body_text: newBody.trim(),
           variables,
+          prevent_resend: newPreventResend,
           // Uazapi templates skip Meta's review pipeline entirely —
           // they're usable the moment they're saved.
           status: 'APPROVED',
@@ -155,6 +157,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
       setCreateOpen(false);
       setNewName('');
       setNewBody('');
+      setNewPreventResend(false);
       await fetchTemplates();
       if (data) onSelect(data as MessageTemplate);
     } catch (err) {
@@ -162,6 +165,28 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
     } finally {
       setSaving(false);
     }
+  }
+
+  async function togglePreventResend(template: MessageTemplate, e: React.MouseEvent) {
+    e.stopPropagation(); // don't select the template, just flip its setting
+    const next = !template.prevent_resend;
+    const supabase = createClient();
+    const { error: toggleError } = await supabase
+      .from('message_templates')
+      .update({ prevent_resend: next })
+      .eq('id', template.id);
+    if (toggleError) {
+      toast.error('Falha ao atualizar o modelo.');
+      return;
+    }
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === template.id ? { ...t, prevent_resend: next } : t)),
+    );
+    toast.success(
+      next
+        ? 'Agora quem já recebeu este modelo é removido por padrão da próxima lista.'
+        : 'Controle de reenvio desligado para este modelo.',
+    );
   }
 
   if (loading) {
@@ -234,8 +259,26 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                   </span>
                 </div>
                 <p className="line-clamp-3 text-xs text-muted-foreground">{template.body_text}</p>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{template.language ?? 'pt_BR'}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => togglePreventResend(template, e)}
+                    title={
+                      template.prevent_resend
+                        ? 'Não reenvia pro mesmo contato — clique pra desligar'
+                        : 'Clique pra não reenviar pro mesmo contato'
+                    }
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition-colors ${
+                      template.prevent_resend
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                        : 'border-border text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <ShieldCheck className="h-3 w-3" />
+                    {template.prevent_resend ? 'Sem reenvio' : 'Permite reenvio'}
+                  </span>
                 </div>
               </button>
             );
@@ -318,6 +361,22 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                 placeholder="Olá {{nome}}, seu horário em {{data}} às {{horario}} está confirmado."
               />
             </div>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border bg-card/50 p-3">
+              <input
+                type="checkbox"
+                checked={newPreventResend}
+                onChange={(e) => setNewPreventResend(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
+              />
+              <span className="text-xs text-foreground">
+                <span className="font-medium">Não enviar de novo pro mesmo contato.</span>{' '}
+                <span className="text-muted-foreground">
+                  Quem já recebeu este modelo antes é removido por padrão ao montar a lista de um
+                  próximo disparo (com a opção de incluir mesmo assim).
+                </span>
+              </span>
+            </label>
           </div>
 
           <DialogFooter>

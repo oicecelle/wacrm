@@ -177,6 +177,7 @@ export async function GET(request: Request) {
         broadcast,
         {
           id: recipient.id,
+          contact_id: recipient.contact?.id ?? null,
           params: recipient.params,
           phone: recipient.contact?.phone ?? null,
         },

@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const { data: broadcast, error: fetchError } = await supabase
       .from('broadcasts')
-      .select('id, status, template_name, template_language, interval_seconds')
+      .select('id, account_id, status, template_name, template_language, interval_seconds')
       .eq('id', id)
       .eq('account_id', accountId)
       .maybeSingle()
@@ -102,7 +102,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     while (keepGoing && Date.now() - startedAt < TIME_BUDGET_MS) {
       const { data: pending } = await admin
         .from('broadcast_recipients')
-        .select('id, params, contact:contacts(phone)')
+        .select('id, params, contact:contacts(id, phone)')
         .eq('broadcast_id', id)
         .eq('status', 'pending')
         .order('created_at', { ascending: true })
@@ -128,8 +128,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const contact = Array.isArray(recipient.contact) ? recipient.contact[0] : recipient.contact
         const result = await sendOneBroadcastRecipient(
           admin,
-          { id: broadcast.id, template_name: broadcast.template_name, template_language: broadcast.template_language },
-          { id: recipient.id, params: (recipient.params as Record<string, string>) ?? {}, phone: contact?.phone ?? null },
+          { id: broadcast.id, account_id: broadcast.account_id, template_name: broadcast.template_name, template_language: broadcast.template_language },
+          { id: recipient.id, contact_id: contact?.id ?? null, params: (recipient.params as Record<string, string>) ?? {}, phone: contact?.phone ?? null },
           config,
           templateRow,
         )
