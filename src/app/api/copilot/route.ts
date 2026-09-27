@@ -1028,13 +1028,34 @@ async function executeTool(
       if (!contacts?.length) return `Não encontrei "${contact_name}".`;
       const contact = contacts[0];
 
+      // Best-effort match against the account's configured payment
+      // methods, by type — LIA only knows a general method like
+      // "pix"/"credito", not which specific configured variant (e.g.
+      // "Crédito 3x" vs "Crédito 6x") the person meant, so this picks
+      // whichever active config of that type comes first. A miss
+      // just means no fee gets recorded, same as before this feature
+      // existed.
+      const methodType = method || "pix";
+      const { data: methodConfig } = await supabase
+        .from("payment_method_configs")
+        .select("id, fee_percent")
+        .eq("clinic_id", accountId)
+        .eq("method_type", methodType)
+        .eq("is_active", true)
+        .order("sort_order")
+        .limit(1)
+        .maybeSingle();
+      const feeAmount = methodConfig ? Math.round(Number(value) * (methodConfig.fee_percent / 100) * 100) / 100 : 0;
+
       const { error } = await supabase.from("financial_transactions").insert({
         clinic_id: accountId,
         patient_id: contact.id,
         date: new Date().toISOString().slice(0, 10),
         description: description ? `${description} — ${LIA_LABEL}` : `Pagamento registrado — ${LIA_LABEL}`,
         category: "Pagamento",
-        method: method || "pix",
+        method: methodType,
+        payment_method_config_id: methodConfig?.id ?? null,
+        fee_amount: feeAmount,
         type: "pagamento",
         value: Number(value),
         status: "paid",

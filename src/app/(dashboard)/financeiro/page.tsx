@@ -40,6 +40,7 @@ interface Transaction {
   status: TxStatus;
   contactName?: string;
   installments?: { total: number; paid: number };
+  fee_amount?: number;
 }
 
 interface Package {
@@ -665,6 +666,13 @@ export default function FinanceiroPage() {
   const despesa = filteredTx.filter((t) => t.type === "despesa" && t.status === "paid").reduce((a, t) => a + t.value, 0);
   const sinais = filteredTx.filter((t) => t.type === "sinal" && t.status === "paid").reduce((a, t) => a + t.value, 0);
   const inadimplentes = filteredTx.filter((t) => t.status === "overdue");
+  // Real fee total from each transaction's own recorded fee_amount
+  // (set at the moment it was paid, per the payment method's
+  // configured rate — see Configurações → Formas de Pagamento).
+  // Replaces what used to be a flat, made-up 5% guess.
+  const taxasPagamento = filteredTx
+    .filter((t) => (t.type === "receita" || t.type === "sinal") && t.status === "paid")
+    .reduce((a, t) => a + (t.fee_amount || 0), 0);
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -678,15 +686,15 @@ export default function FinanceiroPage() {
 
   // DRE dynamically computed over filtered variables
   const totalFaturamento = receita + sinais;
-  const mc = totalFaturamento - (receita * 0.05) - (receita * 0.15);
+  const mc = totalFaturamento - taxasPagamento - (receita * 0.15);
   const lucro = mc - despesa;
 
   const dreRows = [
     { label: "Faturamento Bruto", value: totalFaturamento, type: "result" as const },
     { label: "Receita de Procedimentos", value: receita, indent: true },
     { label: "Sinais (Depósitos)", value: sinais, indent: true },
-    { label: "(-) Custos Variáveis (taxas, impostos)", value: -(receita * 0.05), type: "cost" as const },
-    { label: "(-) Comissões Profissionais", value: -(receita * 0.15), type: "cost" as const },
+    { label: "(-) Taxas de Pagamento", value: -taxasPagamento, type: "cost" as const },
+    { label: "(-) Comissões Profissionais (estimado)", value: -(receita * 0.15), type: "cost" as const },
     { label: "Margem de Contribuição", value: mc, type: "result" as const },
     { label: "(-) Custos Fixos (aluguel, salários)", value: -despesa, type: "cost" as const },
     { label: "Lucro Líquido", value: lucro, type: "result" as const },

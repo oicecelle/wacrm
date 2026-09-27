@@ -110,6 +110,10 @@ export function ContactDetailView({
   const [txDesc, setTxDesc] = useState('');
   const [txCategory, setTxCategory] = useState('Procedimento');
   const [txMethod, setTxMethod] = useState('pix');
+  const [txMethodConfigId, setTxMethodConfigId] = useState<string>('');
+  const [paymentMethodConfigs, setPaymentMethodConfigs] = useState<
+    { id: string; name: string; method_type: string; fee_percent: number }[]
+  >([]);
   const [txType, setTxType] = useState<'receita' | 'despesa'>('receita');
   const [txValue, setTxValue] = useState('');
   const [txStatus, setTxStatus] = useState('paid');
@@ -223,6 +227,26 @@ export function ContactDetailView({
     setLoadingTransactions(false);
   }, [contactId, supabase]);
 
+  const fetchPaymentMethodConfigs = useCallback(async () => {
+    if (!accountId) return;
+    const { data } = await supabase
+      .from('payment_method_configs')
+      .select('id, name, method_type, fee_percent')
+      .eq('clinic_id', accountId)
+      .eq('is_active', true)
+      .order('sort_order');
+    if (data) {
+      setPaymentMethodConfigs(data);
+      // Default to whichever config is named/typed "pix" (matches
+      // the old hardcoded default), falling back to the first one.
+      const pixConfig = data.find((c) => c.method_type === 'pix') || data[0];
+      if (pixConfig) {
+        setTxMethodConfigId(pixConfig.id);
+        setTxMethod(pixConfig.method_type);
+      }
+    }
+  }, [accountId, supabase]);
+
   const handleIARequest = async () => {
     if (!contactId) return;
     setLoadingAISummary(true);
@@ -270,14 +294,20 @@ export function ContactDetailView({
     }
     setSavingTransaction(true);
     try {
+      const value = parseFloat(txValue);
+      const selectedConfig = paymentMethodConfigs.find((c) => c.id === txMethodConfigId);
+      const feeAmount = selectedConfig ? Math.round(value * (selectedConfig.fee_percent / 100) * 100) / 100 : 0;
+
       const { error } = await supabase.from('financial_transactions').insert({
         clinic_id: accountId,
         patient_id: contactId,
         description: txDesc.trim(),
         category: txCategory,
         method: txMethod,
+        payment_method_config_id: txMethodConfigId || null,
+        fee_amount: feeAmount,
         type: txType,
-        value: parseFloat(txValue),
+        value,
         status: txStatus,
         date: txDate,
         source: 'manual',
@@ -306,9 +336,10 @@ export function ContactDetailView({
       fetchDeals();
       fetchTimeline();
       fetchTransactions();
+      fetchPaymentMethodConfigs();
       setAiSummary(null);
     }
-  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals, fetchTimeline, fetchTransactions]);
+  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals, fetchTimeline, fetchTransactions, fetchPaymentMethodConfigs]);
 
   async function copyPhone() {
     if (!contact) return;
@@ -1061,17 +1092,19 @@ export function ContactDetailView({
                         <div className="space-y-1">
                           <Label className="text-muted-foreground text-[10px] font-bold uppercase">Método</Label>
                           <select
-                            value={txMethod}
-                            onChange={(e) => setTxMethod(e.target.value)}
+                            value={txMethodConfigId}
+                            onChange={(e) => {
+                              const config = paymentMethodConfigs.find((c) => c.id === e.target.value);
+                              setTxMethodConfigId(e.target.value);
+                              if (config) setTxMethod(config.method_type);
+                            }}
                             className="w-full rounded-lg bg-background border border-border px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
                           >
-                            <option value="pix">Pix</option>
-                            <option value="credito">Crédito</option>
-                            <option value="debito">Débito</option>
-                            <option value="dinheiro">Dinheiro</option>
-                            <option value="transferencia">Transferência</option>
-                            <option value="boleto">Boleto</option>
-                            <option value="outro">Outro</option>
+                            {paymentMethodConfigs.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}{c.fee_percent > 0 ? ` (${c.fee_percent}% taxa)` : ""}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>
