@@ -390,6 +390,12 @@ export function AppointmentModal({
   const [savingCustomFields, setSavingCustomFields] = useState(false);
   const [contactDeals, setContactDeals] = useState<any[]>([]);
   const [loadingContactDeals, setLoadingContactDeals] = useState(false);
+  const [contactPanelExpanded, setContactPanelExpanded] = useState(true);
+  const [editContactName, setEditContactName] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [editContactEmail, setEditContactEmail] = useState("");
+  const [editContactCompany, setEditContactCompany] = useState("");
+  const [savingContactDetails, setSavingContactDetails] = useState(false);
 
   const [patientPackages, setPatientPackages] = useState<any[]>([]);
   const [docTemplates, setDocTemplates] = useState<any[]>([]);
@@ -736,6 +742,10 @@ export function AppointmentModal({
       setCustomFieldDefs([]);
       setCustomFieldValues({});
       setContactDeals([]);
+      setEditContactName("");
+      setEditContactPhone("");
+      setEditContactEmail("");
+      setEditContactCompany("");
       return;
     }
 
@@ -794,6 +804,23 @@ export function AppointmentModal({
         .then(({ data }) => {
           setContactDeals(data || []);
           setLoadingContactDeals(false);
+        });
+
+      // Dedicated fetch (not reused from `patient`/`selectedPatientInfo`)
+      // because the editable "Dados do Contato" panel always writes to
+      // the `contacts` table specifically — the same source of truth
+      // contact-detail-view.tsx used — regardless of whether this
+      // person also has a `patients` row yet.
+      supabase
+        .from("contacts")
+        .select("name, phone, email, company")
+        .eq("id", patientId)
+        .maybeSingle()
+        .then(({ data }) => {
+          setEditContactName(data?.name ?? "");
+          setEditContactPhone(data?.phone ?? "");
+          setEditContactEmail(data?.email ?? "");
+          setEditContactCompany(data?.company ?? "");
         });
 
       try {
@@ -1601,6 +1628,30 @@ Qualquer dúvida, estou à disposição! 😊`;
     } finally {
       setSavingCustomFields(false);
     }
+  }
+
+  async function saveContactDetails() {
+    if (!patientId || !editContactPhone.trim()) {
+      toast.error("Telefone é obrigatório.");
+      return;
+    }
+    setSavingContactDetails(true);
+    const { error } = await supabase
+      .from("contacts")
+      .update({
+        name: editContactName.trim() || null,
+        phone: editContactPhone.trim(),
+        email: editContactEmail.trim() || null,
+        company: editContactCompany.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", patientId);
+    if (error) {
+      toast.error("Falha ao atualizar contato.");
+    } else {
+      toast.success("Contato atualizado.");
+    }
+    setSavingContactDetails(false);
   }
 
   const handleDelete = async () => {
@@ -3426,7 +3477,53 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                     {/* Tab: HISTORY (Appointments timeline & statistics) */}
                     {activeTab === "timeline" && (
-                      <div className="text-left">
+                      <div className="text-left space-y-4">
+                        {/* Collapsible "Dados do Contato" panel — the
+                            starting view when this modal is opened
+                            from Contatos, alongside the timeline. */}
+                        <div className="rounded-xl border border-border bg-neutral-50/50 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setContactPanelExpanded((prev) => !prev)}
+                            className="flex w-full items-center justify-between px-3.5 py-2.5 text-left"
+                          >
+                            <span className="flex items-center gap-1.5 text-xs font-black text-foreground">
+                              <UserIcon className="h-3.5 w-3.5 text-muted-foreground" /> Dados do Contato
+                            </span>
+                            {contactPanelExpanded ? (
+                              <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          {contactPanelExpanded && (
+                            <div className="space-y-3 border-t border-border px-3.5 py-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-muted-foreground text-xs">Nome</Label>
+                                <Input value={editContactName} onChange={(e) => setEditContactName(e.target.value)} className="h-8 text-sm" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-muted-foreground text-xs">
+                                  Telefone <span className="text-red-400">*</span>
+                                </Label>
+                                <Input value={editContactPhone} onChange={(e) => setEditContactPhone(e.target.value)} className="h-8 text-sm" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-muted-foreground text-xs">E-mail</Label>
+                                <Input value={editContactEmail} onChange={(e) => setEditContactEmail(e.target.value)} className="h-8 text-sm" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-muted-foreground text-xs">Empresa</Label>
+                                <Input value={editContactCompany} onChange={(e) => setEditContactCompany(e.target.value)} className="h-8 text-sm" />
+                              </div>
+                              <Button onClick={saveContactDetails} disabled={savingContactDetails} size="sm" className="w-full gap-1.5">
+                                {savingContactDetails ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SendIcon className="h-3.5 w-3.5" />}
+                                Salvar Alterações
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
                         {loadingTimeline ? (
                           <div className="flex items-center justify-center py-10">
                             <Loader2Icon className="h-5 w-5 animate-spin text-primary" />
