@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CloseSaleModal } from "@/components/ui/close-sale-modal";
 import {
   Loader2Icon,
   Trash2Icon,
@@ -316,6 +317,7 @@ export function AppointmentModal({
   const [professionalId, setProfessionalId] = useState("");
   const [procedureName, setProcedureName] = useState("");
   const [procedureId, setProcedureId] = useState<string | null>(null);
+  const [isCloseSaleOpen, setIsCloseSaleOpen] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -4307,7 +4309,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
             {/* Footer buttons row */}
             <footer className="border-t border-border p-4 bg-card shrink-0 flex items-center justify-between">
-              <div>
+              <div className="flex gap-2">
                 {appointmentId && (
                   <Button
                     type="button"
@@ -4318,6 +4320,17 @@ Qualquer dúvida, estou à disposição! 😊`;
                   >
                     <Trash2Icon className="h-4 w-4" />
                     Excluir
+                  </Button>
+                )}
+                {appointmentId && patientId && (
+                  <Button
+                    type="button"
+                    onClick={() => setIsCloseSaleOpen(true)}
+                    disabled={deleting || saving}
+                    className="gap-1.5 text-xs h-9 rounded-lg px-4 border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  >
+                    <DollarSignIcon className="h-4 w-4" />
+                    Fechar Venda
                   </Button>
                 )}
               </div>
@@ -4361,6 +4374,17 @@ Qualquer dúvida, estou à disposição! 😊`;
         onQuoteCreated={() => {
           fetchQuotes();
         }}
+      />
+
+      <CloseSaleModal
+        open={isCloseSaleOpen}
+        onClose={() => setIsCloseSaleOpen(false)}
+        onSaved={() => setIsCloseSaleOpen(false)}
+        appointmentId={appointmentId || null}
+        patientId={patientId}
+        patientName={selectedPatientInfo?.name || "Paciente"}
+        initialProcedureId={procedureId}
+        initialProfessionalId={professionalId || null}
       />
     </Dialog>
   );
