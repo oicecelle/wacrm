@@ -6,6 +6,7 @@ import {
   createGoogleEvent,
   updateGoogleEvent,
   deleteGoogleEvent,
+  isImportedGoogleBlock,
   type EventAppointment,
 } from '@/lib/integrations/google-calendar'
 import { normalizeGuestEmails } from '@/lib/appointments/guests'
@@ -89,6 +90,12 @@ export async function POST(request: Request) {
     if (!tokenExists) {
       // The professional hasn't integrated Google Calendar. Skip silently.
       return NextResponse.json({ status: 'skipped', reason: 'Integration not connected' })
+    }
+
+    // A block that was imported FROM Google mirrors someone's real event.
+    // Editing or deleting the mirror here must leave that event alone.
+    if (action !== 'create' && isImportedGoogleBlock(appointment.patients?.name)) {
+      return NextResponse.json({ status: 'skipped', reason: 'Imported from Google — original event left untouched' })
     }
 
     const guests = normalizeGuestEmails(appointment.guest_emails)

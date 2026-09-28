@@ -2,6 +2,18 @@ import { createClient } from "@supabase/supabase-js";
 import { normalizeGuestEmails } from "@/lib/appointments/guests";
 import { getEnv } from "@/lib/env";
 
+/**
+ * Events imported FROM Google become "Bloqueio" appointments tied to
+ * this placeholder patient. They mirror someone's real Google event
+ * (which may have other people invited), so the app must never edit or
+ * delete that original event when the mirror is changed here.
+ */
+export const GOOGLE_IMPORT_PLACEHOLDER_NAME = "Bloqueio (Google Calendar)";
+
+export function isImportedGoogleBlock(patientName?: string | null): boolean {
+  return patientName === GOOGLE_IMPORT_PLACEHOLDER_NAME;
+}
+
 // Lazy-initialized Supabase Admin Client
 let _adminClient: any = null;
 function getSupabaseAdmin() {
@@ -331,7 +343,9 @@ export async function deleteGoogleEvent(
   if (!token) return false;
 
   try {
-    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`, {
+    // sendUpdates=all: guests get Google's cancellation e-mail instead
+    // of the meeting silently vanishing from their calendar.
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}?sendUpdates=all`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -390,7 +404,7 @@ export async function syncGoogleEventsToDatabase(accountId: string, userId: stri
       .from("contacts")
       .select("id")
       .eq("account_id", accountId)
-      .eq("name", "Bloqueio (Google Calendar)")
+      .eq("name", GOOGLE_IMPORT_PLACEHOLDER_NAME)
       .maybeSingle();
 
     if (syncPatient) {
@@ -400,7 +414,7 @@ export async function syncGoogleEventsToDatabase(accountId: string, userId: stri
         .from("contacts")
         .insert({
           account_id: accountId,
-          name: "Bloqueio (Google Calendar)",
+          name: GOOGLE_IMPORT_PLACEHOLDER_NAME,
           phone: "00000000000",
         })
         .select("id")

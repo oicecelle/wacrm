@@ -21,6 +21,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CloseSaleModal } from "@/components/ui/close-sale-modal";
 import { OnlineGuestsSection } from "@/components/agenda/online-guests-section";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { RegisterPaymentForm } from "@/components/agenda/register-payment-form";
+import { usePermissions } from "@/hooks/use-permissions";
+import { isIncomeType } from "@/lib/finance/payment-entry";
 import { normalizeGuestEmails } from "@/lib/appointments/guests";
 import {
   Loader2Icon,
@@ -331,6 +335,10 @@ export function AppointmentModal({
   const [procedureName, setProcedureName] = useState("");
   const [procedureId, setProcedureId] = useState<string | null>(null);
   // Online appointment (Google Meet) + e-mail guests invited via Google Calendar.
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canEditFinance = hasPermission("financeiro", "edit");
   const [isOnline, setIsOnline] = useState(false);
   const [guestEmails, setGuestEmails] = useState<string[]>([]);
   const [meetLink, setMeetLink] = useState("");
@@ -484,6 +492,7 @@ export function AppointmentModal({
   useEffect(() => {
     if (!open || !profile) return;
     setActiveTab(initialTab);
+    setShowPaymentForm(false);
 
     const loadOptions = async () => {
       try {
@@ -1031,12 +1040,7 @@ export function AppointmentModal({
         setBodyEvaluations(evalData || []);
 
         // 7. Financial Transactions
-        const { data: txList } = await supabase
-          .from("financial_transactions")
-          .select("*")
-          .eq("patient_id", patientId)
-          .order("created_at", { ascending: false });
-        setPatientTransactions(txList || []);
+        setPatientTransactions(await fetchPatientTransactionRows(patientId));
 
         // 8. Quotes (Orçamentos)
         const { data: quotesList } = await supabase
@@ -1697,6 +1701,28 @@ Qualquer dúvida, estou à disposição! 😊`;
     setSavingContactDetails(false);
   }
 
+  // A patient's financial lines, newest PAYMENT DATE first (then newest
+  // recorded) — so backdated payments and imported history sit where
+  // they belong instead of at the top just because they were entered today.
+  async function fetchPatientTransactionRows(id: string) {
+    const { data } = await supabase
+      .from("financial_transactions")
+      .select("*")
+      .eq("patient_id", id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false });
+    return data || [];
+  }
+
+  const refreshPatientTransactions = async () => {
+    if (patientId) setPatientTransactions(await fetchPatientTransactionRows(patientId));
+  };
+
+  const METHOD_LABELS: Record<string, string> = {
+    pix: "Pix", dinheiro: "Dinheiro", debito: "Débito", credito: "Crédito",
+    transferencia: "Transferência", boleto: "Boleto", outro: "Outro",
+  };
+
   // Tells the person what the Google Calendar sync did with the online
   // link / guests — the sync runs after the modal closes, so without this
   // a missing Meet link or an unsent invitation would go unnoticed.
@@ -1745,20 +1771,41 @@ Qualquer dúvida, estou à disposição! 😊`;
     />
   );
 
+  // Runs after the person confirms in the dialog below.
   const handleDelete = async () => {
     if (!appointmentId) return;
-    if (!confirm("Tem certeza que deseja excluir este agendamento?")) return;
-
+    setDeleteConfirmOpen(false);
     setDeleting(true);
     setError(null);
 
     try {
       const { data } = await supabase
         .from("appointments")
-        .select("patient_id")
+        .select("patient_id, google_event_id")
         .eq("id", appointmentId)
         .single();
-        
+
+      // Remove the Google Calendar event FIRST: the sync route looks the
+      // appointment up in the database, so it has to run while the row
+      // still exists. A Google failure never blocks the deletion here —
+      // it's reported afterwards so the person can clean it up by hand.
+      let googleWarning = false;
+      if (data?.google_event_id) {
+        try {
+          const res = await fetch("/api/integrations/google/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete", appointmentId }),
+            signal: AbortSignal.timeout(10000),
+          });
+          const g = await res.json().catch(() => ({}));
+          if (g?.status === "deleted" && g.success === false) googleWarning = true;
+          if (!res.ok || g?.status === "failed") googleWarning = true;
+        } catch {
+          googleWarning = true;
+        }
+      }
+
       const { error: deleteErr } = await supabase
         .from("appointments")
         .delete()
@@ -1778,6 +1825,9 @@ Qualquer dúvida, estou à disposição! 😊`;
         });
       }
 
+      if (googleWarning) {
+        toast.warning("Agendamento excluído, mas não foi possível remover o evento do Google Agenda. Remova-o por lá.");
+      }
       onSave();
       onOpenChange(false);
     } catch (err: any) {
@@ -4307,33 +4357,62 @@ Qualquer dúvida, estou à disposição! 😊`;
                             <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-left shadow-xs">
                               <span className="text-[9px] text-emerald-600 font-black uppercase block tracking-wider">Faturado / Recebido</span>
                               <span className="text-xl font-black text-emerald-800">
-                                R$ {patientTransactions.filter(t => t.type === 'receita' && t.status === 'paid').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
+                                R$ {patientTransactions.filter(t => isIncomeType(t.type) && t.status === 'paid').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
                               </span>
                             </div>
                             <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-left shadow-xs">
                               <span className="text-[9px] text-rose-600 font-black uppercase block tracking-wider">Pendente de Cobrança</span>
                               <span className="text-xl font-black text-rose-800">
-                                R$ {patientTransactions.filter(t => t.type === 'receita' && t.status === 'pending').reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
+                                R$ {patientTransactions.filter(t => isIncomeType(t.type) && (t.status === 'pending' || t.status === 'overdue')).reduce((acc, curr) => acc + Number(curr.value), 0).toFixed(2)}
                               </span>
                             </div>
                           </div>
 
                           {/* List of Financial Transactions */}
                           <div className="space-y-3">
-                            <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Lançamentos Financeiros</h4>
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-black text-neutral-700 uppercase tracking-wider">Lançamentos Financeiros</h4>
+                              {canEditFinance && patientId && !showPaymentForm && (
+                                <Button
+                                  type="button"
+                                  onClick={() => setShowPaymentForm(true)}
+                                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-bold h-7 gap-1 rounded-lg"
+                                >
+                                  <PlusIcon className="h-3 w-3" />
+                                  Registrar pagamento
+                                </Button>
+                              )}
+                            </div>
+                            {showPaymentForm && canEditFinance && clinicId && patientId && (
+                              <RegisterPaymentForm
+                                clinicId={clinicId}
+                                patientId={patientId}
+                                patientName={selectedPatientInfo?.name}
+                                onCancel={() => setShowPaymentForm(false)}
+                                onSaved={async () => {
+                                  setShowPaymentForm(false);
+                                  await refreshPatientTransactions();
+                                }}
+                              />
+                            )}
                             {patientTransactions.length === 0 ? (
                               <p className="text-xs text-muted-foreground italic">Nenhuma transação financeira lançada no histórico.</p>
                             ) : (
                               <div className="border border-neutral-100 rounded-xl overflow-hidden shadow-xs divide-y divide-neutral-100">
                                 {patientTransactions.map((tx) => {
-                                  const isIncome = tx.type === "receita";
+                                  const isIncome = isIncomeType(tx.type);
                                   const isPaid = tx.status === "paid";
+                                  const isOverdue = tx.status === "overdue";
+                                  const paidOn = tx.date ? new Date(`${tx.date}T12:00:00`) : new Date(tx.created_at || tx.due_date);
                                   return (
                                     <div key={tx.id} className="flex items-center justify-between p-3.5 bg-card text-xs gap-4">
                                       <div className="text-left min-w-0">
                                         <p className="font-extrabold text-foreground truncate">{tx.description || "Transação Sem Título"}</p>
                                         <p className="text-[9px] text-muted-foreground">
-                                          Data: {new Date(tx.created_at || tx.due_date).toLocaleDateString("pt-BR")}
+                                          {paidOn.toLocaleDateString("pt-BR")}
+                                          {tx.method ? ` · ${METHOD_LABELS[tx.method] ?? tx.method}` : ""}
+                                          {tx.category ? ` · ${tx.category}` : ""}
+                                          {Number(tx.fee_amount) > 0 ? ` · taxa R$ ${Number(tx.fee_amount).toFixed(2)}` : ""}
                                         </p>
                                       </div>
                                       <div className="flex items-center gap-3 shrink-0">
@@ -4341,9 +4420,9 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           {isIncome ? "+" : "-"} R$ {Number(tx.value).toFixed(2)}
                                         </span>
                                         <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                          isPaid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-600"
+                                          isPaid ? "bg-emerald-50 text-emerald-700" : isOverdue ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-600"
                                         }`}>
-                                          {isPaid ? "Pago" : "Pendente"}
+                                          {isPaid ? "Pago" : isOverdue ? "Vencido" : "Pendente"}
                                         </span>
                                       </div>
                                     </div>
@@ -4905,7 +4984,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={handleDelete}
+                    onClick={() => setDeleteConfirmOpen(true)}
                     disabled={deleting || saving}
                     className="gap-1.5 text-xs h-9 rounded-lg px-4 border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
                   >
@@ -4965,6 +5044,15 @@ Qualquer dúvida, estou à disposição! 😊`;
         onQuoteCreated={() => {
           fetchQuotes();
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Excluir agendamento"
+        description="Tem certeza que deseja excluir este agendamento? Se ele estiver no Google Agenda, o evento também será removido e os convidados serão avisados."
+        confirmLabel="Excluir"
+        onConfirm={handleDelete}
       />
 
       <CloseSaleModal

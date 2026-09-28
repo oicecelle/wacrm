@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildEventPayload, extractMeetLink } from "./google-calendar";
+import { buildEventPayload, extractMeetLink, GOOGLE_IMPORT_PLACEHOLDER_NAME, isImportedGoogleBlock } from "./google-calendar";
 
 const base = {
   type: "Consulta de retorno",
@@ -77,5 +77,17 @@ describe("extractMeetLink", () => {
   it("returns null when there is no conference", () => {
     expect(extractMeetLink({})).toBeNull();
     expect(extractMeetLink(null)).toBeNull();
+  });
+});
+
+describe("isImportedGoogleBlock", () => {
+  it("recognises the placeholder patient that imported Google events hang off", () => {
+    expect(isImportedGoogleBlock(GOOGLE_IMPORT_PLACEHOLDER_NAME)).toBe(true);
+  });
+  it("never treats a real patient, a missing name or a look-alike as imported", () => {
+    expect(isImportedGoogleBlock("Maria Silva")).toBe(false);
+    expect(isImportedGoogleBlock("Bloqueio")).toBe(false);
+    expect(isImportedGoogleBlock(null)).toBe(false);
+    expect(isImportedGoogleBlock(undefined)).toBe(false);
   });
 });
