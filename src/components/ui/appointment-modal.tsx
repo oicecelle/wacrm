@@ -26,6 +26,7 @@ import { RegisterPaymentForm } from "@/components/agenda/register-payment-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { isIncomeType } from "@/lib/finance/payment-entry";
 import { normalizeGuestEmails } from "@/lib/appointments/guests";
+import { checkSlotAgainstSchedule, describeSlotCheck, parseWeekSchedule, type SlotCheck } from "@/lib/schedule/professional-schedule";
 import {
   Loader2Icon,
   Trash2Icon,
@@ -265,6 +266,7 @@ interface StaffOption {
   id: string;
   name: string;
   user_id?: string;
+  schedules?: unknown;
 }
 
 interface SmartPanelData {
@@ -530,11 +532,11 @@ export function AppointmentModal({
         // Fetch staff (clinic_users)
         const { data: stData } = await supabase
           .from("clinic_users")
-          .select("id, user_id, name")
+          .select("id, user_id, name, schedules")
           .eq("clinic_id", clinicId)
           .eq("is_active", true)
           .order("name");
-        const mappedStaff = (stData || []).map((s) => ({ id: s.id, user_id: s.user_id, name: s.name }));
+        const mappedStaff = (stData || []).map((s) => ({ id: s.id, user_id: s.user_id, name: s.name, schedules: s.schedules }));
         setStaff(mappedStaff);
 
         // Fetch procedures with values and prices
@@ -2503,6 +2505,19 @@ Qualquer dúvida, estou à disposição! 😊`;
 
   const renderStaffSelector = () => {
     const selectedStaffObj = staff.find((s) => s.id === professionalId);
+
+    // Warned, never blocked — the schedule is a guide for the front
+    // desk, not a hard rule (a professional can always cover an
+    // exception), so this never stops the save.
+    let scheduleCheck: SlotCheck | null = null;
+    if (selectedStaffObj && startTime && endTime && apptType !== "bloqueio") {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        scheduleCheck = checkSlotAgainstSchedule(parseWeekSchedule(selectedStaffObj.schedules), start, end);
+      }
+    }
+
     return (
       <div className="relative">
         <button
@@ -2549,6 +2564,13 @@ Qualquer dúvida, estou à disposição! 😊`;
               ))}
             </div>
           </>
+        )}
+
+        {scheduleCheck && !scheduleCheck.ok && (
+          <p className="mt-1.5 flex items-start gap-1 text-[11px] font-semibold text-amber-600">
+            <BadgeAlertIcon className="mt-0.5 h-3 w-3 shrink-0" />
+            Fora do horário de {selectedStaffObj?.name}: {describeSlotCheck(scheduleCheck)}.
+          </p>
         )}
       </div>
     );
