@@ -69,6 +69,34 @@ interface FilterOption {
   color?: string | null;
 }
 
+/** One compact stat tile (used by the day/week summary above the agenda). */
+function SummaryCard({
+  icon,
+  tint,
+  value,
+  label,
+  title,
+}: {
+  icon: React.ReactNode;
+  tint: string;
+  value: string;
+  label: string;
+  title?: string;
+}) {
+  return (
+    <div
+      title={title}
+      className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5 shadow-xs sm:gap-3 sm:rounded-2xl sm:p-4"
+    >
+      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl", tint)}>{icon}</div>
+      <div className="min-w-0">
+        <p className="truncate text-base font-black leading-none text-foreground sm:text-lg">{value}</p>
+        <p className="truncate text-[9px] font-semibold text-muted-foreground sm:text-[10px]">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AgendaPage() {
   const supabase = useMemo(() => createClient(), []);
   const getStatusColor = useCallback((status: string) => {
@@ -148,6 +176,8 @@ export default function AgendaPage() {
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [calendarView, setCalendarView] = useState<"dia" | "semana" | "mes">("semana");
+  // Phones only: the week summary pair starts collapsed (always shown from `sm` up).
+  const [weekSummaryOpen, setWeekSummaryOpen] = useState(false);
 
   // Get week date list starting Sunday to Saturday
   const getWeekDates = (date: Date) => {
@@ -593,28 +623,39 @@ export default function AgendaPage() {
   }, [procedures]);
 
   const scheduleSummary = useMemo(() => {
+    // Count = everything still on the books; revenue = only what can
+    // actually be billed (a cancellation or a no-show brings in nothing).
     const isCountable = (status: string) => status !== "cancelled";
+    const isBillable = (status: string) => status !== "cancelled" && status !== "no_show";
     const revenueOf = (appt: Appointment) =>
-      appt.procedure_id ? procedureValueById.get(appt.procedure_id) || 0 : 0;
+      isBillable(appt.status) && appt.procedure_id ? procedureValueById.get(appt.procedure_id) || 0 : 0;
 
     const dayAppts = appointments.filter(
       (a) => new Date(a.start_time).toDateString() === selectedDate.toDateString() && isCountable(a.status),
     );
 
+    // Same Sunday–Saturday week the grid shows (see getWeekDates).
     const weekStart = new Date(selectedDate);
     weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
     weekStart.setHours(0, 0, 0, 0);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
+    const weekLastDay = new Date(weekStart);
+    weekLastDay.setDate(weekStart.getDate() + 6);
 
     const weekAppts = appointments.filter((a) => {
       const d = new Date(a.start_time);
       return d >= weekStart && d < weekEnd && isCountable(a.status);
     });
 
+    const short = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
     return {
       day: { count: dayAppts.length, revenue: dayAppts.reduce((sum, a) => sum + revenueOf(a), 0) },
       week: { count: weekAppts.length, revenue: weekAppts.reduce((sum, a) => sum + revenueOf(a), 0) },
+      // "hoje" only when the selected day really is today; otherwise the
+      // date itself, so the cards never claim to be about a day they aren't.
+      dayLabel: selectedDate.toDateString() === new Date().toDateString() ? "hoje" : short(selectedDate),
+      weekRange: `${short(weekStart)} – ${short(weekLastDay)}`,
     };
   }, [appointments, selectedDate, procedureValueById]);
 
@@ -860,47 +901,51 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Day/week summary — count + estimated revenue */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
-            <CalendarIcon className="h-5 w-5 text-blue-600" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-lg font-black leading-none text-foreground">{scheduleSummary.day.count}</p>
-            <p className="truncate text-[10px] font-semibold text-muted-foreground">Agendamentos hoje</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
-            <span className="text-base font-black text-emerald-600">R$</span>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-black leading-none text-foreground">
-              {scheduleSummary.day.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-            <p className="truncate text-[10px] font-semibold text-muted-foreground">Previsto hoje</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10">
-            <CalendarIcon className="h-5 w-5 text-purple-600" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-lg font-black leading-none text-foreground">{scheduleSummary.week.count}</p>
-            <p className="truncate text-[10px] font-semibold text-muted-foreground">Agendamentos na semana</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
-            <span className="text-base font-black text-emerald-600">R$</span>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-black leading-none text-foreground">
-              {scheduleSummary.week.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-            <p className="truncate text-[10px] font-semibold text-muted-foreground">Previsto na semana</p>
-          </div>
+      {/* Day/week summary — count + estimated revenue. Follows the
+          selected day / its week. On phones the cards are compact and
+          the week pair starts collapsed behind a chevron; from `sm` up
+          all four sit in one row and the toggle disappears. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        <SummaryCard
+          icon={<CalendarIcon className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />}
+          tint="bg-blue-500/10"
+          value={String(scheduleSummary.day.count)}
+          label={`Agendamentos ${scheduleSummary.dayLabel}`}
+        />
+        <SummaryCard
+          icon={<span className="text-xs font-black text-emerald-600 sm:text-base">R$</span>}
+          tint="bg-emerald-500/10"
+          value={scheduleSummary.day.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          label={`Previsto ${scheduleSummary.dayLabel}`}
+        />
+
+        <button
+          type="button"
+          onClick={() => setWeekSummaryOpen((v) => !v)}
+          aria-expanded={weekSummaryOpen}
+          className="col-span-2 flex items-center justify-between rounded-xl border border-border bg-card px-3 py-1.5 text-left shadow-xs sm:hidden"
+        >
+          <span className="text-[11px] font-bold text-muted-foreground">
+            Semana <span className="font-semibold">({scheduleSummary.weekRange})</span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", weekSummaryOpen && "rotate-180")} />
+        </button>
+
+        <div className={cn("col-span-2 grid grid-cols-2 gap-2 sm:contents", !weekSummaryOpen && "hidden sm:contents")}>
+          <SummaryCard
+            icon={<CalendarIcon className="h-4 w-4 text-purple-600 sm:h-5 sm:w-5" />}
+            tint="bg-purple-500/10"
+            value={String(scheduleSummary.week.count)}
+            label="Agendamentos na semana"
+            title={`Semana ${scheduleSummary.weekRange}`}
+          />
+          <SummaryCard
+            icon={<span className="text-xs font-black text-emerald-600 sm:text-base">R$</span>}
+            tint="bg-emerald-500/10"
+            value={scheduleSummary.week.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            label="Previsto na semana"
+            title={`Semana ${scheduleSummary.weekRange}`}
+          />
         </div>
       </div>
 
