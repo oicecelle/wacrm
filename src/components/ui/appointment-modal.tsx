@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CloseSaleModal } from "@/components/ui/close-sale-modal";
+import { OnlineGuestsSection } from "@/components/agenda/online-guests-section";
+import { normalizeGuestEmails } from "@/lib/appointments/guests";
 import {
   Loader2Icon,
   Trash2Icon,
@@ -328,6 +330,13 @@ export function AppointmentModal({
   const [professionalId, setProfessionalId] = useState("");
   const [procedureName, setProcedureName] = useState("");
   const [procedureId, setProcedureId] = useState<string | null>(null);
+  // Online appointment (Google Meet) + e-mail guests invited via Google Calendar.
+  const [isOnline, setIsOnline] = useState(false);
+  const [guestEmails, setGuestEmails] = useState<string[]>([]);
+  const [meetLink, setMeetLink] = useState("");
+  // True once the person touched the guest list — tells the sync it may
+  // overwrite the Google event's attendees (including clearing them).
+  const [guestsEdited, setGuestsEdited] = useState(false);
   const [isCloseSaleOpen, setIsCloseSaleOpen] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -575,6 +584,10 @@ export function AppointmentModal({
       setRoomId("");
       setStatus("provisional");
       setNotes("");
+      setIsOnline(false);
+      setGuestEmails([]);
+      setMeetLink("");
+      setGuestsEdited(false);
       setAppointmentTag("");
       setAppointmentTagColor("#3b82f6");
       setSendWa(true);
@@ -647,6 +660,10 @@ export function AppointmentModal({
         setEndTime(endLocal);
         setStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
+        setIsOnline(!!appt.is_teleconsult);
+        setGuestEmails(normalizeGuestEmails(appt.guest_emails));
+        setMeetLink(appt.teleconsult_link || "");
+        setGuestsEdited(false);
         setAppointmentColor(appt.color || null);
         setAppointmentTag(appt.tag || "");
         setAppointmentTagColor(appt.tag_color || "#3b82f6");
@@ -1383,6 +1400,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             notes,
             type: procedureName || null,
             procedure_id: procedureId,
+            is_teleconsult: apptType === "bloqueio" ? false : isOnline,
+            guest_emails: apptType === "bloqueio" ? [] : guestEmails,
             room_id: roomId || null,
             color: appointmentColor || null,
             tag: appointmentTag || null,
@@ -1455,8 +1474,12 @@ Qualquer dúvida, estou à disposição! 😊`;
           body: JSON.stringify({
             action: "update",
             appointmentId: appointmentId,
+            guestsChanged: guestsEdited,
           }),
-        }).catch((err) => console.error("Error syncing Google Calendar update:", err));
+        })
+          .then((r) => r.json())
+          .then((data) => notifyGoogleSync(data))
+          .catch((err) => console.error("Error syncing Google Calendar update:", err));
 
       } else {
         // Create appointment
@@ -1472,6 +1495,8 @@ Qualquer dúvida, estou à disposição! 😊`;
             notes,
             type: procedureName || null,
             procedure_id: procedureId,
+            is_teleconsult: apptType === "bloqueio" ? false : isOnline,
+            guest_emails: apptType === "bloqueio" ? [] : guestEmails,
             room_id: roomId || null,
             color: appointmentColor || null,
             tag: appointmentTag || null,
@@ -1562,7 +1587,10 @@ Qualquer dúvida, estou à disposição! 😊`;
               action: "create",
               appointmentId: newAppt.id,
             }),
-          }).catch((err) => console.error("Error syncing Google Calendar create:", err));
+          })
+            .then((r) => r.json())
+            .then((data) => notifyGoogleSync(data))
+            .catch((err) => console.error("Error syncing Google Calendar create:", err));
         }
       }
 
@@ -1668,6 +1696,54 @@ Qualquer dúvida, estou à disposição! 😊`;
     }
     setSavingContactDetails(false);
   }
+
+  // Tells the person what the Google Calendar sync did with the online
+  // link / guests — the sync runs after the modal closes, so without this
+  // a missing Meet link or an unsent invitation would go unnoticed.
+  const notifyGoogleSync = (data: { status?: string; success?: boolean; meetLink?: string | null }) => {
+    const guestCount = apptType === "bloqueio" ? 0 : guestEmails.length;
+    const wantsOnline = apptType !== "bloqueio" && isOnline;
+    if (!wantsOnline && guestCount === 0) return;
+
+    if (data?.status === "skipped") {
+      toast.warning("Agendamento salvo, mas o convite e o link do Meet não foram enviados: o profissional responsável não tem o Google Agenda conectado (Configurações → Google Agenda).");
+    } else if (data?.status === "failed" || (data?.status === "updated" && data.success === false)) {
+      toast.error("Agendamento salvo, mas não foi possível atualizar o evento no Google Agenda. Tente salvar de novo.");
+    } else if (wantsOnline && !data?.meetLink) {
+      toast.warning("Agendamento salvo, mas o Google não devolveu o link do Meet. Salve novamente em instantes.");
+    } else if (wantsOnline) {
+      toast.success(guestCount > 0 ? `Link do Meet gerado e convite enviado a ${guestCount} convidado(s).` : "Link do Google Meet gerado e anexado ao evento.");
+    } else {
+      toast.success(`Convite do Google Agenda enviado a ${guestCount} convidado(s).`);
+    }
+  };
+
+  const onlineShareText = () => {
+    const first = (selectedPatientInfo?.name || "").trim().split(" ")[0];
+    const when = startTime ? new Date(startTime) : null;
+    const whenLabel =
+      when && !Number.isNaN(when.getTime())
+        ? ` para ${when.toLocaleDateString("pt-BR")} às ${when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+        : "";
+    return `Olá${first ? `, ${first}` : ""}! Seu atendimento online está marcado${whenLabel}. Link para entrar:`;
+  };
+
+  const onlineGuestsSection = (
+    <OnlineGuestsSection
+      isOnline={isOnline}
+      onIsOnlineChange={setIsOnline}
+      guestEmails={guestEmails}
+      onGuestEmailsChange={(list) => {
+        setGuestEmails(list);
+        setGuestsEdited(true);
+      }}
+      meetLink={meetLink}
+      patientEmail={selectedPatientInfo?.email}
+      patientPhone={selectedPatientInfo?.phone}
+      shareText={onlineShareText()}
+      disabled={saving}
+    />
+  );
 
   const handleDelete = async () => {
     if (!appointmentId) return;
@@ -2553,6 +2629,8 @@ Qualquer dúvida, estou à disposição! 😊`;
                 />
               </div>
 
+              {apptType === "evento" && onlineGuestsSection}
+
               {/* Color Picker */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">Cor na Agenda</label>
@@ -2897,6 +2975,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       rows={2}
                     />
                   </div>
+                  {apptType === "evento" && onlineGuestsSection}
                   {error && (
                     <Alert variant="destructive" className="py-2">
                       <AlertDescription className="text-xs">{error}</AlertDescription>
@@ -3383,6 +3462,8 @@ Qualquer dúvida, estou à disposição! 😊`;
                               className="rounded-xl border-border shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             />
                           </div>
+
+                          {apptType !== "bloqueio" && onlineGuestsSection}
 
                           {/* Color Picker: only for evento/bloqueio type */}
                           {(apptType === "evento" || apptType === "bloqueio") && (

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { normalizeGuestEmails } from "@/lib/appointments/guests";
 import { getEnv } from "@/lib/env";
 
 // Lazy-initialized Supabase Admin Client
@@ -111,40 +112,136 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
   }
 }
 
+/* ───────────────────────── event payload ───────────────────────── */
+
+export interface EventAppointment {
+  type?: string | null;
+  notes?: string | null;
+  start_time: string;
+  end_time: string;
+  patient_name?: string | null;
+  patient_phone?: string | null;
+  status?: string | null;
+  guest_emails?: string[] | null;
+}
+
+export interface EventPayloadOptions {
+  /** Adds the status line and "(DESMARCADO)" title — the update flavor. */
+  forUpdate?: boolean;
+  /** Include the attendee list (an empty array means "remove all guests"). */
+  includeAttendees?: boolean;
+  /** Ask Google to create a Meet room and attach it to the event. */
+  createMeet?: boolean;
+  /** Remove an existing Meet from the event. */
+  removeMeet?: boolean;
+  /** Idempotency key for the Meet creation request. */
+  requestId?: string;
+}
+
 /**
- * Creates an event in the user's primary calendar
+ * Builds the JSON body sent to the Google Calendar API. Pure, so the
+ * rules that matter (who gets invited, when a Meet is requested, that
+ * updates never blank out fields they don't own) are unit-tested.
+ */
+export function buildEventPayload(a: EventAppointment, opts: EventPayloadOptions = {}): Record<string, unknown> {
+  const isCancelled = a.status === "cancelled" || a.status === "provisional";
+  const title = `${a.type || "Consulta"} - ${a.patient_name || "Sem Nome"}${opts.forUpdate && isCancelled ? " (DESMARCADO)" : ""}`;
+  const description =
+    `Paciente: ${a.patient_name || "N/A"}\nTelefone: ${a.patient_phone || "N/A"}\nNotas: ${a.notes || "Nenhuma"}` +
+    `${opts.forUpdate ? `\nStatus: ${a.status || "N/A"}` : ""}\nAgendado pelo LeadPluz.`;
+
+  const body: Record<string, unknown> = {
+    summary: title,
+    description,
+    start: { dateTime: a.start_time },
+    end: { dateTime: a.end_time },
+  };
+
+  if (opts.includeAttendees) {
+    body.attendees = normalizeGuestEmails(a.guest_emails).map((email) => ({ email }));
+  }
+
+  if (opts.createMeet) {
+    body.conferenceData = {
+      createRequest: {
+        requestId: opts.requestId || `lp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    };
+  } else if (opts.removeMeet) {
+    body.conferenceData = null;
+  }
+  return body;
+}
+
+/** The Meet URL of an event response, if it has one. */
+export function extractMeetLink(event: unknown): string | null {
+  const e = event as {
+    hangoutLink?: string;
+    conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] };
+  } | null;
+  if (!e) return null;
+  if (e.hangoutLink) return e.hangoutLink;
+  const video = e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video" && p.uri);
+  return video?.uri ?? null;
+}
+
+function conferenceStatus(event: unknown): string | null {
+  return (event as { conferenceData?: { createRequest?: { status?: { statusCode?: string } } } })?.conferenceData
+    ?.createRequest?.status?.statusCode ?? null;
+}
+
+const EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+/** Google creates Meet rooms asynchronously; when the first response
+ *  says "pending", ask again shortly instead of losing the link. */
+async function waitForMeetLink(token: string, eventId: string, first: unknown): Promise<string | null> {
+  let link = extractMeetLink(first);
+  if (link || conferenceStatus(first) !== "pending") return link;
+  for (let attempt = 0; attempt < 3 && !link; attempt++) {
+    await new Promise((r) => setTimeout(r, 1200));
+    try {
+      const res = await fetch(`${EVENTS_URL}/${eventId}?conferenceDataVersion=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) link = extractMeetLink(await res.json());
+    } catch {
+      // keep trying; the caller treats a missing link as a soft failure
+    }
+  }
+  return link;
+}
+
+export interface CreatedEvent {
+  eventId: string;
+  meetLink: string | null;
+}
+
+/**
+ * Creates an event in the user's primary calendar. Guests become
+ * attendees (and get Google's invitation e-mail); `createMeet` also
+ * attaches a Google Meet room. The event is created even if the Meet
+ * could not be — `meetLink` is then null and the caller can say so.
  */
 export async function createGoogleEvent(
   accountId: string,
   userId: string | undefined,
-  appointment: {
-    type?: string;
-    notes?: string;
-    start_time: string;
-    end_time: string;
-    patient_name?: string;
-    patient_phone?: string;
-  }
-): Promise<string | null> {
+  appointment: EventAppointment,
+  opts: { createMeet?: boolean } = {},
+): Promise<CreatedEvent | null> {
   const token = await getValidAccessToken(accountId, userId);
   if (!token) return null;
 
-  const eventTitle = `${appointment.type || "Consulta"} - ${appointment.patient_name || "Sem Nome"}`;
-  const eventDesc = `Paciente: ${appointment.patient_name || "N/A"}\nTelefone: ${appointment.patient_phone || "N/A"}\nNotas: ${appointment.notes || "Nenhuma"}\nAgendado pelo LeadPluz.`;
+  const guests = normalizeGuestEmails(appointment.guest_emails);
+  const body = buildEventPayload(appointment, { includeAttendees: guests.length > 0, createMeet: opts.createMeet });
+  const params = new URLSearchParams({ conferenceDataVersion: "1" });
+  if (guests.length > 0) params.set("sendUpdates", "all");
 
   try {
-    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    const res = await fetch(`${EVENTS_URL}?${params.toString()}`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        summary: eventTitle,
-        description: eventDesc,
-        start: { dateTime: appointment.start_time },
-        end: { dateTime: appointment.end_time },
-      }),
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -155,63 +252,70 @@ export async function createGoogleEvent(
 
     const data = await res.json();
     console.log(`[Google Calendar] Successfully created event ID=${data.id}`);
-    return data.id;
+    const meetLink = opts.createMeet ? await waitForMeetLink(token, data.id, data) : null;
+    return { eventId: data.id, meetLink };
   } catch (err) {
     console.error("[Google Calendar] Error creating event:", err);
     return null;
   }
 }
 
+export interface UpdatedEvent {
+  success: boolean;
+  /** Set when this update created a Meet room. */
+  meetLink?: string | null;
+}
+
 /**
- * Updates an event in Google Calendar
+ * Updates an event in Google Calendar. Uses PATCH (not PUT): a PUT
+ * replaces the whole event, which would silently erase the Meet room,
+ * guests and anything else edited directly in Google that we don't
+ * send. Attendees are only sent when the caller says the list is
+ * something we own (`syncGuests`), so events that pre-date this
+ * feature keep the guests someone added by hand in Google.
  */
 export async function updateGoogleEvent(
   accountId: string,
   userId: string | undefined,
   googleEventId: string,
-  appointment: {
-    type?: string;
-    notes?: string;
-    start_time: string;
-    end_time: string;
-    patient_name?: string;
-    patient_phone?: string;
-    status?: string;
-  }
-): Promise<boolean> {
+  appointment: EventAppointment,
+  opts: { syncGuests?: boolean; createMeet?: boolean; removeMeet?: boolean } = {},
+): Promise<UpdatedEvent> {
   const token = await getValidAccessToken(accountId, userId);
-  if (!token) return false;
+  if (!token) return { success: false };
 
-  const isCancelled = appointment.status === "cancelled" || appointment.status === "provisional";
-  const eventTitle = `${appointment.type || "Consulta"} - ${appointment.patient_name || "Sem Nome"}${isCancelled ? " (DESMARCADO)" : ""}`;
-  const eventDesc = `Paciente: ${appointment.patient_name || "N/A"}\nTelefone: ${appointment.patient_phone || "N/A"}\nNotas: ${appointment.notes || "Nenhuma"}\nStatus: ${appointment.status || "N/A"}\nAgendado pelo LeadPluz.`;
+  const guests = normalizeGuestEmails(appointment.guest_emails);
+  const body = buildEventPayload(appointment, {
+    forUpdate: true,
+    includeAttendees: !!opts.syncGuests,
+    createMeet: opts.createMeet,
+    removeMeet: opts.removeMeet,
+  });
+  const params = new URLSearchParams({ conferenceDataVersion: "1" });
+  if (opts.syncGuests && guests.length > 0) params.set("sendUpdates", "all");
 
   try {
-    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        summary: eventTitle,
-        description: eventDesc,
-        start: { dateTime: appointment.start_time },
-        end: { dateTime: appointment.end_time },
-      }),
+    const res = await fetch(`${EVENTS_URL}/${googleEventId}?${params.toString()}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
       const errText = await res.text();
       console.error(`[Google Calendar] Update event failed: ${res.status} - ${errText}`);
-      return false;
+      return { success: false };
     }
 
     console.log(`[Google Calendar] Successfully updated event ID=${googleEventId}`);
-    return true;
+    if (opts.createMeet) {
+      const meetLink = await waitForMeetLink(token, googleEventId, await res.json());
+      return { success: true, meetLink };
+    }
+    return { success: true };
   } catch (err) {
     console.error("[Google Calendar] Error updating event:", err);
-    return false;
+    return { success: false };
   }
 }
 
