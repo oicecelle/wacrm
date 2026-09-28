@@ -16,12 +16,14 @@ import {
   ChevronDownIcon,
   SendIcon,
   CheckCircle2Icon,
-  ClockIcon
+  ClockIcon,
+  PackageIcon,
+  X as XIcon,
 } from "lucide-react";
 
 interface PatientRecord {
   id: string;
-  type: "note" | "image" | "pdf" | "video" | "audio";
+  type: "note" | "image" | "pdf" | "video" | "audio" | "products";
   title: string | null;
   content: string | null;
   file_url: string | null;
@@ -42,6 +44,7 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   pdf: FileTextIcon,
   video: FileTextIcon,
   audio: FileTextIcon,
+  products: PackageIcon,
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -50,6 +53,7 @@ const TYPE_LABELS: Record<string, string> = {
   pdf: "PDF/Documento",
   video: "Vídeo",
   audio: "Áudio",
+  products: "Produtos Utilizados",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -58,6 +62,7 @@ const TYPE_COLORS: Record<string, string> = {
   pdf: "text-rose-500 bg-rose-500/10 border-rose-500/20",
   video: "text-violet-500 bg-violet-500/10 border-violet-500/20",
   audio: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+  products: "text-orange-500 bg-orange-500/10 border-orange-500/20",
 };
 
 export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
@@ -67,6 +72,10 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
   const [records, setRecords] = useState<PatientRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showProductsForm, setShowProductsForm] = useState(false);
+  const [stockProductsList, setStockProductsList] = useState<{ id: string; name: string; unit: string; current_quantity: number }[]>([]);
+  const [usedProducts, setUsedProducts] = useState<{ product_id: string; quantity: string }[]>([{ product_id: "", quantity: "1" }]);
+  const [savingProducts, setSavingProducts] = useState(false);
 
   // Form state
   const [formType, setFormType] = useState<"note" | "image" | "pdf">("note");
@@ -118,6 +127,89 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
   useEffect(() => {
     loadRecords();
   }, [loadRecords]);
+
+  useEffect(() => {
+    if (!accountId) return;
+    supabase
+      .from("stock_products")
+      .select("id, name, unit, current_quantity")
+      .eq("clinic_id", accountId)
+      .eq("is_active", true)
+      .order("name")
+      .then(({ data }) => setStockProductsList(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
+  // Records which stock products were used in this visit AND deducts
+  // them from stock in the same action — plus leaves a "Produtos
+  // Utilizados" entry in the chart itself, so there's a permanent
+  // clinical trail of what was used, not just a number that moved
+  // in Estoque.
+  const handleSaveUsedProducts = async () => {
+    if (!accountId || !user) return;
+    const valid = usedProducts.filter((u) => u.product_id && parseFloat(u.quantity.replace(",", ".")) > 0);
+    if (valid.length === 0) {
+      toast.error("Selecione ao menos um produto com quantidade.");
+      return;
+    }
+    setSavingProducts(true);
+    try {
+      const lines: string[] = [];
+      for (const item of valid) {
+        const product = stockProductsList.find((p) => p.id === item.product_id);
+        if (!product) continue;
+        const qty = parseFloat(item.quantity.replace(",", "."));
+        const newQuantity = Math.max(0, product.current_quantity - qty);
+
+        const { error: movErr } = await supabase.from("stock_movements").insert({
+          clinic_id: accountId,
+          product_id: product.id,
+          type: "saida",
+          quantity: qty,
+          reason: "Uso em atendimento (prontuário)",
+          created_by: user.id,
+        });
+        if (movErr) throw movErr;
+
+        const { error: updErr } = await supabase
+          .from("stock_products")
+          .update({ current_quantity: newQuantity })
+          .eq("id", product.id);
+        if (updErr) throw updErr;
+
+        lines.push(`• ${product.name} — ${qty} ${product.unit || "un"}`);
+      }
+
+      const { error: recErr } = await supabase.from("patient_records").insert({
+        patient_id: patientId,
+        clinic_id: accountId,
+        type: "products",
+        title: "Produtos utilizados",
+        content: lines.join("\n"),
+        created_by: user.id,
+      });
+      if (recErr) throw recErr;
+
+      toast.success("Produtos registrados e abatidos do estoque.");
+      setUsedProducts([{ product_id: "", quantity: "1" }]);
+      setShowProductsForm(false);
+      await loadRecords();
+      // Refresh local stock quantities so a second registration in
+      // the same session sees the already-reduced numbers.
+      const { data: refreshed } = await supabase
+        .from("stock_products")
+        .select("id, name, unit, current_quantity")
+        .eq("clinic_id", accountId)
+        .eq("is_active", true)
+        .order("name");
+      setStockProductsList(refreshed || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao registrar produtos utilizados.");
+    } finally {
+      setSavingProducts(false);
+    }
+  };
 
   const handleFileChange = (file: File | null) => {
     setFileToUpload(file);
@@ -200,15 +292,100 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
         <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
           Prontuário Clínico
         </h3>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black text-white transition-all"
-          style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
-        >
-          <PlusIcon className="h-3.5 w-3.5" />
-          {showForm ? "Cancelar" : "Novo Registro"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowProductsForm(!showProductsForm)}
+            className="flex items-center gap-1.5 rounded-xl border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-700 transition-all hover:bg-orange-100"
+          >
+            <PackageIcon className="h-3.5 w-3.5" />
+            {showProductsForm ? "Cancelar" : "Produtos Utilizados"}
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black text-white transition-all"
+            style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+          >
+            <PlusIcon className="h-3.5 w-3.5" />
+            {showForm ? "Cancelar" : "Novo Registro"}
+          </button>
+        </div>
       </div>
+
+      {showProductsForm && (
+        <div className="space-y-3 rounded-xl border border-orange-200 bg-orange-50/50 p-4">
+          <p className="text-[11px] text-orange-800/80">
+            Registre os produtos usados neste atendimento — eles são abatidos do estoque na hora e
+            ficam anotados no prontuário.
+          </p>
+          {usedProducts.map((item, idx) => {
+            const product = stockProductsList.find((p) => p.id === item.product_id);
+            return (
+              <div key={idx} className="flex items-center gap-2">
+                <select
+                  value={item.product_id}
+                  onChange={(e) => {
+                    const next = [...usedProducts];
+                    next[idx] = { ...next[idx], product_id: e.target.value };
+                    setUsedProducts(next);
+                  }}
+                  className="flex-1 rounded-lg border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Selecione o produto...</option>
+                  {stockProductsList.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} (estoque: {p.current_quantity} {p.unit})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={item.quantity}
+                  onChange={(e) => {
+                    const next = [...usedProducts];
+                    next[idx] = { ...next[idx], quantity: e.target.value };
+                    setUsedProducts(next);
+                  }}
+                  className="h-8 w-20 rounded-lg border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                {product && (
+                  <span className="w-8 shrink-0 text-[10px] text-muted-foreground">{product.unit}</span>
+                )}
+                {usedProducts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setUsedProducts(usedProducts.filter((_, i) => i !== idx))}
+                    className="shrink-0 text-red-400 hover:text-red-600"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setUsedProducts([...usedProducts, { product_id: "", quantity: "1" }])}
+            className="w-full rounded-lg border border-dashed border-orange-300 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100/60"
+          >
+            + Adicionar outro produto
+          </button>
+          {stockProductsList.length === 0 && (
+            <p className="text-[11px] italic text-orange-800/70">
+              Nenhum produto cadastrado no estoque ainda.
+            </p>
+          )}
+          <button
+            onClick={handleSaveUsedProducts}
+            disabled={savingProducts}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-orange-500 py-2 text-xs font-black text-white transition-all hover:bg-orange-600 disabled:opacity-50"
+          >
+            {savingProducts && <Loader2Icon className="h-3.5 w-3.5 animate-spin" />}
+            Registrar e Abater do Estoque
+          </button>
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
