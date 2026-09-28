@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { deductStock } from "@/lib/stock/stock-operations";
 import { X, Plus, Trash2, Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,17 +224,13 @@ export function CloseSaleModal({
         }
       }
       for (const [productId, qty] of deductions.entries()) {
-        const product = stockProducts.find((p) => p.id === productId);
-        if (!product) continue;
-        const newQuantity = Math.max(0, product.current_quantity - qty);
-        await supabase.from("stock_movements").insert({
-          clinic_id: accountId,
-          product_id: productId,
-          type: "saida",
+        await deductStock(supabase, {
+          clinicId: accountId,
+          productId,
           quantity: qty,
           reason: `Venda #${sale.id.slice(0, 8)} — ${patientName}`,
+          appointmentId: appointmentId || null,
         });
-        await supabase.from("stock_products").update({ current_quantity: newQuantity }).eq("id", productId);
       }
 
       // 5. Commission per professional per procedure item sold.

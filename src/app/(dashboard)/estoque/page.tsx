@@ -16,11 +16,13 @@ import {
   SlidersHorizontal,
   Package,
   X,
+  CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { addStockEntry, deductStock } from "@/lib/stock/stock-operations";
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface StockProduct {
@@ -46,7 +48,42 @@ interface StockMovement {
   created_at: string;
 }
 
-type Tab = "products" | "movements";
+type Tab = "products" | "movements" | "expiry";
+
+interface StockBatch {
+  id: string;
+  product_id: string;
+  batch_number: string | null;
+  manufacture_date: string | null;
+  expiry_date: string | null;
+  quantity: number;
+  product_name?: string;
+  product_unit?: string | null;
+}
+
+/** How close a batch is to expiring, relative to today. Thresholds
+ *  (30 / 60 days) match the two warning levels shown on the page. */
+type ExpiryStatus = "expired" | "soon" | "warning" | "ok" | "none";
+
+function getExpiryStatus(expiryDate: string | null): { status: ExpiryStatus; days: number | null } {
+  if (!expiryDate) return { status: "none", days: null };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(`${expiryDate}T00:00:00`);
+  const days = Math.round((expiry.getTime() - today.getTime()) / 86_400_000);
+  if (days < 0) return { status: "expired", days };
+  if (days <= 30) return { status: "soon", days };
+  if (days <= 60) return { status: "warning", days };
+  return { status: "ok", days };
+}
+
+const EXPIRY_STYLES: Record<ExpiryStatus, { label: (d: number | null) => string; cls: string }> = {
+  expired: { label: (d) => `Vencido há ${Math.abs(d ?? 0)} dia(s)`, cls: "text-red-700 bg-red-500/10 border-red-500/30" },
+  soon: { label: (d) => (d === 0 ? "Vence hoje" : `Vence em ${d} dia(s)`), cls: "text-orange-700 bg-orange-500/10 border-orange-500/30" },
+  warning: { label: (d) => `Vence em ${d} dias`, cls: "text-amber-700 bg-amber-500/10 border-amber-500/30" },
+  ok: { label: (d) => `Vence em ${d} dias`, cls: "text-emerald-700 bg-emerald-500/10 border-emerald-500/30" },
+  none: { label: () => "Sem validade", cls: "text-muted-foreground bg-neutral-100 border-border" },
+};
 
 const MOVEMENT_LABELS: Record<string, { label: string; color: string; icon: typeof ArrowUpCircle }> = {
   entrada: { label: "Entrada", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: ArrowUpCircle },
@@ -74,6 +111,7 @@ export default function EstoquePage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("products");
   const [products, setProducts] = useState<StockProduct[]>([]);
+  const [batches, setBatches] = useState<StockBatch[]>([]);
   const [movements, setMovements] = useState<(StockMovement & { product_name?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -98,12 +136,15 @@ export default function EstoquePage() {
   const [mType, setMType] = useState<"entrada" | "saida" | "ajuste">("entrada");
   const [mQuantity, setMQuantity] = useState("1");
   const [mReason, setMReason] = useState("");
+  const [mExpiry, setMExpiry] = useState("");
+  const [mBatchNumber, setMBatchNumber] = useState("");
+  const [mManufacture, setMManufacture] = useState("");
 
   const loadData = useCallback(async () => {
     if (!accountId) return;
     setLoading(true);
     try {
-      const [prodRes, movRes] = await Promise.all([
+      const [prodRes, movRes, batchRes] = await Promise.all([
         supabase.from("stock_products").select("*").eq("clinic_id", accountId).order("name"),
         supabase
           .from("stock_movements")
@@ -111,11 +152,24 @@ export default function EstoquePage() {
           .eq("clinic_id", accountId)
           .order("created_at", { ascending: false })
           .limit(200),
+        supabase
+          .from("stock_batches")
+          .select("*, stock_products(name, unit)")
+          .eq("clinic_id", accountId)
+          .gt("quantity", 0)
+          .order("expiry_date", { ascending: true, nullsFirst: false }),
       ]);
       if (prodRes.error) throw prodRes.error;
       if (movRes.error) throw movRes.error;
+      if (batchRes.error) throw batchRes.error;
 
       setProducts(prodRes.data || []);
+      setBatches(
+        (batchRes.data || []).map((b: StockBatch & { stock_products?: { name: string; unit: string | null } | { name: string; unit: string | null }[] }) => {
+          const sp = Array.isArray(b.stock_products) ? b.stock_products[0] : b.stock_products;
+          return { ...b, product_name: sp?.name, product_unit: sp?.unit };
+        }),
+      );
       setMovements(
         (movRes.data || []).map((m: StockMovement & { stock_products?: { name: string } | { name: string }[] }) => ({
           ...m,
@@ -168,7 +222,7 @@ export default function EstoquePage() {
         category: pCategory.trim() || null,
         brand: pBrand.trim() || null,
         unit: pUnit.trim() || "un",
-        min_quantity: parseInt(pMinQuantity, 10) || 0,
+        min_quantity: parseFloat(pMinQuantity.replace(",", ".")) || 0,
         cost_price: pCostPrice ? parseFloat(pCostPrice.replace(",", ".")) : null,
         sale_price: pSalePrice ? parseFloat(pSalePrice.replace(",", ".")) : null,
         is_active: pActive,
@@ -209,6 +263,9 @@ export default function EstoquePage() {
     setMType("entrada");
     setMQuantity("1");
     setMReason("");
+    setMExpiry("");
+    setMBatchNumber("");
+    setMManufacture("");
     setIsMovementModalOpen(true);
   }
 
@@ -218,8 +275,8 @@ export default function EstoquePage() {
       toast.error("Selecione um produto.");
       return;
     }
-    const qty = parseInt(mQuantity, 10);
-    if (!qty) {
+    const qty = parseFloat(mQuantity.replace(",", "."));
+    if (!qty || qty < 0 || (mType !== "ajuste" && qty <= 0)) {
       toast.error("Informe uma quantidade válida.");
       return;
     }
@@ -228,30 +285,45 @@ export default function EstoquePage() {
       const product = products.find((p) => p.id === mProductId);
       if (!product) throw new Error("Produto não encontrado.");
 
-      // "ajuste" sets the stock straight to the typed quantity (a
-      // correction), while entrada/saída are deltas on top of what's
-      // already there — same convention a physical count-and-fix
-      // session would use.
-      let newQuantity: number;
-      const movementQuantity = Math.abs(qty);
-      if (mType === "entrada") newQuantity = product.current_quantity + movementQuantity;
-      else if (mType === "saida") newQuantity = Math.max(0, product.current_quantity - movementQuantity);
-      else newQuantity = movementQuantity;
-
-      const { error: movErr } = await supabase.from("stock_movements").insert({
-        clinic_id: accountId,
-        product_id: mProductId,
-        type: mType,
-        quantity: movementQuantity,
-        reason: mReason.trim() || null,
-      });
-      if (movErr) throw movErr;
-
-      const { error: updErr } = await supabase
-        .from("stock_products")
-        .update({ current_quantity: newQuantity })
-        .eq("id", mProductId);
-      if (updErr) throw updErr;
+      if (mType === "entrada") {
+        // Entry: optionally records the lot + expiry so it shows up in
+        // the Validades tab and feeds the expiring-soon warnings.
+        await addStockEntry(supabase, {
+          clinicId: accountId,
+          productId: mProductId,
+          quantity: qty,
+          reason: mReason.trim() || null,
+          batchNumber: mBatchNumber.trim() || null,
+          expiryDate: mExpiry || null,
+          manufactureDate: mManufacture || null,
+          costPrice: product.cost_price,
+        });
+      } else if (mType === "saida") {
+        // Exit: FIFO by expiry — the lot that expires soonest goes first.
+        await deductStock(supabase, {
+          clinicId: accountId,
+          productId: mProductId,
+          quantity: qty,
+          reason: mReason.trim() || "Saída manual",
+        });
+      } else {
+        // Adjustment sets the stock straight to the typed quantity (a
+        // physical-count correction). Lots aren't touched — a count
+        // fix says how much is there, not which lot it came from.
+        const { error: movErr } = await supabase.from("stock_movements").insert({
+          clinic_id: accountId,
+          product_id: mProductId,
+          type: "ajuste",
+          quantity: qty,
+          reason: mReason.trim() || null,
+        });
+        if (movErr) throw movErr;
+        const { error: updErr } = await supabase
+          .from("stock_products")
+          .update({ current_quantity: qty })
+          .eq("id", mProductId);
+        if (updErr) throw updErr;
+      }
 
       toast.success("Movimentação registrada!");
       setIsMovementModalOpen(false);
@@ -263,7 +335,12 @@ export default function EstoquePage() {
     }
   }
 
-  const lowStockCount = products.filter((p) => p.is_active && p.current_quantity <= p.min_quantity).length;
+  const lowStockProducts = products.filter((p) => p.is_active && p.current_quantity <= p.min_quantity);
+  const lowStockCount = lowStockProducts.length;
+  const batchesWithStatus = batches.map((b) => ({ ...b, ...getExpiryStatus(b.expiry_date) }));
+  const expiredBatches = batchesWithStatus.filter((b) => b.status === "expired");
+  const expiringSoonBatches = batchesWithStatus.filter((b) => b.status === "soon");
+  const hasAlerts = lowStockCount > 0 || expiredBatches.length > 0 || expiringSoonBatches.length > 0;
   const totalInvestedValue = products.reduce((sum, p) => sum + p.current_quantity * (p.cost_price || 0), 0);
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -287,8 +364,46 @@ export default function EstoquePage() {
         </div>
       </div>
 
+      {/* Alerts: expired / expiring / running out */}
+      {hasAlerts && (
+        <div className="space-y-2 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+          <p className="flex items-center gap-2 text-sm font-black text-amber-800">
+            <AlertTriangle className="h-4 w-4" /> Atenção no estoque
+          </p>
+          <ul className="space-y-1 text-xs text-amber-900">
+            {expiredBatches.length > 0 && (
+              <li>
+                <button onClick={() => setActiveTab("expiry")} className="text-left hover:underline">
+                  <strong className="text-red-700">{expiredBatches.length} lote(s) vencido(s)</strong> —{" "}
+                  {expiredBatches.slice(0, 3).map((b) => b.product_name).join(", ")}
+                  {expiredBatches.length > 3 ? "…" : ""}
+                </button>
+              </li>
+            )}
+            {expiringSoonBatches.length > 0 && (
+              <li>
+                <button onClick={() => setActiveTab("expiry")} className="text-left hover:underline">
+                  <strong>{expiringSoonBatches.length} lote(s) vencendo em até 30 dias</strong> —{" "}
+                  {expiringSoonBatches.slice(0, 3).map((b) => b.product_name).join(", ")}
+                  {expiringSoonBatches.length > 3 ? "…" : ""}
+                </button>
+              </li>
+            )}
+            {lowStockCount > 0 && (
+              <li>
+                <button onClick={() => setActiveTab("products")} className="text-left hover:underline">
+                  <strong>{lowStockCount} produto(s) acabando ou abaixo do mínimo</strong> —{" "}
+                  {lowStockProducts.slice(0, 3).map((p) => p.name).join(", ")}
+                  {lowStockCount > 3 ? "…" : ""}
+                </button>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
           <p className="text-lg font-black text-foreground">{products.filter((p) => p.is_active).length}</p>
           <p className="text-[10px] font-semibold text-muted-foreground">Produtos ativos</p>
@@ -296,6 +411,12 @@ export default function EstoquePage() {
         <div className={`rounded-2xl border p-4 shadow-xs ${lowStockCount > 0 ? "border-red-300 bg-red-50" : "border-border bg-card"}`}>
           <p className={`text-lg font-black ${lowStockCount > 0 ? "text-red-600" : "text-foreground"}`}>{lowStockCount}</p>
           <p className="text-[10px] font-semibold text-muted-foreground">Abaixo do mínimo</p>
+        </div>
+        <div className={`rounded-2xl border p-4 shadow-xs ${expiredBatches.length + expiringSoonBatches.length > 0 ? "border-orange-300 bg-orange-50" : "border-border bg-card"}`}>
+          <p className={`text-lg font-black ${expiredBatches.length + expiringSoonBatches.length > 0 ? "text-orange-600" : "text-foreground"}`}>
+            {expiredBatches.length + expiringSoonBatches.length}
+          </p>
+          <p className="text-[10px] font-semibold text-muted-foreground">Vencidos ou vencendo (30 dias)</p>
         </div>
         <div className="col-span-2 rounded-2xl border border-border bg-card p-4 shadow-xs sm:col-span-1">
           <p className="text-lg font-black text-foreground">{fmt(totalInvestedValue)}</p>
@@ -316,6 +437,12 @@ export default function EstoquePage() {
           className={`px-4 py-2 text-sm font-bold transition-colors ${activeTab === "movements" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
         >
           Histórico de Movimentações
+        </button>
+        <button
+          onClick={() => setActiveTab("expiry")}
+          className={`px-4 py-2 text-sm font-bold transition-colors ${activeTab === "expiry" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Validades ({batches.length})
         </button>
       </div>
 
@@ -386,7 +513,7 @@ export default function EstoquePage() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : activeTab === "movements" ? (
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-neutral-50">
@@ -422,6 +549,49 @@ export default function EstoquePage() {
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-sm italic text-muted-foreground">
                     Nenhuma movimentação registrada ainda.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-muted-foreground">Produto</th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-muted-foreground">Lote</th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-muted-foreground">Quantidade</th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-muted-foreground">Validade</th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-muted-foreground">Situação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {batchesWithStatus.map((b) => {
+                const style = EXPIRY_STYLES[b.status];
+                return (
+                  <tr key={b.id}>
+                    <td className="px-4 py-3 font-semibold text-foreground">{b.product_name || "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{b.batch_number || "—"}</td>
+                    <td className="px-4 py-3 text-foreground">
+                      {b.quantity} {b.product_unit || ""}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {b.expiry_date ? new Date(`${b.expiry_date}T00:00:00`).toLocaleDateString("pt-BR") : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${style.cls}`}>
+                        <CalendarClock className="h-3 w-3" /> {style.label(b.days)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {batches.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm italic text-muted-foreground">
+                    Nenhum lote com validade registrado. Ao registrar uma Entrada, informe a validade pra ela aparecer aqui.
                   </td>
                 </tr>
               )}
@@ -469,7 +639,7 @@ export default function EstoquePage() {
                 </div>
                 <div>
                   <Label className="text-xs font-bold">Estoque mínimo</Label>
-                  <Input type="number" value={pMinQuantity} onChange={(e) => setPMinQuantity(e.target.value)} disabled={saving} className="mt-1" />
+                  <Input type="number" step="0.001" value={pMinQuantity} onChange={(e) => setPMinQuantity(e.target.value)} disabled={saving} className="mt-1" />
                 </div>
                 <div />
                 <div>
@@ -543,8 +713,27 @@ export default function EstoquePage() {
                 <Label className="text-xs font-bold">
                   {mType === "ajuste" ? "Nova quantidade (corrigida)" : "Quantidade"}
                 </Label>
-                <Input type="number" min={0} value={mQuantity} onChange={(e) => setMQuantity(e.target.value)} disabled={saving} className="mt-1" />
+                <Input type="number" min={0} step="0.001" value={mQuantity} onChange={(e) => setMQuantity(e.target.value)} disabled={saving} className="mt-1" />
               </div>
+              {mType === "entrada" && (
+                <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-neutral-50 p-3">
+                  <p className="col-span-2 text-[10px] font-semibold text-muted-foreground">
+                    Lote e validade (opcional) — informe pra receber avisos de vencimento.
+                  </p>
+                  <div>
+                    <Label className="text-xs font-bold">Validade</Label>
+                    <Input type="date" value={mExpiry} onChange={(e) => setMExpiry(e.target.value)} disabled={saving} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold">Nº do lote</Label>
+                    <Input value={mBatchNumber} onChange={(e) => setMBatchNumber(e.target.value)} disabled={saving} className="mt-1" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs font-bold">Data de fabricação</Label>
+                    <Input type="date" value={mManufacture} onChange={(e) => setMManufacture(e.target.value)} disabled={saving} className="mt-1" />
+                  </div>
+                </div>
+              )}
               <div>
                 <Label className="text-xs font-bold">Motivo (opcional)</Label>
                 <Input value={mReason} onChange={(e) => setMReason(e.target.value)} placeholder="Ex: Compra de reposição, perda por validade..." disabled={saving} className="mt-1" />

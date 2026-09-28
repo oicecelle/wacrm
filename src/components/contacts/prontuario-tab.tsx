@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { deductStock } from "@/lib/stock/stock-operations";
 import {
   PlusIcon,
   Loader2Icon,
@@ -159,23 +160,14 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
         const product = stockProductsList.find((p) => p.id === item.product_id);
         if (!product) continue;
         const qty = parseFloat(item.quantity.replace(",", "."));
-        const newQuantity = Math.max(0, product.current_quantity - qty);
 
-        const { error: movErr } = await supabase.from("stock_movements").insert({
-          clinic_id: accountId,
-          product_id: product.id,
-          type: "saida",
+        await deductStock(supabase, {
+          clinicId: accountId,
+          productId: product.id,
           quantity: qty,
           reason: "Uso em atendimento (prontuário)",
-          created_by: user.id,
+          createdBy: user.id,
         });
-        if (movErr) throw movErr;
-
-        const { error: updErr } = await supabase
-          .from("stock_products")
-          .update({ current_quantity: newQuantity })
-          .eq("id", product.id);
-        if (updErr) throw updErr;
 
         lines.push(`• ${product.name} — ${qty} ${product.unit || "un"}`);
       }
