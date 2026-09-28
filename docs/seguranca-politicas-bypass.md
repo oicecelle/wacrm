@@ -1,71 +1,81 @@
-# Alerta de segurança — políticas "bypass" em `appointments` e `patients`
+# Alerta de segurança — isolamento por clínica no banco de dados
 
-**Gravidade: crítica (dados de saúde de todas as clínicas).** Encontrado em 28/09/2026 durante
-uma verificação de rotina. **CORRIGIDO em 28/09/2026** — as 6 políticas foram removidas
-(confirmado: só sobraram as políticas de isolamento por clínica em ambas as tabelas, e uma
-varredura em todo o banco não achou o mesmo padrão em nenhuma outra tabela).
+**Gravidade: crítica (dados de saúde e credenciais de todas as clínicas).**
+Encontrado e **corrigido em 28/09/2026**, em duas rodadas de verificação.
 
-Se existir algum fluxo externo (n8n ou outro) que dependia do cabeçalho `x-webhook-secret`, ele
-parou de funcionar a partir de agora — veja "Depois de aplicar" abaixo.
+## Rodada 1 — políticas "bypass" com cabeçalho fixo
 
-## O que existe hoje no banco
+`appointments` e `patients` tinham políticas que liberavam todas as linhas de todas as
+clínicas pra qualquer requisição com um cabeçalho HTTP de valor fixo, sem login. Nenhum
+código deste repositório usava esse cabeçalho. Removidas as 6 políticas — confirmado
+por busca em todo o banco que o mesmo padrão não existia em nenhuma outra tabela.
 
-Seis políticas de segurança em nível de linha (RLS), nas duas tabelas mais sensíveis do sistema:
+## Rodada 2 — "qualquer usuário autenticado" em vez de "só da própria clínica"
 
-| Tabela | Política | Operação |
-|---|---|---|
-| `appointments` | `bypass_rls_select_appointments` | SELECT |
-| `appointments` | `bypass_rls_update_appointments` | UPDATE |
-| `appointments` | `bypass_rls_insert_appointments` | INSERT |
-| `patients` | `bypass_rls_select_patients` | SELECT |
-| `patients` | `bypass_rls_update_patients` | UPDATE |
-| `patients` | `bypass_rls_insert_patients` | INSERT |
+Uma verificação mais ampla achou um problema maior, em **camadas**, espalhado por
+dezenas de tabelas:
 
-Todas valem para os papéis `anon` **e** `authenticated`, e liberam **todas as linhas de todas as
-clínicas** para qualquer requisição que envie o cabeçalho HTTP `x-webhook-secret` com um valor
-fixo (uma frase curta e legível, gravada dentro da própria definição da política).
+**Camada 1 — política "Allow authenticated access".** 45 tabelas usavam essa política
+única, cuja regra era só `auth.role() = 'authenticated'` — sem checar a qual clínica a
+linha pertencia. Qualquer pessoa logada em **qualquer** clínica (inclusive um cadastro
+de teste novo) lia e alterava os dados de **todas** as outras.
+- 22 tabelas tinham coluna de clínica e nenhum uso disso: corrigidas com isolamento de
+  verdade (`is_account_member(clinic_id)`), igual ao padrão já usado em `sales`,
+  `payment_method_configs` etc.
+- **Achado mais grave dessa camada:** a tabela `clinics` guarda em texto puro os
+  tokens de integração de cada clínica (`uazapi_token`, `whatsapp_token`,
+  `google_maps_api_key`). Qualquer clínica conseguia ler o token de conexão do
+  WhatsApp de qualquer outra.
+- 24 tabelas não tinham coluna de clínica e não são usadas por nenhuma tela deste
+  app — nomes e colunas (`admin_perfis.permissoes`, `users.role`,
+  `treinamento_usuarios`...) indicam um painel administrativo interno à parte,
+  não construído neste repositório. Bloqueadas por enquanto (só o servidor, via
+  `service_role`, continua acessando) — falha fechada, sem quebrar nada em uso.
 
-## Por que é grave
+**Camada 2 — políticas com nomes diferentes, mesmo problema.** Corrigir a camada 1
+não bastava: no Postgres, políticas da mesma tabela **se somam** (é um "OU", não uma
+substituição). Achei mais duas políticas **separadas**, com nomes diferentes,
+cobrindo as mesmas tabelas com a mesma falha:
+- `clinics` tinha uma política extra, `"Allow public select clinics"`, liberando
+  leitura pra **qualquer pessoa — nem precisava estar logada**. Ou seja, mesmo depois
+  de corrigir a política da camada 1, os tokens de WhatsApp continuavam expostos por
+  essa segunda política, sem eu ter notado de primeira.
+- `"Allow public insert"` em `clinics`, `clinic_users` e `users` — desnecessárias:
+  confirmei no código (`src/app/api/clinics/create/route.ts`) que a criação de
+  clínica usa a chave de serviço, que já ignora essas políticas.
+- 6 tabelas com políticas nomeadas como se fossem só pra `service_role`
+  (`"Service role full access"`, `service_role_all_*`), mas configuradas pro papel
+  errado (`public` em vez de `service_role`) — abertas pra qualquer pessoa. 3 com
+  coluna de clínica: corrigidas com isolamento de verdade. 3 sem coluna de clínica e
+  sem uso no código (`clinicas_config`, `debounce_buffer`, `fila_mensagens`):
+  restringidas de fato ao `service_role`, que é como o código já as usa.
 
-- A URL do Supabase e a chave `anon` são **públicas** (vão no código do navegador; a chave
-  também aparece como valor padrão em `src/lib/supabase/server.ts`).
-- Quem souber o valor do cabeçalho consegue, direto pela API, **ler todos os pacientes e
-  agendamentos de todas as clínicas**, alterar e criar registros — sem login.
-- O valor é uma frase fixa, fácil de vazar (planilhas, prints, fluxos do n8n, conversas).
-- Dados de saúde são dado pessoal sensível na LGPD; um vazamento aqui tem consequência legal.
+**Camada 3 — mais 20 políticas, nomes `autenticados_*`/`auth_*`, mesmo problema.**
+Mesmo padrão da camada 1 (qualquer autenticado, sem isolamento), só que com nomes
+diferentes, então a primeira varredura não pegou. 13 tabelas com coluna de clínica
+própria: corrigidas direto. 4 tabelas-filhas sem coluna de clínica própria
+(`auto_script_partes`, `disparo_leads`, `leads_etiquetas`, `leads_interesses`):
+corrigidas checando a clínica da tabela-mãe. `message_buffer` (fila interna por
+telefone, sem uso no código): restrita ao `service_role`.
 
-## O que sei e o que não sei
+## Deliberadamente não alteradas
 
-- O código do app e as migrações do repositório **nunca usam** esse cabeçalho: as políticas foram
-  criadas direto no banco (provavelmente pelo editor SQL), para uma automação externa
-  (o nome sugere um fluxo de sincronização no **n8n**).
-- **Não sei se essa automação está ativa hoje.** Por isso não apaguei as políticas por conta
-  própria: se houver um fluxo em produção usando isso, ele pararia de funcionar.
+Ficaram de fora por parecerem dado global/compartilhado de propósito, não uma falha:
+`plans` (planos de assinatura), `knowledge_base_articles`/`_history` (central de
+ajuda), `system_incidents`/`system_incident_updates`/`system_status_components`
+(página de status), `bio_forms_public_read`/`portal_settings_public_read` (páginas
+públicas voltadas ao paciente final, sem exigir login por design), `processed_messages`
+(só permite inserir, usado pra controle de duplicidade, sem exposição de leitura).
 
-## Antes de aplicar
+## Confirmação final
 
-1. Verifique se existe algum fluxo (n8n ou outro) que envia o cabeçalho `x-webhook-secret`.
-2. Se existir: troque-o para usar a **chave de serviço** (`service_role`) do Supabase, guardada só
-   no servidor do n8n (nunca no navegador). A chave de serviço já ignora o RLS, então não
-   precisa dessas políticas.
-3. Só então aplique o SQL abaixo.
+Uma varredura final em todo o schema (`SELECT ... WHERE qual = 'true' OR ...`) não
+achou mais nenhuma política sem isolamento fora da lista acima. Migrações aplicadas:
+`065_fix_authenticated_access_policies.sql`, `066_lock_down_unused_admin_tables.sql`,
+`067_fix_public_role_policies.sql`, `068_fix_authenticated_wildcard_policies.sql`.
 
-## SQL do conserto (não aplicado)
+## Se o painel administrativo interno for retomado
 
-```sql
-DROP POLICY IF EXISTS bypass_rls_select_appointments ON appointments;
-DROP POLICY IF EXISTS bypass_rls_update_appointments ON appointments;
-DROP POLICY IF EXISTS bypass_rls_insert_appointments ON appointments;
-DROP POLICY IF EXISTS bypass_rls_select_patients ON patients;
-DROP POLICY IF EXISTS bypass_rls_update_patients ON patients;
-DROP POLICY IF EXISTS bypass_rls_insert_patients ON patients;
-```
-
-As políticas de isolamento por clínica (`clinic_isolation_*`) continuam protegendo os dados.
-
-## Depois de aplicar
-
-- Considere o valor antigo do segredo **comprometido** e não o reutilize em lugar nenhum.
-- Confira se há outras tabelas com o mesmo padrão:
-  `SELECT tablename, policyname FROM pg_policies WHERE qual ILIKE '%x-webhook-secret%' OR with_check ILIKE '%x-webhook-secret%';`
-  (na verificação de hoje, só `appointments` e `patients` apareceram).
+As 24 tabelas bloqueadas na camada 1 (rodada 2) precisam de uma política de acesso
+própria (por exemplo, checando uma tabela de funcionários internos da Pluz Tech) —
+não reabrir pra "qualquer autenticado", que foi exatamente a falha corrigida aqui.
