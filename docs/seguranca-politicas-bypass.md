@@ -1,8 +1,12 @@
 # Alerta de segurança — políticas "bypass" em `appointments` e `patients`
 
 **Gravidade: crítica (dados de saúde de todas as clínicas).** Encontrado em 28/09/2026 durante
-uma verificação de rotina. **Ainda NÃO corrigido** — depende de uma decisão sua (ver "Antes de
-aplicar").
+uma verificação de rotina. **CORRIGIDO em 28/09/2026** — as 6 políticas foram removidas
+(confirmado: só sobraram as políticas de isolamento por clínica em ambas as tabelas, e uma
+varredura em todo o banco não achou o mesmo padrão em nenhuma outra tabela).
+
+Se existir algum fluxo externo (n8n ou outro) que dependia do cabeçalho `x-webhook-secret`, ele
+parou de funcionar a partir de agora — veja "Depois de aplicar" abaixo.
 
 ## O que existe hoje no banco
 
