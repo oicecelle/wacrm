@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
+import { defaultWeekSchedule, parseWeekSchedule, type WeekSchedule } from "@/lib/schedule/professional-schedule";
+import { ProfessionalScheduleEditor } from "@/components/equipe/professional-schedule-editor";
 import { toast } from "sonner";
 import {
   PlusIcon,
@@ -49,6 +51,7 @@ interface TeamMember {
   commission_rate: number;
   commission_fixed: number;
   permissions_json: Record<string, boolean>;
+  schedules: unknown;
   // computed
   proceduresMonth: number;
   revenueMonth: number;
@@ -171,6 +174,7 @@ export default function EquipePage() {
   const [formCommRate, setFormCommRate] = useState("0");
   const [formCommFixed, setFormCommFixed] = useState("0");
   const [formPermissions, setFormPermissions] = useState<Record<string, boolean>>({});
+  const [formSchedule, setFormSchedule] = useState<WeekSchedule>(defaultWeekSchedule());
 
   /* ─── Load team ─────────────────────────────────────────── */
   const hasLoadedTeamOnce = useRef(false);
@@ -257,6 +261,7 @@ export default function EquipePage() {
           commission_model: model as "percentage" | "fixed" | "hybrid",
           commission_rate: rate,
           commission_fixed: fixedVal,
+          schedules: u.schedules ?? null,
           permissions_json: u.permissions_json || {},
           proceduresMonth: proceduresCount,
           revenueMonth: revenue,
@@ -310,6 +315,7 @@ export default function EquipePage() {
     setFormCommRate(m.commission_rate.toString());
     setFormCommFixed(m.commission_fixed.toString());
     setFormPermissions(m.permissions_json || DEFAULT_PERMISSIONS[m.role] || {});
+    setFormSchedule(parseWeekSchedule(m.schedules));
     setIsDrawerOpen(true);
   };
 
@@ -336,6 +342,7 @@ export default function EquipePage() {
           commission_rate: parseFloat(formCommRate) || 0,
           commission_fixed: parseFloat(formCommFixed) || 0,
           permissions_json: formPermissions,
+          schedules: formSchedule,
         })
         .eq("id", editingMember.id)
         .eq("clinic_id", accountId);
@@ -675,6 +682,12 @@ export default function EquipePage() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {(formRole === "professional" || formRole === "admin") && (
+                  <div className="border border-border rounded-xl p-4">
+                    <ProfessionalScheduleEditor value={formSchedule} onChange={setFormSchedule} disabled={saving} />
                   </div>
                 )}
 
