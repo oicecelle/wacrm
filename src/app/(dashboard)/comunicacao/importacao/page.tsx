@@ -1,808 +1,856 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Upload,
-  FileSpreadsheet,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Loader2,
-  Users,
-  User,
-  ArrowRight,
-  ArrowLeft,
-  Layers,
-  Database,
-  HelpCircle,
-  FileText,
-  ChevronRight,
-} from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertTriangle,
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  Package,
+  Sparkles,
+  Stethoscope,
+  Upload,
+  Users,
+  Wallet,
+  XCircle,
+} from 'lucide-react';
 
-// Helper to normalize phone numbers (keep digits, add country code fallback if needed)
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (!digits) return '';
-  // If it's a Brazilian mobile number without country code (e.g. 11999999999 or 1199999999)
-  if (digits.length === 10 || digits.length === 11) {
-    return `55${digits}`;
-  }
-  return digits;
-}
+import { ENTITY_LIST, ENTITIES, buildTemplateCsv, missingRequirement } from '@/lib/import/entities';
+import { detectMapping } from '@/lib/import/detect';
+import { loadSpreadsheet, MAX_ROWS, type LoadedWorkbook } from '@/lib/import/parse-file';
+import { buildErrorCsv, buildRows, summarize } from '@/lib/import/validate';
+import { collectSamples, requestAiMapping } from '@/lib/import/ai-mapping';
+import {
+  importAppointments,
+  importContacts,
+  importProcedures,
+  importProducts,
+  importTransactions,
+} from '@/lib/import/importers';
+import type {
+  ColumnMapping,
+  EntityKey,
+  ImportResult,
+  MappingSource,
+  ParsedRow,
+  ParsedSheet,
+} from '@/lib/import/types';
 
-// Helper to parse dates in DD/MM/YYYY or YYYY-MM-DD format
-function parseDate(dateStr: string | undefined): string | null {
-  if (!dateStr || !dateStr.trim()) return null;
-  const cleaned = dateStr.trim();
-  
-  // Format DD/MM/YYYY
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleaned)) {
-    const [day, month, year] = cleaned.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
-  
-  // Format YYYY-MM-DD
-  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
-    const [year, month, day] = cleaned.split('-');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
+const ENTITY_ICONS: Record<EntityKey, React.ElementType> = {
+  contacts: Users,
+  procedures: Stethoscope,
+  products: Package,
+  appointments: CalendarDays,
+  transactions: Wallet,
+};
 
-  // Fallback to JS parsing if possible
-  try {
-    const parsed = new Date(cleaned);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().slice(0, 10);
-    }
-  } catch {}
-  
-  return null;
-}
+const ENTITY_LINKS: Record<EntityKey, { href: string; label: string }> = {
+  contacts: { href: '/contacts', label: 'Ver Contatos' },
+  procedures: { href: '/servicos', label: 'Ver Serviços' },
+  products: { href: '/estoque', label: 'Ver Estoque' },
+  appointments: { href: '/agenda', label: 'Ver Agenda' },
+  transactions: { href: '/financeiro', label: 'Ver Financeiro' },
+};
 
-// Helper to parse CSV fields containing quotes
-function parseCsvLine(line: string): string[] {
-  const values: string[] = [];
-  let current = '';
-  let inQuotes = false;
+const QUERY_TO_ENTITY: Record<string, EntityKey> = {
+  contatos: 'contacts',
+  pacientes: 'contacts',
+  procedimentos: 'procedures',
+  servicos: 'procedures',
+  produtos: 'products',
+  estoque: 'products',
+  agendamentos: 'appointments',
+  agenda: 'appointments',
+  financeiro: 'transactions',
+};
 
-  for (const char of line) {
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      values.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  values.push(current.trim());
-  return values;
-}
+const SOURCE_BADGE: Record<MappingSource, { label: string; cls: string }> = {
+  auto: { label: 'Reconhecida', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  content: { label: 'Pelo conteúdo', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  ai: { label: 'Sugestão da IA', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
+  manual: { label: 'Escolhida por você', cls: 'bg-neutral-100 text-neutral-700 border-neutral-200' },
+  suggestion: { label: 'Confirme', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+};
 
-// Auto-map detection helpers
-function autoDetectField(headers: string[], field: string): string {
-  const lowerHeaders = headers.map(h => h.toLowerCase());
-  const searchMap: Record<string, string[]> = {
-    phone: ['telefone', 'tel', 'phone', 'celular', 'fone', 'whatsapp', 'numero'],
-    name: ['nome', 'name', 'cliente', 'paciente', 'usuario', 'nome completo'],
-    email: ['email', 'mail', 'e-mail', 'correio'],
-    document: ['cpf', 'cnpj', 'documento', 'document', 'rg'],
-    birthday: ['aniversario', 'nascimento', 'data de nascimento', 'birthday', 'birth', 'nasc'],
-    company: ['empresa', 'company', 'trabalho', 'corporacao'],
-    tags: ['tags', 'etiquetas', 'grupos', 'tags_visual'],
-  };
+const STEPS = ['Tipo de dado', 'Enviar planilha', 'Mapear colunas', 'Revisar', 'Resultado'];
 
-  const targets = searchMap[field] || [];
-  for (const target of targets) {
-    const index = lowerHeaders.indexOf(target);
-    if (index >= 0) return headers[index];
-  }
-  return '';
+function downloadFile(name: string, content: string, mime = 'text/csv;charset=utf-8') {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function MigrationPage() {
-  const { accountId, user } = useAuth();
+  const { accountId, user, canEditSettings, canSendMessages } = useAuth();
   const supabase = createClient();
-
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [importType, setImportType] = useState<'patients' | 'contacts' | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [csvRows, setCsvRows] = useState<string[][]>([]);
-  const [mappings, setMappings] = useState<Record<string, string>>({});
-  
-  // Importing states
-  const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{
-    success: number;
-    skipped: number;
-    failed: number;
-  } | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Field requirements based on target table
-  const fieldsConfig = useMemo(() => {
-    if (importType === 'patients') {
-      return [
-        { key: 'name', label: 'Nome', required: true, desc: 'Nome do paciente' },
-        { key: 'phone', label: 'Telefone / Celular', required: true, desc: 'Número com DDD (ex: 11999999999)' },
-        { key: 'email', label: 'E-mail', required: false, desc: 'Endereço de correio eletrônico' },
-        { key: 'document', label: 'CPF / Documento', required: false, desc: 'Documento nacional de identificação' },
-        { key: 'birthday', label: 'Data de Nascimento', required: false, desc: 'Utilizado para felicitações e aniversários' },
-        { key: 'tags', label: 'Etiquetas / Tags', required: false, desc: 'Separe as etiquetas por vírgula no arquivo' },
-      ];
-    } else {
-      return [
-        { key: 'phone', label: 'Telefone / Celular', required: true, desc: 'Número com DDD (ex: 11999999999)' },
-        { key: 'name', label: 'Nome', required: false, desc: 'Nome de contato/lead' },
-        { key: 'email', label: 'E-mail', required: false, desc: 'Endereço de e-mail' },
-        { key: 'company', label: 'Empresa', required: false, desc: 'Organização ou empresa vinculada' },
-        { key: 'tags', label: 'Etiquetas / Tags', required: false, desc: 'Tags para automações ou segmentações' },
-      ];
-    }
-  }, [importType]);
+  const [step, setStep] = useState(1);
+  const [entityKey, setEntityKey] = useState<EntityKey | null>(null);
 
-  const handleReset = () => {
-    setFile(null);
-    setHeaders([]);
-    setCsvRows([]);
-    setMappings({});
-    setResults(null);
-    setProgress(0);
-    setCurrentStep(1);
-    setImportType(null);
+  const [loadingFile, setLoadingFile] = useState(false);
+  const [workbook, setWorkbook] = useState<LoadedWorkbook | null>(null);
+  const [sheetName, setSheetName] = useState('');
+  const [sheet, setSheet] = useState<ParsedSheet | null>(null);
+  const [columns, setColumns] = useState<ColumnMapping[]>([]);
+
+  const [aiBusy, setAiBusy] = useState(false);
+  const [includeSamples, setIncludeSamples] = useState(false);
+  const [showDictionary, setShowDictionary] = useState(false);
+
+  const [contactType, setContactType] = useState<'client' | 'lead'>('client');
+  const [createMissingPatients, setCreateMissingPatients] = useState(true);
+
+  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [result, setResult] = useState<ImportResult | null>(null);
+
+  const entity = entityKey ? ENTITIES[entityKey] : null;
+
+  // Pre-select a type from ?tipo=... (used by links from other screens).
+  useEffect(() => {
+    const tipo = new URLSearchParams(window.location.search).get('tipo');
+    const key = tipo ? QUERY_TO_ENTITY[tipo.toLowerCase()] : undefined;
+    if (key) {
+      setEntityKey(key);
+      setStep(2);
+    }
+  }, []);
+
+  const canImport = useCallback(
+    (key: EntityKey) => (key === 'contacts' ? canSendMessages || canEditSettings : canEditSettings),
+    [canEditSettings, canSendMessages],
+  );
+
+  const reset = () => {
+    setStep(1);
+    setEntityKey(null);
+    setWorkbook(null);
+    setSheetName('');
+    setSheet(null);
+    setColumns([]);
+    setParsedRows([]);
+    setResult(null);
+    setProgress({ done: 0, total: 0 });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+  const clearFile = () => {
+    setWorkbook(null);
+    setSheetName('');
+    setSheet(null);
+    setColumns([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
+  const applySheet = useCallback((wb: LoadedWorkbook, name: string, key: EntityKey) => {
+    const parsed = wb.getSheet(name);
+    if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+      toast.error('Não encontrei um cabeçalho e linhas de dados nessa planilha.');
+      setSheet(null);
+      setColumns([]);
+      return false;
+    }
+    if (parsed.rows.length > MAX_ROWS) {
+      toast.error(
+        `A planilha tem ${parsed.rows.length.toLocaleString('pt-BR')} linhas; o limite é ${MAX_ROWS.toLocaleString('pt-BR')} por importação. Divida em partes.`,
+      );
+      setSheet(null);
+      setColumns([]);
+      return false;
+    }
+    setSheetName(name);
+    setSheet(parsed);
+    setColumns(detectMapping(ENTITIES[key], parsed.headers, parsed.rows));
+    return true;
+  }, []);
+
+  const handleFile = async (file: File | null) => {
+    if (!file || !entityKey) return;
+    setLoadingFile(true);
     try {
-      const text = await selected.text();
-      const lines = text.trim().split(/\r?\n/);
-      if (lines.length < 2) {
-        toast.error('O arquivo CSV deve conter um cabeçalho e pelo menos uma linha de dados.');
-        return;
-      }
-
-      setFile(selected);
-      setResults(null);
-
-      // Parse headers
-      const csvHeaders = lines[0].split(',').map(h => h.trim().replace(/["']/g, ''));
-      setHeaders(csvHeaders);
-
-      // Parse rows
-      const parsedRows: string[][] = [];
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line) {
-          parsedRows.push(parseCsvLine(line));
-        }
-      }
-      setCsvRows(parsedRows);
-
-      // Initial auto-detection mappings
-      const initialMappings: Record<string, string> = {};
-      const fieldsToMap = importType === 'patients' 
-        ? ['name', 'phone', 'email', 'document', 'birthday', 'tags']
-        : ['phone', 'name', 'email', 'company', 'tags'];
-
-      fieldsToMap.forEach(field => {
-        const match = autoDetectField(csvHeaders, field);
-        if (match) {
-          initialMappings[field] = match;
-        }
-      });
-      setMappings(initialMappings);
-      
-      // Advance to mapping step automatically
-      setCurrentStep(3);
-      toast.success('Planilha processada! Configure o mapeamento das colunas.');
+      const wb = await loadSpreadsheet(file);
+      setWorkbook(wb);
+      if (applySheet(wb, wb.sheetNames[0], entityKey)) setStep(3);
     } catch (err) {
-      console.error('Error reading CSV file:', err);
-      toast.error('Falha ao processar o arquivo de planilha');
+      toast.error(err instanceof Error ? err.message : 'Falha ao ler a planilha.');
+    } finally {
+      setLoadingFile(false);
     }
   };
 
-  const handleMappingChange = (field: string, csvHeader: string) => {
-    setMappings(prev => ({
-      ...prev,
-      [field]: csvHeader,
-    }));
+  const setColumnField = (colIdx: number, fieldKey: string | null) => {
+    setColumns((prev) =>
+      prev.map((c, i) => {
+        if (i === colIdx) return { fieldKey, source: 'manual', score: 100 };
+        // a field can live in only one column: taking it moves it
+        if (fieldKey && c.fieldKey === fieldKey) return { fieldKey: null, source: 'manual', score: 0 };
+        return c;
+      }),
+    );
   };
 
-  // Preview generated based on mappings
-  const mappedPreview = useMemo(() => {
-    if (csvRows.length === 0 || headers.length === 0) return [];
-    
-    // Preview first 5 rows
-    return csvRows.slice(0, 5).map(row => {
-      const mapped: Record<string, string> = {};
-      Object.entries(mappings).forEach(([field, header]) => {
-        const idx = headers.indexOf(header);
-        if (idx >= 0) {
-          mapped[field] = row[idx] || '';
-        }
-      });
-      return mapped;
-    });
-  }, [csvRows, headers, mappings]);
+  const redetect = () => {
+    if (!sheet || !entityKey) return;
+    setColumns(detectMapping(ENTITIES[entityKey], sheet.headers, sheet.rows));
+  };
 
-  const canStartImport = useMemo(() => {
-    if (!importType) return false;
-    const requiredFields = fieldsConfig.filter(f => f.required).map(f => f.key);
-    return requiredFields.every(field => !!mappings[field]);
-  }, [fieldsConfig, mappings, importType]);
+  const runAi = async () => {
+    if (!sheet || !entityKey) return;
+    setAiBusy(true);
+    try {
+      const samples = includeSamples ? collectSamples(sheet.rows, sheet.headers.length) : null;
+      const suggestion = await requestAiMapping(entityKey, sheet.headers, samples);
+      let applied = 0;
+      setColumns((prev) => {
+        // The AI only fills what's still open: never overrides a
+        // confident automatic match or something you chose by hand.
+        const taken = new Set(
+          prev
+            .filter((c) => c.fieldKey && (c.source === 'auto' || c.source === 'manual' || c.source === 'content'))
+            .map((c) => c.fieldKey as string),
+        );
+        return prev.map((c, i) => {
+          const s = suggestion[i];
+          const open = !c.fieldKey || c.source === 'suggestion';
+          if (open && s && !taken.has(s)) {
+            taken.add(s);
+            applied++;
+            return { fieldKey: s, source: 'ai' as const, score: 70 };
+          }
+          return c;
+        });
+      });
+      toast.success(
+        applied > 0 ? `A IA sugeriu ${applied} coluna(s). Confira antes de continuar.` : 'A IA não encontrou nenhuma correspondência nova.',
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Não foi possível consultar a IA.');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const mappedKeys = useMemo(
+    () => new Set(columns.map((c) => c.fieldKey).filter((k): k is string => !!k)),
+    [columns],
+  );
+  const requirementMessage = entity ? missingRequirement(entity, mappedKeys) : null;
+  const recognizedCount = columns.filter((c) => c.fieldKey).length;
+  const samplesByColumn = useMemo(
+    () => (sheet ? collectSamples(sheet.rows, sheet.headers.length) : []),
+    [sheet],
+  );
+
+  const goReview = () => {
+    if (!entity || !sheet) return;
+    setParsedRows(buildRows(entity, columns.map((c) => c.fieldKey), sheet.rows));
+    setStep(4);
+  };
+
+  const summary = useMemo(() => summarize(parsedRows), [parsedRows]);
+  const validRows = useMemo(() => parsedRows.filter((r) => r.errors.length === 0), [parsedRows]);
+  const invalidRows = useMemo(() => parsedRows.filter((r) => r.errors.length > 0), [parsedRows]);
 
   const runImport = async () => {
-    if (!accountId || !user || !importType) {
-      toast.error('Não autenticado ou tipo de importação inválido');
+    if (!entityKey || !accountId || !user) {
+      toast.error('Sessão inválida. Recarregue a página.');
       return;
     }
-    if (!canStartImport) {
-      toast.error('Mapeie os campos obrigatórios primeiro.');
-      return;
-    }
-
+    if (validRows.length === 0) return;
     setImporting(true);
-    setProgress(0);
-    setResults(null);
-
-    let successCount = 0;
-    let skippedCount = 0;
-    let failedCount = 0;
-
-    const chunkSize = 50;
-    const totalRows = csvRows.length;
-
+    setProgress({ done: 0, total: validRows.length });
     try {
-      // 1) Fetch existing entries to prevent duplicates in batch checks
-      let existingPhones = new Set<string>();
-      if (importType === 'contacts') {
-        const { data: existingContacts } = await supabase
-          .from('contacts')
-          .select('phone_normalized')
-          .eq('account_id', accountId);
-
-        existingPhones = new Set(
-          (existingContacts || [])
-            .map(c => c.phone_normalized)
-            .filter((p): p is string => !!p)
-        );
-      } else {
-        const { data: existingPatients } = await supabase
-          .from('patients')
-          .select('phone')
-          .eq('clinic_id', accountId);
-
-        existingPhones = new Set(
-          (existingPatients || [])
-            .map(p => normalizePhone(p.phone))
-            .filter(p => !!p)
-        );
+      const ctx = {
+        supabase,
+        accountId,
+        userId: user.id,
+        canCreateTags: canEditSettings,
+        onProgress: (done: number, total: number) => setProgress({ done, total }),
+      };
+      let res: ImportResult;
+      switch (entityKey) {
+        case 'contacts':
+          res = await importContacts(ctx, validRows, { contactType });
+          break;
+        case 'procedures':
+          res = await importProcedures(ctx, validRows);
+          break;
+        case 'products':
+          res = await importProducts(ctx, validRows);
+          break;
+        case 'appointments':
+          res = await importAppointments(ctx, validRows, { createMissingPatients });
+          break;
+        case 'transactions':
+          res = await importTransactions(ctx, validRows);
+          break;
       }
-
-      // Process in chunks of 50
-      for (let i = 0; i < totalRows; i += chunkSize) {
-        const chunk = csvRows.slice(i, i + chunkSize);
-        const rowsToInsert: any[] = [];
-
-        chunk.forEach(row => {
-          const rowData: Record<string, any> = {};
-          
-          Object.entries(mappings).forEach(([field, headerName]) => {
-            const headerIdx = headers.indexOf(headerName);
-            if (headerIdx >= 0) {
-              rowData[field] = row[headerIdx] || null;
-            }
-          });
-
-          const phone = rowData.phone ? rowData.phone.trim() : '';
-          const normalized = normalizePhone(phone);
-
-          if (!normalized) {
-            failedCount++;
-            return;
-          }
-
-          if (existingPhones.has(normalized)) {
-            skippedCount++;
-            return;
-          }
-
-          if (importType === 'patients') {
-            const name = rowData.name ? rowData.name.trim() : 'Paciente Importado';
-            const birthday = parseDate(rowData.birthday);
-            let tagsArray: string[] = [];
-            if (rowData.tags) {
-              tagsArray = rowData.tags.split(/[,;]/).map((t: string) => t.trim()).filter((t: string) => !!t);
-            }
-
-            rowsToInsert.push({
-              clinic_id: accountId,
-              name,
-              phone: rowData.phone || normalized,
-              email: rowData.email ? rowData.email.trim() : null,
-              document: rowData.document ? rowData.document.trim() : null,
-              birthday,
-              tags: tagsArray,
-            });
-          } else {
-            const name = rowData.name ? rowData.name.trim() : null;
-            let tagsArray: string[] = [];
-            if (rowData.tags) {
-              tagsArray = rowData.tags.split(/[,;]/).map((t: string) => t.trim()).filter((t: string) => !!t);
-            }
-
-            rowsToInsert.push({
-              user_id: user.id,
-              account_id: accountId,
-              phone: rowData.phone || normalized,
-              name,
-              email: rowData.email ? rowData.email.trim() : null,
-              company: rowData.company ? rowData.company.trim() : null,
-              tags_visual: tagsArray,
-            });
-          }
-
-          existingPhones.add(normalized);
-        });
-
-        // Batch Insert
-        if (rowsToInsert.length > 0) {
-          const { error } = await supabase
-            .from(importType)
-            .insert(rowsToInsert);
-
-          if (error) {
-            // Fallback individual inserts
-            for (const item of rowsToInsert) {
-              const { error: singleError } = await supabase
-                .from(importType)
-                .insert(item);
-
-              if (singleError) {
-                if (singleError.code === '23505') {
-                  skippedCount++;
-                } else {
-                  failedCount++;
-                }
-              } else {
-                successCount++;
-              }
-            }
-          } else {
-            successCount += rowsToInsert.length;
-          }
-        }
-
-        const processedCount = Math.min(i + chunkSize, totalRows);
-        setProgress(Math.round((processedCount / totalRows) * 100));
-      }
-
-      setResults({
-        success: successCount,
-        skipped: skippedCount,
-        failed: failedCount,
-      });
-
-      // Go to final status/report step
-      setCurrentStep(4);
+      setResult(res);
+      setStep(5);
     } catch (err) {
-      console.error('Error during migration run:', err);
-      toast.error('Ocorreu um erro crítico durante a importação.');
+      console.error('Import failed:', err);
+      toast.error(err instanceof Error ? `Erro na importação: ${err.message}` : 'Erro na importação.');
     } finally {
       setImporting(false);
     }
   };
 
-  const stepsList = [
-    { num: 1, label: 'Destino dos Dados' },
-    { num: 2, label: 'Enviar Planilha' },
-    { num: 3, label: 'Mapear Colunas' },
-    { num: 4, label: 'Resultado' },
-  ];
+  const previewFields = useMemo(() => {
+    if (!entity) return [];
+    return entity.fields.filter((f) => mappedKeys.has(f.key)).slice(0, 6);
+  }, [entity, mappedKeys]);
+
+  const renderPreviewValue = (v: unknown): string => {
+    if (v === null || v === undefined || v === '') return '—';
+    if (Array.isArray(v)) return v.join(', ');
+    if (typeof v === 'number') return v.toLocaleString('pt-BR');
+    return String(v);
+  };
 
   return (
-    <div className="space-y-6 text-left max-w-4xl mx-auto pb-12">
-      {/* Title Header */}
+    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-foreground">Assistente de Migração</h1>
           <p className="text-sm text-muted-foreground">
-            Siga os passos para migrar seus contatos ou pacientes a partir de planilhas CSV.
+            Traga seus dados de outro sistema ou de planilhas (Excel ou CSV): pacientes, procedimentos, estoque, agenda e financeiro.
           </p>
         </div>
-        {file && (
+        {step > 1 && step < 5 && (
           <Button
             variant="outline"
             size="sm"
-            onClick={handleReset}
+            onClick={reset}
             disabled={importing}
-            className="border-border text-xs font-bold text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl shrink-0"
+            className="shrink-0 rounded-xl border-border text-xs font-bold text-red-600 hover:border-red-200 hover:bg-red-50"
           >
-            Reiniciar Assistente
+            Recomeçar
           </Button>
         )}
       </div>
 
-      {/* Progress Tracker (Stepper) */}
-      <div className="grid grid-cols-4 gap-2 bg-neutral-50 p-2.5 rounded-2xl border border-neutral-100/50">
-        {stepsList.map(step => {
-          const isCurrent = currentStep === step.num;
-          const isCompleted = currentStep > step.num;
-          
+      {/* Stepper */}
+      <div className="grid grid-cols-5 gap-2 rounded-2xl border border-neutral-100/50 bg-neutral-50 p-2.5">
+        {STEPS.map((label, i) => {
+          const num = i + 1;
+          const current = step === num;
+          const done = step > num;
           return (
             <div
-              key={step.num}
-              className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
-                isCurrent 
-                  ? 'bg-card shadow-xs border border-border/60 font-black text-blue-600'
-                  : isCompleted
-                  ? 'text-emerald-600 font-bold'
-                  : 'text-muted-foreground font-medium'
+              key={label}
+              className={`flex items-center gap-2 rounded-xl p-2 transition-all ${
+                current
+                  ? 'border border-border/60 bg-card font-black text-blue-600 shadow-xs'
+                  : done
+                    ? 'font-bold text-emerald-600'
+                    : 'font-medium text-muted-foreground'
               }`}
             >
-              <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] ${
-                isCurrent 
-                  ? 'bg-blue-600 text-white' 
-                  : isCompleted 
-                  ? 'bg-emerald-100 text-emerald-800' 
-                  : 'bg-neutral-200 text-neutral-600'
-              }`}>
-                {isCompleted ? '✓' : step.num}
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${
+                  current ? 'bg-blue-600 text-white' : done ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
+                }`}
+              >
+                {done ? '✓' : num}
               </span>
-              <span className="text-[11px] hidden sm:inline truncate">{step.label}</span>
+              <span className="hidden truncate text-[11px] sm:inline">{label}</span>
             </div>
           );
         })}
       </div>
 
-      {/* WIZARD CONTAINER */}
-      <div className="bg-card rounded-3xl border border-neutral-100 shadow-xs overflow-hidden">
-        
-        {/* STEP 1: CHOOSE TARGET TABLE */}
-        {currentStep === 1 && (
-          <div className="p-6 space-y-6">
+      <div className="overflow-hidden rounded-3xl border border-neutral-100 bg-card shadow-xs">
+        {/* ═════════ STEP 1 — type ═════════ */}
+        {step === 1 && (
+          <div className="space-y-5 p-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-foreground">Para onde deseja migrar seus dados?</h2>
+              <h2 className="text-base font-black text-foreground">O que você quer importar?</h2>
               <p className="text-xs text-muted-foreground">
-                Selecione se os contatos da planilha serão inseridos no fluxo de pacientes ou na lista de contatos do CRM.
+                Cada tipo é importado separadamente. Ordem recomendada:{' '}
+                <strong>procedimentos → produtos → pacientes → agendamentos → financeiro</strong> — assim agendamentos e lançamentos já encontram o procedimento e o paciente certos.
               </p>
             </div>
-
-            {/* Visual Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setImportType('patients')}
-                className={`flex flex-col items-left text-left p-5 rounded-2xl border-2 transition-all hover:scale-[1.01] ${
-                  importType === 'patients'
-                    ? 'border-blue-500 bg-blue-50/10 ring-2 ring-blue-500/10'
-                    : 'border-border hover:border-neutral-300'
-                }`}
-              >
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
-                  importType === 'patients' ? 'bg-blue-100 text-blue-600' : 'bg-neutral-100 text-muted-foreground'
-                }`}>
-                  <Users className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-black text-foreground">Pacientes</h3>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Ideais para disparos automáticos baseados na agenda clínica (lembretes de consultas, aniversários, retornos).
-                </p>
-                <ul className="text-[10px] text-muted-foreground space-y-1 mt-3 list-disc list-inside">
-                  <li>Agenda médica integrada</li>
-                  <li>Disparos automáticos de lembretes</li>
-                  <li>Importa Nome, Telefone, CPF, Nascimento e Tags</li>
-                </ul>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setImportType('contacts')}
-                className={`flex flex-col items-left text-left p-5 rounded-2xl border-2 transition-all hover:scale-[1.01] ${
-                  importType === 'contacts'
-                    ? 'border-blue-500 bg-blue-50/10 ring-2 ring-blue-500/10'
-                    : 'border-border hover:border-neutral-300'
-                }`}
-              >
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
-                  importType === 'contacts' ? 'bg-blue-100 text-blue-600' : 'bg-neutral-100 text-muted-foreground'
-                }`}>
-                  <User className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-black text-foreground">Contatos (Chat / CRM)</h3>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Contatos gerais para marketing, campanhas de disparos em massa, funis de vendas e inbox.
-                </p>
-                <ul className="text-[10px] text-muted-foreground space-y-1 mt-3 list-disc list-inside">
-                  <li>Caixa de Entrada compartilhada</li>
-                  <li>Funis de Vendas e CRM</li>
-                  <li>Importa Nome, Telefone, E-mail, Empresa e Tags</li>
-                </ul>
-              </button>
-            </div>
-
-            {/* Footer Buttons */}
-            <div className="flex justify-end pt-4 border-t">
-              <Button
-                onClick={() => setCurrentStep(2)}
-                disabled={!importType}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-1.5 disabled:opacity-50"
-              >
-                Próximo Passo
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: FILE UPLOAD & INSTRUCTIONS */}
-        {currentStep === 2 && (
-          <div className="p-6 space-y-6">
-            <div className="space-y-1">
-              <h2 className="text-base font-black text-foreground">Envie a sua planilha CSV</h2>
-              <p className="text-xs text-muted-foreground">
-                Selecione o arquivo de dados exportado do seu sistema antigo.
-              </p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-5">
-              {/* Instructions / Help */}
-              <div className="md:col-span-2 space-y-4 bg-neutral-50 p-4 rounded-2xl border border-neutral-100 text-xs">
-                <h3 className="font-bold text-neutral-700 flex items-center gap-1">
-                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  Instruções do Arquivo
-                </h3>
-                <ul className="space-y-2 text-muted-foreground leading-relaxed list-decimal list-inside">
-                  <li>O arquivo deve estar no formato **CSV (.csv)**.</li>
-                  <li>A primeira linha do arquivo deve ser a linha de **cabeçalhos** (nomes das colunas).</li>
-                  <li>As linhas seguintes devem conter os dados separados por vírgulas.</li>
-                  <li>A coluna de **Telefone** é obrigatória e deve conter números com DDD.</li>
-                </ul>
-                <div className="p-2.5 bg-blue-500/5 rounded-xl border border-blue-200/30 text-[10px] text-blue-800 font-semibold leading-relaxed">
-                  Dica: Nós iremos formatar e normalizar os telefones de forma automática, removendo caracteres especiais.
-                </div>
-              </div>
-
-              {/* Upload Drop Zone */}
-              <div className="md:col-span-3 flex flex-col justify-between">
-                <div
-                  role="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`flex-1 border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all hover:bg-neutral-50/50 flex flex-col justify-center items-center ${
-                    file ? 'border-blue-300 bg-blue-50/10' : 'border-border'
-                  }`}
-                >
-                  <Upload className={`h-12 w-12 mb-3 ${file ? 'text-blue-500 animate-pulse' : 'text-neutral-300'}`} />
-                  {file ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-bold text-foreground truncate max-w-xs">{file.name}</p>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
-                        <FileText className="h-3.5 w-3.5" />
-                        {csvRows.length} linhas de dados
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-neutral-700">Selecione ou arraste o arquivo CSV</p>
-                      <p className="text-xs text-muted-foreground">Clique para abrir o explorador</p>
-                    </div>
-                  )}
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-between items-center pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(1)}
-                className="border-border text-xs font-bold text-neutral-600 rounded-xl flex items-center gap-1.5 hover:bg-neutral-50"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar
-              </Button>
-              {file && (
-                <Button
-                  onClick={() => setCurrentStep(3)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2 rounded-xl text-xs flex items-center gap-1.5"
-                >
-                  Mapear Colunas
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: MAPPING & PREVIEW */}
-        {currentStep === 3 && (
-          <div className="p-6 space-y-6">
-            <div className="space-y-1">
-              <h2 className="text-base font-black text-foreground">Associe as colunas de dados</h2>
-              <p className="text-xs text-muted-foreground">
-                Mapeie as propriedades do sistema com as colunas reais presentes no seu CSV.
-              </p>
-            </div>
-
-            {/* Mappings Form */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {fieldsConfig.map(field => {
-                const isMapped = !!mappings[field.key];
+            <div className="grid gap-3 sm:grid-cols-2">
+              {ENTITY_LIST.map((e) => {
+                const Icon = ENTITY_ICONS[e.key];
+                const allowed = canImport(e.key);
                 return (
-                  <div key={field.key} className="space-y-1.5 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <label className="text-xs font-black text-neutral-700">
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                        </label>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{field.desc}</p>
-                      </div>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                        isMapped ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {isMapped ? 'Vinculado' : 'Ignorado'}
-                      </span>
+                  <button
+                    key={e.key}
+                    type="button"
+                    disabled={!allowed}
+                    onClick={() => {
+                      setEntityKey(e.key);
+                      setStep(2);
+                    }}
+                    className={`flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-all ${
+                      allowed ? 'border-border hover:border-blue-400 hover:bg-blue-50/30' : 'cursor-not-allowed border-border opacity-50'
+                    }`}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <Icon className="h-5 w-5" />
                     </div>
-                    <select
-                      value={mappings[field.key] || ''}
-                      onChange={(e) => handleMappingChange(field.key, e.target.value)}
-                      disabled={importing}
-                      className="w-full bg-card border border-border text-xs text-neutral-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="">-- Ignorar este campo --</option>
-                      {headers.map(h => (
-                        <option key={h} value={h}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-foreground">{e.label}</p>
+                      <p className="text-xs leading-relaxed text-muted-foreground">{e.description}</p>
+                      {!allowed && <p className="mt-1 text-[10px] font-semibold text-amber-600">Requer permissão de administrador</p>}
+                    </div>
+                  </button>
                 );
               })}
             </div>
+          </div>
+        )}
 
-            {/* Preview Section */}
-            {canStartImport && (
-              <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Layers className="h-4 w-4 text-blue-600" />
-                  Visualização Prévia (Primeiras 5 linhas)
-                </h3>
-                <div className="overflow-x-auto border border-neutral-100 rounded-2xl bg-neutral-50/20">
-                  <Table>
-                    <TableHeader className="bg-neutral-50/80">
-                      <TableRow>
-                        {fieldsConfig.filter(f => !!mappings[f.key]).map(f => (
-                          <TableHead key={f.key} className="text-xs font-black text-muted-foreground py-2">
-                            {f.label}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {mappedPreview.map((row, idx) => (
-                        <TableRow key={idx}>
-                          {fieldsConfig.filter(f => !!mappings[f.key]).map(f => (
-                            <TableCell key={f.key} className="text-xs text-neutral-600 py-2">
-                              {f.key === 'phone' ? normalizePhone(row[f.key]) : row[f.key] || '—'}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
+        {/* ═════════ STEP 2 — file ═════════ */}
+        {step === 2 && entity && (
+          <div className="space-y-5 p-6">
+            <div className="space-y-1">
+              <h2 className="text-base font-black text-foreground">Enviar planilha de {entity.label.toLowerCase()}</h2>
+              <p className="text-xs text-muted-foreground">
+                Aceita Excel (.xlsx, .xls) e CSV (com vírgula ou ponto e vírgula). A primeira linha deve ser o cabeçalho. Até {MAX_ROWS.toLocaleString('pt-BR')} linhas por vez.
+              </p>
+            </div>
 
-            {/* Progress status if importing */}
-            {importing && (
-              <div className="space-y-2 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl">
-                <div className="flex justify-between items-center text-xs font-bold text-blue-700">
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    Processando migração em lotes...
-                  </span>
-                  <span>{progress}%</span>
-                </div>
-                <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${progress}%` }} />
-                </div>
-              </div>
-            )}
+            <label
+              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border p-10 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 ${
+                loadingFile ? 'pointer-events-none opacity-60' : ''
+              }`}
+            >
+              {loadingFile ? <Loader2 className="h-8 w-8 animate-spin text-blue-600" /> : <Upload className="h-8 w-8 text-blue-600" />}
+              <span className="text-sm font-bold text-foreground">{loadingFile ? 'Lendo a planilha...' : 'Clique para escolher o arquivo'}</span>
+              <span className="text-xs text-muted-foreground">.xlsx · .xls · .csv</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.txt,.xlsx,.xls,.xlsm,.ods,text/csv"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
 
-            {/* Buttons */}
-            <div className="flex justify-between items-center pt-4 border-t">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
-                disabled={importing}
-                onClick={() => setCurrentStep(2)}
-                className="border-border text-xs font-bold text-neutral-600 rounded-xl flex items-center gap-1.5 hover:bg-neutral-50"
+                size="sm"
+                className="gap-1.5 rounded-xl text-xs font-bold"
+                onClick={() => downloadFile(`modelo-${entity.key}.csv`, buildTemplateCsv(entity))}
               >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar Planilha
+                <Download className="h-3.5 w-3.5" /> Baixar modelo (.csv)
               </Button>
-              {canStartImport && !importing && (
-                <Button
-                  onClick={runImport}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-1.5"
-                >
-                  Importar {csvRows.length} registros
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowDictionary((v) => !v)}
+                className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+              >
+                <BookOpen className="h-3.5 w-3.5" /> Nomes de coluna que eu reconheço
+                {showDictionary ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+
+            {showDictionary && (
+              <div className="space-y-2 rounded-2xl border border-border bg-neutral-50/60 p-4">
+                <p className="text-xs text-muted-foreground">
+                  Não precisa usar exatamente esses nomes: ignoro acentos, maiúsculas e a ordem das palavras (&quot;Data de Nascimento&quot; = &quot;nascimento (data)&quot;), em português ou inglês. Se a coluna tiver outro nome, você escolhe o campo manualmente no próximo passo.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {entity.fields.map((f) => (
+                    <div key={f.key} className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs font-black text-foreground">
+                        {f.label} {f.required && <span className="text-red-500">*</span>}
+                      </p>
+                      {f.help && <p className="text-[10px] text-muted-foreground">{f.help}</p>}
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        {f.synonyms.slice(0, 14).join(' · ')}
+                        {f.synonyms.length > 14 ? ' …' : ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearFile();
+                  setStep(1);
+                  setEntityKey(null);
+                }}
+                className="text-xs font-bold"
+              >
+                Voltar
+              </Button>
             </div>
           </div>
         )}
 
-        {/* STEP 4: FINAL RESULTS / COMPLETE STATE */}
-        {currentStep === 4 && results && (
-          <div className="p-6 space-y-6 text-center max-w-lg mx-auto">
-            <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2">
-              <CheckCircle2 className="h-8 w-8" />
+        {/* ═════════ STEP 3 — mapping ═════════ */}
+        {step === 3 && entity && sheet && (
+          <div className="space-y-5 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <h2 className="flex items-center gap-2 text-base font-black text-foreground">
+                  <FileSpreadsheet className="h-4 w-4 text-blue-600" /> Confira o que é cada coluna
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {workbook?.fileName} · {sheet.rows.length.toLocaleString('pt-BR')} linha(s) · reconheci <strong>{recognizedCount}</strong> de {sheet.headers.length} colunas. Colunas sem campo são ignoradas.
+                </p>
+              </div>
+              {workbook && workbook.sheetNames.length > 1 && (
+                <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                  Aba:
+                  <select
+                    value={sheetName}
+                    onChange={(e) => entityKey && workbook && applySheet(workbook, e.target.value, entityKey)}
+                    className="rounded-lg border border-input bg-background px-2 py-1 text-xs"
+                  >
+                    {workbook.sheetNames.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <h2 className="text-lg font-black text-foreground">Migração Concluída!</h2>
-              <p className="text-xs text-muted-foreground">
-                A importação da planilha foi processada com sucesso no banco de dados da sua clínica.
+            {/* AI assist */}
+            <div className="space-y-2 rounded-2xl border border-violet-200 bg-violet-50/40 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={runAi} disabled={aiBusy} className="gap-1.5 rounded-xl bg-violet-600 text-xs font-bold hover:bg-violet-700">
+                  {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Sugerir com IA
+                </Button>
+                <Button size="sm" variant="outline" onClick={redetect} disabled={aiBusy} className="rounded-xl text-xs font-bold">
+                  Refazer detecção automática
+                </Button>
+              </div>
+              <p className="text-[11px] leading-relaxed text-violet-900/80">
+                A detecção automática acima funciona sem IA. A IA é opcional e só ajuda nas colunas que sobraram — nunca muda o que já foi reconhecido nem o que você escolheu. Por padrão envia apenas os <strong>nomes das colunas</strong>; nada é gravado por ela.
               </p>
+              <label className="flex items-start gap-2 text-[11px] text-violet-900/80">
+                <input type="checkbox" checked={includeSamples} onChange={(e) => setIncludeSamples(e.target.checked)} className="mt-0.5 h-3.5 w-3.5" />
+                <span>Enviar também 3 exemplos de cada coluna (melhora a precisão, mas envia dados reais da planilha à IA).</span>
+              </label>
             </div>
 
-            {/* Counters cards */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
-              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl space-y-1">
-                <span className="block text-xl font-black text-emerald-700">{results.success}</span>
-                <span className="block text-[10px] font-bold text-emerald-600">Importados</span>
-              </div>
-              <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-1">
-                <span className="block text-xl font-black text-amber-700">{results.skipped}</span>
-                <span className="block text-[10px] font-bold text-amber-600">Duplicados</span>
-              </div>
-              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl space-y-1">
-                <span className="block text-xl font-black text-red-700">{results.failed}</span>
-                <span className="block text-[10px] font-bold text-red-600">Falhas</span>
-              </div>
+            {/* Column mapping table */}
+            <div className="overflow-x-auto rounded-2xl border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-muted-foreground">Coluna da planilha</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-muted-foreground">Exemplos</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-muted-foreground">Vai para o campo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sheet.headers.map((h, i) => {
+                    const col = columns[i];
+                    const examples = samplesByColumn[i] ?? [];
+                    const badge = col?.fieldKey ? SOURCE_BADGE[col.source] : null;
+                    return (
+                      <tr key={i} className={col?.fieldKey ? '' : 'bg-neutral-50/40'}>
+                        <td className="px-3 py-2 align-top">
+                          <p className="text-xs font-bold text-foreground">{h}</p>
+                        </td>
+                        <td className="max-w-[220px] px-3 py-2 align-top">
+                          <p className="truncate text-[11px] text-muted-foreground">{examples.length ? examples.join('  ·  ') : '(vazia)'}</p>
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={col?.fieldKey ?? ''}
+                              onChange={(e) => setColumnField(i, e.target.value || null)}
+                              className="min-w-[180px] rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+                            >
+                              <option value="">— Ignorar esta coluna —</option>
+                              {entity.fields.map((f) => (
+                                <option key={f.key} value={f.key}>
+                                  {f.label}
+                                  {f.required ? ' *' : ''}
+                                  {mappedKeys.has(f.key) && col?.fieldKey !== f.key ? ' (em uso — vai mover)' : ''}
+                                </option>
+                              ))}
+                            </select>
+                            {badge && <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.label}</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            <p className="text-[11px] text-muted-foreground leading-relaxed bg-neutral-50 p-3 rounded-xl border">
-              *Contatos e pacientes duplicados foram ignorados para evitar redundâncias na agenda ou no CRM, mantendo seus dados sempre limpos.
-            </p>
+            {/* Entity options */}
+            {entity.key === 'contacts' && (
+              <div className="space-y-2 rounded-2xl border border-border p-4">
+                <p className="text-xs font-black text-foreground">Como tratar essas pessoas?</p>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  <label className="flex items-center gap-1.5">
+                    <input type="radio" checked={contactType === 'client'} onChange={() => setContactType('client')} /> Pacientes / clientes
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <input type="radio" checked={contactType === 'lead'} onChange={() => setContactType('lead')} /> Leads (ainda não atendidos)
+                  </label>
+                </div>
+              </div>
+            )}
+            {entity.key === 'appointments' && (
+              <label className="flex items-start gap-2 rounded-2xl border border-border p-4 text-xs">
+                <input type="checkbox" checked={createMissingPatients} onChange={(e) => setCreateMissingPatients(e.target.checked)} className="mt-0.5" />
+                <span>
+                  <strong className="text-foreground">Criar automaticamente os pacientes que ainda não existem</strong>
+                  <span className="block text-muted-foreground">
+                    Precisa do telefone na planilha. Sem isso, o agendamento só é importado se o paciente já estiver cadastrado.
+                  </span>
+                </span>
+              </label>
+            )}
 
-            <div className="pt-4 border-t flex justify-center gap-2">
+            {requirementMessage && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0" /> {requirementMessage}
+              </div>
+            )}
+
+            <div className="flex justify-between pt-1">
               <Button
-                variant="outline"
-                onClick={handleReset}
-                className="border-border text-xs font-bold text-neutral-700 rounded-xl hover:bg-neutral-50 px-4 py-2"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearFile();
+                  setStep(2);
+                }}
+                className="text-xs font-bold"
               >
-                Migrar Nova Planilha
+                Trocar arquivo
               </Button>
+              <Button onClick={goReview} disabled={!!requirementMessage} className="gap-1.5 rounded-xl text-xs font-bold">
+                Revisar dados <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ═════════ STEP 4 — review ═════════ */}
+        {step === 4 && entity && sheet && (
+          <div className="space-y-5 p-6">
+            <div className="space-y-1">
+              <h2 className="text-base font-black text-foreground">Revise antes de importar</h2>
+              <p className="text-xs text-muted-foreground">Nada foi gravado ainda. Só as linhas válidas serão importadas.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-border p-4">
+                <p className="text-xl font-black text-foreground">{summary.total.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground">Linhas na planilha</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+                <p className="text-xl font-black text-emerald-700">{summary.valid.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-emerald-800/70">Válidas</p>
+              </div>
+              <div className={`rounded-2xl border p-4 ${summary.invalid ? 'border-red-200 bg-red-50/50' : 'border-border'}`}>
+                <p className={`text-xl font-black ${summary.invalid ? 'text-red-700' : 'text-foreground'}`}>{summary.invalid.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground">Com erro (não entram)</p>
+              </div>
+              <div className={`rounded-2xl border p-4 ${summary.withWarnings ? 'border-amber-200 bg-amber-50/50' : 'border-border'}`}>
+                <p className={`text-xl font-black ${summary.withWarnings ? 'text-amber-700' : 'text-foreground'}`}>{summary.withWarnings.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground">Com avisos</p>
+              </div>
+            </div>
+
+            {entity.key === 'appointments' && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>Agendamentos futuros entram direto na agenda. Se os lembretes automáticos estiverem ativos, os pacientes podem receber mensagens sobre eles.</span>
+              </div>
+            )}
+            {entity.key === 'contacts' && (
+              <div className="rounded-xl border border-border bg-neutral-50 p-3 text-xs text-muted-foreground">
+                Contatos cujo telefone já está cadastrado são mantidos como estão (não são alterados nem duplicados).
+              </div>
+            )}
+            {entity.key === 'products' && (
+              <div className="rounded-xl border border-border bg-neutral-50 p-3 text-xs text-muted-foreground">
+                A quantidade vira o saldo inicial do estoque. Se houver validade ou lote, é criado um lote (aparece nos avisos de vencimento).
+              </div>
+            )}
+            {entity.key === 'transactions' && (
+              <div className="rounded-xl border border-border bg-neutral-50 p-3 text-xs text-muted-foreground">
+                Taxas de forma de pagamento não são aplicadas a lançamentos importados — o histórico entra pelo valor informado.
+              </div>
+            )}
+
+            {validRows.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-black text-foreground">Prévia das primeiras linhas válidas</p>
+                <div className="overflow-x-auto rounded-2xl border border-border">
+                  <table className="w-full text-xs">
+                    <thead className="bg-neutral-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-muted-foreground">Linha</th>
+                        {previewFields.map((f) => (
+                          <th key={f.key} className="px-3 py-2 text-left text-[10px] font-bold uppercase text-muted-foreground">
+                            {f.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {validRows.slice(0, 8).map((r) => (
+                        <tr key={r.rowNumber}>
+                          <td className="px-3 py-2 text-muted-foreground">{r.rowNumber}</td>
+                          {previewFields.map((f) => (
+                            <td key={f.key} className="max-w-[180px] truncate px-3 py-2 text-foreground">
+                              {renderPreviewValue(r.values[f.key])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {invalidRows.length > 0 && (
+              <div className="space-y-2 rounded-2xl border border-red-200 bg-red-50/40 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-black text-red-800">
+                    Linhas com erro ({invalidRows.length.toLocaleString('pt-BR')}) — não serão importadas
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 rounded-xl text-[11px] font-bold"
+                    onClick={() => downloadFile('linhas-com-erro.csv', buildErrorCsv(sheet.headers, parsedRows))}
+                  >
+                    <Download className="h-3.5 w-3.5" /> Baixar só as com erro
+                  </Button>
+                </div>
+                <ul className="max-h-48 space-y-1 overflow-y-auto text-[11px] text-red-900">
+                  {invalidRows.slice(0, 40).map((r) => (
+                    <li key={r.rowNumber}>
+                      <strong>Linha {r.rowNumber}:</strong> {r.errors.join(' · ')}
+                    </li>
+                  ))}
+                  {invalidRows.length > 40 && <li className="italic">… e mais {invalidRows.length - 40}. Baixe o arquivo pra ver todas.</li>}
+                </ul>
+                <p className="text-[11px] text-red-900/70">
+                  Dica: corrija as linhas no arquivo baixado e importe só ele — o que já entrou não duplica.
+                </p>
+              </div>
+            )}
+
+            {importing && (
+              <div className="space-y-1.5">
+                <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Importando {progress.done.toLocaleString('pt-BR')} de {progress.total.toLocaleString('pt-BR')}... não feche esta página.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-between pt-1">
+              <Button variant="ghost" size="sm" onClick={() => setStep(3)} disabled={importing} className="text-xs font-bold">
+                Voltar ao mapeamento
+              </Button>
+              <Button onClick={runImport} disabled={importing || validRows.length === 0} className="gap-1.5 rounded-xl text-xs font-bold">
+                {importing && <Loader2 className="h-4 w-4 animate-spin" />}
+                Importar {validRows.length.toLocaleString('pt-BR')} linha(s)
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ═════════ STEP 5 — result ═════════ */}
+        {step === 5 && result && entityKey && (
+          <div className="space-y-5 p-6">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              <h2 className="text-base font-black text-foreground">Importação concluída</h2>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+                <p className="text-xl font-black text-emerald-700">{result.created.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-emerald-800/70">Criados</p>
+              </div>
+              <div className="rounded-2xl border border-border p-4">
+                <p className="text-xl font-black text-foreground">{result.skipped.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground">Ignorados (já existiam / repetidos)</p>
+              </div>
+              <div className={`rounded-2xl border p-4 ${result.failed ? 'border-red-200 bg-red-50/50' : 'border-border'}`}>
+                <p className={`text-xl font-black ${result.failed ? 'text-red-700' : 'text-foreground'}`}>{result.failed.toLocaleString('pt-BR')}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground">Falharam</p>
+              </div>
+            </div>
+
+            {invalidRows.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {invalidRows.length.toLocaleString('pt-BR')} linha(s) da planilha nem chegaram a ser importadas por erro de formato.
+              </p>
+            )}
+
+            {result.notes.length > 0 && (
+              <ul className="space-y-1.5 rounded-2xl border border-border bg-neutral-50/60 p-4 text-xs text-foreground">
+                {result.notes.map((n, i) => (
+                  <li key={i} className="leading-relaxed">
+                    • {n}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {result.details.length > 0 && (
+              <div className="space-y-1.5 rounded-2xl border border-red-200 bg-red-50/40 p-4">
+                <p className="text-xs font-black text-red-800">Linhas que falharam ao gravar</p>
+                <ul className="max-h-48 space-y-1 overflow-y-auto text-[11px] text-red-900">
+                  {result.details.slice(0, 40).map((d, i) => (
+                    <li key={i}>
+                      <strong>Linha {d.rowNumber}:</strong> {d.message}
+                    </li>
+                  ))}
+                  {result.details.length > 40 && <li className="italic">… e mais {result.details.length - 40}.</li>}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-between gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={reset} className="rounded-xl text-xs font-bold">
+                Importar outro arquivo
+              </Button>
+              <Link href={ENTITY_LINKS[entityKey].href}>
+                <Button size="sm" className="gap-1.5 rounded-xl text-xs font-bold">
+                  {ENTITY_LINKS[entityKey].label} <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         )}

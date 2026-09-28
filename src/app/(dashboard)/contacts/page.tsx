@@ -56,7 +56,7 @@ import {
 import { QuoteModal } from '@/components/quotes/quote-modal';
 import { ContactForm } from '@/components/contacts/contact-form';
 import { AppointmentModal } from '@/components/ui/appointment-modal';
-import { ImportModal } from '@/components/contacts/import-modal';
+import { useRouter } from 'next/navigation';
 import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
 import { usePermissions } from '@/hooks/use-permissions';
 import { GatedButton } from '@/components/ui/gated-button';
@@ -94,7 +94,7 @@ export default function ContactsPage() {
   const [editContactTags, setEditContactTags] = useState<ContactTag[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailContactId, setDetailContactId] = useState<string | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
+  const router = useRouter();
   const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
@@ -391,7 +391,7 @@ export default function ContactsPage() {
             variant="outline"
             canAct={canEdit}
             gateReason="adicionar ou importar contatos"
-            onClick={() => setImportOpen(true)}
+            onClick={() => router.push('/comunicacao/importacao?tipo=contatos')}
             className="border-border text-muted-foreground hover:bg-muted"
           >
             <Upload className="size-4" />
@@ -844,13 +844,6 @@ export default function ContactsPage() {
         defaultPatientId={detailContactId ?? undefined}
         initialTab="timeline"
         onSave={fetchContacts}
-      />
-
-      {/* Import Modal */}
-      <ImportModal
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={fetchContacts}
       />
 
       {/* Custom Fields Manager (admin+) */}

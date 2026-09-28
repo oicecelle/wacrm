@@ -13,18 +13,48 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * (with batch_id) so the history shows exactly which lot was used.
  */
 
+/**
+ * stock_movements.created_by references clinic_users(id) — NOT the
+ * login user's auth id. Callers hand us the auth user id (that's what
+ * they have); it's translated here so no caller can get it wrong. An
+ * unknown user simply records no author rather than failing the
+ * whole movement on a foreign-key error.
+ */
+const clinicUserIdCache = new Map<string, string | null>();
+
+export async function resolveClinicUserId(
+  supabase: SupabaseClient,
+  clinicId: string,
+  authUserId: string | null | undefined,
+): Promise<string | null> {
+  if (!authUserId) return null;
+  const cacheKey = `${clinicId}:${authUserId}`;
+  if (clinicUserIdCache.has(cacheKey)) return clinicUserIdCache.get(cacheKey) ?? null;
+  const { data } = await supabase
+    .from("clinic_users")
+    .select("id")
+    .eq("clinic_id", clinicId)
+    .eq("user_id", authUserId)
+    .maybeSingle();
+  const id = data?.id ?? null;
+  clinicUserIdCache.set(cacheKey, id);
+  return id;
+}
+
 export interface DeductStockInput {
   clinicId: string;
   productId: string;
   quantity: number;
   reason: string;
+  /** The logged-in user's AUTH id (translated to clinic_users.id internally). */
   createdBy?: string | null;
   appointmentId?: string | null;
 }
 
 export async function deductStock(supabase: SupabaseClient, input: DeductStockInput): Promise<void> {
-  const { clinicId, productId, quantity, reason, createdBy, appointmentId } = input;
+  const { clinicId, productId, quantity, reason, appointmentId } = input;
   if (quantity <= 0) return;
+  const createdBy = await resolveClinicUserId(supabase, clinicId, input.createdBy);
 
   const { data: product, error: prodErr } = await supabase
     .from("stock_products")
@@ -58,7 +88,7 @@ export async function deductStock(supabase: SupabaseClient, input: DeductStockIn
       quantity: take,
       reason,
       appointment_id: appointmentId ?? null,
-      created_by: createdBy ?? null,
+      created_by: createdBy,
     });
     if (movErr) throw movErr;
     remaining -= take;
@@ -75,7 +105,7 @@ export async function deductStock(supabase: SupabaseClient, input: DeductStockIn
       quantity: remaining,
       reason,
       appointment_id: appointmentId ?? null,
-      created_by: createdBy ?? null,
+      created_by: createdBy,
     });
     if (movErr) throw movErr;
   }
@@ -103,8 +133,9 @@ export interface AddStockEntryInput {
 }
 
 export async function addStockEntry(supabase: SupabaseClient, input: AddStockEntryInput): Promise<void> {
-  const { clinicId, productId, quantity, reason, createdBy, batchNumber, expiryDate, manufactureDate, costPrice } = input;
+  const { clinicId, productId, quantity, reason, batchNumber, expiryDate, manufactureDate, costPrice } = input;
   if (quantity <= 0) return;
+  const createdBy = await resolveClinicUserId(supabase, clinicId, input.createdBy);
 
   const { data: product, error: prodErr } = await supabase
     .from("stock_products")
@@ -139,7 +170,7 @@ export async function addStockEntry(supabase: SupabaseClient, input: AddStockEnt
     type: "entrada",
     quantity,
     reason: reason ?? null,
-    created_by: createdBy ?? null,
+    created_by: createdBy,
   });
   if (movErr) throw movErr;
 
