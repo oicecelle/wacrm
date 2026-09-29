@@ -295,7 +295,7 @@ export default function BroadcastDetailPage() {
 
   const funnelSteps: FunnelStep[] = [
     { label: 'Enviado', value: broadcast.sent_count, color: 'bg-primary' },
-    { label: 'Respondido', value: broadcast.replied_count, color: 'bg-indigo-500' },
+    { label: 'Respondido', value: broadcast.replied_count, color: 'bg-primary/70' },
   ];
 
   return (
@@ -399,7 +399,7 @@ export default function BroadcastDetailPage() {
           value={broadcast.replied_count}
           total={broadcast.total_recipients}
           icon={<MessageCircle className="h-4 w-4" />}
-          color="bg-indigo-500/10 text-indigo-400"
+          color="bg-primary-soft text-primary"
           onClick={broadcast.replied_count > 0 ? () => setShowRepliedPanel(true) : undefined}
         />
         <StatCard

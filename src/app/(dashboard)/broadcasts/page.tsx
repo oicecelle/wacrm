@@ -225,9 +225,9 @@ export default function BroadcastsPage() {
           </div>
           <div className="rounded-2xl border border-border bg-card p-4 shadow-xs hover:shadow-md transition-all">
             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mb-1">Taxa de Resposta</p>
-            <p className="text-2xl font-black text-indigo-600">{avgReplied}%</p>
+            <p className="text-2xl font-black text-primary">{avgReplied}%</p>
             <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${avgReplied}%` }} />
+              <div className="h-full bg-primary rounded-full" style={{ width: `${avgReplied}%` }} />
             </div>
           </div>
         </div>
@@ -287,7 +287,7 @@ export default function BroadcastsPage() {
                       <RateCell
                         value={broadcast.replied_count}
                         total={broadcast.total_recipients}
-                        color="bg-indigo-500"
+                        color="bg-primary"
                       />
                     </TableCell>
                     <TableCell>

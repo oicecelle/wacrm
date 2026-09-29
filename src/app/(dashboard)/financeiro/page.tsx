@@ -746,7 +746,7 @@ export default function FinanceiroPage() {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 shadow-sm transition-all cursor-pointer border-0"
+          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover shadow-sm transition-all cursor-pointer border-0"
         >
           <PlusIcon className="h-4 w-4" />
           Lançar Transação
@@ -763,7 +763,7 @@ export default function FinanceiroPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <KpiCard label="Receita total" value={fmt(receita)} icon={TrendingUpIcon} color="text-emerald-600" />
             <KpiCard label="Despesas" value={fmt(despesa)} icon={TrendingDownIcon} color="text-destructive" />
-            <KpiCard label="Caixa de Sinais" value={fmt(sinais)} sub="Depósitos de garantia" icon={DollarSignIcon} color="text-blue-500" />
+            <KpiCard label="Caixa de Sinais" value={fmt(sinais)} sub="Depósitos de garantia" icon={DollarSignIcon} color="text-primary" />
             <KpiCard
               label="Inadimplência"
               value={`${inadimplentes.length} caso(s)`}

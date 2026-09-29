@@ -433,8 +433,8 @@ export function DealForm({
             </div>
 
             {/* AI / Copilot Fields Group */}
-            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3.5">
-              <p className="text-xs font-black text-blue-600 uppercase tracking-wider flex items-center gap-1">
+            <div className="rounded-xl border border-primary/20 bg-primary-soft p-4 space-y-3.5">
+              <p className="text-xs font-black text-primary uppercase tracking-wider flex items-center gap-1">
                 🤖 Copiloto IA & CRM Inteligente
               </p>
 

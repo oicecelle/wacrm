@@ -671,7 +671,7 @@ export default function ContactsPage() {
                               <UserCheck className="size-2.5" /> Cliente
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 border border-blue-200 px-1.5 py-0.5 text-[9px] font-black text-blue-700 uppercase">
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-primary-soft-2 border border-primary-soft-2 px-1.5 py-0.5 text-[9px] font-black text-primary uppercase">
                               <TrendingUp className="size-2.5" /> Lead
                             </span>
                           )}

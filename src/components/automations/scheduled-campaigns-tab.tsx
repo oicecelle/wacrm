@@ -167,7 +167,7 @@ export function ScheduledCampaignsTab() {
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -181,7 +181,7 @@ export function ScheduledCampaignsTab() {
         </p>
         <Button
           onClick={() => setEditing(newCampaignDraft())}
-          className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold"
+          className="shrink-0 bg-primary hover:bg-primary-hover text-primary-foreground font-bold"
         >
           <Plus className="h-4 w-4" />
           Nova Campanha
