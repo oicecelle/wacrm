@@ -187,7 +187,7 @@ function TemplateVariablesEditor({
                 type="button"
                 onClick={() => onInsert(v.key)}
                 title="Inserir no texto do modelo"
-                className="min-w-0 flex-1 truncate text-left font-mono text-blue-600 hover:underline"
+                className="min-w-0 flex-1 truncate text-left font-mono text-primary hover:underline"
               >
                 {"{{"}
                 {v.key}
@@ -775,7 +775,7 @@ export default function DocumentosPage() {
                       type="checkbox"
                       checked={tmplFormIsDefault}
                       onChange={(e) => setTmplFormIsDefault(e.target.checked)}
-                      className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                      className="rounded border-neutral-300 text-primary focus:ring-primary h-4 w-4"
                     />
                     <span className="text-xs font-semibold text-neutral-700">Modelo Padrão</span>
                   </label>
@@ -795,7 +795,7 @@ export default function DocumentosPage() {
                   onChange={(e) => setTmplFormContent(e.target.value)}
                   placeholder="Prezada(o) {{nome}}, por meio deste..."
                   rows={10}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-mono resize-none"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-mono resize-none"
                   required
                 />
               </div>
@@ -914,7 +914,7 @@ export default function DocumentosPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por título ou paciente..."
-                  className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-all shadow-xs"
+                  className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all shadow-xs"
                 />
               </div>
               <div className="flex gap-1.5 flex-wrap">
@@ -924,7 +924,7 @@ export default function DocumentosPage() {
                     onClick={() => setStatusFilter(f)}
                     className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
                       statusFilter === f
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "border-border text-muted-foreground bg-card hover:bg-neutral-50"
                     }`}
                   >
@@ -937,7 +937,7 @@ export default function DocumentosPage() {
             {/* Document list */}
             {loadingDocs ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+                <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : filtered.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground bg-card shadow-xs">
@@ -953,12 +953,12 @@ export default function DocumentosPage() {
                   return (
                     <div
                       key={doc.id}
-                      className="rounded-xl border border-border bg-card p-5 hover:border-blue-200 transition-all shadow-xs"
+                      className="rounded-xl border border-border bg-card p-5 hover:border-primary-soft-2 transition-all shadow-xs"
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-start gap-4 min-w-0 text-left">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 border border-blue-100">
-                            <FileTextIcon className="h-5 w-5 text-blue-600" />
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft border border-primary-soft-2">
+                            <FileTextIcon className="h-5 w-5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -999,7 +999,7 @@ export default function DocumentosPage() {
                             <>
                               <button
                                 onClick={() => handleCopyLink(doc.public_token)}
-                                className="p-2 border border-border hover:bg-neutral-50 text-blue-600 rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
+                                className="p-2 border border-border hover:bg-neutral-50 text-primary rounded-lg transition-colors flex items-center justify-center cursor-pointer bg-transparent"
                                 title="Copiar Link de Assinatura"
                               >
                                 <CopyIcon className="h-4 w-4" />
@@ -1030,7 +1030,7 @@ export default function DocumentosPage() {
           {/* Step 1: Select Patient */}
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">1</div>
+              <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-primary-foreground shrink-0">1</div>
               <h2 className="text-sm font-black text-foreground">Selecionar Paciente</h2>
             </div>
             
@@ -1044,7 +1044,7 @@ export default function DocumentosPage() {
                 }}
                 onFocus={() => setShowPatientDropdown(true)}
                 placeholder="Pesquise o paciente pelo nome..."
-                className="w-full rounded-xl border border-border bg-card pl-10 pr-4 py-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
+                className="w-full rounded-xl border border-border bg-card pl-10 pr-4 py-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all shadow-xs"
               />
               
               {showPatientDropdown && filteredPatients.length > 0 && (
@@ -1068,8 +1068,8 @@ export default function DocumentosPage() {
             </div>
 
             {selectedPatient && (
-              <div className="rounded-xl px-4 py-3 flex items-center gap-3 bg-blue-50/50 border border-blue-100">
-                <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-sm font-black text-white shrink-0">
+              <div className="rounded-xl px-4 py-3 flex items-center gap-3 bg-primary-soft border border-primary-soft-2">
+                <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-sm font-black text-primary-foreground shrink-0">
                   {selectedPatient.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
@@ -1093,7 +1093,7 @@ export default function DocumentosPage() {
           {/* Step 2: Select Templates */}
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">2</div>
+              <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-primary-foreground shrink-0">2</div>
               <h2 className="text-sm font-black text-foreground">Selecionar Modelos de Documento</h2>
               <span className="text-[10px] font-bold text-muted-foreground ml-auto">
                 {selectedTemplateIds.length} selecionado(s)
@@ -1117,13 +1117,13 @@ export default function DocumentosPage() {
                       }
                       className={`w-full rounded-xl px-4 py-3 flex items-center gap-3 transition-all border cursor-pointer ${
                         selected
-                          ? "bg-blue-50/40 border-blue-300 shadow-xs"
+                          ? "bg-primary-soft border-primary-soft-2 shadow-xs"
                           : "border-border bg-card hover:bg-neutral-50/50"
                       }`}
                     >
                       <div
                         className={`h-4 w-4 rounded shrink-0 flex items-center justify-center border transition-all ${
-                          selected ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-300 bg-transparent"
+                          selected ? "border-primary bg-primary text-primary-foreground" : "border-neutral-300 bg-transparent"
                         }`}
                       >
                         {selected && <CheckIcon className="h-3 w-3" />}
@@ -1200,7 +1200,7 @@ export default function DocumentosPage() {
           {/* Step 3: Write document content */}
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">3</div>
+              <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-primary-foreground shrink-0">3</div>
               <h2 className="text-sm font-black text-foreground">Conteúdo do Documento</h2>
             </div>
 
@@ -1215,7 +1215,7 @@ export default function DocumentosPage() {
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
                     placeholder="Título do termo customizado..."
-                    className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-xs"
+                    className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all shadow-xs"
                   />
                 </div>
                 <div className="space-y-1.5 text-left">
@@ -1227,7 +1227,7 @@ export default function DocumentosPage() {
                     onChange={(e) => setCustomContent(e.target.value)}
                     placeholder="Escreva ou edite o conteúdo do documento..."
                     rows={8}
-                    className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all resize-none font-mono shadow-xs"
+                    className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all resize-none font-mono shadow-xs"
                   />
                 </div>
               </div>
@@ -1237,12 +1237,12 @@ export default function DocumentosPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => setAddCustom(true)}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline block bg-transparent border-0 cursor-pointer"
+                  className="text-xs font-bold text-primary hover:text-primary hover:underline block bg-transparent border-0 cursor-pointer"
                 >
                   + Escrever ou colar termo manualmente
                 </button>
                 <span className="text-neutral-300 text-xs">ou</span>
-                <label className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer flex items-center gap-1.5">
+                <label className="text-xs font-bold text-primary hover:text-primary hover:underline cursor-pointer flex items-center gap-1.5">
                   {uploadingPdf ? (
                     <><Loader2Icon className="h-3.5 w-3.5 animate-spin" /> Enviando...</>
                   ) : (
@@ -1291,12 +1291,12 @@ export default function DocumentosPage() {
                 {docsToSend.map((doc, idx) => (
                   <div key={idx} className="py-2.5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <FileTextIcon className="h-4 w-4 text-blue-600 shrink-0" />
+                      <FileTextIcon className="h-4 w-4 text-primary shrink-0" />
                       <span className="text-xs font-bold text-neutral-700 truncate">{doc.title}</span>
                     </div>
                     <button
                       onClick={() => setPreviewDoc({ title: doc.title, content: doc.content })}
-                      className="text-xs font-bold text-blue-600 hover:underline shrink-0 bg-transparent border-0 cursor-pointer"
+                      className="text-xs font-bold text-primary hover:underline shrink-0 bg-transparent border-0 cursor-pointer"
                     >
                       Visualizar
                     </button>
@@ -1339,7 +1339,7 @@ export default function DocumentosPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Pesquisar por nome do modelo..."
-                className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-all shadow-xs"
+                className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all shadow-xs"
               />
             </div>
           </div>
@@ -1378,14 +1378,14 @@ export default function DocumentosPage() {
                                 Sistema
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200/40 px-2.5 py-0.5 text-[9px] font-black text-blue-700">
+                              <span className="inline-flex items-center rounded-full bg-primary-soft border border-primary-soft-2 px-2.5 py-0.5 text-[9px] font-black text-primary">
                                 Clínica
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <h3 className="text-sm font-black text-foreground tracking-tight group-hover:text-blue-600 transition-colors">
+                        <h3 className="text-sm font-black text-foreground tracking-tight group-hover:text-primary transition-colors">
                           {tmpl.name}
                         </h3>
                         <p className="text-xs text-muted-foreground leading-relaxed mt-1.5 line-clamp-4 min-h-[64px]">
@@ -1406,7 +1406,7 @@ export default function DocumentosPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleOpenTemplateForm(tmpl)}
-                            className="text-xs font-black text-blue-600 hover:text-blue-700 transition-colors cursor-pointer bg-transparent border-0"
+                            className="text-xs font-black text-primary hover:text-primary transition-colors cursor-pointer bg-transparent border-0"
                           >
                             {isSystem ? "Clonar e Editar" : "Editar"}
                           </button>
