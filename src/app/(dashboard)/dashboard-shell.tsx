@@ -204,7 +204,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {user?.created_at && !hideTrialBanner && (
-          <div className="bg-blue-600 text-white text-center py-2 px-4 text-[11px] font-bold shadow-xs flex items-center justify-center gap-2 relative z-50">
+          <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-[11px] font-bold shadow-xs flex items-center justify-center gap-2 relative z-50">
             <Sparkles className="w-3.5 h-3.5 shrink-0 text-yellow-300 animate-pulse" />
             <span>
               Você está no dia {Math.min(Math.max(Math.ceil((new Date().getTime() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)), 1), 7)} de 7 dias de teste. Aproveite ao máximo, conte com o nosso suporte.
@@ -225,7 +225,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                       ? "border-red-500/20 bg-red-500/10 text-red-400"
                       : alert.severity === "warning"
                       ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-400"
-                      : "border-blue-500/20 bg-blue-500/10 text-blue-400"
+                      : "border-primary/20 bg-primary-soft text-primary"
                   }`}
                 >
                   <div className="flex gap-2">

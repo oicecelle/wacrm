@@ -413,7 +413,7 @@ export default function RelatoriosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 min-h-[300px]">
-        <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -542,7 +542,7 @@ export default function RelatoriosPage() {
             <div className="rounded-xl border border-border bg-card p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Número de Leads</span>
-                <UsersIcon className="h-4 w-4 text-blue-500" />
+                <UsersIcon className="h-4 w-4 text-primary" />
               </div>
               <p className="text-2xl font-black text-foreground">{metrics.leadCount}</p>
               <p className="text-[10px] text-muted-foreground">Novos no período</p>
@@ -602,7 +602,7 @@ export default function RelatoriosPage() {
               <div className="rounded-xl border border-border bg-card p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-[10px] font-bold uppercase tracking-wider">Enviados</span>
-                  <FileTextIcon className="h-4 w-4 text-blue-500" />
+                  <FileTextIcon className="h-4 w-4 text-primary" />
                 </div>
                 <p className="text-2xl font-black text-foreground">{metrics.quotesSent}</p>
                 <p className="text-[10px] text-muted-foreground">No período</p>
@@ -791,7 +791,7 @@ export default function RelatoriosPage() {
                     sourceRules.map((rule, idx) => (
                       <tr key={idx} className="hover:bg-muted/10">
                         <td className="px-6 py-3 font-mono font-semibold text-foreground">"{rule.keyword}"</td>
-                        <td className="px-6 py-3 text-blue-500 font-bold">{rule.source}</td>
+                        <td className="px-6 py-3 text-primary font-bold">{rule.source}</td>
                         <td className="px-6 py-3 text-right">
                           <button
                             onClick={() => handleRemoveRule(idx)}

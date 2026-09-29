@@ -158,7 +158,7 @@ export default function PatientPortalLoginPage({ params }: Props) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
         <div className="text-center space-y-2">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-xs text-neutral-400">Carregando portal da clínica...</p>
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function PatientPortalLoginPage({ params }: Props) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-950 p-4 text-left relative overflow-hidden">
       {/* Background radial highlight */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl relative z-10 space-y-6">
         {/* Clinic Identity & Header */}
@@ -194,7 +194,7 @@ export default function PatientPortalLoginPage({ params }: Props) {
               className="h-14 w-auto mx-auto rounded-xl object-contain bg-white/5 p-1 border border-white/10"
             />
           ) : (
-            <div className="h-12 w-12 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-2xl flex items-center justify-center mx-auto">
+            <div className="h-12 w-12 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center mx-auto">
               <Building className="h-6 w-6" />
             </div>
           )}

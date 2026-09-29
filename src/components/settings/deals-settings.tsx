@@ -347,7 +347,7 @@ export function DealsSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
             <svg
-              className="size-4 text-blue-600"
+              className="size-4 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -403,14 +403,14 @@ export function DealsSettings() {
                   leadSources.map((src) => (
                     <span
                       key={src}
-                      className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full"
+                      className="inline-flex items-center gap-1 bg-primary-soft-2 text-primary text-xs font-semibold px-2 py-1 rounded-full"
                     >
                       {src}
                       {canEditSettings && (
                         <button
                           type="button"
                           onClick={() => handleRemoveSource(src)}
-                          className="hover:bg-blue-200 rounded-full p-0.5"
+                          className="hover:bg-primary-soft-2 rounded-full p-0.5"
                         >
                           <X className="size-3" />
                         </button>
