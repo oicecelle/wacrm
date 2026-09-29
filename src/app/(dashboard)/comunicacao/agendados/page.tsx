@@ -345,7 +345,7 @@ export default function ScheduledNotificationsPage() {
                 }}
                 className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all ${
                   isActive
-                    ? 'bg-blue-50 text-blue-600 border-blue-200/50'
+                    ? 'bg-primary-soft text-primary border-primary-soft-2'
                     : 'text-muted-foreground hover:bg-neutral-50 border-transparent'
                 } border`}
               >
@@ -369,8 +369,8 @@ export default function ScheduledNotificationsPage() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between bg-blue-500/10 border border-blue-200/50 p-3 rounded-2xl animate-fade-in">
-          <span className="text-xs font-bold text-blue-800">
+        <div className="flex items-center justify-between bg-primary-soft border border-primary-soft-2 p-3 rounded-2xl animate-fade-in">
+          <span className="text-xs font-bold text-primary">
             {selectedIds.size} {selectedIds.size === 1 ? 'item selecionado' : 'itens selecionados'}
           </span>
           <div className="flex items-center gap-2">
@@ -400,7 +400,7 @@ export default function ScheduledNotificationsPage() {
       {/* Table Section */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-card">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : filteredNotifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-card p-8 text-center">
@@ -421,7 +421,7 @@ export default function ScheduledNotificationsPage() {
                       type="checkbox"
                       checked={selectedIds.size === filteredNotifications.length}
                       onChange={toggleSelectAll}
-                      className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-neutral-300 text-primary focus:ring-primary"
                     />
                   </TableHead>
                 )}
@@ -443,7 +443,7 @@ export default function ScheduledNotificationsPage() {
                   <TableRow
                     key={notif.id}
                     className={`border-neutral-100 transition-colors ${
-                      isSelected ? 'bg-blue-500/5 hover:bg-blue-500/10' : 'hover:bg-neutral-50/50'
+                      isSelected ? 'bg-primary-soft hover:bg-primary-soft-2' : 'hover:bg-neutral-50/50'
                     }`}
                   >
                     {statusFilter === 'pending' && (
@@ -452,7 +452,7 @@ export default function ScheduledNotificationsPage() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelectOne(notif.id)}
-                          className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-neutral-300 text-primary focus:ring-primary"
                         />
                       </TableCell>
                     )}
@@ -524,7 +524,7 @@ export default function ScheduledNotificationsPage() {
                           <button
                             onClick={() => handleReactivateOne(notif.id)}
                             title="Reativar Envio"
-                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-blue-600 transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-neutral-100 hover:text-primary transition-colors"
                           >
                             <RefreshCw className="h-3.5 w-3.5" />
                           </button>
@@ -564,7 +564,7 @@ export default function ScheduledNotificationsPage() {
             <div className="space-y-4 py-4 text-left">
               {/* Recipient summary */}
               <div className="flex gap-2 p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                <div className="h-8 w-8 rounded-xl bg-primary-soft flex items-center justify-center text-primary">
                   <User className="h-4 w-4" />
                 </div>
                 <div>
@@ -591,7 +591,7 @@ export default function ScheduledNotificationsPage() {
                   value={editMessageText}
                   onChange={(e) => setEditMessageText(e.target.value)}
                   rows={6}
-                  className="w-full border border-border bg-neutral-50 text-xs text-foreground rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed"
+                  className="w-full border border-border bg-neutral-50 text-xs text-foreground rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary leading-relaxed"
                   placeholder="Escreva a mensagem personalizada..."
                 />
               </div>
