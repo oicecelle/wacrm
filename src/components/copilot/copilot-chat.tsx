@@ -244,7 +244,7 @@ export function CopilotChat() {
       <button
         onClick={() => setClosedAndPersist(false)}
         aria-label="Abrir a LIA"
-        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-2xl transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-transform hover:scale-105 active:scale-95"
       >
         <SparklesIcon className="h-5 w-5" />
       </button>
@@ -255,7 +255,7 @@ export function CopilotChat() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-3 sm:px-4 sm:pb-4">
       <div className="pointer-events-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Collapse toggle strip */}
-        <div className="flex w-full items-center justify-between bg-gradient-to-r from-blue-600 to-violet-600 pl-4 pr-1.5 py-1.5 text-white">
+        <div className="flex w-full items-center justify-between bg-primary pl-4 pr-1.5 py-1.5 text-primary-foreground">
           <button
             onClick={() => setCollapsedAndPersist(!collapsed)}
             aria-label={collapsed ? "Abrir LIA" : "Recolher LIA"}
@@ -294,14 +294,14 @@ export function CopilotChat() {
                 <div key={i} className={`flex gap-2 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                   <div
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                      m.role === "assistant" ? "bg-gradient-to-br from-blue-500 to-violet-500 text-white" : "bg-neutral-200 text-neutral-600"
+                      m.role === "assistant" ? "bg-primary text-primary-foreground" : "bg-neutral-200 text-neutral-600"
                     }`}
                   >
                     {m.role === "assistant" ? <BotIcon className="h-3.5 w-3.5" /> : <UserIcon className="h-3.5 w-3.5" />}
                   </div>
                   <div
                     className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-xs leading-relaxed ${
-                      m.role === "user" ? "rounded-tr-sm bg-blue-600 text-white" : "rounded-tl-sm bg-neutral-100 text-foreground"
+                      m.role === "user" ? "rounded-tr-sm bg-primary text-primary-foreground" : "rounded-tl-sm bg-neutral-100 text-foreground"
                     }`}
                   >
                     {m.content}
@@ -311,7 +311,7 @@ export function CopilotChat() {
 
               {loading && (
                 <div className="flex gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary">
                     <BotIcon className="h-3.5 w-3.5 text-white" />
                   </div>
                   <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm bg-neutral-100 px-3 py-2.5">
@@ -331,7 +331,7 @@ export function CopilotChat() {
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
-                    className="rounded-full border border-border bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold transition-colors hover:bg-blue-50 hover:text-blue-700"
+                    className="rounded-full border border-border bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold transition-colors hover:bg-primary-soft hover:text-primary"
                   >
                     {s}
                   </button>
@@ -344,7 +344,7 @@ export function CopilotChat() {
         {/* Input row — always visible, even collapsed, so typing works either way */}
         <div className="border-t border-neutral-100 p-2.5 sm:p-3">
           {pendingAttachment && (
-            <div className="mb-2 flex items-center justify-between rounded-lg bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-700">
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-primary-soft px-2.5 py-1.5 text-[11px] text-primary">
               <span className="flex items-center gap-1.5 truncate">
                 <PaperclipIcon className="h-3 w-3 shrink-0" />
                 <span className="truncate">{pendingAttachment.name}</span>
@@ -352,14 +352,14 @@ export function CopilotChat() {
               <button
                 type="button"
                 onClick={() => setPendingAttachment(null)}
-                className="ml-2 shrink-0 font-bold text-blue-700 hover:underline"
+                className="ml-2 shrink-0 font-bold text-primary hover:underline"
               >
                 Remover
               </button>
             </div>
           )}
           <input ref={fileInputRef} type="file" onChange={handleFileSelected} className="hidden" accept="image/*,video/*,application/pdf" />
-          <div className="flex items-center gap-1.5 rounded-xl border border-border bg-neutral-50 px-2 py-1.5 transition-all focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-300 sm:px-3 sm:py-2">
+          <div className="flex items-center gap-1.5 rounded-xl border border-border bg-neutral-50 px-2 py-1.5 transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/40 sm:px-3 sm:py-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -394,7 +394,7 @@ export function CopilotChat() {
               onClick={() => handleSend()}
               disabled={loading || (!input.trim() && !pendingAttachment)}
               aria-label="Enviar mensagem"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-40"
             >
               {loading ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SendIcon className="h-3.5 w-3.5" />}
             </button>
