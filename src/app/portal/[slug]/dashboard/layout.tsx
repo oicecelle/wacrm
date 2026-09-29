@@ -115,7 +115,7 @@ export default function PatientPortalDashboardLayout({
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-50 text-neutral-800">
         <div className="text-center space-y-2">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-xs text-neutral-500">Carregando painel do paciente...</p>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function PatientPortalDashboardLayout({
                 className="h-9 w-auto object-contain"
               />
             ) : (
-              <div className="h-8 w-8 bg-blue-500/10 text-blue-600 rounded-lg flex items-center justify-center">
+              <div className="h-8 w-8 bg-primary-soft text-primary rounded-lg flex items-center justify-center">
                 <Building className="h-4 w-4" />
               </div>
             )}
@@ -230,14 +230,14 @@ export default function PatientPortalDashboardLayout({
         {/* Clinic Info Bar */}
         <div className="grid gap-3 sm:grid-cols-2 bg-white border p-4 rounded-3xl shadow-xs">
           <div className="flex gap-2 text-xs text-neutral-500">
-            <MapPin className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+            <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-neutral-800">Endereço da Clínica</p>
               <p className="mt-0.5">{clinic?.address || 'Endereço não informado'}</p>
             </div>
           </div>
           <div className="flex gap-2 text-xs text-neutral-500">
-            <Phone className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+            <Phone className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-neutral-800">Fale Conosco</p>
               {clinic?.whatsapp_url || clinic?.phone ? (
@@ -245,7 +245,7 @@ export default function PatientPortalDashboardLayout({
                   href={clinic.whatsapp_url || `https://wa.me/${clinic.phone?.replace(/\D/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 font-bold hover:underline block mt-0.5"
+                  className="text-primary font-bold hover:underline block mt-0.5"
                 >
                   {clinic.phone || 'Enviar Mensagem no WhatsApp'}
                 </a>

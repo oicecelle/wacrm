@@ -133,7 +133,7 @@ function JoinPageContent() {
       <CardTitle className="text-xl text-foreground font-black">
         Você foi convidado para a equipe da clínica
       </CardTitle>
-      <p className="text-lg font-black text-blue-600 mt-1">{clinicName}</p>
+      <p className="text-lg font-black text-primary mt-1">{clinicName}</p>
       <CardDescription className="text-muted-foreground mt-2">
         Ao aceitar, você poderá gerenciar a agenda, contatos e faturamento.
       </CardDescription>

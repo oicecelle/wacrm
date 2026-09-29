@@ -505,7 +505,7 @@ export default function AdminDashboardPage() {
       {/* Sidebar */}
       <aside className="hidden md:flex w-[260px] shrink-0 flex-col bg-neutral-900 border-r border-neutral-800 p-5 space-y-6">
         <div>
-          <h1 className="text-lg font-black tracking-wider bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+          <h1 className="text-lg font-black tracking-wider text-primary">
             LEADPLUZ BACKOFFICE
           </h1>
           <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold mt-1">Super-Admin Portal</p>
