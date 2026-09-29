@@ -356,7 +356,7 @@ export default function MigrationPage() {
               key={label}
               className={`flex items-center gap-2 rounded-xl p-2 transition-all ${
                 current
-                  ? 'border border-border/60 bg-card font-black text-blue-600 shadow-xs'
+                  ? 'border border-border/60 bg-card font-black text-primary shadow-xs'
                   : done
                     ? 'font-bold text-emerald-600'
                     : 'font-medium text-muted-foreground'
@@ -364,7 +364,7 @@ export default function MigrationPage() {
             >
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${
-                  current ? 'bg-blue-600 text-white' : done ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
+                  current ? 'bg-primary text-primary-foreground' : done ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
                 }`}
               >
                 {done ? '✓' : num}
@@ -400,10 +400,10 @@ export default function MigrationPage() {
                       setStep(2);
                     }}
                     className={`flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-all ${
-                      allowed ? 'border-border hover:border-blue-400 hover:bg-blue-50/30' : 'cursor-not-allowed border-border opacity-50'
+                      allowed ? 'border-border hover:border-primary/60 hover:bg-primary-soft' : 'cursor-not-allowed border-border opacity-50'
                     }`}
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
@@ -429,11 +429,11 @@ export default function MigrationPage() {
             </div>
 
             <label
-              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border p-10 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 ${
+              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border p-10 text-center transition-colors hover:border-primary/60 hover:bg-primary-soft ${
                 loadingFile ? 'pointer-events-none opacity-60' : ''
               }`}
             >
-              {loadingFile ? <Loader2 className="h-8 w-8 animate-spin text-blue-600" /> : <Upload className="h-8 w-8 text-blue-600" />}
+              {loadingFile ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-primary" />}
               <span className="text-sm font-bold text-foreground">{loadingFile ? 'Lendo a planilha...' : 'Clique para escolher o arquivo'}</span>
               <span className="text-xs text-muted-foreground">.xlsx · .xls · .csv</span>
               <input
@@ -457,7 +457,7 @@ export default function MigrationPage() {
               <button
                 type="button"
                 onClick={() => setShowDictionary((v) => !v)}
-                className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
               >
                 <BookOpen className="h-3.5 w-3.5" /> Nomes de coluna que eu reconheço
                 {showDictionary ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -509,7 +509,7 @@ export default function MigrationPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
                 <h2 className="flex items-center gap-2 text-base font-black text-foreground">
-                  <FileSpreadsheet className="h-4 w-4 text-blue-600" /> Confira o que é cada coluna
+                  <FileSpreadsheet className="h-4 w-4 text-primary" /> Confira o que é cada coluna
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   {workbook?.fileName} · {sheet.rows.length.toLocaleString('pt-BR')} linha(s) · reconheci <strong>{recognizedCount}</strong> de {sheet.headers.length} colunas. Colunas sem campo são ignoradas.
@@ -767,7 +767,7 @@ export default function MigrationPage() {
               <div className="space-y-1.5">
                 <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
                   <div
-                    className="h-full rounded-full bg-blue-600 transition-all"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }}
                   />
                 </div>
