@@ -240,7 +240,7 @@ export default function PatientPortalDashboardPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -264,7 +264,7 @@ export default function PatientPortalDashboardPage() {
               onClick={() => setActiveTab(tab)}
               className={`pb-2.5 px-4 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
                 isActive 
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700'
               }`}
             >
@@ -320,7 +320,7 @@ export default function PatientPortalDashboardPage() {
             {/* Next appointment Card */}
             <div className="border p-5 rounded-2xl bg-white space-y-3 shadow-xs">
               <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                <CalendarClock className="h-4 w-4 text-blue-600" />
+                <CalendarClock className="h-4 w-4 text-primary" />
                 Próxima Consulta
               </h3>
               {nextAppt ? (
@@ -352,7 +352,7 @@ export default function PatientPortalDashboardPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setActiveTab('appointments')}
-                      className="mt-3 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold rounded-xl text-xs"
+                      className="mt-3 border-primary-soft-2 text-primary hover:bg-primary-soft font-bold rounded-xl text-xs"
                     >
                       Agendar Consulta Online
                     </Button>
@@ -364,7 +364,7 @@ export default function PatientPortalDashboardPage() {
             {/* Sessions Packages Card — real credit data, not a fixed label */}
             <div className="border p-5 rounded-2xl bg-white space-y-3 shadow-xs">
               <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                <Package className="h-4 w-4 text-blue-600" />
+                <Package className="h-4 w-4 text-primary" />
                 Meus Pacotes de Tratamento
               </h3>
               {packages.length === 0 ? (
@@ -400,7 +400,7 @@ export default function PatientPortalDashboardPage() {
             <div className="border p-5 rounded-2xl bg-white space-y-4 shadow-xs">
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-neutral-800 flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <Calendar className="h-4 w-4 text-primary" />
                   Agendar Novo Horário
                 </h3>
                 <p className="text-xs text-neutral-400">
@@ -418,14 +418,14 @@ export default function PatientPortalDashboardPage() {
                     setBookingDate(e.target.value);
                     loadSlots(e.target.value);
                   }}
-                  className="w-full bg-neutral-50 border border-neutral-200 text-xs text-neutral-700 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-neutral-50 border border-neutral-200 text-xs text-neutral-700 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               {/* Slots rendering */}
               {loadingSlots ? (
                 <div className="flex items-center gap-2 text-xs text-neutral-500 py-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   Buscando horários disponíveis na agenda...
                 </div>
               ) : bookingDate && slots.length === 0 ? (
@@ -450,7 +450,7 @@ export default function PatientPortalDashboardPage() {
                           !slot.available
                             ? 'opacity-40 bg-neutral-50 border-neutral-100 text-neutral-400 cursor-not-allowed'
                             : selectedSlot?.time === slot.time
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                            ? 'bg-primary border-primary text-primary-foreground shadow-xs'
                             : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
                         }`}
                       >
@@ -618,7 +618,7 @@ export default function PatientPortalDashboardPage() {
               {financeTimeline.map(item => (
                 <div key={item.id} className="border p-4 rounded-2xl bg-white shadow-xs flex items-center justify-between gap-3">
                   <div className="flex gap-2.5 items-center">
-                    <div className="h-8 w-8 bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="h-8 w-8 bg-primary-soft text-primary rounded-xl flex items-center justify-center shrink-0">
                       <DollarSign className="h-4 w-4" />
                     </div>
                     <div>
@@ -651,7 +651,7 @@ export default function PatientPortalDashboardPage() {
               {documents.map((doc) => (
                 <div key={doc.id} className="border p-4 rounded-2xl bg-white shadow-xs flex items-center justify-between gap-3">
                   <div className="flex gap-2.5 items-center min-w-0">
-                    <div className="h-8 w-8 bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="h-8 w-8 bg-primary-soft text-primary rounded-xl flex items-center justify-center shrink-0">
                       <FileText className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -664,7 +664,7 @@ export default function PatientPortalDashboardPage() {
                   {doc.status !== 'signed' && doc.public_token ? (
                     <a
                       href={`/portal/documento/${doc.public_token}`}
-                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-blue-700"
+                      className="shrink-0 rounded-lg bg-primary px-3 py-2 text-[10px] font-bold text-primary-foreground hover:bg-primary-hover"
                     >
                       Assinar agora
                     </a>
