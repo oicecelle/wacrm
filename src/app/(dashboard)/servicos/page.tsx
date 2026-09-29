@@ -468,7 +468,7 @@ export default function ServicosPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Serviços & Pacotes</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Serviços & Pacotes</h1>
           <p className="text-sm text-muted-foreground">Procedimentos, salas de atendimento e pacotes oferecidos pela clínica.</p>
         </div>
         <button

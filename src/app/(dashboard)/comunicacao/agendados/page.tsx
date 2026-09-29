@@ -299,7 +299,7 @@ export default function ScheduledNotificationsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Agenda de Envios</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda de Envios</h1>
           <p className="text-sm text-muted-foreground">
             Gerencie as mensagens automáticas de lembretes e aniversariantes programadas pelo sistema.
           </p>

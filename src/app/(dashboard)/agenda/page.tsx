@@ -840,7 +840,7 @@ export default function AgendaPage() {
 
       {/* Header: page title + Criar Novo (replaces the old floating FAB) */}
       <div className="relative flex items-center justify-between">
-        <h1 className="text-2xl font-black tracking-tight text-foreground">Agenda</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda</h1>
         <div className="relative">
           <button
             type="button"

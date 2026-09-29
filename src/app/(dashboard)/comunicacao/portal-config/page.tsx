@@ -162,7 +162,7 @@ export default function PortalConfigPage() {
     <div className="space-y-6 text-left max-w-4xl mx-auto pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-foreground">Configuração do Portal</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Configuração do Portal</h1>
         <p className="text-sm text-muted-foreground">
           Personalize a Área do Paciente da sua clínica com sua logo, regras de agendamento online e banners de marketing.
         </p>

@@ -349,7 +349,7 @@ export default function EstoquePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground">
             <Boxes className="h-6 w-6 text-primary" /> Estoque
           </h1>
           <p className="text-sm text-muted-foreground">Produtos, insumos e o histórico de movimentações.</p>

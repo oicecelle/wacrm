@@ -741,7 +741,7 @@ export default function FinanceiroPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Financeiro</h1>
           <p className="text-sm text-muted-foreground">Caixa, pacotes, comissões reais e DRE em tempo real da clínica.</p>
         </div>
         <button

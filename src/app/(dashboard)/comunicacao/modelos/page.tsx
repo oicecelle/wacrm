@@ -188,7 +188,7 @@ export default function ModelosPage() {
   return (
     <div className="space-y-6 text-left">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-foreground">Gerenciador de Modelos</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Gerenciador de Modelos</h1>
         <p className="text-sm text-muted-foreground">Configure os templates de disparos e lembretes automáticos do WhatsApp.</p>
       </div>
 

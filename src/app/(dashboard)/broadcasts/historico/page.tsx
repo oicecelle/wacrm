@@ -498,7 +498,7 @@ export default function BroadcastHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Histórico de Disparos</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Histórico de Disparos</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Acompanhe, edite, cancele ou duplique seus disparos.
         </p>

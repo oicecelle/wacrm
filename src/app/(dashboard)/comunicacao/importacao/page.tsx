@@ -327,7 +327,7 @@ export default function MigrationPage() {
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between border-b pb-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Assistente de Migração</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Assistente de Migração</h1>
           <p className="text-sm text-muted-foreground">
             Traga seus dados de outro sistema ou de planilhas (Excel ou CSV): pacientes, procedimentos, estoque, agenda e financeiro.
           </p>

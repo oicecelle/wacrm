@@ -168,7 +168,7 @@ export default function MeusRelatoriosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground">
           <Wallet className="h-6 w-6 text-primary" /> Meus Relatórios
         </h1>
         <p className="text-sm text-muted-foreground">

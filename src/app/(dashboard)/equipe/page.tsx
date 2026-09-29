@@ -391,7 +391,7 @@ export default function EquipePage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Equipe & Comissões</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Equipe & Comissões</h1>
           <p className="text-sm text-muted-foreground">Convide colaboradores, configure permissões e acompanhe comissões.</p>
         </div>
         <div className="flex items-center gap-2">
