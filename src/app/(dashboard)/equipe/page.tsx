@@ -138,7 +138,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       type="button"
       onClick={onChange}
       disabled={disabled}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-blue-600" : "bg-neutral-300"}`}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-primary" : "bg-neutral-300"}`}
     >
       <span className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-card shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
     </button>
@@ -366,7 +366,7 @@ export default function EquipePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -397,7 +397,7 @@ export default function EquipePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsLinkInviteOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2.5 text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-xs font-black hover:bg-primary-hover transition-colors shadow-sm"
           >
             <LinkIcon className="h-4 w-4" />
             Convidar por Link
@@ -447,7 +447,7 @@ export default function EquipePage() {
           return (
             <div
               key={member.id}
-              className="rounded-xl border border-border bg-card p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all relative"
+              className="rounded-xl border border-border bg-card p-5 space-y-3 hover:border-primary-soft-2 hover:shadow-md transition-all relative"
             >
               {/* Pending badge overlay */}
               {isPending && (
@@ -509,7 +509,7 @@ export default function EquipePage() {
                   </div>
                   <div className="rounded-lg bg-neutral-50 p-2">
                     <p className="text-[10px] text-muted-foreground font-bold uppercase">Comissão</p>
-                    <p className="font-black text-blue-700 text-sm mt-0.5">{fmt(member.commissionMonth)}</p>
+                    <p className="font-black text-primary text-sm mt-0.5">{fmt(member.commissionMonth)}</p>
                   </div>
                 </div>
               )}
@@ -526,7 +526,7 @@ export default function EquipePage() {
                 {!isPending ? (
                   <button
                     onClick={() => handleOpenEditDrawer(member)}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+                    className="text-xs font-bold text-primary hover:text-primary transition-colors"
                   >
                     Editar
                   </button>
@@ -575,7 +575,7 @@ export default function EquipePage() {
                     {m.commission_model === "percentage" ? `${m.commission_rate}%` : m.commission_model === "fixed" ? `R$ ${m.commission_fixed} fixo` : "Híbrido"}
                   </td>
                   <td className="px-6 py-3 font-mono text-neutral-600">{fmt(m.revenueMonth)}</td>
-                  <td className="px-6 py-3 font-black text-blue-700">{fmt(m.commissionMonth)}</td>
+                  <td className="px-6 py-3 font-black text-primary">{fmt(m.commissionMonth)}</td>
                 </tr>
               ))}
             </tbody>
@@ -618,7 +618,7 @@ export default function EquipePage() {
                     <select
                       value={formRole}
                       onChange={(e) => handleRoleChange(e.target.value as Role)}
-                      className="w-full text-xs h-9 rounded-lg border border-border bg-card px-2 focus:ring-1 focus:ring-blue-500"
+                      className="w-full text-xs h-9 rounded-lg border border-border bg-card px-2 focus:ring-1 focus:ring-primary"
                     >
                       {Object.entries(ROLE_CONFIG).map(([k, v]) => (
                         <option key={k} value={k}>{v.label}</option>
@@ -652,9 +652,9 @@ export default function EquipePage() {
 
                 {/* Commission (professionals only) */}
                 {formRole === "professional" && (
-                  <div className="border border-blue-100 rounded-xl p-4 bg-blue-50/20 space-y-3">
-                    <p className="text-[10px] font-black text-blue-900 uppercase tracking-wide flex items-center gap-1">
-                      <PercentIcon className="h-3.5 w-3.5 text-blue-600" /> Comissão
+                  <div className="border border-primary-soft-2 rounded-xl p-4 bg-primary-soft space-y-3">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-wide flex items-center gap-1">
+                      <PercentIcon className="h-3.5 w-3.5 text-primary" /> Comissão
                     </p>
                     <div className="space-y-1">
                       <Label className="text-[9px] font-bold text-muted-foreground uppercase">Modelo</Label>
