@@ -9,8 +9,6 @@ import {
   DEFAULT_THEME,
   MODE_STORAGE_KEY,
   MODES,
-  STORAGE_KEY,
-  THEME_IDS,
 } from "@/lib/themes";
 
 const inter = Inter({
@@ -66,11 +64,10 @@ const THEME_BOOT_SCRIPT = `
 (function(){
   var d = document.documentElement;
   try {
-    var THEME_KEY = ${JSON.stringify(STORAGE_KEY)};
-    var THEME_DEFAULT = ${JSON.stringify(DEFAULT_THEME)};
-    var THEMES = ${JSON.stringify(THEME_IDS)};
-    var savedTheme = localStorage.getItem(THEME_KEY);
-    d.dataset.theme = THEMES.indexOf(savedTheme) !== -1 ? savedTheme : THEME_DEFAULT;
+    // Accent is fixed (LYA CRM brand, marrom) — no longer read from
+    // localStorage, so an old saved preference from before this
+    // decision can never override it.
+    d.dataset.theme = ${JSON.stringify(DEFAULT_THEME)};
 
     var MODE_KEY = ${JSON.stringify(MODE_STORAGE_KEY)};
     var MODE_DEFAULT = ${JSON.stringify(DEFAULT_MODE)};
