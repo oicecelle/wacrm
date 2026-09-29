@@ -517,7 +517,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
       {/* Record list */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2Icon className="h-6 w-6 animate-spin text-indigo-400" />
+          <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : records.length === 0 ? (
         <div
@@ -560,7 +560,7 @@ export function ProntuarioTab({ patientId }: ProntuarioTabProps) {
                       onClick={() => handleRequestCiente(rec.id)}
                       disabled={requestingCienteId !== null || rec.patient_acknowledged}
                       title="Solicitar Ciência via WhatsApp"
-                      className="h-7 px-2 rounded-lg flex items-center justify-center text-xs font-bold text-indigo-400 hover:text-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-7 px-2 rounded-lg flex items-center justify-center text-xs font-bold text-primary hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ background: "rgba(255,255,255,0.05)" }}
                     >
                       {requestingCienteId === rec.id ? (
