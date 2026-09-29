@@ -289,11 +289,11 @@ export default function DashboardPage() {
                             <Flame className="h-2.5 w-2.5 fill-current" />
                             {item.temperature}
                           </span>
-                          <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 text-[9px] font-bold border border-blue-100/30">
+                          <span className="inline-flex items-center rounded-full bg-primary-soft text-primary px-2 py-0.5 text-[9px] font-bold border border-primary-soft-2">
                             {item.score}% engajamento
                           </span>
                         </div>
-                        <span className="text-sm font-black text-blue-600 dark:text-blue-400">
+                        <span className="text-sm font-black text-primary">
                           {fmt(item.value)}
                         </span>
                       </div>
@@ -310,8 +310,8 @@ export default function DashboardPage() {
                       )}
 
                       {item.nextAction && (
-                        <div className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/[0.03] border border-blue-500/10 px-2.5 py-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 w-full">
-                          <Sparkles className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 rounded-lg bg-primary-soft border border-primary-soft-2 px-2.5 py-1 text-[11px] font-semibold text-primary w-full">
+                          <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
                           <span className="truncate">IA: {item.nextAction}</span>
                         </div>
                       )}
