@@ -153,7 +153,7 @@ export default function PortalConfigPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[300px] border border-neutral-100 rounded-3xl bg-card">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -170,9 +170,9 @@ export default function PortalConfigPage() {
 
       {/* Share / URL Panel */}
       {slug && (
-        <div className="bg-blue-500/5 border border-blue-200/50 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-primary-soft border border-primary-soft-2 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 bg-primary-soft text-primary rounded-2xl flex items-center justify-center shrink-0">
               <Globe className="h-5 w-5" />
             </div>
             <div>
@@ -212,7 +212,7 @@ export default function PortalConfigPage() {
           {/* Identity settings */}
           <div className="bg-card p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b pb-2">
-              <Settings className="h-4 w-4 text-blue-600" />
+              <Settings className="h-4 w-4 text-primary" />
               Identidade do Portal
             </h2>
 
@@ -233,7 +233,7 @@ export default function PortalConfigPage() {
                   value={welcomeSubtitle}
                   onChange={(e) => setWelcomeSubtitle(e.target.value)}
                   rows={3}
-                  className="w-full border border-border bg-neutral-50 text-xs text-neutral-700 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full border border-border bg-neutral-50 text-xs text-neutral-700 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Ex: Gerencie seus horários, consulte faturas e assine seus documentos."
                 />
               </div>
@@ -269,7 +269,7 @@ export default function PortalConfigPage() {
                   type="checkbox"
                   checked={enabledScheduling}
                   onChange={(e) => setEnabledScheduling(e.target.checked)}
-                  className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  className="rounded border-neutral-300 text-primary focus:ring-primary h-4 w-4"
                 />
               </div>
 
@@ -282,7 +282,7 @@ export default function PortalConfigPage() {
                   type="checkbox"
                   checked={enabledCancellation}
                   onChange={(e) => setEnabledCancellation(e.target.checked)}
-                  className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  className="rounded border-neutral-300 text-primary focus:ring-primary h-4 w-4"
                 />
               </div>
 
@@ -295,7 +295,7 @@ export default function PortalConfigPage() {
                   type="checkbox"
                   checked={enabledRescheduling}
                   onChange={(e) => setEnabledRescheduling(e.target.checked)}
-                  className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  className="rounded border-neutral-300 text-primary focus:ring-primary h-4 w-4"
                 />
               </div>
             </div>
@@ -306,7 +306,7 @@ export default function PortalConfigPage() {
         <div className="md:col-span-1 space-y-6">
           <div className="bg-card p-5 rounded-3xl border border-neutral-100 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-foreground border-b pb-2 flex items-center gap-1.5">
-              <Upload className="h-4 w-4 text-blue-600" />
+              <Upload className="h-4 w-4 text-primary" />
               Carrossel de Banners
             </h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -346,7 +346,7 @@ export default function PortalConfigPage() {
                       </div>
                       <p className="text-[9px] text-muted-foreground truncate mt-0.5">Img: {banner.image_url}</p>
                       {banner.link && (
-                        <p className="text-[9px] text-blue-500 truncate">Link: {banner.link}</p>
+                        <p className="text-[9px] text-primary truncate">Link: {banner.link}</p>
                       )}
                     </div>
                   ))}
