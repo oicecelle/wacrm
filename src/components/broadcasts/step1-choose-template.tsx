@@ -209,7 +209,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Escolha um modelo</h2>
+          <h2 className="text-lg font-bold text-foreground">Escolha um modelo</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {providerType === 'meta'
               ? 'Selecione um modelo aprovado para o seu disparo.'

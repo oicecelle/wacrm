@@ -380,7 +380,7 @@ export default function MigrationPage() {
         {step === 1 && (
           <div className="space-y-5 p-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-foreground">O que você quer importar?</h2>
+              <h2 className="text-base font-bold text-foreground">O que você quer importar?</h2>
               <p className="text-xs text-muted-foreground">
                 Cada tipo é importado separadamente. Ordem recomendada:{' '}
                 <strong>procedimentos → produtos → pacientes → agendamentos → financeiro</strong> — assim agendamentos e lançamentos já encontram o procedimento e o paciente certos.
@@ -422,7 +422,7 @@ export default function MigrationPage() {
         {step === 2 && entity && (
           <div className="space-y-5 p-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-foreground">Enviar planilha de {entity.label.toLowerCase()}</h2>
+              <h2 className="text-base font-bold text-foreground">Enviar planilha de {entity.label.toLowerCase()}</h2>
               <p className="text-xs text-muted-foreground">
                 Aceita Excel (.xlsx, .xls) e CSV (com vírgula ou ponto e vírgula). A primeira linha deve ser o cabeçalho. Até {MAX_ROWS.toLocaleString('pt-BR')} linhas por vez.
               </p>
@@ -508,7 +508,7 @@ export default function MigrationPage() {
           <div className="space-y-5 p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <h2 className="flex items-center gap-2 text-base font-black text-foreground">
+                <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
                   <FileSpreadsheet className="h-4 w-4 text-primary" /> Confira o que é cada coluna
                 </h2>
                 <p className="text-xs text-muted-foreground">
@@ -657,7 +657,7 @@ export default function MigrationPage() {
         {step === 4 && entity && sheet && (
           <div className="space-y-5 p-6">
             <div className="space-y-1">
-              <h2 className="text-base font-black text-foreground">Revise antes de importar</h2>
+              <h2 className="text-base font-bold text-foreground">Revise antes de importar</h2>
               <p className="text-xs text-muted-foreground">Nada foi gravado ainda. Só as linhas válidas serão importadas.</p>
             </div>
 
@@ -794,7 +794,7 @@ export default function MigrationPage() {
           <div className="space-y-5 p-6">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-              <h2 className="text-base font-black text-foreground">Importação concluída</h2>
+              <h2 className="text-base font-bold text-foreground">Importação concluída</h2>
             </div>
 
             <div className="grid grid-cols-3 gap-3">

@@ -292,7 +292,7 @@ export function Step3Personalize({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Personalizar mensagem</h2>
+        <h2 className="text-lg font-bold text-foreground">Personalizar mensagem</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Defina de onde vem o valor de cada variável do modelo.
         </p>

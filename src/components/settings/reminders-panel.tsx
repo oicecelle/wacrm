@@ -129,7 +129,7 @@ export function RemindersPanel() {
         <div className="flex items-center gap-3">
           <BellIcon className="h-5 w-5 text-primary" />
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Lembretes de Consulta automáticos</h2>
+            <h2 className="text-lg font-bold text-foreground">Lembretes de Consulta automáticos</h2>
             <p className="text-xs text-muted-foreground">Configure o envio de notificações de confirmação para os pacientes via WhatsApp.</p>
           </div>
         </div>

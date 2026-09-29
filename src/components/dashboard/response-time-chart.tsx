@@ -47,7 +47,7 @@ export function ResponseTimeChart({
     <section className="rounded-xl border border-border bg-card">
       <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-sm font-bold text-foreground">
             Tempo Médio de Primeira Resposta
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">

@@ -267,7 +267,7 @@ export function SimpleTemplateManager() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Templates de Campanha</h2>
+          <h2 className="text-lg font-bold text-foreground">Templates de Campanha</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Modelos de mensagem usados nos disparos em massa.
           </p>

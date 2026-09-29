@@ -323,7 +323,7 @@ function CampaignEditor({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl">
-        <h2 className="mb-4 text-sm font-black text-foreground">
+        <h2 className="mb-4 text-sm font-bold text-foreground">
           {"id" in draft ? "Editar Campanha" : "Nova Campanha Agendada"}
         </h2>
 

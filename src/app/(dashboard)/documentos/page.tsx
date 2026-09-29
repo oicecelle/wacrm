@@ -1031,7 +1031,7 @@ export default function DocumentosPage() {
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-primary-foreground shrink-0">1</div>
-              <h2 className="text-sm font-black text-foreground">Selecionar Paciente</h2>
+              <h2 className="text-sm font-bold text-foreground">Selecionar Paciente</h2>
             </div>
             
             <div className="relative">
@@ -1094,7 +1094,7 @@ export default function DocumentosPage() {
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-primary-foreground shrink-0">2</div>
-              <h2 className="text-sm font-black text-foreground">Selecionar Modelos de Documento</h2>
+              <h2 className="text-sm font-bold text-foreground">Selecionar Modelos de Documento</h2>
               <span className="text-[10px] font-bold text-muted-foreground ml-auto">
                 {selectedTemplateIds.length} selecionado(s)
               </span>
@@ -1201,7 +1201,7 @@ export default function DocumentosPage() {
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-black text-primary-foreground shrink-0">3</div>
-              <h2 className="text-sm font-black text-foreground">Conteúdo do Documento</h2>
+              <h2 className="text-sm font-bold text-foreground">Conteúdo do Documento</h2>
             </div>
 
             {/* Custom/Manual input */}

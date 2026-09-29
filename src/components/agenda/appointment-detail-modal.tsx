@@ -272,7 +272,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Detalhes do Agendamento</p>
-            <h2 className="text-sm font-black text-foreground mt-0.5">
+            <h2 className="text-sm font-bold text-foreground mt-0.5">
               {contact?.name || "Carregando..."}
               {appointment && (
                 <span className="ml-2 text-muted-foreground font-normal text-xs">

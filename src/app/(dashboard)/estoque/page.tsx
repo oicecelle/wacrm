@@ -674,7 +674,7 @@ export default function EstoquePage() {
             className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-black text-foreground">Registrar Movimentação</h2>
+              <h2 className="text-lg font-bold text-foreground">Registrar Movimentação</h2>
               <button type="button" onClick={() => setIsMovementModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>

@@ -102,7 +102,7 @@ export function Step4ScheduleSend({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Revisar & Enviar</h2>
+        <h2 className="text-lg font-bold text-foreground">Revisar & Enviar</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Dê um nome ao disparo, revise os detalhes e envie.
         </p>

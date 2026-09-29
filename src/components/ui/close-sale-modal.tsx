@@ -292,7 +292,7 @@ export function CloseSaleModal({
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-black text-foreground">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
             <ShoppingBag className="h-5 w-5 text-primary" /> Fechar Compra
           </h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">

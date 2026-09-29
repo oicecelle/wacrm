@@ -348,7 +348,7 @@ function EmptyState({
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
         <Workflow className="h-6 w-6 text-muted-foreground" />
       </div>
-      <h2 className="mt-4 text-base font-medium text-foreground">
+      <h2 className="mt-4 text-base font-bold text-foreground">
         No flows yet
       </h2>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">

@@ -17,7 +17,7 @@ export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
   return (
     <section className="flex h-full flex-col rounded-xl border border-border bg-card">
       <header className="border-b border-border px-5 py-4">
-        <h2 className="text-sm font-semibold text-foreground">Valor do Funil</h2>
+        <h2 className="text-sm font-bold text-foreground">Valor do Funil</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Negócios abertos por etapa
         </p>

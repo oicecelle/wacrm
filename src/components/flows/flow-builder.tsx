@@ -267,7 +267,7 @@ function TriggerPanel({
 }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold text-foreground">Gatilho</h2>
+      <h2 className="mb-3 text-sm font-bold text-foreground">Gatilho</h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs text-muted-foreground">Quando…</label>

@@ -341,7 +341,7 @@ export function Step2SelectAudience({
   return (
     <div className="space-y-6 text-left">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Selecionar Público</h2>
+        <h2 className="text-lg font-bold text-foreground">Selecionar Público</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Escolha quem receberá as mensagens desta campanha.
         </p>

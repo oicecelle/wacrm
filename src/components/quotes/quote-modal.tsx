@@ -421,7 +421,7 @@ export function QuoteModal({
               <>
                 <FileTextIcon className="h-5 w-5 text-primary" />
                 <div>
-                  <h2 className="text-sm font-black text-foreground">Novo Orçamento</h2>
+                  <h2 className="text-sm font-bold text-foreground">Novo Orçamento</h2>
                   {contactName && <p className="text-xs text-muted-foreground">para {contactName}</p>}
                 </div>
               </>
@@ -429,7 +429,7 @@ export function QuoteModal({
               <>
                 <MessageSquareIcon className="h-5 w-5 text-emerald-600" />
                 <div>
-                  <h2 className="text-sm font-black text-foreground">Mensagem do Orçamento</h2>
+                  <h2 className="text-sm font-bold text-foreground">Mensagem do Orçamento</h2>
                   <p className="text-xs text-muted-foreground">Revise antes de enviar</p>
                 </div>
               </>
