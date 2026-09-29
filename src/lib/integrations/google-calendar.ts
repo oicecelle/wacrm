@@ -160,7 +160,7 @@ export function buildEventPayload(a: EventAppointment, opts: EventPayloadOptions
   const title = `${a.type || "Consulta"} - ${a.patient_name || "Sem Nome"}${opts.forUpdate && isCancelled ? " (DESMARCADO)" : ""}`;
   const description =
     `Paciente: ${a.patient_name || "N/A"}\nTelefone: ${a.patient_phone || "N/A"}\nNotas: ${a.notes || "Nenhuma"}` +
-    `${opts.forUpdate ? `\nStatus: ${a.status || "N/A"}` : ""}\nAgendado pelo LeadPluz.`;
+    `${opts.forUpdate ? `\nStatus: ${a.status || "N/A"}` : ""}\nAgendado pelo LYA CRM.`;
 
   const body: Record<string, unknown> = {
     summary: title,
@@ -471,7 +471,7 @@ export async function syncGoogleEventsToDatabase(accountId: string, userId: stri
         }
       } else if (!isGoogleCancelled) {
         // Only import if not cancelled and does not contain WACRM in description (prevent looping)
-        const isFromWacrm = event.description?.includes("Agendado pelo WACRM") || event.description?.includes("Agendado pelo LeadPluz");
+        const isFromWacrm = event.description?.includes("Agendado pelo WACRM") || event.description?.includes("Agendado pelo LeadPluz") || event.description?.includes("Agendado pelo LYA CRM");
         if (isFromWacrm) continue;
 
         // Create a blocker/provisional appointment for the professional

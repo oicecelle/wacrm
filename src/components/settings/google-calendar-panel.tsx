@@ -116,7 +116,7 @@ export function GoogleCalendarPanel() {
     <div className="space-y-6">
       <SettingsPanelHead
         title="Google Agenda"
-        description="Sincronize seus agendamentos automaticamente entre o LeadPluz e a Google Agenda."
+        description="Sincronize seus agendamentos automaticamente entre o LYA CRM e a Google Agenda."
       />
 
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -134,7 +134,7 @@ export function GoogleCalendarPanel() {
               <div className="flex-1 space-y-1">
                 <h3 className="text-sm font-bold text-foreground">Sua agenda está conectada!</h3>
                 <p className="text-xs text-muted-foreground">
-                  Compromissos criados no LeadPluz serão enviados para sua conta, e novos compromissos criados na Google Agenda serão importados.
+                  Compromissos criados no LYA CRM serão enviados para sua conta, e novos compromissos criados na Google Agenda serão importados.
                 </p>
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1 text-xs font-bold text-foreground">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -199,7 +199,7 @@ export function GoogleCalendarPanel() {
           <div className="space-y-1">
             <h4 className="text-xs font-bold text-amber-800">Nota sobre Sincronização</h4>
             <p className="text-[11px] text-amber-700/90 leading-relaxed">
-              O LeadPluz realiza a sincronização instantânea de saída (do sistema para o Google). A sincronização inversa (do Google para o sistema) ocorre via webhook de notificações do Google ou através do processo de sincronização periódica programada.
+              O LYA CRM realiza a sincronização instantânea de saída (do sistema para o Google). A sincronização inversa (do Google para o sistema) ocorre via webhook de notificações do Google ou através do processo de sincronização periódica programada.
             </p>
           </div>
         </div>

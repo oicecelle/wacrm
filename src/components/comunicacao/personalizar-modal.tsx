@@ -595,7 +595,7 @@ export function PersonalizarModal({
                       LP
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-white tracking-tight">LeadPluz</p>
+                      <p className="text-[10px] font-bold text-white tracking-tight">LYA CRM</p>
                       <p className="text-[7px] text-emerald-400 font-semibold leading-none mt-0.5">Online</p>
                     </div>
                   </div>

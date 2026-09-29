@@ -211,7 +211,7 @@ export function RemindersPanel() {
             {getPreviewText()}
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Nota: Se o paciente responder "Confirmar" ou "Cancelar", o robô de IA do LeadPluz detectará e atualizará o status na agenda automaticamente.
+            Nota: Se o paciente responder "Confirmar" ou "Cancelar", o robô de IA do LYA CRM detectará e atualizará o status na agenda automaticamente.
           </p>
         </div>
       </div>

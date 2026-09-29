@@ -265,7 +265,7 @@ export function CopilotChat() {
               <SparklesIcon className="h-3.5 w-3.5" />
             </div>
             <span className="text-xs font-black leading-none">LIA</span>
-            <span className="text-[10px] leading-none text-white/70">Assistente do LeadPluz</span>
+            <span className="text-[10px] leading-none text-white/70">Assistente do LYA CRM</span>
           </button>
           <div className="flex items-center gap-0.5">
             <button

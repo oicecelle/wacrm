@@ -108,7 +108,7 @@ function LoginPageInner() {
         </div>
         
         <div className="text-xs text-neutral-500 relative z-10 font-semibold">
-          © {new Date().getFullYear()} LeadPluz. Todos os direitos reservados.
+          © {new Date().getFullYear()} LYA CRM. Todos os direitos reservados.
         </div>
       </div>
 

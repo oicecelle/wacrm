@@ -18,16 +18,16 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "LeadPluz — O CRM que se organiza sozinho pelo WhatsApp",
-    template: "%s — LeadPluz",
+    default: "LYA CRM — O CRM que se organiza sozinho pelo WhatsApp",
+    template: "%s — LYA CRM",
   },
-  description: "LeadPluz é o CRM autônomo integrado ao WhatsApp: leads, agenda, assinaturas digitais e financeiro organizados automaticamente por IA, sem digitação manual. Teste grátis por 7 dias.",
+  description: "LYA CRM é o CRM autônomo integrado ao WhatsApp: leads, agenda, assinaturas digitais e financeiro organizados automaticamente por IA, sem digitação manual. Teste grátis por 7 dias.",
   robots: {
     index: true,
     follow: true,
   },
   openGraph: {
-    title: "LeadPluz — O CRM que se organiza sozinho pelo WhatsApp",
+    title: "LYA CRM — O CRM que se organiza sozinho pelo WhatsApp",
     description: "Seu WhatsApp alimenta o CRM automaticamente. Leads, agenda e financeiro organizados por IA. Teste grátis por 7 dias.",
     type: "website",
     locale: "pt_BR",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#eef4ff",
+  themeColor: "#F5EDE4",
   colorScheme: "dark light",
 };
 

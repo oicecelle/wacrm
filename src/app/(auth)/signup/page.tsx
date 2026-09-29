@@ -116,7 +116,7 @@ function SignupPageInner() {
             </h2>
           </div>
           <div className="text-xs text-neutral-500 relative z-10 font-semibold">
-            © {new Date().getFullYear()} LeadPluz. Todos os direitos reservados.
+            © {new Date().getFullYear()} LYA CRM. Todos os direitos reservados.
           </div>
         </div>
 
@@ -183,7 +183,7 @@ function SignupPageInner() {
         </div>
         
         <div className="text-xs text-neutral-500 relative z-10 font-semibold">
-          © {new Date().getFullYear()} LeadPluz. Todos os direitos reservados.
+          © {new Date().getFullYear()} LYA CRM. Todos os direitos reservados.
         </div>
       </div>
 

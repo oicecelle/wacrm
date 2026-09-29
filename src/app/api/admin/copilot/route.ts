@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `Você é o Copiloto do Backoffice Administrativo da LeadPluz.
+          content: `Você é o Copiloto do Backoffice Administrativo da LYA CRM.
 Seu objetivo é auxiliar a equipe de suporte e fundadores a gerenciar clínicas, planos de assinatura, suspensões de contas, promoção de papéis de usuários (roles) e envio de alertas do sistema.
 
 Você tem acesso a ferramentas especiais para consultar e alterar informações do banco de dados com bypass administrativo.

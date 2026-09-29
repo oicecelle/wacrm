@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
   const [chatMessages, setChatMessages] = useState<any[]>([
     {
       role: "assistant",
-      content: "Olá! Sou o Copiloto de suporte LeadPluz. Posso te ajudar a realizar modificações diretas no banco de dados. Ex: 'Altere o plano de Marcelle Beauty para enterprise' ou 'Promova user@example.com para admin'."
+      content: "Olá! Sou o Copiloto de suporte LYA CRM. Posso te ajudar a realizar modificações diretas no banco de dados. Ex: 'Altere o plano de Marcelle Beauty para enterprise' ou 'Promova user@example.com para admin'."
     }
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -471,7 +471,7 @@ export default function AdminDashboardPage() {
           </div>
           <h1 className="text-xl font-bold">Acesso Restrito</h1>
           <p className="text-xs text-neutral-400">
-            Esta área é exclusiva para administradores da plataforma LeadPluz. Seu usuário (
+            Esta área é exclusiva para administradores da plataforma LYA CRM. Seu usuário (
             <strong className="text-neutral-200">{profile?.email}</strong>) não tem permissões para prosseguir.
           </p>
           <Button

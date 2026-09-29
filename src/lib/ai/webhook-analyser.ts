@@ -113,7 +113,7 @@ export async function analyseWhatsAppConversationWithAI(
     // ─── 8. Build AI prompt ───────────────────────────────────────────────
     const nowStr = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-    const systemPrompt = `Você é a LIA — Inteligência Artificial do sistema LeadPluz CRM de uma clínica de saúde e estética.
+    const systemPrompt = `Você é a LIA — Inteligência Artificial do sistema LYA CRM de uma clínica de saúde e estética.
 Sua tarefa é analisar o histórico COMPLETO de conversas do WhatsApp (mensagens da clínica E do paciente) e identificar ações específicas a serem tomadas no CRM.
 Hoje é: ${nowStr} (horário de Brasília — use isso para calcular referências como "amanhã", "segunda", "14h hoje").
 
