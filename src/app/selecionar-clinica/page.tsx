@@ -309,7 +309,7 @@ export default function SelecionarClinicaPage() {
         <div className="rounded-2xl p-2 space-y-1 bg-white border border-slate-200 shadow-sm">
           {loading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2Icon className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : clinics.length === 0 ? (
             <div className="text-center py-8">
@@ -331,7 +331,7 @@ export default function SelecionarClinicaPage() {
                   className={cn(
                     "group w-full text-left rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all border",
                     isSelected
-                      ? "bg-blue-50/70 border-blue-200/80 text-blue-900"
+                      ? "bg-primary-soft border-primary-soft-2 text-primary"
                       : "bg-slate-50/40 border-slate-100/50 hover:bg-slate-50 hover:border-slate-200 text-slate-700"
                   )}
                 >
@@ -340,7 +340,7 @@ export default function SelecionarClinicaPage() {
                     className={cn(
                       "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-base font-black text-white",
                       isSelected
-                        ? "bg-gradient-to-br from-blue-500 to-indigo-600"
+                        ? "bg-primary"
                         : "bg-slate-200 text-slate-600"
                     )}
                   >
@@ -388,7 +388,7 @@ export default function SelecionarClinicaPage() {
                       className={cn(
                         "h-5 w-5 rounded-full flex items-center justify-center transition-all border",
                         isSelected
-                          ? "bg-blue-600 border-blue-600 text-white"
+                          ? "bg-primary border-primary text-primary-foreground"
                           : "bg-slate-100 border-slate-200 text-transparent"
                       )}
                     >
@@ -415,7 +415,7 @@ export default function SelecionarClinicaPage() {
               value={newClinicName}
               onChange={(e) => setNewClinicName(e.target.value)}
               placeholder="Ex: Clínica Bella Vitta"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-primary"
               onKeyDown={(e) => e.key === "Enter" && handleCreateClinic()}
             />
             <div className="flex gap-2">
@@ -423,7 +423,7 @@ export default function SelecionarClinicaPage() {
                 type="button"
                 onClick={handleCreateClinic}
                 disabled={creating || !newClinicName.trim()}
-                className="h-9 flex-1 rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40"
+                className="h-9 flex-1 rounded-lg bg-primary text-xs font-bold text-primary-foreground hover:bg-primary-hover disabled:opacity-40"
               >
                 {creating ? "Criando..." : "Criar e acessar"}
               </button>
@@ -444,7 +444,7 @@ export default function SelecionarClinicaPage() {
           <button
             type="button"
             onClick={() => setShowCreateForm(true)}
-            className="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            className="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-bold text-slate-500 hover:border-primary/60 hover:text-primary transition-colors"
           >
             + Criar nova clínica
           </button>
@@ -455,7 +455,7 @@ export default function SelecionarClinicaPage() {
           type="button"
           onClick={handleAccess}
           disabled={!selectedId || switching || loading}
-          className="w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-md shadow-blue-500/10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95 active:scale-95"
+          className="w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-md shadow-primary/10 bg-primary text-primary-foreground hover:opacity-95 active:scale-95"
         >
           {switching ? (
             <>
