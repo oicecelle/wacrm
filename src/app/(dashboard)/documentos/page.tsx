@@ -848,7 +848,7 @@ export default function DocumentosPage() {
           )}
           <button
             onClick={() => setActiveTab(activeTab === "history" ? "novo" : "history")}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-blue-200 cursor-pointer"
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 cursor-pointer"
           >
             {activeTab === "novo" ? (
               <><ChevronLeftIcon className="h-4 w-4" /> Voltar ao Histórico</>
@@ -1317,7 +1317,7 @@ export default function DocumentosPage() {
             <button
               onClick={handleSend}
               disabled={sending || docsToSend.length === 0 || missingStaffVariables.length > 0}
-              className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-6 py-3 text-xs font-black transition-all shadow-md shadow-blue-200 cursor-pointer border-0"
+              className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 px-6 py-3 text-xs font-black transition-all shadow-md shadow-primary/20 cursor-pointer border-0"
             >
               {sending ? (
                 <><Loader2Icon className="h-4 w-4 animate-spin" /> Enviando...</>

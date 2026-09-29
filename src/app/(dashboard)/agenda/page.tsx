@@ -1361,7 +1361,7 @@ export default function AgendaPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={triggerCopilot}
-                className="h-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:opacity-90 active:scale-95 transition-all text-xs px-3.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-blue-500/10"
+                className="h-8 bg-primary text-primary-foreground font-medium hover:opacity-90 active:scale-95 transition-all text-xs px-3.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-primary/10"
               >
                 <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-primary-soft-2" />
                 Pedir à LIA

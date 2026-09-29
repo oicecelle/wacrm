@@ -631,7 +631,7 @@ export function PersonalizarModal({
           <Button
             onClick={handleSave}
             disabled={saving || loading}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-extrabold h-10 px-5 text-xs rounded-xl gap-1 shadow-lg shadow-blue-500/10"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-extrabold h-10 px-5 text-xs rounded-xl gap-1 shadow-lg shadow-primary/10"
           >
             {saving ? (
               <>

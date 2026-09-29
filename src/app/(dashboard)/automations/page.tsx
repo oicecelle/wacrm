@@ -315,7 +315,7 @@ export default function AutomationsPage() {
               canAct={canCreate}
               gateReason="criar automações"
               onClick={() => router.push("/automations/new")}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md shadow-blue-200"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md shadow-primary/20"
             >
               <Plus className="h-4 w-4" />
               Criar Automação
@@ -325,7 +325,7 @@ export default function AutomationsPage() {
               canAct={canCreate}
               gateReason="criar fluxos"
               onClick={() => setCreateFlowOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md shadow-blue-200"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-md shadow-primary/20"
             >
               <Plus className="h-4 w-4" />
               Novo Fluxo
@@ -341,7 +341,7 @@ export default function AutomationsPage() {
           className={cn(
             "px-4 py-2.5 text-xs font-bold transition-all border-b-2",
             activeTab === "rules"
-              ? "border-blue-600 text-blue-600"
+              ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
@@ -352,12 +352,12 @@ export default function AutomationsPage() {
           className={cn(
             "px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5",
             activeTab === "flows"
-              ? "border-blue-600 text-blue-600"
+              ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           Fluxos de Mensagens
-          <Badge className="rounded-full bg-blue-100 border border-blue-200/50 text-blue-700 px-1 py-0 text-[8px] font-black uppercase shrink-0">
+          <Badge className="rounded-full bg-primary-soft border border-primary-soft-2 text-primary px-1 py-0 text-[8px] font-black uppercase shrink-0">
             BETA
           </Badge>
         </button>
@@ -366,7 +366,7 @@ export default function AutomationsPage() {
           className={cn(
             "px-4 py-2.5 text-xs font-bold transition-all border-b-2",
             activeTab === "campaigns"
-              ? "border-blue-600 text-blue-600"
+              ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
@@ -380,7 +380,7 @@ export default function AutomationsPage() {
         <div className="space-y-6">
           {automations === null ? (
             <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
             <>
@@ -395,9 +395,9 @@ export default function AutomationsPage() {
                         <button
                           key={slug}
                           onClick={() => startFromTemplate(slug)}
-                          className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-300 hover:shadow-xs"
+                          className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/60 hover:shadow-xs"
                         >
-                          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors">
+                          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary transition-colors">
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="text-xs font-bold text-foreground">{t.name}</div>
@@ -440,7 +440,7 @@ export default function AutomationsPage() {
         <div className="space-y-6">
           {loadingFlows ? (
             <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : flows.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card shadow-xs">
@@ -531,9 +531,9 @@ export default function AutomationsPage() {
                       type="button"
                       onClick={() => handleUseFlowTemplate(t.slug)}
                       disabled={creatingFlow}
-                      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-400 hover:shadow-xs disabled:opacity-50"
+                      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/60 hover:shadow-xs disabled:opacity-50"
                     >
-                      <Icon className="h-5 w-5 text-blue-600" />
+                      <Icon className="h-5 w-5 text-primary" />
                       <span className="text-xs font-bold text-foreground leading-tight">
                         {t.name}
                       </span>
@@ -622,9 +622,9 @@ function AutomationCard({
   else if (automation.trigger_type === "new_contact_created") localizedTriggerLabel = "Novo Contato";
 
   return (
-    <li className="rounded-xl border border-border bg-card transition-all hover:border-blue-200 shadow-xs">
+    <li className="rounded-xl border border-border bg-card transition-all hover:border-primary-soft-2 shadow-xs">
       <div className="flex items-center gap-4 p-4">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
           <Zap className="h-5 w-5" />
         </div>
 
@@ -635,8 +635,8 @@ function AutomationCard({
             </span>
             {automation.is_active && (
               <span className="relative flex h-2 w-2" aria-label="ativo">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
               </span>
             )}
           </div>
@@ -707,11 +707,11 @@ function FlowCard({
   else if (flow.trigger_type === "manual") triggerLabel = "Manual";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 hover:border-blue-200 transition-all shadow-xs flex flex-col justify-between">
+    <div className="rounded-xl border border-border bg-card p-4 hover:border-primary-soft-2 transition-all shadow-xs flex flex-col justify-between">
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <Workflow className="h-4 w-4 text-blue-600 shrink-0" />
+            <Workflow className="h-4 w-4 text-primary shrink-0" />
             <h3 className="text-xs font-bold text-foreground truncate" title={flow.name}>
               {flow.name}
             </h3>
