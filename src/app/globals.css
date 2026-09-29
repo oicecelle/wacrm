@@ -72,8 +72,8 @@
  * --sidebar-ring) live in the ACCENT blocks. They set disjoint
  * variables, so cascade order between them doesn't matter.
  *
- * `:root` carries the dark-mode + violet defaults so a visitor
- * renders correctly before JS runs; the boot script in
+ * `:root` carries the dark-mode + marrom (LYA CRM) defaults so a
+ * visitor renders correctly before JS runs; the boot script in
  * layout.tsx replays the saved mode + accent before first paint.
  *
  * The three `--primary-*` extras (hover / soft / soft-2) feed
@@ -147,7 +147,6 @@ html[data-mode="light"] {
 
 /* ---- ACCENT: primary color ---- */
 
-:root,
 html[data-theme="violet"] {
   --primary: oklch(0.585 0.2 254);
   --primary-foreground: oklch(0.985 0 0);
@@ -215,6 +214,21 @@ html[data-theme="rose"] {
   --sidebar-primary: oklch(0.645 0.22 16);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-ring: oklch(0.645 0.22 16);
+}
+
+:root,
+html[data-theme="marrom"] {
+  --primary: oklch(0.17 0.025 55);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.25 0.03 55);
+  --primary-soft: oklch(0.38 0.09 50 / 0.12);
+  --primary-soft-2: oklch(0.38 0.09 50 / 0.22);
+  --ring: oklch(0.38 0.09 50);
+  --chart-1: oklch(0.38 0.09 50);
+  --chart-2: oklch(0.75 0.05 70);
+  --sidebar-primary: oklch(0.17 0.025 55);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.38 0.09 50);
 }
 
 @layer base {

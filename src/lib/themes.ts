@@ -14,6 +14,7 @@
  */
 
 export const THEME_IDS = [
+  "marrom",
   "violet",
   "emerald",
   "cobalt",
@@ -23,7 +24,7 @@ export const THEME_IDS = [
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "cobalt";
+export const DEFAULT_THEME: ThemeId = "marrom";
 
 export const STORAGE_KEY = "wacrm.theme";
 
@@ -68,9 +69,15 @@ export interface ThemeMeta {
 
 export const THEMES: ReadonlyArray<ThemeMeta> = [
   {
+    id: "marrom",
+    name: "Marrom",
+    tagline: "A identidade da LYA CRM — sofisticado e premium.",
+    swatch: "oklch(0.17 0.025 55)",
+  },
+  {
     id: "violet",
     name: "Violet",
-    tagline: "The default — confident, slightly playful.",
+    tagline: "Confident, slightly playful.",
     swatch: "oklch(0.585 0.2 254)",
   },
   {
