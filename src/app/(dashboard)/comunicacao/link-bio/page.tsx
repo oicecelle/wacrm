@@ -298,7 +298,7 @@ export default function LinkBioPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -426,7 +426,7 @@ export default function LinkBioPage() {
                 e.target.value = '';
               }}
               defaultValue=""
-              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-bold text-blue-600"
+              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-bold text-primary"
             >
               <option value="" disabled>
                 + Adicionar bloco
@@ -469,7 +469,7 @@ export default function LinkBioPage() {
           <h2 className="text-xs font-black uppercase tracking-wide text-muted-foreground">Formulários</h2>
           <button
             onClick={addForm}
-            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50"
+            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-primary-soft"
           >
             <Plus className="h-3.5 w-3.5" />
             Novo formulário
@@ -537,7 +537,7 @@ function BlockEditor({
     <div className="rounded-xl border border-border bg-neutral-50/50 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <GripVertical className="h-4 w-4 text-neutral-300" />
-        <Icon className="h-4 w-4 text-blue-600" />
+        <Icon className="h-4 w-4 text-primary" />
         <span className="text-xs font-black text-neutral-700">{meta.label}</span>
         <div className="ml-auto flex items-center gap-1">
           <button onClick={onMoveUp} disabled={isFirst} className="text-muted-foreground hover:text-neutral-700 disabled:opacity-30">
@@ -631,7 +631,7 @@ function BlockEditor({
           ))}
           <button
             onClick={() => onChange({ images: [...(block.images || []), { image_url: '', link_url: '' }] })}
-            className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
+            className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary"
           >
             <Plus className="h-3.5 w-3.5" /> Adicionar imagem
           </button>
@@ -680,7 +680,7 @@ function FormEditor({
   return (
     <div className="rounded-xl border border-border bg-neutral-50/50 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <FileText className="h-4 w-4 text-blue-600" />
+        <FileText className="h-4 w-4 text-primary" />
         <Input
           value={form.name}
           onChange={(e) => onChange({ name: e.target.value })}
@@ -725,7 +725,7 @@ function FormEditor({
             </button>
           </div>
         ))}
-        <button onClick={onAddField} className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800">
+        <button onClick={onAddField} className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary">
           <Plus className="h-3.5 w-3.5" /> Adicionar pergunta
         </button>
       </div>
