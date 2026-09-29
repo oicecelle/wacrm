@@ -249,7 +249,7 @@ export default function DocumentSigningPortalPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-4">
-        <Loader2Icon className="h-10 w-10 animate-spin text-blue-600 mb-3" />
+        <Loader2Icon className="h-10 w-10 animate-spin text-primary mb-3" />
         <p className="text-sm text-slate-500 font-semibold uppercase tracking-wider">
           Verificando Link de Assinatura...
         </p>
@@ -266,7 +266,7 @@ export default function DocumentSigningPortalPage() {
           <p className="text-xs text-slate-500 leading-relaxed">{error}</p>
           <button
             onClick={() => router.push("/")}
-            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-xs"
+            className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs"
           >
             Ir para a Página Inicial
           </button>
@@ -327,7 +327,7 @@ export default function DocumentSigningPortalPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
           <div className="text-center space-y-1">
-            <ShieldCheckIcon className="h-8 w-8 text-blue-600 mx-auto" />
+            <ShieldCheckIcon className="h-8 w-8 text-primary mx-auto" />
             <h1 className="text-base font-black text-slate-800">Antes de continuar</h1>
             <p className="text-xs text-slate-500 leading-relaxed">
               Preencha essas informações pra gente montar o documento certinho pra você.
@@ -342,7 +342,7 @@ export default function DocumentSigningPortalPage() {
                   <select
                     value={patientFormValues[v.key] || ""}
                     onChange={(e) => setPatientFormValues((prev) => ({ ...prev, [v.key]: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
                     <option value="">Selecione...</option>
                     {procedureOptions.map((p) => (
@@ -354,7 +354,7 @@ export default function DocumentSigningPortalPage() {
                     value={patientFormValues[v.key] || ""}
                     onChange={(e) => setPatientFormValues((prev) => ({ ...prev, [v.key]: e.target.value }))}
                     placeholder={v.label}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 )}
               </div>
@@ -364,7 +364,7 @@ export default function DocumentSigningPortalPage() {
           <button
             onClick={handleSubmitPatientForm}
             disabled={savingVariables}
-            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {savingVariables ? <Loader2Icon className="h-4 w-4 animate-spin" /> : "Continuar"}
           </button>
@@ -383,7 +383,7 @@ export default function DocumentSigningPortalPage() {
       >
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-sm font-black text-white shadow-lg">
+            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-sm font-black text-primary-foreground shadow-lg">
               {clinic?.name?.charAt(0)?.toUpperCase() || "C"}
             </div>
             <div>
@@ -446,7 +446,7 @@ export default function DocumentSigningPortalPage() {
               className="rounded-2xl p-5 space-y-3 bg-white border border-slate-200 shadow-xs"
             >
               <span
-                className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block bg-blue-50 text-blue-600 border border-blue-100"
+                className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block bg-primary-soft text-primary border border-primary-soft-2"
               >
                 {document.type?.toUpperCase() || "CONTRATO"}
               </span>
@@ -470,7 +470,7 @@ export default function DocumentSigningPortalPage() {
               <div
                 className="px-4 py-2.5 flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider select-none border-b bg-slate-50 border-slate-100"
               >
-                <ShieldCheckIcon className="h-4 w-4 text-blue-600" />
+                <ShieldCheckIcon className="h-4 w-4 text-primary" />
                 Conteúdo do Documento para Revisão
               </div>
               {document.pdf_url ? (
@@ -494,7 +494,7 @@ export default function DocumentSigningPortalPage() {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <PenToolIcon className="h-4 w-4 text-blue-600" />
+                  <PenToolIcon className="h-4 w-4 text-primary" />
                   Assinatura Digital do Cliente
                 </h3>
                 {isSigned ? (
