@@ -191,7 +191,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   value={selectedPatientId || "none"}
                   onValueChange={(val) => setSelectedPatientId(val === "none" || val === null ? "" : val)}
                 >
-                  <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                  <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary">
                     <SelectValue placeholder="Selecione o paciente...">
                       {selectedPatientId
                         ? patients.find((p) => p.id === selectedPatientId)?.name ?? "Selecione o paciente..."
@@ -216,7 +216,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                   value={selectedStaffId || "none"}
                   onValueChange={(val) => setSelectedStaffId(val === "none" || val === null ? "" : val)}
                 >
-                  <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                  <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary">
                     <SelectValue placeholder="Qualquer profissional...">
                       {selectedStaffId
                         ? staff.find((s) => s.user_id === selectedStaffId)?.name ?? "Qualquer profissional..."
@@ -308,7 +308,7 @@ export function WaitlistDrawer({ open, onClose, onSchedule }: WaitlistDrawerProp
                         <p className="text-[10px] text-muted-foreground font-semibold">Tel: {item.patientPhone}</p>
                       )}
                       <div className="flex flex-wrap gap-1.5 pt-1.5">
-                        <span className="text-[9px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100/50 font-bold">
+                        <span className="text-[9px] px-2 py-0.5 rounded bg-primary-soft text-primary border border-primary-soft-2 font-bold">
                           {item.procedureName}
                         </span>
                         <span className="text-[9px] px-2 py-0.5 rounded bg-neutral-50 text-neutral-600 border border-border/50 font-bold">
