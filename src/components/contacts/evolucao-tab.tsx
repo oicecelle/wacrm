@@ -472,9 +472,9 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
         <div className="space-y-4">
           {/* Compare Window Box */}
           {selectedPhotoA && selectedPhotoB && (
-            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.01] p-4 space-y-3">
+            <div className="rounded-xl border border-primary/20 bg-primary-soft p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                <p className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1">
                   <Sparkles className="size-3.5" /> Comparativo Lado a Lado
                 </p>
                 <button
@@ -575,7 +575,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
           {/* Photo gallery */}
           {loadingPhotos ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2Icon className="h-5 w-5 animate-spin text-indigo-400" />
+              <Loader2Icon className="h-5 w-5 animate-spin text-primary" />
             </div>
           ) : photos.length === 0 ? (
             <div className="text-center py-10 rounded-xl border border-dashed border-border bg-card">
@@ -599,7 +599,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
                       key={item.id}
                       className={`group relative aspect-[3/4] rounded-xl overflow-hidden border cursor-pointer transition-all hover:scale-[1.02] ${
                         isSelected
-                          ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                          ? 'border-primary ring-2 ring-primary/20 shadow-md'
                           : 'border-border bg-muted'
                       }`}
                       onClick={() => handleSelectPhotoForCompare(item.id)}
@@ -612,7 +612,7 @@ export function EvolucaoTab({ patientId }: EvolucaoTabProps) {
 
                       {/* Top Check/Number Indicator */}
                       {isSelected && (
-                        <span className="absolute top-1.5 left-1.5 h-4 w-4 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[9px] font-black uppercase">
+                        <span className="absolute top-1.5 left-1.5 h-4 w-4 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-[9px] font-black uppercase">
                           {isSelectedA ? 'A' : 'B'}
                         </span>
                       )}
