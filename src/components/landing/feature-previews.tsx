@@ -58,7 +58,7 @@ function CRMPreview() {
         </div>
         <div className="flex gap-1">
           {step >= 2 && (
-            <span className="animate-fade-in text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+            <span className="animate-fade-in text-[10px] font-bold bg-primary-soft text-primary border border-primary-soft-2 px-2 py-0.5 rounded-full flex items-center gap-0.5">
               <Sparkles className="w-2.5 h-2.5" /> IA Ativa
             </span>
           )}
@@ -82,14 +82,14 @@ function CRMPreview() {
 
         {step === 1 && (
           <div className="flex justify-end items-center gap-1.5 text-neutral-400 animate-pulse">
-            <Bot className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+            <Bot className="w-3.5 h-3.5 text-primary animate-spin" />
             <span className="text-[10px]">IA analisando intenção...</span>
           </div>
         )}
 
         {step >= 2 && (
           <div className="flex justify-end animate-fade-in">
-            <div className="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%] shadow-xs">
+            <div className="bg-primary text-primary-foreground p-3 rounded-2xl rounded-tr-none max-w-[80%] shadow-xs">
               Olá Juliana! A sessão de Harmonização é personalizada. Nossos procedimentos variam de R$ 800 a R$ 2.500. Vamos agendar uma avaliação cortesia amanhã às 14h?
             </div>
           </div>
@@ -98,7 +98,7 @@ function CRMPreview() {
         {step >= 4 && (
           <div className="flex justify-start animate-fade-in mt-2 border-t pt-2">
             <div className="bg-neutral-100 text-neutral-500 p-2.5 rounded-2xl max-w-[85%] border border-dashed flex items-start gap-2">
-              <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5 animate-pulse" />
+              <Clock className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5 animate-pulse" />
               <div>
                 <p className="font-bold text-[10px] text-neutral-700">Follow-up Automático (IA D+1):</p>
                 <p className="text-[11px] mt-0.5 italic">"Juliana, conseguimos reservar o horário das 14h de amanhã para você. Quer confirmar?"</p>
@@ -136,7 +136,7 @@ function LeadsPreview() {
             <h4 className="text-xs font-bold text-neutral-800">Funil de Leads Automático</h4>
             <p className="text-[10px] text-neutral-400">Atualizado em tempo real pela IA</p>
           </div>
-          <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <span className="text-[10px] font-bold bg-primary-soft text-primary px-2.5 py-0.5 rounded-full flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" /> +45% conversão
           </span>
         </div>
@@ -144,9 +144,9 @@ function LeadsPreview() {
         {/* Funil de Vendas */}
         <div className="space-y-3">
           {[
-            { label: "Novos Leads", val: progress[0], color: "bg-blue-400", count: "120" },
-            { label: "Intenção Detectada", val: progress[1], color: "bg-blue-500", count: "90" },
-            { label: "Agendados", val: progress[2], color: "bg-blue-600", count: "62" },
+            { label: "Novos Leads", val: progress[0], color: "bg-primary/50", count: "120" },
+            { label: "Intenção Detectada", val: progress[1], color: "bg-primary/75", count: "90" },
+            { label: "Agendados", val: progress[2], color: "bg-primary", count: "62" },
             { label: "Convertidos", val: progress[3], color: "bg-emerald-500", count: "42" },
           ].map((item, idx) => (
             <div key={idx} className="space-y-1">
@@ -188,7 +188,7 @@ function SchedulingPreview() {
       <div>
         <div className="flex items-center justify-between mb-3 border-b pb-2">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-blue-500" />
+            <Calendar className="w-4 h-4 text-primary" />
             <h4 className="text-xs font-bold text-neutral-800">Google Calendar Sincronizado</h4>
           </div>
           <span className="text-[9px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-0.5">
@@ -209,16 +209,16 @@ function SchedulingPreview() {
             <span className="text-[10px] font-bold text-neutral-400 w-10">10:00</span>
             <div className={`flex-1 rounded-xl p-2 text-[10px] transition-all duration-700 flex justify-between items-center ${
               booked 
-                ? "bg-blue-50 border border-blue-200 text-blue-800 scale-100 opacity-100" 
+                ? "bg-primary-soft border border-primary-soft-2 text-primary scale-100 opacity-100" 
                 : "bg-neutral-50 border rounded-xl border-dashed text-neutral-400 scale-95 opacity-50"
             }`}>
               {booked ? (
                 <>
                   <div>
                     <span className="font-bold">Dra. Camila S. (Avaliação)</span>
-                    <span className="text-[8px] text-blue-500 block">Agendado pelo Bot via WhatsApp</span>
+                    <span className="text-[8px] text-primary block">Agendado pelo Bot via WhatsApp</span>
                   </div>
-                  <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-md font-bold">
+                  <span className="text-[8px] bg-primary-soft-2 text-primary px-1.5 py-0.5 rounded-md font-bold">
                     Confirmado
                   </span>
                 </>
@@ -281,7 +281,7 @@ function FinanceiroPreview() {
             <h4 className="text-xs font-bold text-neutral-800">Receita Prevista</h4>
             <p className="text-[10px] text-neutral-400">Contratos & Orçamentos em andamento</p>
           </div>
-          <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <span className="text-[10px] font-bold bg-primary-soft text-primary px-2.5 py-0.5 rounded-full flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5" /> Financeiro
           </span>
         </div>
