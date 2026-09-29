@@ -302,7 +302,7 @@ export function PersonalizarModal({
         <div className="p-6 border-b border-neutral-800 flex items-center justify-between bg-neutral-950/40">
           <div>
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
               <h2 className="text-lg font-black text-white">{eventName}</h2>
             </div>
             <p className="text-xs text-neutral-400 mt-1">{eventDescription}</p>
@@ -316,7 +316,7 @@ export function PersonalizarModal({
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <span className="h-8 w-8 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
+              <span className="h-8 w-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
               <p className="text-xs font-semibold text-neutral-400">Carregando automações...</p>
             </div>
           </div>
@@ -347,7 +347,7 @@ export function PersonalizarModal({
                       onClick={() => setActiveIndex(idx)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
                         activeIndex === idx
-                          ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/10'
+                          ? 'bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/10'
                           : 'bg-neutral-800 border-neutral-700/50 text-neutral-300 hover:border-neutral-600'
                       }`}
                     >
@@ -387,7 +387,7 @@ export function PersonalizarModal({
                       <button
                         onClick={() => updateActiveAut({ is_active: !activeAutomation.is_active })}
                         className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                          activeAutomation.is_active ? 'bg-blue-600' : 'bg-neutral-700'
+                          activeAutomation.is_active ? 'bg-primary' : 'bg-neutral-700'
                         }`}
                       >
                         <span className={`inline-block h-4 w-4 translate-x-0.5 rounded-full bg-white shadow transition-transform ${
@@ -413,13 +413,13 @@ export function PersonalizarModal({
                             onClick={() => updateActiveAut({ provider_type: prov.id as any })}
                             className={`p-3 text-xs font-bold text-left rounded-xl border transition-all ${
                               isSelected
-                                ? 'bg-neutral-800 border-blue-600 text-white shadow-xs'
+                                ? 'bg-neutral-800 border-primary text-white shadow-xs'
                                 : 'bg-neutral-800/40 border-neutral-800 text-neutral-400 hover:border-neutral-700'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <span>{prov.title}</span>
-                              {isSelected && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                              {isSelected && <span className="h-2 w-2 rounded-full bg-primary" />}
                             </div>
                           </button>
                         );
@@ -430,7 +430,7 @@ export function PersonalizarModal({
                   {/* Trigger Configuration depending on eventType */}
                   <div className="space-y-2.5 p-4 bg-neutral-950/20 border border-neutral-800/60 rounded-2xl">
                     <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      <Clock className="h-3.5 w-3.5 text-primary" />
                       <span className="text-xs font-extrabold text-white">Configuração de Agendamento</span>
                     </div>
 
@@ -502,10 +502,10 @@ export function PersonalizarModal({
 
                   {/* Meta Template specific fields */}
                   {activeAutomation.provider_type === 'meta' && (
-                    <div className="space-y-3 p-4 border border-blue-900/40 bg-blue-950/10 rounded-2xl animate-in slide-in-from-top-1 duration-200">
+                    <div className="space-y-3 p-4 border border-primary/20 bg-primary-soft rounded-2xl animate-in slide-in-from-top-1 duration-200">
                       <div className="flex items-center gap-1">
-                        <Info className="h-3.5 w-3.5 text-blue-400" />
-                        <span className="text-xs font-bold text-blue-200">Configuração da API Meta</span>
+                        <Info className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-bold text-primary">Configuração da API Meta</span>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
@@ -527,7 +527,7 @@ export function PersonalizarModal({
                           />
                         </div>
                       </div>
-                      <p className="text-[10px] text-blue-400/80 leading-normal">
+                      <p className="text-[10px] text-primary/80 leading-normal">
                         Para a Meta API, o texto abaixo serve como o fallback e preview. A mensagem entregue usará o layout aprovado no Meta Manager.
                       </p>
                     </div>
@@ -540,7 +540,7 @@ export function PersonalizarModal({
                       value={activeAutomation.message_text}
                       onChange={(e) => updateActiveAut({ message_text: e.target.value })}
                       rows={5}
-                      className="bg-neutral-800 border-neutral-700 text-white text-xs rounded-xl focus:ring-blue-500 placeholder:text-neutral-600 resize-none leading-relaxed"
+                      className="bg-neutral-800 border-neutral-700 text-white text-xs rounded-xl focus:ring-primary placeholder:text-neutral-600 resize-none leading-relaxed"
                       placeholder="Escreva a mensagem..."
                     />
                     
@@ -591,7 +591,7 @@ export function PersonalizarModal({
 
                   {/* Chat Header */}
                   <div className="bg-neutral-800/80 border-b border-neutral-800 p-2.5 flex items-center gap-1.5 shrink-0 select-none">
-                    <div className="h-6 w-6 rounded-full bg-blue-600/30 text-[9px] flex items-center justify-center text-blue-400 font-extrabold border border-blue-500/20">
+                    <div className="h-6 w-6 rounded-full bg-primary/30 text-[9px] flex items-center justify-center text-primary font-extrabold border border-primary/20">
                       LP
                     </div>
                     <div>

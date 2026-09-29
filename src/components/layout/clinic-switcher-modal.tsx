@@ -223,7 +223,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2Icon className="h-6 w-6 animate-spin text-blue-600" />
+            <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : (
           <div className="space-y-3 py-3 text-left">
@@ -239,7 +239,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   }}
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                     isSelected
-                      ? "border-blue-600 bg-blue-50/40 text-blue-900"
+                      ? "border-primary bg-primary-soft text-primary"
                       : "border-border hover:border-neutral-300 bg-card text-neutral-700"
                   }`}
                 >
@@ -247,7 +247,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   <div
                     className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all ${
                       isSelected
-                        ? "border-blue-600 bg-blue-600 text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-neutral-300 bg-card"
                     }`}
                   >
@@ -291,14 +291,14 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
                   value={newClinicName}
                   onChange={(e) => setNewClinicName(e.target.value)}
                   placeholder="Ex: Clínica Bella Vitta"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-xs text-foreground outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-xs text-foreground outline-none focus:border-primary"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateClinic()}
                 />
                 <div className="flex gap-2">
                   <Button
                     onClick={handleCreateClinic}
                     disabled={creating || !newClinicName.trim()}
-                    className="h-8 flex-1 rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
+                    className="h-8 flex-1 rounded-lg bg-primary text-xs font-bold text-primary-foreground hover:bg-primary-hover"
                   >
                     {creating ? "Criando..." : "Criar e acessar"}
                   </Button>
@@ -319,7 +319,7 @@ export function ClinicSwitcherModal({ open, onOpenChange }: ClinicSwitcherModalP
               <button
                 type="button"
                 onClick={() => setShowCreateForm(true)}
-                className="mt-2 w-full rounded-xl border border-dashed border-neutral-300 py-2.5 text-xs font-bold text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors"
+                className="mt-2 w-full rounded-xl border border-dashed border-neutral-300 py-2.5 text-xs font-bold text-muted-foreground hover:border-primary/60 hover:text-primary transition-colors"
               >
                 + Criar nova clínica
               </button>

@@ -296,7 +296,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors -mb-px shrink-0 ${
                   activeTab === tab.key
-                    ? "border-blue-600 text-blue-600"
+                    ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -311,7 +311,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2Icon className="h-7 w-7 animate-spin text-blue-600" />
+              <Loader2Icon className="h-7 w-7 animate-spin text-primary" />
             </div>
           ) : !appointment ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -381,7 +381,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                       onChange={e => setNewProntuario(e.target.value)}
                       rows={4}
                       placeholder="Queixas, histórico, observações clínicas..."
-                      className="w-full text-sm rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                      className="w-full text-sm rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-primary focus:outline-none resize-none"
                     />
                     <Button
                       onClick={handleAddProntuario}
@@ -418,7 +418,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                       onChange={e => setNewEvolucao(e.target.value)}
                       rows={3}
                       placeholder="Resultado do procedimento, resposta do paciente, próximos passos..."
-                      className="w-full text-sm rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                      className="w-full text-sm rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-primary focus:outline-none resize-none"
                     />
                     <Button
                       onClick={handleAddEvolucao}
@@ -436,7 +436,7 @@ export function AppointmentDetailModal({ open, appointmentId, onClose, onUpdated
                     {evolucoes.filter(e => e.note_type !== "prontuario").map((entry, idx) => (
                       <div key={idx} className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <div className="h-2.5 w-2.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                          <div className="h-2.5 w-2.5 rounded-full bg-primary mt-1.5 shrink-0" />
                           {idx < evolucoes.filter(e => e.note_type !== "prontuario").length - 1 && (
                             <div className="w-px flex-1 bg-neutral-200 mt-1" />
                           )}

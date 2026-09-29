@@ -419,7 +419,7 @@ export function QuoteModal({
           <div className="flex items-center gap-2">
             {step === "build" ? (
               <>
-                <FileTextIcon className="h-5 w-5 text-blue-600" />
+                <FileTextIcon className="h-5 w-5 text-primary" />
                 <div>
                   <h2 className="text-sm font-black text-foreground">Novo Orçamento</h2>
                   {contactName && <p className="text-xs text-muted-foreground">para {contactName}</p>}
@@ -438,7 +438,7 @@ export function QuoteModal({
           <div className="flex items-center gap-2">
             {/* Step indicator */}
             <div className="flex items-center gap-1">
-              <span className={`h-2 w-6 rounded-full transition-colors ${step === "build" ? "bg-blue-600" : "bg-neutral-200"}`} />
+              <span className={`h-2 w-6 rounded-full transition-colors ${step === "build" ? "bg-primary" : "bg-neutral-200"}`} />
               <span className={`h-2 w-6 rounded-full transition-colors ${step === "message" ? "bg-emerald-600" : "bg-neutral-200"}`} />
             </div>
             <button onClick={onClose} className="text-muted-foreground hover:text-neutral-700">
@@ -449,7 +449,7 @@ export function QuoteModal({
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-12">
-            <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : step === "build" ? (
           <>
@@ -531,7 +531,7 @@ export function QuoteModal({
                               className="h-5 w-5 rounded bg-neutral-200 hover:bg-neutral-300 text-xs font-bold flex items-center justify-center"
                             >+</button>
                           </div>
-                          <span className="text-xs font-black text-blue-700 w-16 text-right shrink-0">{fmt(item.total_price)}</span>
+                          <span className="text-xs font-black text-primary w-16 text-right shrink-0">{fmt(item.total_price)}</span>
                           <button onClick={() => removeItem(idx)} className="text-rose-400 hover:text-rose-600 shrink-0">
                             <TrashIcon className="h-3.5 w-3.5" />
                           </button>
@@ -579,7 +579,7 @@ export function QuoteModal({
                       <button
                         type="button"
                         onClick={addPaymentLine}
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-0.5"
+                        className="text-[10px] font-bold text-primary hover:text-primary flex items-center gap-0.5"
                       >
                         <PlusIcon className="h-3 w-3" /> Adicionar linha
                       </button>
@@ -638,7 +638,7 @@ export function QuoteModal({
                       type="date"
                       value={expiresAt}
                       onChange={(e) => setExpiresAt(e.target.value)}
-                      className="w-full rounded-xl border border-border h-8 px-3 text-xs bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-full rounded-xl border border-border h-8 px-3 text-xs bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
 
@@ -656,7 +656,7 @@ export function QuoteModal({
                     )}
                     <div className="flex justify-between text-sm font-black text-foreground">
                       <span>Total</span>
-                      <span className="text-blue-700">{fmt(total)}</span>
+                      <span className="text-primary">{fmt(total)}</span>
                     </div>
                   </div>
                 </div>
@@ -690,7 +690,7 @@ export function QuoteModal({
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 rows={14}
-                className="w-full text-sm font-mono rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                className="w-full text-sm font-mono rounded-xl border border-border bg-neutral-50 px-4 py-3 focus:ring-1 focus:ring-primary focus:outline-none resize-none"
               />
               <p className="text-xs text-muted-foreground">
                 Você pode editar o texto acima antes de enviar.
@@ -699,12 +699,12 @@ export function QuoteModal({
               </p>
 
               {/* Summary */}
-              <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 flex items-center justify-between">
+              <div className="rounded-xl bg-primary-soft border border-primary-soft-2 px-4 py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-black text-blue-900">{items.length} item{items.length > 1 ? "ns" : ""} — Total: {fmt(total)}</p>
-                  {specialCondition && <p className="text-[10px] text-blue-600 mt-0.5">{specialCondition}</p>}
+                  <p className="text-xs font-black text-primary">{items.length} item{items.length > 1 ? "ns" : ""} — Total: {fmt(total)}</p>
+                  {specialCondition && <p className="text-[10px] text-primary mt-0.5">{specialCondition}</p>}
                 </div>
-                <span className="text-xs font-bold text-blue-600">{contactName}</span>
+                <span className="text-xs font-bold text-primary">{contactName}</span>
               </div>
             </div>
 
