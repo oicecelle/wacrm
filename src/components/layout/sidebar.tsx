@@ -297,8 +297,8 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
             <Logo className="h-7 w-7 shrink-0" />
             {(!isMounted || !isCollapsed) && (
               <span className="text-xs font-black tracking-tight text-foreground select-none uppercase">
-                <span className="font-medium text-blue-600">LEAD</span>{" "}
-                <span className="font-extrabold text-blue-800">PLUZ</span>
+                <span className="font-medium text-primary">LEAD</span>{" "}
+                <span className="font-extrabold text-primary">PLUZ</span>
               </span>
             )}
           </Link>
@@ -314,11 +314,11 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
 
         {/* Clinic info banner */}
         {!isCollapsed && account?.name && (
-          <div className="mx-4 mt-3 rounded-xl bg-blue-500/5 p-3 border border-blue-500/10 shrink-0">
-            <div className="text-[10px] font-black text-blue-500 uppercase tracking-wider">Clínica Ativa</div>
+          <div className="mx-4 mt-3 rounded-xl bg-primary-soft p-3 border border-primary-soft-2 shrink-0">
+            <div className="text-[10px] font-black text-primary uppercase tracking-wider">Clínica Ativa</div>
             <div className="text-xs font-bold text-foreground truncate mt-0.5" title={account.name}>{account.name}</div>
-            <div className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] text-blue-600 font-bold">
-              <Crown className="h-3 w-3 text-blue-500 shrink-0" />
+            <div className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-primary-soft px-2 py-0.5 text-[9px] text-primary font-bold">
+              <Crown className="h-3 w-3 text-primary shrink-0" />
               Licença Ativa
             </div>
           </div>
@@ -342,7 +342,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors w-full text-left",
                         isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : "",
                         hasActiveSub
-                          ? "bg-blue-600/10 text-blue-600"
+                          ? "bg-primary-soft text-primary"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                       title={isCollapsed ? item.label : undefined}
@@ -366,7 +366,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                                 className={cn(
                                   "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
                                   isSubActive
-                                    ? "bg-blue-600/10 text-blue-600"
+                                    ? "bg-primary-soft text-primary"
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                 )}
                               >
@@ -398,7 +398,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors relative",
                       isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : "",
                       isActive
-                        ? "bg-blue-600/10 text-blue-600"
+                        ? "bg-primary-soft text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                     title={isCollapsed ? item.label : undefined}
@@ -414,16 +414,16 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                         )}
                         {showUnreadDot && (
                           <span className="relative flex h-2 w-2">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600 opacity-75" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                           </span>
                         )}
                       </>
                     )}
                     {isCollapsed && showUnreadDot && (
                       <span className="absolute top-1 right-1 flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                       </span>
                     )}
                   </Link>
@@ -445,7 +445,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                       "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors",
                       isCollapsed ? "w-9 h-9 mx-auto justify-center p-0 flex items-center justify-center" : "",
                       isActive
-                        ? "bg-blue-600/10 text-blue-600"
+                        ? "bg-primary-soft text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                     title={isCollapsed ? item.label : undefined}
@@ -495,7 +495,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                     alt={profile.full_name ?? "Avatar"}
                   />
                 ) : null}
-                <AvatarFallback className="bg-blue-600/10 text-xs font-bold text-blue-600">
+                <AvatarFallback className="bg-primary-soft text-xs font-bold text-primary">
                   {profile?.full_name?.charAt(0)?.toUpperCase() ??
                     profile?.email?.charAt(0)?.toUpperCase() ??
                     "U"}
@@ -570,7 +570,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
               {account?.name && (
                 <div className="px-2 py-1 flex items-center gap-1.5 border-b border-border bg-muted/20">
                   <Avatar className="size-5 shrink-0">
-                    <AvatarFallback className="bg-blue-600/10 text-[9px] font-bold text-blue-600 uppercase">
+                    <AvatarFallback className="bg-primary-soft text-[9px] font-bold text-primary uppercase">
                       {account.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
