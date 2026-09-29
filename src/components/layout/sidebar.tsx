@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { applySidebarOrder, getSidebarOrder, SIDEBAR_ORDER_CHANGED_EVENT } from "@/lib/sidebar-order";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Logo } from "@/components/ui/logo";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import {
@@ -105,6 +106,7 @@ interface MenuItem {
 export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
   const totalUnread = useTotalUnread();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   
@@ -192,6 +194,49 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     { key: "/comunicacao/link-bio", href: "/comunicacao/link-bio", label: "Link na Bio", icon: Link2 },
   ];
 
+  // Route/group key → the flat permission key that gates it (matches
+  // exactly what each page's own hasPermission(...) check already
+  // uses — see src/lib/auth/permissions.ts). null/absent means the
+  // page itself has no gate today, so the menu item always shows,
+  // same as today's behavior.
+  const MENU_PERMISSION_KEYS: Record<string, string> = {
+    "/pipelines": "edit_crm",
+    "/contacts": "edit_crm",
+    "/financeiro": "view_financeiro",
+    "/documentos": "view_documentos",
+    "/equipe": "gerenciar_equipe",
+    "/relatorios": "view_relatorios",
+    "/broadcasts": "configurar_marketing",
+    "/comunicacao/modelos": "configurar_marketing",
+    "/broadcasts/historico": "configurar_marketing",
+    "/comunicacao/agendados": "configurar_marketing",
+    "/automations": "configurar_marketing",
+    "/settings": "acessar_configuracoes",
+  };
+  // "/agenda" is deliberately absent: everyone with clinic access sees
+  // the Agenda item itself — it's the page's OWN data (via RLS, not
+  // this menu) that narrows to "only my appointments" for a
+  // professional (see migration 069), not whether the item shows at all.
+
+  // While permissions are still loading, show everything rather than
+  // flash an empty/incomplete menu — the destination page still
+  // enforces its own access check regardless of what the menu shows.
+  const visibleMenuItems = permsLoading
+    ? defaultMenuItems
+    : defaultMenuItems
+    .map((item) => {
+      if (item.subItems) {
+        const visibleSubItems = item.subItems.filter(
+          (sub) => !MENU_PERMISSION_KEYS[sub.href] || hasPermission(MENU_PERMISSION_KEYS[sub.href], "view"),
+        );
+        return visibleSubItems.length > 0 ? { ...item, subItems: visibleSubItems } : null;
+      }
+      const requiredKey = MENU_PERMISSION_KEYS[item.key];
+      if (requiredKey && !hasPermission(requiredKey, "view")) return null;
+      return item;
+    })
+    .filter((item): item is MenuItem => item !== null);
+
   // Re-read whenever the saved order changes — including from another
   // tab/the Settings page in this same tab, via the custom event
   // setSidebarOrder dispatches, so a reorder shows up immediately
@@ -207,7 +252,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     };
   }, []);
 
-  const menuItems = applySidebarOrder(defaultMenuItems, savedOrder);
+  const menuItems = applySidebarOrder(visibleMenuItems, savedOrder);
 
   const bottomNavItems = [
     { href: "/settings?tab=appearance", label: "Personalizar Menu", icon: ListOrdered },

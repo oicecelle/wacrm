@@ -340,7 +340,7 @@ export function AppointmentModal({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const { hasPermission } = usePermissions();
-  const canEditFinance = hasPermission("financeiro", "edit");
+  const canEditFinance = hasPermission("edit_financeiro", "edit");
   const [isOnline, setIsOnline] = useState(false);
   const [guestEmails, setGuestEmails] = useState<string[]>([]);
   const [meetLink, setMeetLink] = useState("");
