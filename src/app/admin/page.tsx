@@ -456,7 +456,7 @@ export default function AdminDashboardPage() {
   if (loadingAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -534,7 +534,7 @@ export default function AdminDashboardPage() {
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                   activeTab === item.key
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/10"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10"
                     : "text-neutral-400 hover:text-white hover:bg-neutral-800/50"
                 }`}
               >
@@ -585,7 +585,7 @@ export default function AdminDashboardPage() {
         {/* Tab Search Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
           <div className="flex items-center gap-3">
-            <Activity className="h-5 w-5 text-blue-500" />
+            <Activity className="h-5 w-5 text-primary" />
             <div>
               <h2 className="text-sm font-bold text-white capitalize">{activeTab}</h2>
               <p className="text-[10px] text-neutral-400">Gerenciamento administrativo da plataforma.</p>
@@ -597,7 +597,7 @@ export default function AdminDashboardPage() {
               placeholder="Pesquisar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:border-blue-500"
+              className="pl-9 bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:border-primary"
             />
           </div>
         </div>
@@ -605,7 +605,7 @@ export default function AdminDashboardPage() {
         {/* Tab Content Rendering */}
         {loadingData ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <>
@@ -628,7 +628,7 @@ export default function AdminDashboardPage() {
                       <tr key={c.id} className="hover:bg-neutral-800/20 transition-colors">
                         <td className="px-6 py-4 font-bold text-white">{c.name}</td>
                         <td className="px-6 py-4">{c.user_count} usuário(s)</td>
-                        <td className="px-6 py-4 text-blue-400 font-semibold">{c.plan}</td>
+                        <td className="px-6 py-4 text-primary font-semibold">{c.plan}</td>
                         <td className="px-6 py-4 font-mono">{c.expires_at}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex rounded-full px-2 py-0.5 font-bold ${
@@ -675,7 +675,7 @@ export default function AdminDashboardPage() {
                         <td className="px-6 py-4 text-neutral-400">{u.clinic_name}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex rounded-full px-2 py-0.5 font-bold ${
-                            u.role === "system_admin" ? "bg-blue-500/10 text-blue-400" : "bg-neutral-800 text-neutral-500"
+                            u.role === "system_admin" ? "bg-primary/10 text-primary" : "bg-neutral-800 text-neutral-500"
                           }`}>
                             {u.role === "system_admin" ? "Super Admin" : "Clínica"}
                           </span>
@@ -766,13 +766,13 @@ export default function AdminDashboardPage() {
                   </div>
                 ) : (
                   supportTickets.map((ticket) => (
-                  <div key={ticket.id} className={`rounded-2xl border bg-neutral-900 p-5 space-y-3 ${ticket.status === "open" ? "border-blue-500/30" : "border-neutral-800"}`}>
+                  <div key={ticket.id} className={`rounded-2xl border bg-neutral-900 p-5 space-y-3 ${ticket.status === "open" ? "border-primary/30" : "border-neutral-800"}`}>
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-white">{ticket.subject}</h4>
                           <span className={`text-[9px] font-bold uppercase rounded-full px-2 py-0.5 ${
-                            ticket.status === "open" ? "bg-blue-500/10 text-blue-400" : "bg-neutral-800 text-neutral-500"
+                            ticket.status === "open" ? "bg-primary/10 text-primary" : "bg-neutral-800 text-neutral-500"
                           }`}>
                             {ticket.status === "open" ? "Aberto" : "Resolvido"}
                           </span>
@@ -782,7 +782,7 @@ export default function AdminDashboardPage() {
                       {ticket.status === "open" && (
                         <button
                           onClick={() => handleResolveTicket(ticket.id)}
-                          className="rounded-lg bg-blue-600 text-white font-bold px-3 py-1.5 text-xs hover:bg-blue-700 transition-colors cursor-pointer"
+                          className="rounded-lg bg-primary text-primary-foreground font-bold px-3 py-1.5 text-xs hover:bg-primary-hover transition-colors cursor-pointer"
                         >
                           Marcar como Resolvida
                         </button>
@@ -837,7 +837,7 @@ export default function AdminDashboardPage() {
               <div className="flex flex-col h-[600px] border border-neutral-800 bg-neutral-900 rounded-2xl overflow-hidden">
                 <div className="bg-neutral-850 px-6 py-4 border-b border-neutral-800">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-blue-500 animate-pulse" />
+                    <Activity className="h-4 w-4 text-primary animate-pulse" />
                     Copiloto Administrativo IA (Backoffice)
                   </h3>
                   <p className="text-[10px] text-neutral-400 mt-0.5">
@@ -854,7 +854,7 @@ export default function AdminDashboardPage() {
                     >
                       <div className={`max-w-xl rounded-xl p-3.5 text-xs leading-relaxed ${
                         msg.role === "user" 
-                          ? "bg-blue-600 text-white" 
+                          ? "bg-primary text-primary-foreground" 
                           : "bg-neutral-800 border border-neutral-750 text-neutral-200"
                       }`}>
                         {msg.content}
@@ -864,7 +864,7 @@ export default function AdminDashboardPage() {
                   {sendingChat && (
                     <div className="flex justify-start">
                       <div className="bg-neutral-800 border border-neutral-750 rounded-xl p-3.5 text-xs text-neutral-400 flex items-center gap-2">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                         Executando comando administrativo...
                       </div>
                     </div>
@@ -903,7 +903,7 @@ export default function AdminDashboardPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSendAdminCopilotMessage();
                     }}
-                    className="flex-1 bg-neutral-900 border-neutral-750 text-xs focus-visible:border-blue-500"
+                    className="flex-1 bg-neutral-900 border-neutral-750 text-xs focus-visible:border-primary"
                   />
                   <Button
                     onClick={handleSendAdminCopilotMessage}
@@ -932,7 +932,7 @@ export default function AdminDashboardPage() {
                       <select
                         value={alertClinicId}
                         onChange={(e) => setAlertClinicId(e.target.value)}
-                        className="h-9 w-full rounded-lg border border-neutral-750 bg-neutral-950 px-3 py-1 text-xs cursor-pointer text-white focus-visible:border-blue-500"
+                        className="h-9 w-full rounded-lg border border-neutral-750 bg-neutral-950 px-3 py-1 text-xs cursor-pointer text-white focus-visible:border-primary"
                       >
                         <option value="">(Global / Todas as Clínicas)</option>
                         {clinics.map((c) => (
@@ -946,7 +946,7 @@ export default function AdminDashboardPage() {
                       <select
                         value={alertSeverity}
                         onChange={(e) => setAlertSeverity(e.target.value as any)}
-                        className="h-9 w-full rounded-lg border border-neutral-750 bg-neutral-950 px-3 py-1 text-xs cursor-pointer text-white focus-visible:border-blue-500"
+                        className="h-9 w-full rounded-lg border border-neutral-750 bg-neutral-950 px-3 py-1 text-xs cursor-pointer text-white focus-visible:border-primary"
                       >
                         <option value="info">Informativo (Azul)</option>
                         <option value="warning">Aviso / Warning (Amarelo)</option>
@@ -960,7 +960,7 @@ export default function AdminDashboardPage() {
                         placeholder="ex: Instabilidade na API de Mensagens"
                         value={alertTitle}
                         onChange={(e) => setAlertTitle(e.target.value)}
-                        className="bg-neutral-950 border-neutral-750 text-xs focus-visible:border-blue-500"
+                        className="bg-neutral-950 border-neutral-750 text-xs focus-visible:border-primary"
                       />
                     </div>
 
@@ -971,7 +971,7 @@ export default function AdminDashboardPage() {
                         rows={3}
                         value={alertMessage}
                         onChange={(e) => setAlertMessage(e.target.value)}
-                        className="w-full rounded-lg border border-neutral-750 bg-neutral-950 px-3 py-2 text-xs focus-visible:border-blue-500 focus-visible:outline-none"
+                        className="w-full rounded-lg border border-neutral-750 bg-neutral-950 px-3 py-2 text-xs focus-visible:border-primary focus-visible:outline-none"
                       />
                     </div>
                   </div>
@@ -979,7 +979,7 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={handleCreateSystemAlert}
                     disabled={creatingAlert}
-                    className="flex items-center gap-1.5 px-4 h-9 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg cursor-pointer transition-colors"
+                    className="flex items-center gap-1.5 px-4 h-9 bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground font-bold text-xs rounded-lg cursor-pointer transition-colors"
                   >
                     {creatingAlert ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1022,7 +1022,7 @@ export default function AdminDashboardPage() {
                                     ? "bg-rose-500/10 text-rose-400" 
                                     : alert.severity === "warning" 
                                       ? "bg-amber-500/10 text-amber-400" 
-                                      : "bg-blue-500/10 text-blue-400"
+                                      : "bg-primary/10 text-primary"
                                 }`}>
                                   {alert.severity.toUpperCase()}
                                 </span>
