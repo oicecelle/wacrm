@@ -503,7 +503,7 @@ export default function OnboardingPage() {
         </div>
         <div className="h-1.5 w-full bg-slate-200/50 rounded-full overflow-hidden">
           <div 
-            className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out" 
+            className="h-full bg-primary rounded-full transition-all duration-500 ease-out" 
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -520,7 +520,7 @@ export default function OnboardingPage() {
         {/* STEP 1: Welcome Page */}
         {currentStep === 1 && (
           <div className="space-y-6 text-center py-6">
-            <div className="h-16 w-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto shadow-inner">
+            <div className="h-16 w-16 rounded-3xl bg-primary-soft text-primary flex items-center justify-center text-2xl mx-auto shadow-inner">
               🚀
             </div>
             <div className="space-y-2">
@@ -537,7 +537,7 @@ export default function OnboardingPage() {
             <div className="pt-6">
               <Button 
                 onClick={handleNext} 
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-extrabold h-12 rounded-2xl shadow-lg shadow-blue-500/10 text-xs transition-transform active:scale-98"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-extrabold h-12 rounded-2xl shadow-lg shadow-primary/10 text-xs transition-transform active:scale-98"
               >
                 Começar configuração
                 <ArrowRightIcon className="ml-1.5 h-4 w-4" />
@@ -578,7 +578,7 @@ export default function OnboardingPage() {
                     id="wa-timezone"
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full text-xs h-10 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                    className="w-full text-xs h-10 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-primary"
                     disabled={waStatus !== "disconnected"}
                   >
                     <option value="America/Sao_Paulo">Brasília (GMT-3) - America/Sao_Paulo</option>
@@ -596,7 +596,7 @@ export default function OnboardingPage() {
             <div className="py-2 flex justify-center">
               {waStatus === "disconnected" && (
                 <div className="w-full flex flex-col items-center justify-center p-6 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-3">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary-soft text-primary">
                     <MessageSquareIcon className="h-5 w-5" />
                   </div>
                   <div className="text-center space-y-1">
@@ -625,18 +625,18 @@ export default function OnboardingPage() {
                         href={`https://uazapi.com/connect/${encodeURIComponent(uazapiToken.trim())}`} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-xs text-blue-600 hover:text-blue-700 underline font-bold mt-1"
+                        className="text-xs text-primary hover:text-primary underline font-bold mt-1"
                       >
                         Ou clique aqui para abrir em nova aba
                       </a>
                     </div>
                   ) : (
                     <div className="h-40 w-40 flex items-center justify-center bg-white border border-slate-100 rounded-2xl">
-                      <Loader2Icon className="h-6 w-6 animate-spin text-blue-600" />
+                      <Loader2Icon className="h-6 w-6 animate-spin text-primary" />
                     </div>
                   )}
                   <div className="text-center space-y-2">
-                    <div className="flex items-center justify-center gap-1.5 text-blue-600 font-bold text-xs">
+                    <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-xs">
                       <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
                       <span>Aguardando leitura do celular...</span>
                     </div>
@@ -719,7 +719,7 @@ export default function OnboardingPage() {
                       onClick={() => handleToggleCampaign(c)}
                       className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
                         isSelected
-                          ? "bg-blue-50/50 border-blue-600 text-blue-900"
+                          ? "bg-primary-soft border-primary text-primary"
                           : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                       }`}
                     >
@@ -756,7 +756,7 @@ export default function OnboardingPage() {
                 {campaignTags.map((tag) => (
                   <span 
                     key={tag} 
-                    className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100/50 text-[10px] font-black px-2 py-0.5 rounded-lg"
+                    className="inline-flex items-center gap-1 bg-primary-soft text-primary border border-primary-soft-2 text-[10px] font-black px-2 py-0.5 rounded-lg"
                   >
                     {tag}
                     <button 
@@ -949,7 +949,7 @@ export default function OnboardingPage() {
                     id="srv-duration"
                     value={serviceDuration}
                     onChange={(e) => setServiceDuration(e.target.value)}
-                    className="w-full text-xs h-9 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                    className="w-full text-xs h-9 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-primary"
                   >
                     <option value="30">30 min</option>
                     <option value="60">60 min</option>
@@ -1090,7 +1090,7 @@ export default function OnboardingPage() {
                     id="tm-role"
                     value={teamRole}
                     onChange={(e) => setTeamRole(e.target.value)}
-                    className="w-full text-xs h-9 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-blue-500"
+                    className="w-full text-xs h-9 rounded-xl border border-slate-200 bg-white px-2 focus:ring-1 focus:ring-primary"
                   >
                     <option value="professional">Profissional Clínico</option>
                     <option value="admin">Administrador</option>
@@ -1123,7 +1123,7 @@ export default function OnboardingPage() {
                           onClick={() => handleToggleProcedureForMember(s.name)}
                           className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold transition-all ${
                             selected
-                              ? "bg-blue-50 border-blue-500 text-blue-700"
+                              ? "bg-primary-soft border-primary text-primary"
                               : "bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-350"
                           }`}
                         >
@@ -1247,7 +1247,7 @@ export default function OnboardingPage() {
             <div className="pt-6">
               <Button
                 onClick={handleComplete}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-2xl shadow-lg shadow-blue-500/10 text-xs transition-transform active:scale-98"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-2xl shadow-lg shadow-primary/10 text-xs transition-transform active:scale-98"
               >
                 Ir para minha Agenda
                 <ArrowRightIcon className="ml-1.5 h-4 w-4" />
