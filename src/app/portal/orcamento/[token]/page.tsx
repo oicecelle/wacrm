@@ -131,7 +131,7 @@ export default function QuotePortalPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-4">
-        <Loader2Icon className="h-10 w-10 animate-spin text-blue-600 mb-3" />
+        <Loader2Icon className="h-10 w-10 animate-spin text-primary mb-3" />
         <p className="text-sm text-slate-500 font-semibold uppercase tracking-wider">
           Carregando Detalhes do Orçamento...
         </p>
@@ -148,7 +148,7 @@ export default function QuotePortalPage() {
           <p className="text-xs text-slate-500 leading-relaxed">{error}</p>
           <button
             onClick={() => router.push("/")}
-            className="w-full h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-xs"
+            className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs"
           >
             Ir para a Página Inicial
           </button>
@@ -168,7 +168,7 @@ export default function QuotePortalPage() {
       <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur-md border-slate-200">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-sm font-black text-white shadow-lg">
+            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-sm font-black text-primary-foreground shadow-lg">
               {clinic?.name?.charAt(0)?.toUpperCase() || "C"}
             </div>
             <div>
@@ -220,7 +220,7 @@ export default function QuotePortalPage() {
           <div className="space-y-5 flex-1 flex flex-col">
             {/* Meta */}
             <div className="rounded-2xl p-5 space-y-3 bg-white border border-slate-200 shadow-xs">
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block bg-blue-50 text-blue-600 border border-blue-100">
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider inline-block bg-primary-soft text-primary border border-primary-soft-2">
                 ORÇAMENTO #{quote.id.substring(0, 6).toUpperCase()}
               </span>
               <h1 className="text-lg font-black text-slate-900 leading-snug">Proposta de Tratamento / Serviços</h1>
@@ -239,7 +239,7 @@ export default function QuotePortalPage() {
             {/* Quote items table */}
             <div className="rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-xs flex flex-col">
               <div className="px-4 py-2.5 flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider select-none border-b bg-slate-50 border-slate-100">
-                <FileTextIcon className="h-4 w-4 text-blue-600" />
+                <FileTextIcon className="h-4 w-4 text-primary" />
                 Itens Inclusos na Proposta
               </div>
               <div className="divide-y divide-slate-100">
@@ -275,7 +275,7 @@ export default function QuotePortalPage() {
                 )}
                 <div className="flex justify-between text-sm font-black text-slate-900 pt-1.5 border-t border-slate-200">
                   <span>Valor Total da Proposta</span>
-                  <span className="text-blue-600 font-mono text-base">{fmt(total)}</span>
+                  <span className="text-primary font-mono text-base">{fmt(total)}</span>
                 </div>
               </div>
             </div>
