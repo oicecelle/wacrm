@@ -95,10 +95,10 @@ function SignupPageInner() {
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2 bg-[#FAFBFF] text-[#10182B] font-sans">
         {/* Left column (Dark marketing banner) */}
         <div className="hidden lg:flex flex-col justify-between bg-[#0B1528] p-12 text-left relative overflow-hidden border-r border-neutral-800">
-          <div className="absolute top-20 left-1/4 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-10 right-1/4 w-56 h-56 bg-blue-800/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-20 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-10 right-1/4 w-56 h-56 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
           
-          <Link href="/landing" className="inline-flex items-center gap-2 text-neutral-400 hover:text-blue-400 transition-colors z-10">
+          <Link href="/landing" className="inline-flex items-center gap-2 text-neutral-400 hover:text-primary transition-colors z-10">
             <ArrowLeft className="w-4 h-4" />
             <span className="text-xs font-semibold">Voltar para o site</span>
           </Link>
@@ -107,8 +107,8 @@ function SignupPageInner() {
             <div className="flex items-center gap-2">
               <Logo className="h-8 w-8 object-contain" />
               <span className="text-lg font-black tracking-tight text-white uppercase">
-                <span className="font-medium text-blue-400">LEAD</span>{" "}
-                <span className="font-extrabold text-blue-500">PLUZ</span>
+                <span className="font-medium text-primary">LEAD</span>{" "}
+                <span className="font-extrabold text-primary">PLUZ</span>
               </span>
             </div>
             <h2 className="text-4xl font-black text-white leading-[1.1] tracking-tight">
@@ -152,10 +152,10 @@ function SignupPageInner() {
       
       {/* Left side (Marketing column, hidden on mobile) */}
       <div className="hidden lg:flex flex-col justify-between bg-[#0B1528] p-12 text-left relative overflow-hidden border-r border-neutral-800">
-        <div className="absolute top-20 left-1/4 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 right-1/4 w-56 h-56 bg-blue-800/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-20 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-1/4 w-56 h-56 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
         
-        <Link href="/landing" className="inline-flex items-center gap-2 text-neutral-400 hover:text-blue-400 transition-colors z-10">
+        <Link href="/landing" className="inline-flex items-center gap-2 text-neutral-400 hover:text-primary transition-colors z-10">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-xs font-semibold">Voltar para o site</span>
         </Link>
@@ -164,12 +164,12 @@ function SignupPageInner() {
           <div className="flex items-center gap-2">
             <Logo className="h-8 w-8 object-contain" />
             <span className="text-lg font-black tracking-tight text-white uppercase">
-              <span className="font-medium text-blue-400">LEAD</span>{" "}
-              <span className="font-extrabold text-blue-500">PLUZ</span>
+              <span className="font-medium text-primary">LEAD</span>{" "}
+              <span className="font-extrabold text-primary">PLUZ</span>
             </span>
           </div>
           
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 border border-blue-500/30 px-3 py-1.5 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft border border-primary-soft-2 px-3 py-1.5 text-[10px] font-bold text-primary uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5" /> CRM Inteligente & Autônomo
           </span>
           
@@ -196,8 +196,8 @@ function SignupPageInner() {
             <div className="flex items-center gap-2 lg:hidden pb-4">
               <Logo className="h-7 w-7 object-contain" />
               <span className="text-base font-black tracking-tight text-[#10182B] uppercase">
-                <span className="font-medium text-blue-600">LEAD</span>{" "}
-                <span className="font-extrabold text-blue-800">PLUZ</span>
+                <span className="font-medium text-primary">LEAD</span>{" "}
+                <span className="font-extrabold text-primary">PLUZ</span>
               </span>
             </div>
             
@@ -232,7 +232,7 @@ function SignupPageInner() {
                   placeholder="Seu Nome completo"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white"
+                  className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                   required
                   disabled={loading}
                 />
@@ -251,7 +251,7 @@ function SignupPageInner() {
                   placeholder="exemplo@clinica.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white"
+                  className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                   required
                   disabled={loading}
                 />
@@ -270,7 +270,7 @@ function SignupPageInner() {
                   placeholder="Min. 6 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white"
+                  className="w-full pl-10 pr-10 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                   required
                   disabled={loading}
                 />
@@ -296,7 +296,7 @@ function SignupPageInner() {
                   placeholder="Repita sua senha"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white"
+                  className="w-full pl-10 pr-10 py-2.5 border border-neutral-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-white"
                   required
                   disabled={loading}
                 />
@@ -364,7 +364,7 @@ function SignupPageInner() {
             Já tem uma conta?{" "}
             <Link
               href={inviteToken ? `/login?invite=${encodeURIComponent(inviteToken)}` : "/login"}
-              className="text-blue-600 hover:text-blue-700 transition-colors"
+              className="text-primary hover:text-primary transition-colors"
             >
               Fazer login
             </Link>
