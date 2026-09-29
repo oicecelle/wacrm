@@ -298,6 +298,7 @@ export function AppointmentModal({
   const clinicId = accountId;
   const profileName = profile?.full_name || "Sistema";
   const [originalStatus, setOriginalStatus] = useState<string>("");
+  const [originalStartTime, setOriginalStartTime] = useState<string>("");
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [staff, setStaff] = useState<StaffOption[]>([]);
   const [procedures, setProcedures] = useState<any[]>([]);
@@ -595,6 +596,7 @@ export function AppointmentModal({
       setRoomId("");
       setStatus("provisional");
       setNotes("");
+      setOriginalStartTime("");
       setIsOnline(false);
       setGuestEmails([]);
       setMeetLink("");
@@ -668,6 +670,7 @@ export function AppointmentModal({
         const endLocal = formatISOToLocalInput(appt.end_time);
 
         setStartTime(startLocal);
+        setOriginalStartTime(startLocal);
         setEndTime(endLocal);
         setStatus(appt.status || "provisional");
         setNotes(appt.notes || "");
@@ -1394,6 +1397,12 @@ Qualquer dúvida, estou à disposição! 😊`;
       const endTimeIso = formatLocalISO(endTime);
 
       if (appointmentId) {
+        // A genuine reschedule — same rule the Agenda's drag-and-drop
+        // uses — compares against the moment the modal was opened, not
+        // just "did the value change during this edit session" (which
+        // would also fire from re-saving with no real change).
+        const wasRescheduled = !!originalStartTime && originalStartTime !== startTime;
+
         // Update appointment
         const { error: updateErr } = await supabase
           .from("appointments")
@@ -1412,6 +1421,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             color: appointmentColor || null,
             tag: appointmentTag || null,
             tag_color: appointmentTag ? appointmentTagColor : null,
+            ...(wasRescheduled ? { was_rescheduled: true } : {}),
           })
           .eq("id", appointmentId)
           .eq("clinic_id", clinicId);

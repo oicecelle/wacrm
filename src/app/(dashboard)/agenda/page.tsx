@@ -734,7 +734,7 @@ export default function AgendaPage() {
 
     const { error } = await supabase
       .from("appointments")
-      .update({ start_time: newStart.toISOString(), end_time: newEnd.toISOString() })
+      .update({ start_time: newStart.toISOString(), end_time: newEnd.toISOString(), was_rescheduled: true })
       .eq("id", apptId);
 
     if (error) {
