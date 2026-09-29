@@ -240,7 +240,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
         <div className="flex items-center gap-1 flex-wrap">
           <TemperatureBadge temperature={deal.temperature} />
           {deal.score !== undefined && deal.score !== null && (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 text-[9px] font-extrabold border border-blue-100/30">
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-primary-soft text-primary px-1.5 py-0.5 text-[9px] font-extrabold border border-primary-soft-2">
               <Zap className="h-2.5 w-2.5 fill-current" />
               {deal.score}%
             </span>
@@ -345,7 +345,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
 
       {/* Next Action indicator */}
       {deal.next_action && (
-        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-blue-600 font-semibold bg-blue-500/5 border border-blue-500/10 px-2 py-0.5 rounded-lg">
+        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-primary font-semibold bg-primary-soft border border-primary-soft-2 px-2 py-0.5 rounded-lg">
           <Target className="h-3 w-3 shrink-0" />
           <span className="truncate">Próxima: {deal.next_action}</span>
         </div>
@@ -363,7 +363,7 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
       )}
 
       <div className="mt-2.5 flex items-center justify-between pt-1.5 border-t border-neutral-100/50">
-        <span className="text-sm font-black text-blue-600">
+        <span className="text-sm font-black text-primary">
           {formatCurrency(deal.value, deal.currency)}
         </span>
         {deal.expected_close_date && (
