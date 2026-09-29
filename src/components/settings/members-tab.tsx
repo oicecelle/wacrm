@@ -586,7 +586,7 @@ export function MembersTab() {
                           size="sm"
                           onClick={() => handleOpenPermissions(member)}
                           disabled={isBusy}
-                          className="border-blue-500/40 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:border-blue-500/60 hover:text-blue-200"
+                          className="border-primary/40 bg-primary-soft text-primary hover:bg-primary-soft-2 hover:border-primary/60 hover:text-primary"
                           title="Editar Permissões"
                         >
                           <Shield className="size-4" />
@@ -806,7 +806,7 @@ export function MembersTab() {
                             [module]: { ...perm, view: e.target.checked }
                           });
                         }}
-                        className="rounded border-border bg-muted text-blue-500 focus:ring-0"
+                        className="rounded border-border bg-muted text-primary focus:ring-0"
                       />
                       Ver
                     </label>
@@ -821,7 +821,7 @@ export function MembersTab() {
                             [module]: { ...perm, edit: e.target.checked }
                           });
                         }}
-                        className="rounded border-border bg-muted text-blue-500 focus:ring-0 disabled:opacity-30"
+                        className="rounded border-border bg-muted text-primary focus:ring-0 disabled:opacity-30"
                       />
                       Editar
                     </label>

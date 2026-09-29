@@ -38,7 +38,7 @@ export function SubscriptionPanel() {
         description="Gerencie a assinatura do seu workspace, altere o seu plano de faturamento ou consulte os dados do seu período de testes."
       />
 
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+      <div className="bg-primary rounded-2xl p-6 text-primary-foreground shadow-md relative overflow-hidden">
         <div className="absolute right-0 bottom-0 translate-x-10 translate-y-10 opacity-10">
           <CreditCard className="w-64 h-64" />
         </div>
@@ -90,11 +90,11 @@ export function SubscriptionPanel() {
               </p>
             </div>
             <ul className="text-[10px] text-muted-foreground space-y-1.5 border-t pt-3">
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-500 shrink-0" /> CRM inteligente e autônomo</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-500 shrink-0" /> API WhatsApp (Oficial/Não-Oficial)</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-500 shrink-0" /> Agenda e Google Agenda integrada</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-500 shrink-0" /> Assinaturas digitais de termos/fichas</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-blue-500 shrink-0" /> Financeiro e Receita Prevista</li>
+              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary shrink-0" /> CRM inteligente e autônomo</li>
+              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary shrink-0" /> API WhatsApp (Oficial/Não-Oficial)</li>
+              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary shrink-0" /> Agenda e Google Agenda integrada</li>
+              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary shrink-0" /> Assinaturas digitais de termos/fichas</li>
+              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary shrink-0" /> Financeiro e Receita Prevista</li>
             </ul>
             <Button className="w-full text-xs font-bold" variant="outline">
               Assinar Plano Mensal
