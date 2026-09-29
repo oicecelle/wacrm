@@ -845,7 +845,7 @@ export default function AgendaPage() {
           <button
             type="button"
             onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-black text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
           >
             <PlusIcon className="h-4 w-4" />
             Criar Novo
@@ -864,7 +864,7 @@ export default function AgendaPage() {
                   }}
                   className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
                 >
-                  <PlusIcon className="h-4 w-4 text-blue-600" />
+                  <PlusIcon className="h-4 w-4 text-primary" />
                   <span>Marcar Consulta (Lead)</span>
                 </button>
 
@@ -878,7 +878,7 @@ export default function AgendaPage() {
                   }}
                   className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
                 >
-                  <SparklesIcon className="h-4 w-4 text-indigo-500" />
+                  <SparklesIcon className="h-4 w-4 text-primary" />
                   <span>Criar Evento</span>
                 </button>
 
@@ -907,8 +907,8 @@ export default function AgendaPage() {
           all four sit in one row and the toggle disappears. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <SummaryCard
-          icon={<CalendarIcon className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />}
-          tint="bg-blue-500/10"
+          icon={<CalendarIcon className="h-4 w-4 text-primary sm:h-5 sm:w-5" />}
+          tint="bg-primary-soft"
           value={String(scheduleSummary.day.count)}
           label={`Agendamentos ${scheduleSummary.dayLabel}`}
         />
@@ -957,11 +957,11 @@ export default function AgendaPage() {
             <button
               type="button"
               onClick={() => setIsMiniCalendarExpanded(!isMiniCalendarExpanded)}
-              className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-blue-600 transition-colors capitalize"
+              className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-primary transition-colors capitalize"
               title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
             >
               <span>{monthNames[pickerMonth]} {pickerYear}</span>
-              <span className="text-[9px] font-extrabold text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
+              <span className="text-[9px] font-extrabold text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-primary-soft hover:text-primary transition-colors uppercase tracking-wider">
                 {isMiniCalendarExpanded ? "Mês" : "Semana"}
               </span>
             </button>
@@ -1003,9 +1003,9 @@ export default function AgendaPage() {
                   }}
                   className={`h-7 w-7 rounded-full flex items-center justify-center transition-all ${
                     isSelected
-                      ? "bg-blue-600 text-white font-bold shadow-xs"
+                      ? "bg-primary text-primary-foreground font-bold shadow-xs"
                       : isToday
-                      ? "border border-blue-600 text-blue-600 font-semibold"
+                      ? "border border-primary text-primary font-semibold"
                       : isCurrentMonth
                       ? "text-neutral-700 hover:bg-neutral-100"
                       : "text-neutral-300 dark:text-neutral-600 hover:bg-neutral-50"
@@ -1029,7 +1029,7 @@ export default function AgendaPage() {
         <div className="space-y-2.5">
           {loading ? (
             <div className="flex items-center justify-center py-10 text-muted-foreground">
-              <Loader2Icon className="h-5 w-5 animate-spin text-blue-600 mr-2" />
+              <Loader2Icon className="h-5 w-5 animate-spin text-primary mr-2" />
               <span className="text-xs">Buscando agendamentos...</span>
             </div>
           ) : (() => {
@@ -1132,11 +1132,11 @@ export default function AgendaPage() {
               <button
                 type="button"
                 onClick={() => setIsMiniCalendarExpanded(!isMiniCalendarExpanded)}
-                className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-blue-600 transition-colors capitalize"
+                className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-primary transition-colors capitalize"
                 title={isMiniCalendarExpanded ? "Recolher para semana" : "Expandir para mês"}
               >
                 <span>{monthNames[pickerMonth]} {pickerYear}</span>
-                <span className="text-[9px] font-extrabold text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-blue-50 hover:text-blue-600 transition-colors uppercase tracking-wider">
+                <span className="text-[9px] font-extrabold text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-md hover:bg-primary-soft hover:text-primary transition-colors uppercase tracking-wider">
                   {isMiniCalendarExpanded ? "Mês" : "Semana"}
                 </span>
               </button>
@@ -1186,9 +1186,9 @@ export default function AgendaPage() {
                     }}
                     className={`h-8 w-8 rounded-full flex flex-col items-center justify-center relative transition-all ${
                       isSelected
-                        ? "bg-blue-600 text-white font-bold shadow-xs"
+                        ? "bg-primary text-primary-foreground font-bold shadow-xs"
                         : isToday
-                        ? "border border-blue-600 text-blue-600 font-semibold"
+                        ? "border border-primary text-primary font-semibold"
                         : isCurrentMonth
                         ? "text-neutral-700 hover:bg-neutral-100"
                         : "text-neutral-300 dark:text-neutral-600 hover:bg-neutral-50"
@@ -1197,7 +1197,7 @@ export default function AgendaPage() {
                     <span className="text-[10px]">{cellDate.getDate()}</span>
                     {hasAppt && (
                       <span className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        isSelected ? "bg-card" : "bg-blue-600"
+                        isSelected ? "bg-card" : "bg-primary"
                       }`} />
                     )}
                   </button>
@@ -1213,7 +1213,7 @@ export default function AgendaPage() {
               {filterStatus !== "Todos" && (
                 <button
                   onClick={() => setFilterStatus("Todos")}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
+                  className="text-[10px] font-bold text-primary hover:text-primary transition-colors uppercase tracking-wider"
                 >
                   Limpar
                 </button>
@@ -1228,12 +1228,12 @@ export default function AgendaPage() {
                 className={cn(
                   "flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all text-left",
                   filterStatus === "Todos"
-                    ? "bg-blue-50/70 border-blue-200 text-blue-800 font-bold"
+                    ? "bg-primary-soft border-primary-soft-2 text-primary font-bold"
                     : "bg-card border-neutral-100 hover:border-border text-neutral-600"
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-primary" />
                   <span>Todos os agendamentos</span>
                 </div>
                 <span className="text-[10px] bg-neutral-100 px-2 py-0.5 rounded-md text-neutral-600 font-extrabold">
@@ -1363,7 +1363,7 @@ export default function AgendaPage() {
                 onClick={triggerCopilot}
                 className="h-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:opacity-90 active:scale-95 transition-all text-xs px-3.5 rounded-lg flex items-center gap-1.5 shadow-sm shadow-blue-500/10"
               >
-                <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-blue-100" />
+                <SparklesIcon className="h-3.5 w-3.5 animate-pulse text-primary-soft-2" />
                 Pedir à LIA
               </button>
 
@@ -1423,13 +1423,13 @@ export default function AgendaPage() {
                 <div key={i} className="py-2.5 flex flex-col items-center justify-center gap-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     {isToday ? (
-                      <span className="bg-blue-600 text-white text-xs font-black h-6 w-6 rounded-full flex items-center justify-center shadow-xs">
+                      <span className="bg-primary text-primary-foreground text-xs font-black h-6 w-6 rounded-full flex items-center justify-center shadow-xs">
                         {dayNum}
                       </span>
                     ) : (
                       <span className="text-foreground text-xs font-bold">{dayNum}</span>
                     )}
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}>
                       {dayName}
                     </span>
                     {hasBirthday && (
@@ -1448,7 +1448,7 @@ export default function AgendaPage() {
           {/* Loading state indicator */}
           {loading ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] gap-2 text-muted-foreground">
-              <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
               <span className="text-xs">Buscando consultas agendadas...</span>
             </div>
           ) : (
@@ -1521,7 +1521,7 @@ export default function AgendaPage() {
                       key={dayIdx}
                       className={cn(
                         "relative h-full select-none cursor-pointer hover:bg-neutral-50/20",
-                        draggedApptId && "hover:bg-blue-50/40",
+                        draggedApptId && "hover:bg-primary-soft",
                       )}
                       onClick={() => {
                         const dayStr = dayDate.toISOString().slice(0, 10);
@@ -1617,7 +1617,7 @@ export default function AgendaPage() {
                               <span
                                 title={visitNumber === 1 ? "Primeira vez" : `${visitNumber}ª visita`}
                                 className={`absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[8px] font-black text-white shadow-sm ${
-                                  visitNumber === 1 ? "bg-blue-500" : "bg-neutral-500"
+                                  visitNumber === 1 ? "bg-primary" : "bg-neutral-500"
                                 }`}
                               >
                                 {visitNumber === 1 ? "1ª" : visitNumber}
@@ -1791,7 +1791,7 @@ export default function AgendaPage() {
 
               {/* Patient */}
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-full bg-blue-100 border border-blue-200 overflow-hidden text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                <div className="h-7 w-7 rounded-full bg-primary-soft border border-primary-soft-2 overflow-hidden text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
                   {popoverAppt.patients?.avatar_url ? (
                     <img 
                       src={popoverAppt.patients.avatar_url} 
@@ -1849,7 +1849,7 @@ export default function AgendaPage() {
               </div>
               <div className="text-right shrink-0">
                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Valor</p>
-                <p className="font-extrabold text-blue-700">
+                <p className="font-extrabold text-primary">
                   {(() => {
                     const proc = procedures.find(p => p.name === popoverAppt.type);
                     return proc?.valor ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proc.valor) : "R$ 0,00";
