@@ -100,7 +100,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
       type="button"
       onClick={onChange}
       className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-        checked ? "bg-blue-600" : "bg-neutral-300"
+        checked ? "bg-primary" : "bg-neutral-300"
       }`}
     >
       <span
@@ -451,7 +451,7 @@ export default function ServicosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 min-h-[300px]">
-        <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -459,7 +459,7 @@ export default function ServicosPage() {
   const tabBtnCls = (t: Tab) =>
     `px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px cursor-pointer flex items-center gap-1.5 ${
       activeTab === t
-        ? "border-blue-600 text-blue-600"
+        ? "border-primary text-primary"
         : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
@@ -473,7 +473,7 @@ export default function ServicosPage() {
         </div>
         <button
           onClick={activeTab === "procedures" ? handleOpenAddProc : activeTab === "rooms" ? handleOpenAddRoom : handleOpenAddPkg}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-4 py-2.5 text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-xs font-black hover:bg-primary-hover transition-colors shadow-sm"
         >
           <PlusIcon className="h-4 w-4" />
           {activeTab === "procedures" ? "Novo Procedimento" : activeTab === "rooms" ? "Nova Sala" : "Novo Pacote"}
@@ -555,7 +555,7 @@ export default function ServicosPage() {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleOpenEditProc(p)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary px-2 py-1 rounded-lg hover:bg-primary-soft transition-colors"
                       >
                         <Pencil className="h-3.5 w-3.5" /> Editar
                       </button>
@@ -610,7 +610,7 @@ export default function ServicosPage() {
                     )}
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <button onClick={() => handleOpenEditRoom(r)} className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                    <button onClick={() => handleOpenEditRoom(r)} className="text-xs font-bold text-primary hover:text-primary transition-colors">
                       Editar
                     </button>
                   </td>
@@ -630,11 +630,11 @@ export default function ServicosPage() {
       {activeTab === "packages" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
-            <div key={pkg.id} className="rounded-xl border border-border bg-card p-5 space-y-3 hover:border-blue-200 hover:shadow-md transition-all">
+            <div key={pkg.id} className="rounded-xl border border-border bg-card p-5 space-y-3 hover:border-primary-soft-2 hover:shadow-md transition-all">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <PackageIcon className="h-4 w-4 text-blue-600" />
+                  <div className="h-9 w-9 rounded-lg bg-primary-soft flex items-center justify-center">
+                    <PackageIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm font-black text-foreground">{pkg.name}</p>
@@ -645,7 +645,7 @@ export default function ServicosPage() {
                 </div>
                 <button
                   onClick={() => handleOpenEditPkg(pkg)}
-                  className="text-muted-foreground hover:text-blue-600 transition-colors p-1"
+                  className="text-muted-foreground hover:text-primary transition-colors p-1"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -667,7 +667,7 @@ export default function ServicosPage() {
               )}
 
               <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-                <span className="text-lg font-black text-blue-700">{fmt(pkg.price)}</span>
+                <span className="text-lg font-black text-primary">{fmt(pkg.price)}</span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   pkg.is_active
                     ? "bg-emerald-50 text-emerald-600 border-emerald-200"
@@ -719,7 +719,7 @@ export default function ServicosPage() {
                 <select
                   value={procCategory}
                   onChange={e => setProcCategory(e.target.value)}
-                  className="w-full text-sm h-9 rounded-lg border border-border bg-card px-3 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full text-sm h-9 rounded-lg border border-border bg-card px-3 focus:ring-1 focus:ring-primary focus:outline-none"
                   disabled={saving}
                 >
                   <option value="">Selecione uma categoria...</option>
@@ -736,7 +736,7 @@ export default function ServicosPage() {
                   onChange={e => setProcDescription(e.target.value)}
                   rows={2}
                   disabled={saving}
-                  className="w-full text-sm rounded-md border border-border bg-card px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full text-sm rounded-md border border-border bg-card px-3 py-2 focus:ring-1 focus:ring-primary focus:outline-none resize-none"
                 />
               </div>
 
@@ -999,7 +999,7 @@ export default function ServicosPage() {
                   onChange={e => setPkgDescription(e.target.value)}
                   rows={2}
                   disabled={saving}
-                  className="w-full text-sm rounded-md border border-border bg-card px-3 py-2 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full text-sm rounded-md border border-border bg-card px-3 py-2 focus:ring-1 focus:ring-primary focus:outline-none resize-none"
                 />
               </div>
 
@@ -1027,7 +1027,7 @@ export default function ServicosPage() {
                   <button
                     type="button"
                     onClick={addPkgItem}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    className="text-xs font-bold text-primary hover:text-primary flex items-center gap-1"
                   >
                     <PlusIcon className="h-3.5 w-3.5" /> Adicionar
                   </button>
@@ -1042,7 +1042,7 @@ export default function ServicosPage() {
                           updated[idx].procedure_name = e.target.value;
                           setPkgItems(updated);
                         }}
-                        className="flex-1 text-xs h-8 rounded-md border border-border bg-card px-2 focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 text-xs h-8 rounded-md border border-border bg-card px-2 focus:ring-1 focus:ring-primary"
                       >
                         <option value="">Selecione um procedimento...</option>
                         {procedures.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
