@@ -96,7 +96,7 @@ export function OnlineGuestsSection({
           aria-checked={isOnline}
           disabled={disabled}
           onClick={() => onIsOnlineChange(!isOnline)}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${isOnline ? "bg-blue-600" : "bg-neutral-300"}`}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${isOnline ? "bg-primary" : "bg-neutral-300"}`}
         >
           <span
             className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isOnline ? "translate-x-5" : "translate-x-0.5"}`}
@@ -105,14 +105,14 @@ export function OnlineGuestsSection({
       </div>
 
       {isOnline && meetLink && (
-        <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/60 p-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Link do Google Meet</p>
-          <p className="break-all text-xs font-semibold text-blue-900">{meetLink}</p>
+        <div className="space-y-2 rounded-lg border border-primary-soft-2 bg-primary-soft p-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Link do Google Meet</p>
+          <p className="break-all text-xs font-semibold text-primary">{meetLink}</p>
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={copyLink}
-              className="flex items-center gap-1 rounded-lg border border-blue-200 bg-white px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-50"
+              className="flex items-center gap-1 rounded-lg border border-primary-soft-2 bg-white px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary-soft"
             >
               <Copy className="h-3 w-3" /> Copiar
             </button>
@@ -120,7 +120,7 @@ export function OnlineGuestsSection({
               href={meetLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 rounded-lg border border-blue-200 bg-white px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-50"
+              className="flex items-center gap-1 rounded-lg border border-primary-soft-2 bg-white px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary-soft"
             >
               <ExternalLink className="h-3 w-3" /> Abrir
             </a>
@@ -200,7 +200,7 @@ export function OnlineGuestsSection({
             type="button"
             disabled={disabled}
             onClick={() => onGuestEmailsChange([...guestEmails, patientEmailClean])}
-            className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
+            className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
           >
             <UserPlus className="h-3 w-3" /> Convidar o paciente ({patientEmailClean})
           </button>
