@@ -127,7 +127,7 @@ export function RemindersPanel() {
     <div className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <BellIcon className="h-5 w-5 text-blue-500" />
+          <BellIcon className="h-5 w-5 text-primary" />
           <div>
             <h2 className="text-lg font-semibold text-foreground">Lembretes de Consulta automáticos</h2>
             <p className="text-xs text-muted-foreground">Configure o envio de notificações de confirmação para os pacientes via WhatsApp.</p>
@@ -139,7 +139,7 @@ export function RemindersPanel() {
             type="button"
             onClick={() => setIsActive(!isActive)}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              isActive ? 'bg-blue-600' : 'bg-neutral-600'
+              isActive ? 'bg-primary' : 'bg-neutral-600'
             }`}
           >
             <span
@@ -171,7 +171,7 @@ export function RemindersPanel() {
                   onClick={() => handleToggleMilestone(hours)}
                   className={`rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
                     checked
-                      ? 'border-blue-500 bg-blue-500/10 text-blue-500'
+                      ? 'border-primary bg-primary-soft text-primary'
                       : 'border-border bg-muted hover:border-neutral-500 text-muted-foreground'
                   }`}
                 >
@@ -189,21 +189,21 @@ export function RemindersPanel() {
             Template da Mensagem
           </label>
           <p className="text-xs text-muted-foreground">
-            Escreva o texto do lembrete. Use variáveis: <code className="bg-muted px-1 py-0.5 rounded text-blue-500 text-[10px]">{"{{nome}}"}</code> para o nome do paciente, <code className="bg-muted px-1 py-0.5 rounded text-blue-500 text-[10px]">{"{{data}}"}</code>, <code className="bg-muted px-1 py-0.5 rounded text-blue-500 text-[10px]">{"{{hora}}"}</code> para data/hora e <code className="bg-muted px-1 py-0.5 rounded text-blue-500 text-[10px]">{"{{procedimento}}"}</code>.
+            Escreva o texto do lembrete. Use variáveis: <code className="bg-muted px-1 py-0.5 rounded text-primary text-[10px]">{"{{nome}}"}</code> para o nome do paciente, <code className="bg-muted px-1 py-0.5 rounded text-primary text-[10px]">{"{{data}}"}</code>, <code className="bg-muted px-1 py-0.5 rounded text-primary text-[10px]">{"{{hora}}"}</code> para data/hora e <code className="bg-muted px-1 py-0.5 rounded text-primary text-[10px]">{"{{procedimento}}"}</code>.
           </p>
           <textarea
             value={messageTemplate}
             onChange={(e) => setMessageTemplate(e.target.value)}
             rows={4}
-            className="w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground focus:border-primary focus:outline-none"
             placeholder="Olá {{nome}}! ..."
           />
         </div>
 
         {/* Live Preview block */}
-        <div className="rounded-lg border border-blue-900/40 bg-[#0B1528] p-4 space-y-2">
+        <div className="rounded-lg border border-primary/30 bg-[#0B1528] p-4 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary-soft border border-primary-soft-2 px-2 py-0.5 rounded">
               Pré-visualização do Lembrete
             </span>
           </div>
