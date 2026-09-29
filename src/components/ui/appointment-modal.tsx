@@ -167,7 +167,7 @@ function RoundedDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled}
-        className="w-full flex items-center justify-between rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left disabled:opacity-60 font-medium cursor-pointer"
+        className="w-full flex items-center justify-between rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-left disabled:opacity-60 font-medium cursor-pointer"
       >
         <span>{displayValue}</span>
         <CalendarDaysIcon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -217,9 +217,9 @@ function RoundedDatePicker({
                 }}
                 className={`h-7 w-7 rounded-full flex items-center justify-center relative font-semibold transition-all cursor-pointer ${
                   isSelected
-                    ? "bg-blue-600 text-white font-extrabold shadow-sm"
+                    ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
                     : isToday
-                    ? "border border-blue-600 text-blue-600"
+                    ? "border border-primary text-primary"
                     : cell.isCurrentMonth
                     ? "text-neutral-700 hover:bg-neutral-100"
                     : "text-neutral-300 hover:bg-neutral-50"
@@ -2461,7 +2461,7 @@ Qualquer dúvida, estou à disposição! 😊`;
             value={selectedChartMetric}
             onValueChange={(val) => setSelectedChartMetric(val as any)}
           >
-            <SelectTrigger className="rounded-lg border border-border bg-card h-8 px-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-blue-500">
+            <SelectTrigger className="rounded-lg border border-border bg-card h-8 px-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-primary">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent className="rounded-xl bg-card border border-border">
@@ -2533,12 +2533,12 @@ Qualquer dúvida, estou à disposição! 😊`;
         <button
           type="button"
           onClick={() => setIsStaffDropdownOpen(!isStaffDropdownOpen)}
-          className="w-full flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-9"
+          className="w-full flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary h-9"
           disabled={saving}
         >
           {selectedStaffObj ? (
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[10px] font-black text-blue-700 uppercase shrink-0">
+              <div className="h-6 w-6 rounded-full bg-primary-soft border border-primary-soft-2 flex items-center justify-center text-[10px] font-black text-primary uppercase shrink-0">
                 {getInitials(selectedStaffObj.name)}
               </div>
               <span className="font-semibold text-foreground text-xs">{selectedStaffObj.name}</span>
@@ -2563,10 +2563,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                   }}
                   className={cn(
                     "w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-neutral-50 transition-colors",
-                    professionalId === s.id && "bg-blue-50/50 text-blue-600"
+                    professionalId === s.id && "bg-primary-soft text-primary"
                   )}
                 >
-                  <div className="h-6 w-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[10px] font-black text-blue-700 uppercase shrink-0">
+                  <div className="h-6 w-6 rounded-full bg-primary-soft border border-primary-soft-2 flex items-center justify-center text-[10px] font-black text-primary uppercase shrink-0">
                     {getInitials(s.name)}
                   </div>
                   <span className="flex-1 truncate">{s.name}</span>
@@ -2597,7 +2597,7 @@ Qualquer dúvida, estou à disposição! 😊`;
       )}>
         {loading ? (
           <div className="flex flex-1 items-center justify-center py-20 min-h-[300px]">
-            <Loader2Icon className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader2Icon className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (appointmentId && (apptType === "evento" || apptType === "bloqueio")) ? (
           /* Simplified modal layout for blocks and events */
@@ -2630,7 +2630,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   value={procedureName}
                   onChange={(e) => setProcedureName(e.target.value)}
                   placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
-                  className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs"
                 />
               </div>
 
@@ -2663,7 +2663,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setStartTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary bg-card">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -2684,7 +2684,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       setEndTime(`${d}T${val}`);
                     }}
                   >
-                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
+                    <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary bg-card">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -2706,7 +2706,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Notas ou observações sobre este período..."
-                  className="rounded-xl border-border focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                  className="rounded-xl border-border focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs"
                   rows={3}
                 />
               </div>
@@ -2736,13 +2736,13 @@ Qualquer dúvida, estou à disposição! 😊`;
                       onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
                       className={`h-7 w-7 rounded-full transition-all border-2 ${
                         appointmentColor === color
-                          ? "border-blue-600 scale-110 shadow-md"
+                          ? "border-primary scale-110 shadow-md"
                           : "border-transparent hover:scale-105 hover:border-neutral-300"
                       }`}
                       style={{ backgroundColor: color }}
                     />
                   ))}
-                  <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all overflow-hidden relative">
+                  <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-primary/60 transition-all overflow-hidden relative">
                     <input
                       type="color"
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -2795,7 +2795,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     onChange={(e) => setNewPatientName(e.target.value)}
                     required
                     disabled={savingNewPatient}
-                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
 
@@ -2809,7 +2809,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     onChange={(e) => setNewPatientPhone(e.target.value)}
                     required
                     disabled={savingNewPatient}
-                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
 
@@ -2822,7 +2822,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     value={newPatientEmail}
                     onChange={(e) => setNewPatientEmail(e.target.value)}
                     disabled={savingNewPatient}
-                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
 
@@ -2879,7 +2879,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     }}
                     className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
                       apptType === tab.key
-                        ? "bg-card shadow-sm text-blue-700 border border-blue-100"
+                        ? "bg-card shadow-sm text-primary border border-primary-soft-2"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -2913,13 +2913,13 @@ Qualquer dúvida, estou à disposição! 😊`;
                         onClick={() => setAppointmentColor(appointmentColor === color ? null : color)}
                         className={`h-7 w-7 rounded-full transition-all border-2 ${
                           appointmentColor === color
-                            ? "border-blue-600 scale-110 shadow-md"
+                            ? "border-primary scale-110 shadow-md"
                             : "border-transparent hover:scale-105 hover:border-neutral-300"
                         }`}
                         style={{ backgroundColor: color }}
                       />
                     ))}
-                    <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all overflow-hidden relative">
+                    <label title="Cor personalizada" className="h-7 w-7 rounded-full border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-primary/60 transition-all overflow-hidden relative">
                       <input
                         type="color"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -2952,7 +2952,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       value={procedureName}
                       onChange={(e) => setProcedureName(e.target.value)}
                       placeholder={apptType === "evento" ? "Ex: Reunião Geral de Equipe" : "Ex: Horário de Almoço"}
-                      className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs"
                     />
                   </div>
                   <div className="space-y-1">
@@ -2982,7 +2982,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setStartTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary bg-card">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -3003,7 +3003,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           setEndTime(`${d}T${val}`);
                         }}
                       >
-                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
+                        <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary bg-card">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -3022,7 +3022,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     <select
                       value={recurrence}
                       onChange={(e) => setRecurrence(e.target.value as any)}
-                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-card shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-card shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     >
                       <option value="none">Não se repete</option>
                       <option value="daily">Diariamente</option>
@@ -3040,7 +3040,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                           max={52}
                           value={recurrenceCount}
                           onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                          className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                         <span className="text-xs text-muted-foreground">vezes (semanalmente)</span>
                       </div>
@@ -3053,7 +3053,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Notas sobre este horário..."
-                      className="rounded-xl border-border focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs"
+                      className="rounded-xl border-border focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs"
                       rows={2}
                     />
                   </div>
@@ -3082,7 +3082,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         setShowNewPatientForm(true);
                         setNewPatientError(null);
                       }}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 transition-all"
+                      className="text-xs font-bold text-primary hover:text-primary hover:underline flex items-center gap-1 transition-all"
                     >
                       <UserPlusIcon className="h-3.5 w-3.5" /> + Cadastrar Novo
                     </button>
@@ -3096,7 +3096,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       placeholder="Digite nome, e-mail ou telefone..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="rounded-xl border-border pl-10 h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="rounded-xl border-border pl-10 h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
 
@@ -3113,10 +3113,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                             setSelectedPatientInfo({ id: p.id, name: p.name, phone: p.phone || "", email: p.email || "" });
                             setPatientId(p.id);
                           }}
-                          className="w-full text-left p-3 hover:bg-blue-50/50 flex items-center justify-between gap-3 transition-all"
+                          className="w-full text-left p-3 hover:bg-primary-soft flex items-center justify-between gap-3 transition-all"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-9 w-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black shrink-0">
+                            <div className="h-9 w-9 rounded-full bg-primary-soft text-primary flex items-center justify-center text-xs font-black shrink-0">
                               {p.name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -3159,7 +3159,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       onError={() => setWhatsappAvatarUrl(null)}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-blue-600 text-base font-black text-white">
+                    <div className="flex h-full w-full items-center justify-center bg-primary text-base font-black text-primary-foreground">
                       {firstName.charAt(0).toUpperCase()}
                       {lastName.charAt(0).toUpperCase()}
                     </div>
@@ -3263,7 +3263,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                       onClick={() => setActiveTab(tb.id as any)}
                       className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all ${
                         isActive
-                          ? "bg-blue-600 text-white shadow-md"
+                          ? "bg-primary text-primary-foreground shadow-md"
                           : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                       }`}
                     >
@@ -3287,7 +3287,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                 {loadingDetails ? (
                   <div className="flex items-center justify-center py-20">
-                    <Loader2Icon className="h-7 w-7 animate-spin text-blue-600" />
+                    <Loader2Icon className="h-7 w-7 animate-spin text-primary" />
                   </div>
                 ) : (
                   <>
@@ -3296,18 +3296,18 @@ Qualquer dúvida, estou à disposição! 😊`;
                       <div className="space-y-4">
                         {/* Active Packages Indicator Banner */}
                         {patientPackages.filter(p => p.status === 'active').length > 0 && (
-                          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-left shadow-xs">
-                            <p className="text-xs font-black text-blue-900 flex items-center gap-1.5 mb-2">
-                              <PackageIcon className="h-4 w-4 text-blue-700 animate-pulse" />
+                          <div className="bg-primary-soft border border-primary-soft-2 rounded-xl p-4 text-left shadow-xs">
+                            <p className="text-xs font-black text-primary flex items-center gap-1.5 mb-2">
+                              <PackageIcon className="h-4 w-4 text-primary animate-pulse" />
                               Pacotes de Sessões Ativos
                             </p>
                             <div className="space-y-1.5">
                               {patientPackages.filter(p => p.status === 'active').map(pkg => (
-                                <div key={pkg.id} className="flex items-center gap-3 rounded-lg bg-card/80 border border-blue-100/50 p-2.5">
+                                <div key={pkg.id} className="flex items-center gap-3 rounded-lg bg-card/80 border border-primary-soft-2 p-2.5">
                                   <PackageProgressRing used={pkg.used} total={pkg.total} size={40} strokeWidth={3.5} />
                                   <div className="min-w-0 flex-1">
                                     <p className="truncate text-xs font-extrabold text-foreground">{pkg.name}</p>
-                                    <p className="text-[10px] font-semibold text-blue-700">
+                                    <p className="text-[10px] font-semibold text-primary">
                                       {pkg.total - pkg.used} restante{pkg.total - pkg.used === 1 ? '' : 's'}
                                     </p>
                                     <p className="text-[9px] font-medium uppercase text-muted-foreground">
@@ -3329,7 +3329,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => handleSelectProcedure(val || "")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 <SelectValue placeholder="Selecione o procedimento..." />
                               </SelectTrigger>
                               <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -3357,7 +3357,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRoomId(val === "none" || val === null ? "" : val)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 <SelectValue placeholder="Selecione a sala...">
                                   {roomId ? rooms.find((r) => r.id === roomId)?.name ?? "Nenhuma" : "Nenhuma"}
                                 </SelectValue>
@@ -3400,7 +3400,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 onValueChange={(val) => handleSelectStartTime(val || "09:00")}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary bg-card">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -3422,7 +3422,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 }}
                                 disabled={saving}
                               >
-                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-card">
+                                <SelectTrigger className="w-full rounded-xl border border-border h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary bg-card">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60 rounded-xl overflow-y-auto bg-card border border-border">
@@ -3447,7 +3447,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 max={480}
                                 value={procedureDuration}
                                 onChange={(e) => handleDurationChange(Number(e.target.value))}
-                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-foreground"
+                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs font-bold text-foreground"
                               />
                             </div>
                             <div className="space-y-1 text-left">
@@ -3458,7 +3458,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={procedureValue}
                                 onChange={(e) => setProcedureValue(e.target.value)}
                                 placeholder="0,00"
-                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-bold text-foreground"
+                                className="rounded-xl border-border h-9 shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs font-bold text-foreground"
                               />
                             </div>
                           </div>
@@ -3471,7 +3471,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setRecurrence(val as any)}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 <SelectValue placeholder="Selecione">
                                   {
                                     {
@@ -3503,7 +3503,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   max={52}
                                   value={recurrenceCount}
                                   onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                                  className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                  className="w-16 rounded-xl border border-border h-8 px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                                 <span className="text-xs text-muted-foreground">vezes (semanalmente)</span>
                               </div>
@@ -3518,7 +3518,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onValueChange={(val) => setStatus(val || "provisional")}
                               disabled={saving}
                             >
-                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                              <SelectTrigger className="w-full rounded-xl border border-border bg-card h-9 px-3 text-xs text-foreground shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 <SelectValue placeholder="Selecione o status" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl bg-card border border-border">
@@ -3541,7 +3541,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               onChange={(e) => setNotes(e.target.value)}
                               rows={3}
                               disabled={saving}
-                              className="rounded-xl border-border shadow-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              className="rounded-xl border-border shadow-xs focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             />
                           </div>
 
@@ -3606,7 +3606,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 value={appointmentTag}
                                 onChange={(e) => setAppointmentTag(e.target.value)}
                                 placeholder="Ex: Retorno, VIP, Urgente..."
-                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-card shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 rounded-xl border border-border h-9 px-3 text-xs text-foreground bg-card shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
                               />
                               <div className="flex gap-1.5">
                                 {["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#f97316","#ec4899","#6b7280"].map(c => (
@@ -3651,7 +3651,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               type="button"
                               onClick={() => setSendWa(!sendWa)}
                               className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                                sendWa ? "bg-blue-600" : "bg-neutral-300"
+                                sendWa ? "bg-primary" : "bg-neutral-300"
                               }`}
                             >
                               <span
@@ -3982,7 +3982,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               let statusBadge = "bg-neutral-100 text-neutral-600";
                               if (appt.status === "confirmed") statusBadge = "bg-emerald-50 text-emerald-700 border border-emerald-100";
                               if (appt.status === "cancelled") statusBadge = "bg-rose-50 text-rose-700 border border-rose-100 line-through";
-                              if (appt.status === "attended") statusBadge = "bg-blue-50 text-blue-700 border border-blue-100";
+                              if (appt.status === "attended") statusBadge = "bg-primary-soft text-primary border border-primary-soft-2";
                               if (appt.status === "no_show") statusBadge = "bg-amber-50 text-amber-700 border border-amber-100";
 
                               return (
@@ -4019,7 +4019,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         {/* Templates Checklist & Send */}
                         <div className="space-y-3 border border-border/80 rounded-xl p-4 bg-neutral-50/10 shadow-xs">
                           <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                            <SendIcon className="h-3.5 w-3.5 text-blue-600" />
+                            <SendIcon className="h-3.5 w-3.5 text-primary" />
                             Enviar Termo / Contrato Existente
                           </h4>
                           <p className="text-[10px] text-muted-foreground">Marque as opções para gerar e enviar links de assinatura digital via WhatsApp do cliente.</p>
@@ -4029,12 +4029,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                               {docTemplates.map((t) => (
-                                <label key={t.id} className="flex items-center gap-2 text-xs text-neutral-700 bg-card border border-neutral-100 hover:border-blue-200 hover:bg-blue-50/10 rounded-lg p-2 cursor-pointer transition-colors shadow-xs">
+                                <label key={t.id} className="flex items-center gap-2 text-xs text-neutral-700 bg-card border border-neutral-100 hover:border-primary-soft-2 hover:bg-primary-soft rounded-lg p-2 cursor-pointer transition-colors shadow-xs">
                                   <input
                                     type="checkbox"
                                     checked={selectedDocs.includes(t.id)}
                                     onChange={() => handleToggleDocSelect(t.id)}
-                                    className="rounded text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
+                                    className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                   />
                                   <span className="truncate flex-1 font-semibold">{t.name}</span>
                                 </label>
@@ -4083,7 +4083,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           href={signingUrl}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="text-[9px] px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold transition-colors"
+                                          className="text-[9px] px-2 py-1 rounded bg-primary-soft text-primary hover:bg-primary-soft-2 font-bold transition-colors"
                                         >
                                           Link Assinatura
                                         </a>
@@ -4112,7 +4112,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                         <div className="space-y-4 text-left animate-in fade-in duration-200">
                           <div className="flex items-center justify-between border-b border-neutral-100 pb-2.5">
                             <div className="flex items-center gap-2">
-                              <FileTextIcon className="h-4.5 w-4.5 text-blue-600 animate-pulse" />
+                              <FileTextIcon className="h-4.5 w-4.5 text-primary animate-pulse" />
                               <div>
                                 <h3 className="text-xs font-black text-foreground">Novo Orçamento</h3>
                                 <p className="text-[10px] text-muted-foreground">Monte o orçamento para {selectedPatientInfo?.name || "o paciente"}</p>
@@ -4135,7 +4135,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <div className="space-y-4 border border-neutral-100 rounded-xl p-3 bg-neutral-50/20">
                                   <div>
                                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                                      <TagIcon className="h-3 w-3 text-blue-500" /> Procedimentos
+                                      <TagIcon className="h-3 w-3 text-primary" /> Procedimentos
                                     </p>
                                     <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
                                       {procedures.map((p) => (
@@ -4143,7 +4143,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           key={p.id}
                                           type="button"
                                           onClick={() => addQuoteProcedure(p)}
-                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-blue-50 hover:text-blue-700 border border-neutral-100 bg-card transition-all text-left shadow-xs font-semibold"
+                                          className="w-full flex items-center justify-between text-[11px] rounded-lg px-2.5 py-1.5 hover:bg-primary-soft hover:text-primary border border-neutral-100 bg-card transition-all text-left shadow-xs font-semibold"
                                         >
                                           <span className="truncate">{p.name}</span>
                                           <span className="text-muted-foreground font-mono shrink-0 ml-2">{fmt(p.valor || p.price || 0)}</span>
@@ -4209,7 +4209,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                               className="h-4.5 w-4.5 rounded bg-neutral-200 hover:bg-neutral-300 text-[10px] font-bold flex items-center justify-center"
                                             >+</button>
                                           </div>
-                                          <span className="font-bold text-blue-700 w-16 text-right shrink-0">{fmt(item.total_price)}</span>
+                                          <span className="font-bold text-primary w-16 text-right shrink-0">{fmt(item.total_price)}</span>
                                           <button
                                             type="button"
                                             onClick={() => removeQuoteItem(idx)}
@@ -4231,7 +4231,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           value={quoteDiscountType}
                                           onValueChange={(val) => setQuoteDiscountType(val as any)}
                                         >
-                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-border bg-card px-2 focus:ring-1 focus:ring-blue-400">
+                                          <SelectTrigger className="w-full text-xs h-8 rounded-lg border border-border bg-card px-2 focus:ring-1 focus:ring-primary">
                                             <SelectValue placeholder="Selecione..." />
                                           </SelectTrigger>
                                           <SelectContent className="rounded-xl bg-card border border-border">
@@ -4268,7 +4268,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           type="date"
                                           value={quoteExpiresAt}
                                           onChange={(e) => setQuoteExpiresAt(e.target.value)}
-                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                          className="w-full rounded-lg border border-border h-8 px-2.5 text-xs bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                                         />
                                       </div>
                                     </div>
@@ -4287,7 +4287,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                       )}
                                       <div className="flex justify-between text-foreground font-extrabold border-t border-border/50 pt-1.5">
                                         <span>Total Líquido</span>
-                                        <span className="text-blue-700">{fmt(total)}</span>
+                                        <span className="text-primary">{fmt(total)}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -4322,17 +4322,17 @@ Qualquer dúvida, estou à disposição! 😊`;
                                   value={quoteMessageText}
                                   onChange={(e) => setQuoteMessageText(e.target.value)}
                                   rows={8}
-                                  className="w-full text-xs font-mono rounded-xl border border-border bg-neutral-50/50 px-3.5 py-3 focus:ring-1 focus:ring-blue-400 focus:outline-none resize-none"
+                                  className="w-full text-xs font-mono rounded-xl border border-border bg-neutral-50/50 px-3.5 py-3 focus:ring-1 focus:ring-primary focus:outline-none resize-none"
                                 />
                                 <p className="text-[9px] text-muted-foreground">Você pode modificar o texto livremente antes de enviar.</p>
                               </div>
 
-                              <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-left">
-                                <div className="font-semibold text-blue-900">
+                              <div className="flex items-center justify-between bg-primary-soft border border-primary-soft-2 rounded-xl p-3 text-xs text-left">
+                                <div className="font-semibold text-primary">
                                   <p>{quoteItems.length} item{quoteItems.length > 1 ? "ns" : ""} • Total Líquido: {fmt(total)}</p>
-                                  {quoteSpecialCondition && <p className="text-[10px] text-blue-700 mt-0.5">{quoteSpecialCondition}</p>}
+                                  {quoteSpecialCondition && <p className="text-[10px] text-primary mt-0.5">{quoteSpecialCondition}</p>}
                                 </div>
-                                <span className="text-xs font-bold text-blue-700">{selectedPatientInfo?.name}</span>
+                                <span className="text-xs font-bold text-primary">{selectedPatientInfo?.name}</span>
                               </div>
 
                               <div className="flex justify-between items-center pt-2">
@@ -4486,9 +4486,9 @@ Qualquer dúvida, estou à disposição! 😊`;
                                 <span className="text-[8px] text-muted-foreground font-extrabold uppercase block tracking-wider">Total</span>
                                 <span className="text-sm font-black text-neutral-700">{quotes.length}</span>
                               </div>
-                              <div className="bg-blue-50 border border-blue-100/50 rounded-xl p-2.5 text-center shadow-xs">
-                                <span className="text-[8px] text-blue-600 font-extrabold uppercase block tracking-wider">Enviados</span>
-                                <span className="text-sm font-black text-blue-700">
+                              <div className="bg-primary-soft border border-primary-soft-2/50 rounded-xl p-2.5 text-center shadow-xs">
+                                <span className="text-[8px] text-primary font-extrabold uppercase block tracking-wider">Enviados</span>
+                                <span className="text-sm font-black text-primary">
                                   {quotes.filter(q => q.status === 'sent').length}
                                 </span>
                               </div>
@@ -4502,7 +4502,7 @@ Qualquer dúvida, estou à disposição! 😊`;
 
                             {loadingQuotes ? (
                               <div className="flex items-center justify-center py-4">
-                                <Loader2Icon className="h-4 w-4 animate-spin text-blue-600" />
+                                <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
                               </div>
                             ) : quotes.length === 0 ? (
                               <p className="text-xs text-muted-foreground italic">Nenhum orçamento gerado para este paciente.</p>
@@ -4529,7 +4529,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                           R$ {Number(q.total_value || 0).toFixed(2)}
                                         </span>
                                         <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                          isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-blue-50 text-blue-700 border border-blue-100/50" : "bg-neutral-100 text-muted-foreground"
+                                          isAccepted ? "bg-emerald-50 text-emerald-700 border border-emerald-100/50" : isSent ? "bg-primary-soft text-primary border border-primary-soft-2/50" : "bg-neutral-100 text-muted-foreground"
                                         }`}>
                                           {isAccepted ? "Aprovado" : isSent ? "Enviado" : "Rascunho"}
                                         </span>
@@ -4562,7 +4562,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                             {pkg.status === "active" ? "ativo" : pkg.status}
                                           </span>
                                         </div>
-                                        <p className="text-blue-700 font-bold text-[10px]">
+                                        <p className="text-primary font-bold text-[10px]">
                                           {remaining} restante{remaining === 1 ? '' : 's'}
                                         </p>
                                         <p className="text-[8px] text-muted-foreground font-bold uppercase">
@@ -4594,7 +4594,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                               value={newEvolContent}
                               onChange={(e) => setNewEvolContent(e.target.value)}
                               rows={3}
-                              className="text-xs rounded-xl border-border bg-card focus:ring-blue-500"
+                              className="text-xs rounded-xl border-border bg-card focus:ring-primary"
                               required
                               disabled={evolSaving}
                             />
@@ -4605,7 +4605,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     type="checkbox"
                                     checked={evolShared}
                                     onChange={(e) => setEvolShared(e.target.checked)}
-                                    className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                                    className="rounded border-neutral-300 text-primary focus:ring-primary h-3.5 w-3.5"
                                   />
                                   Portal do Paciente
                                 </label>
@@ -4646,7 +4646,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                         </span>
                                       )}
                                       {ev.shared && (
-                                        <span className="bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded uppercase">
+                                        <span className="bg-primary-soft text-primary border border-primary-soft-2 px-1.5 py-0.5 rounded uppercase">
                                           Compartilhado no Portal
                                         </span>
                                       )}
@@ -4656,7 +4656,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                         type="button"
                                         onClick={() => handleSendConsent(ev.id)}
                                         disabled={sendingConsentId === ev.id}
-                                        className="shrink-0 text-[9px] font-black text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                                        className="shrink-0 text-[9px] font-black text-primary hover:text-primary disabled:opacity-50"
                                       >
                                         {sendingConsentId === ev.id
                                           ? "Enviando..."
@@ -4679,12 +4679,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                             <div className="flex items-center gap-3">
                               {uploadingPhoto ? (
                                 <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                                  <Loader2Icon className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                                  <Loader2Icon className="h-3.5 w-3.5 animate-spin text-primary" />
                                   Processando foto...
                                 </span>
                               ) : (
                                 <>
-                                  <label className="text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 bg-blue-50/50 hover:bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100/50 transition-colors">
+                                  <label className="text-[11px] font-bold text-primary hover:text-primary cursor-pointer flex items-center gap-1 bg-primary-soft hover:bg-primary-soft-2 px-2 py-1.5 rounded-lg border border-primary-soft-2 transition-colors">
                                     <PlusIcon className="h-3.5 w-3.5" />
                                     Upload de Imagem
                                     <input
@@ -4696,7 +4696,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                                     />
                                   </label>
 
-                                  <label className="text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 bg-blue-50/50 hover:bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100/50 transition-colors">
+                                  <label className="text-[11px] font-bold text-primary hover:text-primary cursor-pointer flex items-center gap-1 bg-primary-soft hover:bg-primary-soft-2 px-2 py-1.5 rounded-lg border border-primary-soft-2 transition-colors">
                                     <Camera className="h-3.5 w-3.5" />
                                     Tirar Foto (Câmera)
                                     <input
@@ -4918,7 +4918,7 @@ Qualquer dúvida, estou à disposição! 😊`;
               {/* Smart Sidebar Panel (Right - 35% width) */}
               <aside className="w-80 shrink-0 border-l border-border/80 bg-[#fbfcfc]/60 p-6 overflow-y-auto flex flex-col gap-5">
                 <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-2">
-                  <SparklesIcon className="h-4 w-4 text-blue-600 animate-pulse" />
+                  <SparklesIcon className="h-4 w-4 text-primary animate-pulse" />
                   <span className="font-bold text-xs text-foreground uppercase tracking-wider">Painel Inteligente</span>
                 </div>
 
@@ -4932,10 +4932,10 @@ Qualquer dúvida, estou à disposição! 😊`;
                     <div className="space-y-2 text-left">
                       <div className="flex justify-between text-xs text-muted-foreground font-bold">
                         <span>Score de Compra:</span>
-                        <span className="font-extrabold text-blue-600">{smartPanelData.leadScore}%</span>
+                        <span className="font-extrabold text-primary">{smartPanelData.leadScore}%</span>
                       </div>
                       <div className="w-full bg-neutral-200/60 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${smartPanelData.leadScore}%` }} />
+                        <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${smartPanelData.leadScore}%` }} />
                       </div>
                       <p className="text-[9px] text-muted-foreground font-bold capitalize mt-0.5">Estágio CRM: {smartPanelData.stage}</p>
                     </div>
@@ -4943,12 +4943,12 @@ Qualquer dúvida, estou à disposição! 😊`;
                     {/* Active tags */}
                     <div className="space-y-2 text-left">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        <TagIcon className="h-3.5 w-3.5 text-blue-500" /> Tags Ativas
+                        <TagIcon className="h-3.5 w-3.5 text-primary" /> Tags Ativas
                       </span>
                       {smartPanelData.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1 pt-0.5">
                           {smartPanelData.tags.map((t) => (
-                            <span key={t} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-[9px] font-bold border border-blue-100/50">
+                            <span key={t} className="bg-primary-soft text-primary px-2 py-0.5 rounded-md text-[9px] font-bold border border-primary-soft-2">
                               {t}
                             </span>
                           ))}
@@ -4961,7 +4961,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     {/* Remaining package sessions alert summary */}
                     <div className="bg-card p-3 rounded-xl border border-border/70 space-y-1 text-left shadow-xs">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        <UserCheckIcon className="h-3.5 w-3.5 text-blue-500" /> Sessões em Aberto
+                        <UserCheckIcon className="h-3.5 w-3.5 text-primary" /> Sessões em Aberto
                       </span>
                       <p className={`text-sm font-black pt-1 ${smartPanelData.remainingSessions > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
                         {smartPanelData.remainingSessions} sessões restantes
@@ -4989,7 +4989,7 @@ Qualquer dúvida, estou à disposição! 😊`;
                     {/* Last Appointment info */}
                     <div className="space-y-2 text-left">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        <CalendarDaysIcon className="h-3.5 w-3.5 text-blue-500" /> Último Atendimento
+                        <CalendarDaysIcon className="h-3.5 w-3.5 text-primary" /> Último Atendimento
                       </span>
                       {smartPanelData.lastAppointmentDate ? (
                         <div className="bg-card p-2.5 rounded-xl border border-border/50 text-[10px] shadow-xs space-y-1 font-semibold text-neutral-600">
