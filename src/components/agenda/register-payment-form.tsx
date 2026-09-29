@@ -109,7 +109,7 @@ export function RegisterPaymentForm({ clinicId, patientId, patientName, onSaved,
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/30 p-4 text-left">
+    <div className="space-y-3 rounded-xl border border-primary-soft-2 bg-primary-soft p-4 text-left">
       <div>
         <p className="text-xs font-black text-foreground">Registrar pagamento</p>
         {patientName && <p className="text-[10px] text-muted-foreground">Paciente: {patientName}</p>}
@@ -122,7 +122,7 @@ export function RegisterPaymentForm({ clinicId, patientId, patientName, onSaved,
             type="button"
             onClick={() => changeType(t)}
             className={`rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-colors ${
-              type === t ? "border-blue-600 bg-blue-600 text-white" : "border-border bg-card text-muted-foreground hover:bg-neutral-50"
+              type === t ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:bg-neutral-50"
             }`}
           >
             {PAYMENT_TYPE_LABELS[t]}
@@ -234,7 +234,7 @@ export function RegisterPaymentForm({ clinicId, patientId, patientName, onSaved,
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar
         </button>

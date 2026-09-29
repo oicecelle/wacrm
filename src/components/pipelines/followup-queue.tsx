@@ -304,7 +304,7 @@ export function FollowupQueue() {
                           <span className="shrink-0 text-[9px] bg-emerald-100 text-emerald-700 font-semibold px-1 rounded">IA</span>
                         )}
                         {followup.status === 'sent' && (
-                          <span className="shrink-0 text-[9px] bg-blue-100 text-blue-700 font-semibold px-1 rounded">Enviado</span>
+                          <span className="shrink-0 text-[9px] bg-primary-soft-2 text-primary font-semibold px-1 rounded">Enviado</span>
                         )}
                         {followup.status === 'cancelled' && (
                           <span className="shrink-0 text-[9px] bg-neutral-100 text-muted-foreground font-semibold px-1 rounded">Cancelado</span>
@@ -360,7 +360,7 @@ export function FollowupQueue() {
                             setEditMessage(followup.message);
                             setEditScheduledAt(followup.scheduled_at.substring(0, 16));
                           }}
-                          className="flex items-center gap-0.5 text-[10px] font-semibold text-blue-600 hover:text-blue-800 py-0.5 px-1.5 rounded bg-blue-50 hover:bg-blue-100"
+                          className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:text-primary py-0.5 px-1.5 rounded bg-primary-soft hover:bg-primary-soft-2"
                           title="Editar"
                         >
                           <Pencil className="h-3 w-3" />
