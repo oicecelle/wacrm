@@ -30,6 +30,7 @@ import {
   FileText,
   Briefcase,
   Boxes,
+  Wallet,
   TrendingUp,
   ArrowLeftRight,
   Lock,
@@ -172,6 +173,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     { key: "/equipe", href: "/equipe", label: "Equipe", icon: UsersRound },
     { key: "/servicos", href: "/servicos", label: "Serviços", icon: Briefcase },
     { key: "/estoque", href: "/estoque", label: "Estoque", icon: Boxes },
+    { key: "/minhas-comissoes", href: "/minhas-comissoes", label: "Minhas Comissões", icon: Wallet },
     {
       key: "marketing-group",
       label: "Marketing",
