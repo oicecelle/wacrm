@@ -205,7 +205,7 @@ export default function ModelosPage() {
         <TabsContent value="system" className="space-y-6">
           {loading ? (
             <div className="flex items-center justify-center py-20 min-h-[300px]">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -244,7 +244,7 @@ export default function ModelosPage() {
                       </div>
 
                       {/* Body Content */}
-                      <h3 className="text-sm font-black text-foreground tracking-tight group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-sm font-black text-foreground tracking-tight group-hover:text-primary transition-colors">
                         {item.name}
                       </h3>
                       <p className="text-xs text-muted-foreground leading-relaxed mt-1.5 min-h-[48px]">
@@ -257,7 +257,7 @@ export default function ModelosPage() {
                       <span className="text-[10px] font-bold text-muted-foreground">Gatilho Automático</span>
                       <button
                         onClick={() => setSelectedTemplate(item)}
-                        className="flex items-center gap-1 text-xs font-black text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 text-xs font-black text-primary hover:text-primary transition-colors cursor-pointer"
                       >
                         Personalizar
                         <ArrowRight className="h-3 w-3" />
