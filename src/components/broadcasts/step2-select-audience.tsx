@@ -496,7 +496,7 @@ export function Step2SelectAudience({
       {audience.type === 'filters' && (
         <div className="space-y-4 rounded-xl border border-border bg-card/50 p-4">
           <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <Sparkles className="size-4 text-indigo-500" /> Filtros de Segmentação Avançada
+            <Sparkles className="size-4 text-primary" /> Filtros de Segmentação Avançada
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {/* Contact Type */}
@@ -554,7 +554,7 @@ export function Step2SelectAudience({
                 max="100"
                 value={audience.filters?.minScore ?? 0}
                 onChange={(e) => updateFilters({ minScore: parseInt(e.target.value) })}
-                className="w-full h-9 accent-indigo-600"
+                className="w-full h-9 accent-primary"
               />
             </div>
 
