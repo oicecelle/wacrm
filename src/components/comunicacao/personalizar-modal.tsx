@@ -591,7 +591,7 @@ export function PersonalizarModal({
 
                   {/* Chat Header */}
                   <div className="bg-neutral-800/80 border-b border-neutral-800 p-2.5 flex items-center gap-1.5 shrink-0 select-none">
-                    <div className="h-6 w-6 rounded-full bg-primary/30 text-[9px] flex items-center justify-center text-primary font-extrabold border border-primary/20">
+                    <div className="h-6 w-6 rounded-full bg-primary/40 text-[9px] flex items-center justify-center text-white font-extrabold border border-primary/30">
                       LP
                     </div>
                     <div>
