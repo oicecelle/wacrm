@@ -71,6 +71,7 @@ export function SimpleTemplateManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [parts, setParts] = useState<TemplatePart[]>([{ id: newPartId(), type: 'text', text: '' }]);
+  const [preventResend, setPreventResend] = useState(false);
   const [uploadingPartId, setUploadingPartId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -104,6 +105,7 @@ export function SimpleTemplateManager() {
     setEditingId(null);
     setName('');
     setParts([{ id: newPartId(), type: 'text', text: '' }]);
+    setPreventResend(false);
     setDialogOpen(true);
   }
 
@@ -116,6 +118,7 @@ export function SimpleTemplateManager() {
         ? existingParts
         : [{ id: newPartId(), type: 'text', text: t.body_text || '' }],
     );
+    setPreventResend(!!t.prevent_resend);
     setDialogOpen(true);
   }
 
@@ -199,7 +202,7 @@ export function SimpleTemplateManager() {
       if (editingId) {
         const { error } = await supabase
           .from('message_templates')
-          .update({ name: name.trim(), body_text: firstText, parts, variables })
+          .update({ name: name.trim(), body_text: firstText, parts, variables, prevent_resend: preventResend })
           .eq('id', editingId)
           .eq('account_id', profile.account_id);
         if (error) throw error;
@@ -219,6 +222,7 @@ export function SimpleTemplateManager() {
           body_text: firstText,
           parts,
           variables,
+          prevent_resend: preventResend,
           // No Meta review pipeline on this path — usable immediately.
           status: 'APPROVED',
         });
@@ -336,7 +340,7 @@ export function SimpleTemplateManager() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="flex max-h-[85vh] max-w-lg flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Editar modelo' : 'Criar modelo'}</DialogTitle>
             <DialogDescription>
@@ -344,7 +348,7 @@ export function SimpleTemplateManager() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="-mx-6 flex-1 space-y-4 overflow-y-auto px-6">
             <div className="space-y-1.5">
               <Label htmlFor="tpl-name">Nome do modelo</Label>
               <Input
@@ -353,6 +357,27 @@ export function SimpleTemplateManager() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Lembrete de consulta"
               />
+            </div>
+
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card/50 p-3">
+              <div>
+                <Label className="text-sm">Impedir reenvio</Label>
+                <p className="text-xs text-muted-foreground">
+                  Quem já recebeu este modelo fica de fora por padrão ao adicionar uma nova lista de disparo
+                  (dá pra incluir mesmo assim, na hora).
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={preventResend}
+                onClick={() => setPreventResend((v) => !v)}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${preventResend ? 'bg-primary' : 'bg-neutral-300'}`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${preventResend ? 'translate-x-5' : 'translate-x-0.5'}`}
+                />
+              </button>
             </div>
 
             <div className="space-y-1.5">
