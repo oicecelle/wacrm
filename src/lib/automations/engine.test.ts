@@ -95,7 +95,7 @@ vi.mock("./meta-send", () => ({
   engineSendTemplate: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
-import { runAutomationsForTrigger } from "./engine";
+import { runAutomationsForTrigger, isWithinWindow, minutesInTimeZone } from "./engine";
 
 const ACCOUNT = "acct-1";
 
@@ -256,3 +256,27 @@ function customStep(field: string, value: string) {
     step_config: { field, value },
   };
 }
+
+describe("isWithinWindow / minutesInTimeZone (bug: server timezone vs Brasília)", () => {
+  it("reads the hour in America/Sao_Paulo regardless of what the Date object's UTC hour is", () => {
+    // 2026-10-01T00:19:27Z = 2026-09-30T21:19:27 em Brasília (UTC-3) —
+    // exatamente a mensagem real que expôs o bug: o servidor via
+    // getHours() leria "0", não "21".
+    const d = new Date("2026-10-01T00:19:27Z");
+    expect(minutesInTimeZone(d, "America/Sao_Paulo")).toBe(21 * 60 + 19);
+  });
+
+  it("matches a window using Brasília time, not the Date object's own UTC hour", () => {
+    const withinWindow = new Date("2026-10-01T00:19:27Z"); // 21:19 BRT
+    const outsideWindow = new Date("2026-10-01T00:21:13Z"); // 21:21 BRT
+    expect(isWithinWindow("21:15-21:20", withinWindow)).toBe(true);
+    expect(isWithinWindow("21:15-21:20", outsideWindow)).toBe(false);
+  });
+
+  it("still handles an overnight window (e.g. 22:00-06:00) correctly in Brasília time", () => {
+    const lateNight = new Date("2026-10-01T04:00:00Z"); // 01:00 BRT — inside 22:00-06:00
+    const midday = new Date("2026-10-01T15:00:00Z"); // 12:00 BRT — outside
+    expect(isWithinWindow("22:00-06:00", lateNight)).toBe(true);
+    expect(isWithinWindow("22:00-06:00", midday)).toBe(false);
+  });
+});

@@ -927,6 +927,26 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
   }
 }
 
+/** Minutes-since-midnight for `date`, read in `timeZone` rather than
+ *  the server process's own local time. `Date.getHours()`/`getMinutes()`
+ *  reflect whatever timezone the Node runtime happens to be configured
+ *  with — on Vercel that's UTC — which silently turned every
+ *  "21:15-21:20" window into "21:15-21:20 UTC" (= 18:15-18:20 em
+ *  Brasília) instead of the clinic's own local time. hourCycle: 'h23'
+ *  avoids an Intl quirk where some ICU builds format midnight as "24"
+ *  instead of "00" under hour12: false. */
+export function minutesInTimeZone(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const h = Number(parts.find((p) => p.type === 'hour')?.value ?? 0)
+  const m = Number(parts.find((p) => p.type === 'minute')?.value ?? 0)
+  return h * 60 + m
+}
+
 /** Parses "HH:mm-HH:mm" into minutes-since-midnight bounds. Shared by
  *  the time_of_day condition and the wait step's 'until_window' mode
  *  — same window format and overnight-range handling either way. */
@@ -940,10 +960,10 @@ function parseWindow(window: string): { from: number; to: number } | null {
   return { from: parse(from), to: parse(to) }
 }
 
-function isWithinWindow(window: string, now: Date): boolean {
+export function isWithinWindow(window: string, now: Date): boolean {
   const bounds = parseWindow(window)
   if (!bounds) return false
-  const mins = now.getHours() * 60 + now.getMinutes()
+  const mins = minutesInTimeZone(now, 'America/Sao_Paulo')
   return bounds.from <= bounds.to
     ? mins >= bounds.from && mins < bounds.to
     : mins >= bounds.from || mins < bounds.to
@@ -957,7 +977,7 @@ function msUntilWindowOpens(window: string, now: Date): number {
   if (isWithinWindow(window, now)) return 0
   const bounds = parseWindow(window)
   if (!bounds) return 0
-  const nowMins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+  const nowMins = minutesInTimeZone(now, 'America/Sao_Paulo') + now.getSeconds() / 60
   let deltaMins = bounds.from - nowMins
   if (deltaMins < 0) deltaMins += 24 * 60 // window opens tomorrow
   return Math.max(1_000, Math.round(deltaMins * 60_000))
