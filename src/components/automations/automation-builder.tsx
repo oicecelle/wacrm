@@ -31,6 +31,7 @@ import {
   CircleSlash,
   Zap,
   Loader2,
+  PlayCircle,
   ArrowDown,
   ArrowUp,
   CalendarPlus,
@@ -42,6 +43,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -817,11 +825,21 @@ function SendMediaFields({
 
 export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const router = useRouter()
+  const { accountId } = useAuth()
   const isEditing = !!initial.id
   const [state, setState] = useState<BuilderInitial>(initial)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"list" | "diagram">("list")
+  const [testPanelOpen, setTestPanelOpen] = useState(false)
+  const [testQuery, setTestQuery] = useState("")
+  const [testResults, setTestResults] = useState<{ id: string; name: string; phone: string | null }[]>([])
+  const [testContact, setTestContact] = useState<{ id: string; name: string } | null>(null)
+  const [testMessageText, setTestMessageText] = useState(
+    (state.trigger_config as { keywords?: string[] })?.keywords?.[0] ?? "",
+  )
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ status: string; steps: { step_type: string; detail?: string; status: string }[] } | null>(null)
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
     setState((s) => ({ ...s, [key]: value }))
@@ -905,6 +923,75 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
     }
   }
 
+  useEffect(() => {
+    if (!accountId || testQuery.trim().length < 2) {
+      setTestResults([])
+      return
+    }
+    let cancelled = false
+    const t = setTimeout(async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, name, phone")
+        .eq("account_id", accountId)
+        .ilike("name", `%${testQuery.trim()}%`)
+        .limit(8)
+      if (!cancelled) setTestResults((data as { id: string; name: string; phone: string | null }[] | null) ?? [])
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [testQuery, accountId])
+
+  async function runTest() {
+    if (!testContact) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res = await fetch("/api/automations/engine", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          trigger_type: state.trigger_type,
+          contact_id: testContact.id,
+          context: { message_text: testMessageText, message_direction: "lead" },
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body?.error ?? "Falha ao rodar o teste")
+        return
+      }
+      // The engine runs fire-and-forget on the server; give it a beat
+      // to write the log row before we go looking for it.
+      await new Promise((r) => setTimeout(r, 900))
+      const supabase = createClient()
+      const { data: log } = await supabase
+        .from("automation_logs")
+        .select("status, steps_executed, created_at")
+        .eq("automation_id", initial.id)
+        .eq("contact_id", testContact.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!log) {
+        setTestResult(null)
+        toast.warning(
+          "O gatilho não bateu para essa mensagem/contato — nenhuma execução foi registrada. Confira o texto exato e o tipo de gatilho.",
+        )
+        return
+      }
+      setTestResult({
+        status: log.status as string,
+        steps: (log.steps_executed as { step_type: string; detail?: string; status: string }[]) ?? [],
+      })
+    } finally {
+      setTesting(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 flex flex-col bg-background">
       {/* Top bar. At sub-sm widths the "Active" label is hidden and the
@@ -955,6 +1042,17 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
             aria-label="Ativo"
           />
         </div>
+        {isEditing && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setTestPanelOpen(true)}
+            className="gap-1.5"
+          >
+            <PlayCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Testar agora</span>
+          </Button>
+        )}
         <Button
           onClick={save}
           disabled={saving}
@@ -1005,6 +1103,104 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           </div>
         )}
       </div>
+
+      <Dialog open={testPanelOpen} onOpenChange={setTestPanelOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Testar agora</DialogTitle>
+            <DialogDescription>
+              Roda essa automação de verdade, sem precisar de uma mensagem real no WhatsApp —
+              útil quando não dá pra testar ao vivo. Escolha um contato e o texto a simular.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Contato</label>
+              {testContact ? (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-3 py-2 text-sm">
+                  <span className="text-foreground">{testContact.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTestContact(null)
+                      setTestResult(null)
+                    }}
+                    className="text-xs font-bold text-muted-foreground hover:text-foreground"
+                  >
+                    Trocar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    value={testQuery}
+                    onChange={(e) => setTestQuery(e.target.value)}
+                    placeholder="Buscar contato pelo nome…"
+                    className="bg-muted text-foreground"
+                  />
+                  {testResults.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto rounded-lg border border-border">
+                      {testResults.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setTestContact({ id: c.id, name: c.name })
+                            setTestResults([])
+                            setTestQuery("")
+                          }}
+                          className="flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-muted"
+                        >
+                          <span className="text-foreground">{c.name}</span>
+                          {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {state.trigger_type === "keyword_match" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Texto da mensagem a simular
+                </label>
+                <Textarea
+                  value={testMessageText}
+                  onChange={(e) => setTestMessageText(e.target.value)}
+                  className="min-h-16 bg-muted text-foreground"
+                />
+              </div>
+            )}
+
+            <Button
+              type="button"
+              onClick={runTest}
+              disabled={!testContact || testing}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+              Rodar teste
+            </Button>
+
+            {testResult && (
+              <div className="space-y-1.5 rounded-lg border border-border bg-muted/50 p-3">
+                <p className="text-xs font-bold text-foreground">
+                  Resultado: {testResult.status === "success" ? "✅ concluído" : `⚠️ ${testResult.status}`}
+                </p>
+                {testResult.steps.map((s, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">
+                    {STEP_META[s.step_type as AutomationStepType]?.label ?? s.step_type}
+                    {s.detail ? ` — ${s.detail}` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
