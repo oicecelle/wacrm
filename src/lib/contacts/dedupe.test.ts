@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   dedupeByPhone,
   findExistingContact,
+  findExistingContactsBatch,
   isExactMatch,
   isUniqueViolation,
   normalizeKey,
@@ -93,5 +94,77 @@ describe("findExistingContact", () => {
   it("returns null for an empty phone without querying", async () => {
     const db = stubDb([{ id: "c1", phone: "15551234567" }]);
     expect(await findExistingContact(db, "acct", "   ")).toBeNull();
+  });
+});
+
+describe("findExistingContactsBatch", () => {
+  // Deliberately has NO bare `.eq()` terminal resolution — only `.or()`
+  // resolves to data. If the implementation ever regresses to an
+  // unbounded `.select("*").eq("account_id", ...)` with no `.or()`
+  // filter (the real bug this was built to catch — see below), that
+  // chain would return `undefined` here instead of real rows, and
+  // every assertion in this block would fail loudly instead of the
+  // bug silently reappearing.
+  function stubDb(rows: Array<{ id: string; phone: string; name?: string }>) {
+    const calls: { orFilter: string }[] = [];
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      or: (filter: string) => {
+        calls.push({ orFilter: filter });
+        return Promise.resolve({ data: rows, error: null });
+      },
+    };
+    const db = { from: () => builder } as unknown as SupabaseClient;
+    return { db, calls };
+  }
+
+  it("matches real contacts found via Postgres found via the suffix OR-filter (exact phones)", async () => {
+    const { db } = stubDb([
+      { id: "c1", phone: "5583987451115", name: "Tatiana" },
+      { id: "c2", phone: "5583998314151", name: "Maytê" },
+    ]);
+    const result = await findExistingContactsBatch(db, "acct", ["(83) 98745-1115", "(83) 99831-4151"]);
+    expect(result.get(normalizeKey("(83) 98745-1115"))?.name).toBe("Tatiana");
+    expect(result.get(normalizeKey("(83) 99831-4151"))?.name).toBe("Maytê");
+  });
+
+  it(
+    "finds an exact match regardless of how many OTHER contacts the account has " +
+      "(the real bug: an unbounded select over a 1,000+ contact account silently " +
+      "truncated at PostgREST's default row cap, so a real match further down the " +
+      "table was missed and the caller tried to re-insert it, hitting the DB's own " +
+      'unique index — "duplicate key value violates unique constraint ' +
+      '\\"idx_contacts_account_phone_normalized\\""). The OR-filter approach only ever ' +
+      "asks for rows that could match one of THIS batch's phones, so it can never be " +
+      "truncated by how large the account's full contact list is.",
+    async () => {
+      const { db } = stubDb([{ id: "needle", phone: "5583987451115", name: "Tatiana" }]);
+      const result = await findExistingContactsBatch(db, "acct", ["(83) 98745-1115"]);
+      expect(result.get(normalizeKey("(83) 98745-1115"))?.id).toBe("needle");
+    },
+  );
+
+  it("returns an empty map when nothing matches", async () => {
+    const { db } = stubDb([{ id: "c1", phone: "5583987451115" }]);
+    const result = await findExistingContactsBatch(db, "acct", ["(11) 90000-0000"]);
+    expect(result.size).toBe(0);
+  });
+
+  it("de-duplicates OR-filter suffixes so repeated/similar phones in the batch don't balloon the query", async () => {
+    const { db, calls } = stubDb([{ id: "c1", phone: "5583987451115" }]);
+    await findExistingContactsBatch(db, "acct", ["(83) 98745-1115", "83987451115", "+55 83 98745-1115"]);
+    // All three inputs share the same last-8-digit suffix — exactly
+    // one OR-term, not three, regardless of how the same number was
+    // formatted across the pasted list.
+    expect(calls).toHaveLength(1);
+    expect(calls[0].orFilter.split(",")).toHaveLength(1);
+  });
+
+  it("returns an empty map for an all-invalid batch without querying", async () => {
+    const { db, calls } = stubDb([{ id: "c1", phone: "5583987451115" }]);
+    const result = await findExistingContactsBatch(db, "acct", ["", "   "]);
+    expect(result.size).toBe(0);
+    expect(calls).toHaveLength(0);
   });
 });

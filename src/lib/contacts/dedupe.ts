@@ -78,13 +78,45 @@ export async function findExistingContactsBatch(
   const validPhones = phones.filter((p) => normalizeKey(p));
   if (validPhones.length === 0) return result;
 
-  const { data, error } = await db
-    .from("contacts")
-    .select("*")
-    .eq("account_id", accountId);
-  if (error || !data) return result;
+  // BUG FIXED HERE (found via a real "duplicate key" error on an
+  // account with 1,271 contacts): this used to be an unbounded
+  // `.select("*")` over every contact in the account, matched in JS
+  // afterwards. PostgREST caps an unbounded select at 1,000 rows by
+  // default — past that, the query silently returns a partial result
+  // instead of erroring, so on any account over that size this
+  // "found existing contacts" lookup could miss real matches further
+  // down the result set, and the code would then try to INSERT a
+  // contact that already existed, hitting the DB's own unique index
+  // on phone_normalized. Fixed by querying only candidates that could
+  // possibly match one of THIS batch's phones (bounded by the batch
+  // size, not the account's total contact count) instead of the
+  // whole table — same `phonesMatch` fuzziness as before, applied to
+  // a correctly-complete candidate set regardless of account size.
+  const suffixes = Array.from(
+    new Set(
+      validPhones
+        .map((p) => normalizeKey(p))
+        .map((key) => (key.length >= 8 ? key.slice(-8) : key))
+        .filter(Boolean),
+    ),
+  );
+  if (suffixes.length === 0) return result;
 
-  const candidates = data as ExistingContact[];
+  // Chunked so a very large pasted list (hundreds/thousands of
+  // numbers — a realistic broadcast audience) never builds one
+  // enormous `.or()` filter string in a single request.
+  const SUFFIX_CHUNK = 200;
+  const candidates: ExistingContact[] = [];
+  for (let i = 0; i < suffixes.length; i += SUFFIX_CHUNK) {
+    const chunk = suffixes.slice(i, i + SUFFIX_CHUNK);
+    const { data, error } = await db
+      .from("contacts")
+      .select("*")
+      .eq("account_id", accountId)
+      .or(chunk.map((s) => `phone.like.%${s}`).join(","));
+    if (error) return result;
+    if (data) candidates.push(...(data as ExistingContact[]));
+  }
   for (const phone of validPhones) {
     const key = normalizeKey(phone);
     if (result.has(key)) continue;
