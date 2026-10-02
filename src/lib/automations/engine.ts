@@ -310,6 +310,52 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
       return
     }
 
+    // Pacing: when this automation has a minimum interval configured,
+    // every actual outbound send (not add_tag, not update_deal_field —
+    // just the three that really hit Uazapi) reserves its own slot
+    // first. If the automation has fired for several contacts close
+    // together (the exact "50 people ask the same thing in the same
+    // minute" scenario this exists for), later callers get pushed to
+    // a later slot instead of all firing at once — protecting the
+    // number from a burst that could get it flagged. Reuses the exact
+    // same suspend-and-resume mechanism `wait` uses above, just
+    // resuming at THIS step's own position (not +1) so the deferred
+    // run retries the actual send once its slot arrives, rather than
+    // skipping it.
+    const isOutboundSend =
+      step.step_type === 'send_message' || step.step_type === 'send_template' || step.step_type === 'send_media'
+    if (isOutboundSend && args.automation.min_interval_seconds && args.automation.min_interval_seconds > 0) {
+      const { data: slotIso } = await db.rpc('reserve_automation_send_slot', {
+        p_automation_id: args.automation.id,
+        p_interval_seconds: args.automation.min_interval_seconds,
+      })
+      const slotMs = slotIso ? new Date(slotIso as string).getTime() - Date.now() : 0
+      if (slotMs > 500) {
+        await db.from('automation_pending_executions').insert({
+          automation_id: args.automation.id,
+          account_id: args.automation.account_id,
+          user_id: args.automation.user_id,
+          contact_id: args.contactId,
+          log_id: args.logId,
+          parent_step_id: args.parentStepId,
+          branch: args.branch,
+          next_step_position: step.position,
+          context: args.context,
+          run_at: slotIso as string,
+          status: 'pending',
+        })
+        results.push({
+          step_id: step.id,
+          step_type: step.step_type,
+          status: 'success',
+          detail: `paced — queued for ${slotIso}`,
+        })
+        status = 'partial'
+        await appendResults(args.logId, results, status, errorMessage)
+        return
+      }
+    }
+
     try {
       if (step.step_type === 'condition') {
         const cfg = step.step_config as ConditionStepConfig

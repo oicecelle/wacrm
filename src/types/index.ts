@@ -664,6 +664,12 @@ export interface Automation {
   is_active: boolean;
   execution_count: number;
   last_executed_at?: string | null;
+  /** Minimum seconds between this automation's own outbound sends
+   *  (send_message / send_template / send_media) — null/0 = no pacing,
+   *  the previous behavior. Protects the number from a burst when the
+   *  same automation fires for many contacts close together. */
+  min_interval_seconds?: number | null;
+  last_outbound_sent_at?: string | null;
   created_at: string;
   updated_at: string;
 }

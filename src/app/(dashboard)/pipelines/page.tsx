@@ -8,6 +8,7 @@ import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
+import { LiaSummaryPanel } from "@/components/pipelines/lia-summary-panel";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,7 +52,7 @@ export default function PipelinesPage() {
   const { hasPermission, loading: permsLoading } = usePermissions();
   const canEditSettings = !permsLoading && hasPermission("edit_crm", "edit");
   const canCreateDeals = !permsLoading && hasPermission("edit_crm", "edit");
-  const { accountId } = useAuth();
+  const { accountId, profile } = useAuth();
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
@@ -663,6 +664,14 @@ export default function PipelinesPage() {
         </div>
       ) : (
         <>
+          {accountId && (
+            <LiaSummaryPanel
+              accountId={accountId}
+              deals={deals}
+              stages={stages}
+              greetingName={profile?.full_name ?? undefined}
+            />
+          )}
           <PipelineAnalytics stages={stages} deals={filteredDeals} />
           <PipelineBoard
             stages={stages}

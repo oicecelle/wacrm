@@ -94,6 +94,8 @@ export interface BuilderInitial {
   trigger_config: Record<string, unknown>
   is_active: boolean
   steps: BuilderStep[]
+  /** null/0 = sem ritmo configurado (comportamento de sempre). */
+  min_interval_seconds?: number | null
 }
 
 // ------------------------------------------------------------
@@ -1130,6 +1132,29 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
                   onTypeChange={(t) => patchTop("trigger_type", t)}
                   onConfigChange={(c) => patchTop("trigger_config", c)}
                 />
+
+                <div className="mb-4 flex w-full max-w-md items-center gap-2 rounded-xl border border-border bg-card p-3">
+                  <Hourglass className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-foreground">Intervalo mínimo entre envios</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Se essa automação disparar pra várias pessoas ao mesmo tempo, espaça os
+                      envios em vez de mandar tudo junto.
+                    </p>
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={state.min_interval_seconds ?? ""}
+                    onChange={(e) =>
+                      patchTop("min_interval_seconds", e.target.value ? Math.max(0, Number(e.target.value)) : null)
+                    }
+                    placeholder="0"
+                    className="h-8 w-20 bg-muted text-center text-xs text-foreground"
+                  />
+                  <span className="text-xs text-muted-foreground">seg</span>
+                </div>
+
                 <StepList
                   steps={state.steps}
                   parentPath={[]}
