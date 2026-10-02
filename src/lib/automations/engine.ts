@@ -896,8 +896,16 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
     }
     case 'time_of_day': {
       // operand form "HH:mm-HH:mm" — true if now is within that window
-      // (supports over-midnight ranges like "18:00-09:00").
-      return isWithinWindow(cfg.operand ?? '', new Date())
+      // (supports over-midnight ranges like "18:00-09:00"). `days`
+      // (0=domingo..6=sábado) additionally restricts which weekdays the
+      // window applies to; omitted/empty means every day, matching the
+      // behavior before this field existed.
+      const now = new Date()
+      if (cfg.days && cfg.days.length > 0) {
+        const today = dayOfWeekInTimeZone(now, 'America/Sao_Paulo')
+        if (!cfg.days.includes(today)) return false
+      }
+      return isWithinWindow(cfg.operand ?? '', now)
     }
     case 'no_reply_since': {
       // True = "still no reply" — i.e. no customer message has landed
@@ -945,6 +953,18 @@ export function minutesInTimeZone(date: Date, timeZone: string): number {
   const h = Number(parts.find((p) => p.type === 'hour')?.value ?? 0)
   const m = Number(parts.find((p) => p.type === 'minute')?.value ?? 0)
   return h * 60 + m
+}
+
+/** Day of week (0=domingo..6=sábado, same as Date#getDay()) for `date`,
+ *  read in `timeZone` — same reasoning as minutesInTimeZone: a message
+ *  that lands at 23:40 UTC on a Monday is already Tuesday in Brasília,
+ *  and the condition needs to agree with the calendar the clinic
+ *  actually operates on, not the server's. */
+export function dayOfWeekInTimeZone(date: Date, timeZone: string): number {
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(date)
+  const order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const idx = order.indexOf(weekday)
+  return idx === -1 ? date.getDay() : idx
 }
 
 /** Parses "HH:mm-HH:mm" into minutes-since-midnight bounds. Shared by

@@ -2099,6 +2099,37 @@ function StepEditor({
               )}
             </FieldBlock>
           )}
+          {cfg.subject === "time_of_day" && (
+            <FieldBlock label="Dias da semana">
+              <div className="flex flex-wrap gap-1">
+                {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((label, idx) => {
+                  const days = (cfg.days as number[] | undefined) ?? []
+                  const active = days.includes(idx)
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() =>
+                        set({
+                          days: active ? days.filter((d) => d !== idx) : [...days, idx].sort(),
+                        })
+                      }
+                      className={`rounded-lg border px-2 py-1 text-xs font-bold transition-colors ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Nenhum dia marcado = vale todo santo dia.
+              </p>
+            </FieldBlock>
+          )}
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
             <FieldBlock label="Valor">
               <Input

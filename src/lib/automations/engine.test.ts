@@ -95,7 +95,7 @@ vi.mock("./meta-send", () => ({
   engineSendTemplate: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
-import { runAutomationsForTrigger, isWithinWindow, minutesInTimeZone } from "./engine";
+import { runAutomationsForTrigger, isWithinWindow, minutesInTimeZone, dayOfWeekInTimeZone } from "./engine";
 
 const ACCOUNT = "acct-1";
 
@@ -278,5 +278,27 @@ describe("isWithinWindow / minutesInTimeZone (bug: server timezone vs Brasília)
     const midday = new Date("2026-10-01T15:00:00Z"); // 12:00 BRT — outside
     expect(isWithinWindow("22:00-06:00", lateNight)).toBe(true);
     expect(isWithinWindow("22:00-06:00", midday)).toBe(false);
+  });
+});
+
+describe("dayOfWeekInTimeZone (condição de dia da semana)", () => {
+  it("reads the weekday in America/Sao_Paulo, not the Date object's own UTC day", () => {
+    // 2026-10-01T02:30:00Z = 2026-09-30T23:30:00 em Brasília — ainda
+    // quarta-feira (3) em Brasília, mesmo já sendo quinta em UTC.
+    const d = new Date("2026-10-01T02:30:00Z");
+    expect(dayOfWeekInTimeZone(d, "America/Sao_Paulo")).toBe(3); // Wed
+  });
+
+  it("matches Date#getDay()'s convention (0=domingo..6=sábado) for a clean local date", () => {
+    // 2026-09-28 é uma segunda-feira.
+    const d = new Date("2026-09-28T15:00:00Z"); // 12:00 BRT, mesmo dia em ambos os fusos
+    expect(dayOfWeekInTimeZone(d, "America/Sao_Paulo")).toBe(1); // Mon
+  });
+});
+
+describe("evaluateCondition — time_of_day com filtro de dias (via isWithinWindow + days)", () => {
+  it("days vazio ou ausente continua valendo todo santo dia (comportamento anterior)", () => {
+    const sunday = new Date("2026-09-27T15:00:00Z"); // domingo, 12:00 BRT
+    expect(isWithinWindow("10:00-14:00", sunday)).toBe(true);
   });
 });

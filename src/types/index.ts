@@ -595,6 +595,10 @@ export interface ConditionStepConfig {
   operand?: string;
   /** For contact_field equals / message_content contains — comparison value */
   value?: string;
+  /** time_of_day only. Weekdays the window applies to — 0=domingo .. 6=sábado,
+   *  same convention as Date#getDay(). Omitted/empty = every day
+   *  (unchanged default behavior for conditions saved before this field existed). */
+  days?: number[];
 }
 
 export interface SendWebhookStepConfig {
