@@ -19,6 +19,11 @@ import {
   ArrowRightLeft,
   StickyNote,
   Heart,
+  Radio,
+  Brain,
+  TrendingDown,
+  Award,
+  HelpCircle,
 } from "lucide-react";
 
 interface LiaSummaryPanelProps {
@@ -29,6 +34,13 @@ interface LiaSummaryPanelProps {
 }
 
 type Period = "today" | "7d" | "30d" | "this_month";
+
+interface PendingItem {
+  id: string;
+  runAt: string;
+  automationName: string;
+  contactName: string | null;
+}
 
 interface DiaryEntry {
   id: string;
@@ -82,6 +94,8 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
   const [tagsAddedCount, setTagsAddedCount] = useState<number | null>(null);
   const [loadingLia, setLoadingLia] = useState(true);
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
+  const [pendingQueue, setPendingQueue] = useState<PendingItem[]>([]);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
 
   const since = useMemo(() => periodStart(period), [period]);
 
@@ -203,6 +217,41 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, since]);
 
+  // Operação automática: o que está de fato enfileirado agora (não é
+  // histórico, não depende do período acima) — lê direto de
+  // automation_pending_executions, a mesma fila que o passo "esperar"
+  // e o ritmo entre envios usam de verdade.
+  useEffect(() => {
+    if (!accountId) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await supabase
+        .from("automation_pending_executions")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .eq("status", "pending");
+      const { data } = await supabase
+        .from("automation_pending_executions")
+        .select("id, run_at, automations(name), contacts(name)")
+        .eq("account_id", accountId)
+        .eq("status", "pending")
+        .order("run_at", { ascending: true })
+        .limit(5);
+      if (cancelled) return;
+      setPendingCount(count ?? 0);
+      setPendingQueue(
+        (data ?? []).map((r) => {
+          const row = r as unknown as { id: string; run_at: string; automations: { name: string } | null; contacts: { name: string } | null };
+          return { id: row.id, runAt: row.run_at, automationName: row.automations?.name ?? "—", contactName: row.contacts?.name ?? null };
+        }),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
   const dealsInPeriod = useMemo(() => deals.filter((d) => new Date(d.created_at) >= since), [deals, since]);
   const wonInPeriod = useMemo(() => dealsInPeriod.filter((d) => d.status === "won"), [dealsInPeriod]);
   const revenueInPeriod = useMemo(() => wonInPeriod.reduce((sum, d) => sum + (Number(d.value) || 0), 0), [wonInPeriod]);
@@ -241,6 +290,28 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
       }))
       .sort((a, b) => b.leads - a.leads);
   }, [dealsInPeriod]);
+
+  // Melhor origem: a com mais leads no período que teve pelo menos 1
+  // cliente — evita "origem com 1 lead e 100% de conversão" ganhar por
+  // amostra pequena demais pra significar algo.
+  const bestSource = useMemo(() => {
+    const withClients = bySource.filter((s) => s.clients > 0);
+    return withClients.length > 0 ? [...withClients].sort((a, b) => b.conversion - a.conversion)[0] : null;
+  }, [bySource]);
+
+  // Maior vazamento: maior queda absoluta entre duas etapas
+  // consecutivas do funil configurado por essa clínica — real, não um
+  // funil genérico inventado.
+  const biggestLeak = useMemo(() => {
+    let worst: { from: string; to: string; drop: number } | null = null;
+    for (let i = 0; i < stageCounts.length - 1; i++) {
+      const drop = stageCounts[i].count - stageCounts[i + 1].count;
+      if (drop > 0 && (!worst || drop > worst.drop)) {
+        worst = { from: stageCounts[i].stage.name, to: stageCounts[i + 1].stage.name, drop };
+      }
+    }
+    return worst;
+  }, [stageCounts]);
 
   const liaActions = [
     { icon: Zap, label: "Automações concluídas", value: automationCount },
@@ -321,6 +392,90 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
         ) : (
           <p className="rounded-xl bg-muted px-3 py-4 text-center text-xs text-muted-foreground">
             Nenhuma ação automática registrada neste período ainda.
+          </p>
+        )}
+      </div>
+
+      {/* Inteligência da LYA */}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Brain className="h-4 w-4 text-primary" />
+          <div>
+            <p className="text-sm font-bold text-foreground">Inteligência da LYA</p>
+            <p className="text-[11px] text-muted-foreground">Padrões identificados nos seus dados.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {bestSource ? (
+            <InsightCard
+              icon={<Award className="h-3.5 w-3.5" />}
+              tag="Melhor origem"
+              title={bestSource.source}
+              detail={`${bestSource.conversion}% de conversão no período, entre as origens com cliente.`}
+            />
+          ) : (
+            <InsightCard
+              icon={<Award className="h-3.5 w-3.5" />}
+              tag="Melhor origem"
+              title="Dados insuficientes"
+              detail="Ainda não há vendas suficientes no período pra identificar qual origem converte melhor."
+              muted
+            />
+          )}
+          {biggestLeak ? (
+            <InsightCard
+              icon={<TrendingDown className="h-3.5 w-3.5" />}
+              tag="Maior vazamento"
+              title={`${biggestLeak.from} → ${biggestLeak.to}`}
+              detail={`${biggestLeak.drop} negócios não avançaram dessa etapa pra próxima.`}
+            />
+          ) : (
+            <InsightCard
+              icon={<TrendingDown className="h-3.5 w-3.5" />}
+              tag="Maior vazamento"
+              title="Dados insuficientes"
+              detail="Sem negócios suficientes nas etapas do funil pra identificar um ponto de perda."
+              muted
+            />
+          )}
+          <InsightCard
+            icon={<HelpCircle className="h-3.5 w-3.5" />}
+            tag="Principal objeção"
+            title="Dados insuficientes"
+            detail="Nenhuma objeção foi registrada nos negócios ainda — essa análise aparece aqui assim que houver dado real."
+            muted
+          />
+        </div>
+      </div>
+
+      {/* Operação automática */}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Radio className="h-4 w-4 text-primary" />
+          <div>
+            <p className="text-sm font-bold text-foreground">Operação automática</p>
+            <p className="text-[11px] text-muted-foreground">
+              {pendingCount === null ? "Carregando…" : pendingCount === 0 ? "Nada na fila agora." : `${pendingCount} ação${pendingCount === 1 ? "" : "ões"} aguardando o momento certo pra sair.`}
+            </p>
+          </div>
+        </div>
+        {pendingQueue.length > 0 ? (
+          <div className="space-y-1.5">
+            {pendingQueue.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
+                <span className="text-foreground">
+                  {item.automationName}
+                  {item.contactName ? ` · ${item.contactName}` : ""}
+                </span>
+                <span className="text-muted-foreground">
+                  {new Date(item.runAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl bg-muted px-3 py-4 text-center text-xs text-muted-foreground">
+            Nenhuma ação automática programada no momento. Você não precisa fazer nada — a LYA continua monitorando.
           </p>
         )}
       </div>
@@ -429,6 +584,31 @@ function DiaryIcon({ kind }: { kind: DiaryEntry["kind"] }) {
   } as const;
   const { Icon, className } = map[kind];
   return <Icon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${className}`} />;
+}
+
+function InsightCard({
+  icon,
+  tag,
+  title,
+  detail,
+  muted,
+}: {
+  icon: React.ReactNode;
+  tag: string;
+  title: string;
+  detail: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className={`rounded-xl border border-border p-3 ${muted ? "bg-muted/50" : "bg-primary-soft"}`}>
+      <div className={`mb-1.5 flex items-center gap-1.5 text-[10px] font-bold ${muted ? "text-muted-foreground" : "text-primary"}`}>
+        {icon}
+        {tag}
+      </div>
+      <p className="text-sm font-bold text-foreground">{title}</p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{detail}</p>
+    </div>
+  );
 }
 
 function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
