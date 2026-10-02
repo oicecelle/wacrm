@@ -338,6 +338,12 @@ export interface Deal {
   // AI fields
   interest?: string;
   crm_stage?: string;
+  /** Clinic's own configurable attendance queue (Novo, Em atendimento,
+   *  Sinal pago...) — separate from `status` (open/won/lost lifecycle)
+   *  and from `crm_stage` (sales-funnel stage). Nullable: most deals
+   *  predate this field. */
+  crm_status_id?: string | null;
+  crm_status?: { id: string; nome: string } | null;
   temperature?: 'hot' | 'warm' | 'cold';
   main_objection?: string;
   score?: number;

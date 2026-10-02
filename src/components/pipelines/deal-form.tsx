@@ -37,6 +37,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DealExtrasPanel } from "@/components/pipelines/deal-extras-panel";
 
 interface DealFormProps {
   open: boolean;
@@ -70,6 +71,8 @@ export function DealForm({
   const [notes, setNotes] = useState("");
   // AI/Copilot fields
   const [interest, setInterest] = useState("");
+  const [crmStatusId, setCrmStatusId] = useState("");
+  const [crmStatuses, setCrmStatuses] = useState<{ id: string; nome: string }[]>([]);
   const [temperature, setTemperature] = useState<"hot" | "warm" | "cold" | "">("");
   const [mainObjection, setMainObjection] = useState("");
   const [score, setScore] = useState("");
@@ -116,6 +119,7 @@ export function DealForm({
       setExpectedCloseDate(deal.expected_close_date ?? "");
       setNotes(deal.notes ?? "");
       setInterest(deal.interest ?? "");
+      setCrmStatusId(deal.crm_status_id ?? "");
       setTemperature(deal.temperature ?? "");
       setMainObjection(deal.main_objection ?? "");
       setScore(deal.score !== undefined && deal.score !== null ? String(deal.score) : "");
@@ -159,20 +163,24 @@ export function DealForm({
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const [c, p, fs] = await Promise.all([
+      const [c, p, fs, cs] = await Promise.all([
         supabase.from("contacts").select("*").order("name"),
         supabase.from("profiles").select("*").order("full_name"),
         fetch("/api/account/followup-settings").then(r => r.json()),
+        accountId
+          ? supabase.from("crm_status").select("id, nome").eq("clinic_id", accountId).order("ordem")
+          : Promise.resolve({ data: [] }),
       ]);
       if (cancelled) return;
       setContacts((c.data ?? []) as Contact[]);
       setProfiles((p.data ?? []) as Profile[]);
       if (fs?.settings) setFollowupSettings(fs.settings);
+      setCrmStatuses((cs.data as { id: string; nome: string }[] | null) ?? []);
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, supabase]);
+  }, [open, supabase, accountId]);
 
   // Fetch linked conversation for the selected contact (newest open one).
   // Clearing on no-selection is sync with prop state; the populated
@@ -218,6 +226,7 @@ export function DealForm({
       notes: notes.trim() || null,
       expected_close_date: expectedCloseDate || null,
       interest: interest.trim() || null,
+      crm_status_id: crmStatusId || null,
       temperature: temperature || null,
       main_objection: mainObjection.trim() || null,
       score: score ? parseInt(score, 10) : null,
@@ -438,7 +447,7 @@ export function DealForm({
                 🤖 Copiloto IA & CRM Inteligente
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="grid gap-1.5">
                   <Label className="text-xs font-bold text-neutral-600">Temperatura</Label>
                   <select
@@ -450,6 +459,22 @@ export function DealForm({
                     <option value="hot">🔥 Hot (Quente)</option>
                     <option value="warm">⚡ Warm (Morno)</option>
                     <option value="cold">❄️ Cold (Frio)</option>
+                  </select>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label className="text-xs font-bold text-neutral-600">Status (fila de atendimento)</Label>
+                  <select
+                    value={crmStatusId}
+                    onChange={(e) => setCrmStatusId(e.target.value)}
+                    className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-xs text-foreground outline-none"
+                  >
+                    <option value="">Nenhum</option>
+                    {crmStatuses.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -658,6 +683,8 @@ export function DealForm({
                 className="min-h-[100px] border-border bg-muted text-foreground"
               />
             </div>
+
+            {deal?.id && accountId && <DealExtrasPanel dealId={deal.id} accountId={accountId} />}
 
             {deal && (
               <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
