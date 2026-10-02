@@ -24,6 +24,8 @@ import {
   TrendingDown,
   Award,
   HelpCircle,
+  ShieldAlert,
+  Sprout,
 } from "lucide-react";
 
 interface LiaSummaryPanelProps {
@@ -96,6 +98,8 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
   const [pendingQueue, setPendingQueue] = useState<PendingItem[]>([]);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [recovered, setRecovered] = useState<{ count: number; value: number } | null>(null);
+  const [atRisk, setAtRisk] = useState<{ count: number; value: number } | null>(null);
 
   const since = useMemo(() => periodStart(period), [period]);
 
@@ -210,6 +214,21 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
 
       setDiaryEntries(entries.slice(0, 15));
       setLoadingLia(false);
+
+      // Critério decidido com o cliente: rigoroso (silêncio real →
+      // automação agiu → cliente respondeu → venda), 3 dias de
+      // silêncio. Funções no banco (migração 074) — a lógica de
+      // "maior intervalo entre mensagens" precisa de window function,
+      // não dá pra fazer isso limpo puxando tudo pro JS.
+      const [rec, risk] = await Promise.all([
+        supabase.rpc("recovered_revenue", { p_account_id: accountId, p_since: sinceIso, p_silence_days: 3 }),
+        supabase.rpc("at_risk_revenue", { p_account_id: accountId, p_silence_days: 3 }),
+      ]);
+      if (cancelled) return;
+      const recRow = (rec.data as { deal_count: number; total_value: number }[] | null)?.[0];
+      const riskRow = (risk.data as { deal_count: number; total_value: number }[] | null)?.[0];
+      setRecovered(recRow ? { count: recRow.deal_count, value: Number(recRow.total_value) } : null);
+      setAtRisk(riskRow ? { count: riskRow.deal_count, value: Number(riskRow.total_value) } : null);
     })();
     return () => {
       cancelled = true;
@@ -394,6 +413,55 @@ export function LiaSummaryPanel({ accountId, deals, stages, greetingName }: LiaS
             Nenhuma ação automática registrada neste período ainda.
           </p>
         )}
+      </div>
+
+      {/* Receita recuperada / em risco */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+            <Sprout className="h-3.5 w-3.5" /> Receita recuperada pela LYA
+          </div>
+          {recovered === null ? (
+            <div className="h-8 w-32 animate-pulse rounded bg-emerald-100" />
+          ) : recovered.count === 0 ? (
+            <p className="text-sm text-emerald-800">
+              Nenhuma venda se encaixou no critério neste período ainda (cliente ficou 3+ dias em
+              silêncio, uma automação agiu, o cliente respondeu depois, e a venda aconteceu).
+            </p>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-emerald-900">
+                {recovered.value > 0 ? money(recovered.value) : `${recovered.count} negócio${recovered.count === 1 ? "" : "s"}`}
+              </p>
+              <p className="mt-0.5 text-xs text-emerald-700">
+                {recovered.value > 0
+                  ? `${recovered.count} oportunidade${recovered.count === 1 ? "" : "s"} recuperada${recovered.count === 1 ? "" : "s"} por ação automática.`
+                  : "Valor do negócio não foi preenchido — contagem real, R$ ainda não disponível."}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-bold text-red-700">
+            <ShieldAlert className="h-3.5 w-3.5" /> Receita em risco
+          </div>
+          {atRisk === null ? (
+            <div className="h-8 w-32 animate-pulse rounded bg-red-100" />
+          ) : atRisk.count === 0 ? (
+            <p className="text-sm text-red-800">Nenhum negócio aberto está há 3+ dias sem resposta do cliente agora.</p>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-red-900">
+                {atRisk.value > 0 ? money(atRisk.value) : `${atRisk.count} negócio${atRisk.count === 1 ? "" : "s"}`}
+              </p>
+              <p className="mt-0.5 text-xs text-red-700">
+                {atRisk.value > 0
+                  ? `Negócios abertos há 3+ dias sem resposta do cliente.`
+                  : "Valor do negócio não foi preenchido — contagem real, R$ ainda não disponível."}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Inteligência da LYA */}
