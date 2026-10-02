@@ -908,11 +908,16 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
       return isWithinWindow(cfg.operand ?? '', now)
     }
     case 'no_reply_since': {
-      // True = "still no reply" — i.e. no customer message has landed
-      // in the conversation since this automation run started. Pairs
-      // with a preceding `wait`: send a message, wait N hours, check
-      // this condition, and only the "yes" (no reply) branch sends
-      // the follow-up.
+      // True = "still untouched" — i.e. nobody has said anything in
+      // the conversation since this automation run started: not the
+      // customer replying, and not an attendant answering by hand
+      // straight in WhatsApp. Either one means a human (the contact or
+      // the clinic) already moved the conversation forward, so the
+      // automated follow-up should stand down — sending it anyway
+      // would land on top of, or contradict, what was just said.
+      // Pairs with a preceding `wait`: send a message, wait N
+      // minutes/hours, check this condition, and only the "yes"
+      // (still untouched) branch sends the follow-up.
       if (!args.contactId) return true
       const anchor = args.context.vars?.automation_started_at as string | undefined
       if (!anchor) return true
@@ -926,7 +931,6 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
         .from('messages')
         .select('id', { count: 'exact', head: true })
         .eq('conversation_id', conversationId)
-        .eq('sender_type', 'customer')
         .gt('created_at', anchor)
       return (count ?? 0) === 0
     }
@@ -989,25 +993,46 @@ export function isWithinWindow(window: string, now: Date): boolean {
     : mins >= bounds.from || mins < bounds.to
 }
 
-/** Milliseconds until `now` next falls inside `window` — 0 if it's
- *  already inside. This is the "message arrived at 7am, hold the
- *  follow-up until 9am" case: a wait step in 'until_window' mode
- *  parks the run here instead of a fixed relative delay. */
-function msUntilWindowOpens(window: string, now: Date): number {
-  if (isWithinWindow(window, now)) return 0
+/** Milliseconds until `now` next falls inside `window` (and, if given,
+ *  one of `days`) — 0 if it's already inside both. This is the
+ *  "message arrived at 7am, hold the follow-up until 9am" case (and,
+ *  with `days`, "...but only on a day we're open"): a wait step in
+ *  'until_window' mode parks the run here instead of a fixed relative
+ *  delay. Walks forward a day at a time (bounded to a week) rather
+ *  than assuming "tomorrow" like the no-`days` case can, since the
+ *  next allowed weekday might be several days out (e.g. Friday night
+ *  queuing for a Monday-only window). */
+export function msUntilWindowOpens(window: string, now: Date, days?: number[]): number {
   const bounds = parseWindow(window)
   if (!bounds) return 0
+  const dayOk = (d: Date) => !days || days.length === 0 || days.includes(dayOfWeekInTimeZone(d, 'America/Sao_Paulo'))
+
+  if (dayOk(now) && isWithinWindow(window, now)) return 0
+
   const nowMins = minutesInTimeZone(now, 'America/Sao_Paulo') + now.getSeconds() / 60
-  let deltaMins = bounds.from - nowMins
-  if (deltaMins < 0) deltaMins += 24 * 60 // window opens tomorrow
-  return Math.max(1_000, Math.round(deltaMins * 60_000))
+  for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+    const candidateDate = new Date(now.getTime() + dayOffset * 86_400_000)
+    if (!dayOk(candidateDate)) continue
+    // Minutes from `now` until this candidate day's window opens — a
+    // single formula for "today" and "N days out" alike: dayOffset
+    // whole days, plus the window's own start time, minus however far
+    // into today we already are. Negative on day 0 just means today's
+    // window already opened and passed; the loop moves on to the next
+    // allowed day instead.
+    const deltaMins = dayOffset * 24 * 60 + bounds.from - nowMins
+    if (deltaMins > 0) return Math.max(1_000, Math.round(deltaMins * 60_000))
+  }
+  // Shouldn't happen (days, if given, always contains at least one
+  // weekday) — fall back to "right now" rather than wait forever.
+  return 1_000
 }
 
-function waitMs(cfg: WaitStepConfig): number {
+export function waitMs(cfg: WaitStepConfig): number {
   if (cfg.mode === 'until_window' && cfg.window) {
-    return msUntilWindowOpens(cfg.window, new Date())
+    return msUntilWindowOpens(cfg.window, new Date(), cfg.days)
   }
-  const unitMs = cfg.unit === 'days' ? 86_400_000 : cfg.unit === 'hours' ? 3_600_000 : 60_000
+  const unitMs =
+    cfg.unit === 'days' ? 86_400_000 : cfg.unit === 'hours' ? 3_600_000 : cfg.unit === 'seconds' ? 1_000 : 60_000
   return Math.max(1_000, (cfg.amount ?? 0) * unitMs)
 }
 

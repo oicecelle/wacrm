@@ -2021,18 +2021,26 @@ function StepEditor({
             </select>
           </FieldBlock>
           {mode === "until_window" ? (
-            <FieldBlock label="Janela permitida">
-              <Input
-                placeholder="09:00-18:00"
-                value={(cfg.window as string) ?? ""}
-                onChange={(e) => set({ window: e.target.value })}
-                className="bg-muted text-foreground"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Se estiver fora desse horário, a automação espera até o próximo horário de
-                início da janela antes de continuar.
-              </p>
-            </FieldBlock>
+            <>
+              <FieldBlock label="Janela permitida">
+                <Input
+                  placeholder="09:00-18:00"
+                  value={(cfg.window as string) ?? ""}
+                  onChange={(e) => set({ window: e.target.value })}
+                  className="bg-muted text-foreground"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Se estiver fora desse horário, a automação espera até o próximo horário de
+                  início da janela antes de continuar.
+                </p>
+              </FieldBlock>
+              <FieldBlock label="Dias da semana">
+                <WeekdayChips value={cfg.days as number[] | undefined} onChange={(days) => set({ days })} />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Nenhum dia marcado = a janela vale todo santo dia.
+                </p>
+              </FieldBlock>
+            </>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <FieldBlock label="Quantidade">
@@ -2050,6 +2058,7 @@ function StepEditor({
                   onChange={(e) => set({ unit: e.target.value })}
                   className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
                 >
+                  <option value="seconds">Segundos</option>
                   <option value="minutes">Minutos</option>
                   <option value="hours">Horas</option>
                   <option value="days">Dias</option>
@@ -2073,7 +2082,7 @@ function StepEditor({
               <option value="contact_field">Campo do contato</option>
               <option value="message_content">Conteúdo da mensagem</option>
               <option value="time_of_day">Horário do dia</option>
-              <option value="no_reply_since">Ainda sem resposta (desde o início da automação)</option>
+              <option value="no_reply_since">Ninguém respondeu ainda (nem o contato, nem a clínica)</option>
             </select>
           </FieldBlock>
           {cfg.subject !== "no_reply_since" && (
@@ -2101,30 +2110,7 @@ function StepEditor({
           )}
           {cfg.subject === "time_of_day" && (
             <FieldBlock label="Dias da semana">
-              <div className="flex flex-wrap gap-1">
-                {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((label, idx) => {
-                  const days = (cfg.days as number[] | undefined) ?? []
-                  const active = days.includes(idx)
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() =>
-                        set({
-                          days: active ? days.filter((d) => d !== idx) : [...days, idx].sort(),
-                        })
-                      }
-                      className={`rounded-lg border px-2 py-1 text-xs font-bold transition-colors ${
-                        active
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
+              <WeekdayChips value={cfg.days as number[] | undefined} onChange={(days) => set({ days })} />
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Nenhum dia marcado = vale todo santo dia.
               </p>
@@ -2141,8 +2127,9 @@ function StepEditor({
           )}
           {cfg.subject === "no_reply_since" && (
             <p className="text-xs text-muted-foreground">
-              Ramo &quot;sim&quot; segue quando o contato ainda não respondeu desde que essa
-              automação começou — use depois de uma etapa de espera para montar um follow-up.
+              Ramo &quot;sim&quot; segue quando ninguém mexeu na conversa desde que essa automação
+              começou — nem o contato respondeu, nem um atendente respondeu manualmente pelo
+              WhatsApp. Use depois de uma etapa de espera para montar um follow-up.
             </p>
           )}
         </>
@@ -2175,6 +2162,36 @@ function StepEditor({
     default:
       return null
   }
+}
+
+const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+
+/** Shared by the time_of_day condition and the wait step's
+ *  'until_window' mode — same 0=domingo..6=sábado days array either
+ *  way, so one chip row covers both. */
+function WeekdayChips({ value, onChange }: { value: number[] | undefined; onChange: (days: number[]) => void }) {
+  const days = value ?? []
+  return (
+    <div className="flex flex-wrap gap-1">
+      {WEEKDAY_LABELS.map((label, idx) => {
+        const active = days.includes(idx)
+        return (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => onChange(active ? days.filter((d) => d !== idx) : [...days, idx].sort())}
+            className={`rounded-lg border px-2 py-1 text-xs font-bold transition-colors ${
+              active
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+            }`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 function FieldBlock({

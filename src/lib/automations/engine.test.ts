@@ -95,7 +95,7 @@ vi.mock("./meta-send", () => ({
   engineSendTemplate: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
-import { runAutomationsForTrigger, isWithinWindow, minutesInTimeZone, dayOfWeekInTimeZone } from "./engine";
+import { runAutomationsForTrigger, isWithinWindow, minutesInTimeZone, dayOfWeekInTimeZone, waitMs, msUntilWindowOpens } from "./engine";
 
 const ACCOUNT = "acct-1";
 
@@ -300,5 +300,39 @@ describe("evaluateCondition — time_of_day com filtro de dias (via isWithinWind
   it("days vazio ou ausente continua valendo todo santo dia (comportamento anterior)", () => {
     const sunday = new Date("2026-09-27T15:00:00Z"); // domingo, 12:00 BRT
     expect(isWithinWindow("10:00-14:00", sunday)).toBe(true);
+  });
+});
+
+describe("waitMs — nova unidade 'segundos'", () => {
+  it("espera em segundos de verdade, não arredonda pra minuto", () => {
+    expect(waitMs({ amount: 60, unit: "seconds" })).toBe(60_000);
+    expect(waitMs({ amount: 90, unit: "seconds" })).toBe(90_000);
+  });
+  it("continua funcionando pras unidades antigas", () => {
+    expect(waitMs({ amount: 1, unit: "minutes" })).toBe(60_000);
+    expect(waitMs({ amount: 2, unit: "hours" })).toBe(2 * 3_600_000);
+  });
+});
+
+describe("msUntilWindowOpens — com filtro de dias (fila seg-sáb)", () => {
+  it("abre na hora se já está dentro da janela e do dia permitido", () => {
+    const mon = new Date("2026-09-28T15:00:00Z"); // segunda, 12:00 BRT
+    expect(msUntilWindowOpens("10:00-14:00", mon, [1, 2, 3, 4, 5, 6])).toBe(0);
+  });
+
+  it("empurra pro próximo dia permitido quando hoje não é um deles (ex: domingo)", () => {
+    // domingo (0) não está em seg-sáb — deve esperar até segunda 10:00.
+    const sunday = new Date("2026-09-27T15:00:00Z"); // domingo, 12:00 BRT
+    const ms = msUntilWindowOpens("10:00-14:00", sunday, [1, 2, 3, 4, 5, 6]);
+    const openedAt = new Date(sunday.getTime() + ms);
+    expect(dayOfWeekInTimeZone(openedAt, "America/Sao_Paulo")).toBe(1); // segunda
+    expect(minutesInTimeZone(openedAt, "America/Sao_Paulo")).toBe(10 * 60);
+  });
+
+  it("sem days informado, continua valendo todo santo dia (comportamento anterior)", () => {
+    const outsideSunday = new Date("2026-09-27T20:00:00Z"); // domingo, 17:00 BRT — fora de 10-14h
+    expect(msUntilWindowOpens("10:00-14:00", outsideSunday)).toBeGreaterThan(0); // fora do horário, mas qualquer dia serve
+    const insideSunday = new Date("2026-09-27T15:00:00Z"); // domingo, 12:00 BRT — dentro de 10-14h
+    expect(msUntilWindowOpens("10:00-14:00", insideSunday)).toBe(0);
   });
 });

@@ -574,10 +574,14 @@ export interface WaitStepConfig {
    *  9am" case. */
   mode?: 'relative' | 'until_window';
   amount?: number;
-  unit?: 'minutes' | 'hours' | 'days';
+  unit?: 'seconds' | 'minutes' | 'hours' | 'days';
   /** mode 'until_window': "HH:mm-HH:mm", same format and semantics
    *  (including overnight ranges) as the time_of_day condition. */
   window?: string;
+  /** mode 'until_window' only. Weekdays the window applies to —
+   *  0=domingo..6=sábado, same convention as the time_of_day condition's
+   *  `days`. Omitted/empty = every day. */
+  days?: number[];
 }
 
 export type ConditionSubject =
