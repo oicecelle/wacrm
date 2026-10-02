@@ -235,6 +235,7 @@ interface AutomationResources {
   templates: MessageTemplate[]
   customFields: CustomField[]
   pipelineStages: { id: string; name: string }[]
+  crmStatuses: { id: string; nome: string }[]
 }
 
 const ResourcesContext = createContext<AutomationResources>({
@@ -243,6 +244,7 @@ const ResourcesContext = createContext<AutomationResources>({
   templates: [],
   customFields: [],
   pipelineStages: [],
+  crmStatuses: [],
 })
 
 function useResources(): AutomationResources {
@@ -257,6 +259,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
   const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string }[]>([])
+  const [crmStatuses, setCrmStatuses] = useState<{ id: string; nome: string }[]>([])
 
   useEffect(() => {
     if (!accountId) return
@@ -285,7 +288,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
           ? templatesQuery.eq("status", "APPROVED")
           : templatesQuery.not("status", "in", "(REJECTED,DISABLED)")
 
-      const [tagsRes, templatesRes, customFieldsRes, stagesRes] = await Promise.all([
+      const [tagsRes, templatesRes, customFieldsRes, stagesRes, crmStatusRes] = await Promise.all([
         supabase.from("tags").select("*").eq("account_id", accountId).order("name"),
         templatesQuery,
         supabase.from("custom_fields").select("*").eq("account_id", accountId).order("field_name"),
@@ -294,12 +297,14 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
           .select("id, name, pipelines!inner(account_id)")
           .eq("pipelines.account_id", accountId)
           .order("position"),
+        supabase.from("crm_status").select("id, nome, ordem").eq("clinic_id", accountId).order("ordem"),
       ])
       if (cancelled) return
       setTags((tagsRes.data as TagRecord[] | null) ?? [])
       setTemplates((templatesRes.data as MessageTemplate[] | null) ?? [])
       setCustomFields((customFieldsRes.data as CustomField[] | null) ?? [])
       setPipelineStages(((stagesRes.data as { id: string; name: string }[] | null) ?? []).map((s) => ({ id: s.id, name: s.name })))
+      setCrmStatuses(((crmStatusRes.data as { id: string; nome: string }[] | null) ?? []).map((s) => ({ id: s.id, nome: s.nome })))
     })()
 
     // Members go through the API so we inherit its email-visibility
@@ -322,7 +327,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   }, [accountId, providerType])
 
   return (
-    <ResourcesContext.Provider value={{ tags, members, templates, customFields, pipelineStages }}>
+    <ResourcesContext.Provider value={{ tags, members, templates, customFields, pipelineStages, crmStatuses }}>
       {children}
     </ResourcesContext.Provider>
   )
@@ -435,7 +440,8 @@ function DealFieldSelect({
   return (
     <select value={value || "temperature"} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
       <option value="source">Origem</option>
-      <option value="status">Status (aberto / ganho / perdido)</option>
+      <option value="crm_status">Status (fila de atendimento: Novo, Em atendimento...)</option>
+      <option value="status">Ciclo de vida (aberto / ganho / perdido)</option>
       <option value="interest">Interesse (valor único — veja também &quot;Adicionar interesse&quot;)</option>
       <option value="crm_stage">Etapa no CRM (texto livre)</option>
       <option value="temperature">Temperatura (quente / morno / frio)</option>
@@ -471,7 +477,7 @@ function DealValueEditor({
   value: string
   onChange: (v: string) => void
 }) {
-  const { pipelineStages } = useResources()
+  const { pipelineStages, crmStatuses } = useResources()
 
   if (field === "temperature") {
     return (
@@ -487,6 +493,28 @@ function DealValueEditor({
             </option>
           ))}
         </select>
+      </FieldBlock>
+    )
+  }
+
+  if (field === "crm_status") {
+    if (crmStatuses.length > 0) {
+      return (
+        <FieldBlock label="Novo status">
+          <select value={value} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
+            <option value="">Selecione…</option>
+            {crmStatuses.map((s) => (
+              <option key={s.id} value={s.nome}>
+                {s.nome}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
+      )
+    }
+    return (
+      <FieldBlock label="Novo status (nome exato, cadastrado em Configurações → CRM)">
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="bg-muted text-foreground" />
       </FieldBlock>
     )
   }

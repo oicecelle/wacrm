@@ -570,20 +570,27 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       // with "column does not exist" the moment anyone used it.
       // 'status' joined 'interest' et al. here later than the rest —
       // it used to only be settable by hand in the Pipelines UI.
-      const allowed = new Set(['source', 'interest', 'temperature', 'main_objection', 'next_action', 'crm_stage', 'status'])
+      // 'crm_status' is its own thing again: NOT the same as 'status'
+      // (open/won/lost, a lifecycle flag) — it's the clinic's own
+      // configurable attendance queue (Novo, Em atendimento, Sinal
+      // pago...), a foreign key (deals.crm_status_id) resolved below
+      // by name, not a plain column written directly like the rest.
+      const allowed = new Set([
+        'source', 'interest', 'temperature', 'main_objection', 'next_action', 'crm_stage', 'status', 'crm_status',
+      ])
       if (!allowed.has(cfg.field)) {
         return `field ${cfg.field} not writable from automations`
       }
 
-      // Both status and crm_stage get a history row alongside the
-      // update — the clinic needs to filter/kanban by "the current
-      // value" (unchanged: still a plain column on deals) but also
-      // see when and how it got there.
-      const tracksHistory = cfg.field === 'status' || cfg.field === 'crm_stage'
+      // status, crm_stage and crm_status all get a history row
+      // alongside the update — the clinic needs to filter/kanban by
+      // "the current value" (unchanged: still a plain column/FK on
+      // deals) but also see when and how it got there.
+      const tracksHistory = cfg.field === 'status' || cfg.field === 'crm_stage' || cfg.field === 'crm_status'
 
       const { data: deal } = await db
         .from('deals')
-        .select('id, status, crm_stage')
+        .select('id, status, crm_stage, crm_status_id, crm_status:crm_status_id(nome)')
         .eq('contact_id', args.contactId)
         .eq('account_id', args.automation.account_id)
         .not('status', 'in', '(won,lost)')
@@ -592,28 +599,58 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         .maybeSingle()
 
       if (!deal) return 'no open deal for this contact — skipped'
-      const dealRow = deal
+      const dealRow = deal as unknown as {
+        id: string
+        status: string | null
+        crm_stage: string | null
+        crm_status_id: string | null
+        crm_status: { nome: string } | null
+      }
 
       const value = interpolate(cfg.value, args)
-      await db
-        .from('deals')
-        .update({ [cfg.field]: value, updated_at: new Date().toISOString() })
-        .eq('id', dealRow.id)
-        .eq('account_id', args.automation.account_id)
+      let oldValueLabel: string | null = null
+      let newValueLabel = value
+
+      if (cfg.field === 'crm_status') {
+        // The clinic's own queue, scoped per-clinic — match by name
+        // (case/accent-insensitive would be nicer, but exact keeps this
+        // predictable and matches how crm_stage's free text already works).
+        const { data: statusRow } = await db
+          .from('crm_status')
+          .select('id, nome')
+          .eq('clinic_id', args.automation.account_id)
+          .eq('nome', value)
+          .maybeSingle()
+        if (!statusRow) return `status "${value}" does not exist for this clinic — skipped`
+
+        oldValueLabel = dealRow.crm_status?.nome ?? null
+        newValueLabel = statusRow.nome
+        await db
+          .from('deals')
+          .update({ crm_status_id: statusRow.id, updated_at: new Date().toISOString() })
+          .eq('id', dealRow.id)
+          .eq('account_id', args.automation.account_id)
+      } else {
+        oldValueLabel = cfg.field === 'status' ? dealRow.status : cfg.field === 'crm_stage' ? dealRow.crm_stage : null
+        await db
+          .from('deals')
+          .update({ [cfg.field]: value, updated_at: new Date().toISOString() })
+          .eq('id', dealRow.id)
+          .eq('account_id', args.automation.account_id)
+      }
 
       if (tracksHistory) {
-        const oldValue = cfg.field === 'status' ? dealRow.status : dealRow.crm_stage
         await db.from('deal_field_history').insert({
           account_id: args.automation.account_id,
           deal_id: dealRow.id,
           field: cfg.field,
-          old_value: oldValue ?? null,
-          new_value: value,
+          old_value: oldValueLabel,
+          new_value: newValueLabel,
           changed_by_automation_id: args.automation.id,
         })
       }
 
-      return `deal.${cfg.field} set to "${value}"`
+      return `deal.${cfg.field} set to "${newValueLabel}"`
     }
 
     case 'add_interest':
