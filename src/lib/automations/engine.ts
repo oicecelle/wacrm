@@ -12,6 +12,7 @@ import type {
   TagStepConfig,
   UpdateContactFieldStepConfig,
   UpdateDealFieldStepConfig,
+  DealListEntryStepConfig,
   WaitStepConfig,
   CreateDealStepConfig,
   CreateAppointmentStepConfig,
@@ -567,10 +568,59 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       // live schema. update_contact_field's own whitelist used to
       // wrongly include them, which would have failed at write time
       // with "column does not exist" the moment anyone used it.
-      const allowed = new Set(['source', 'interest', 'temperature', 'main_objection', 'next_action', 'crm_stage'])
+      // 'status' joined 'interest' et al. here later than the rest —
+      // it used to only be settable by hand in the Pipelines UI.
+      const allowed = new Set(['source', 'interest', 'temperature', 'main_objection', 'next_action', 'crm_stage', 'status'])
       if (!allowed.has(cfg.field)) {
         return `field ${cfg.field} not writable from automations`
       }
+
+      // Both status and crm_stage get a history row alongside the
+      // update — the clinic needs to filter/kanban by "the current
+      // value" (unchanged: still a plain column on deals) but also
+      // see when and how it got there.
+      const tracksHistory = cfg.field === 'status' || cfg.field === 'crm_stage'
+
+      const { data: deal } = await db
+        .from('deals')
+        .select('id, status, crm_stage')
+        .eq('contact_id', args.contactId)
+        .eq('account_id', args.automation.account_id)
+        .not('status', 'in', '(won,lost)')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!deal) return 'no open deal for this contact — skipped'
+      const dealRow = deal
+
+      const value = interpolate(cfg.value, args)
+      await db
+        .from('deals')
+        .update({ [cfg.field]: value, updated_at: new Date().toISOString() })
+        .eq('id', dealRow.id)
+        .eq('account_id', args.automation.account_id)
+
+      if (tracksHistory) {
+        const oldValue = cfg.field === 'status' ? dealRow.status : dealRow.crm_stage
+        await db.from('deal_field_history').insert({
+          account_id: args.automation.account_id,
+          deal_id: dealRow.id,
+          field: cfg.field,
+          old_value: oldValue ?? null,
+          new_value: value,
+          changed_by_automation_id: args.automation.id,
+        })
+      }
+
+      return `deal.${cfg.field} set to "${value}"`
+    }
+
+    case 'add_interest':
+    case 'remove_interest': {
+      const cfg = step.step_config as DealListEntryStepConfig
+      if (!args.contactId) throw new Error(`${step.step_type} needs a contact`)
+      if (!cfg.value) throw new Error(`${step.step_type} needs a value`)
 
       const { data: deal } = await db
         .from('deals')
@@ -581,17 +631,51 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-
       if (!deal) return 'no open deal for this contact — skipped'
 
       const value = interpolate(cfg.value, args)
+      if (step.step_type === 'add_interest') {
+        await db.from('deal_interests').insert({
+          account_id: args.automation.account_id,
+          deal_id: deal.id,
+          value,
+          created_by_automation_id: args.automation.id,
+        })
+        return `interest "${value}" added`
+      }
       await db
-        .from('deals')
-        .update({ [cfg.field]: value, updated_at: new Date().toISOString() })
-        .eq('id', deal.id)
+        .from('deal_interests')
+        .delete()
+        .eq('deal_id', deal.id)
         .eq('account_id', args.automation.account_id)
+        .eq('value', value)
+      return `interest "${value}" removed`
+    }
 
-      return `deal.${cfg.field} set to "${value}"`
+    case 'add_note': {
+      const cfg = step.step_config as DealListEntryStepConfig
+      if (!args.contactId) throw new Error('add_note needs a contact')
+      if (!cfg.value) throw new Error('add_note needs a value')
+
+      const { data: deal } = await db
+        .from('deals')
+        .select('id')
+        .eq('contact_id', args.contactId)
+        .eq('account_id', args.automation.account_id)
+        .not('status', 'in', '(won,lost)')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!deal) return 'no open deal for this contact — skipped'
+
+      const value = interpolate(cfg.value, args)
+      await db.from('deal_notes').insert({
+        account_id: args.automation.account_id,
+        deal_id: deal.id,
+        note_text: value,
+        created_by_automation_id: args.automation.id,
+      })
+      return 'note added'
     }
 
     case 'create_appointment': {

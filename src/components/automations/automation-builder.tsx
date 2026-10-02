@@ -32,6 +32,9 @@ import {
   Zap,
   Loader2,
   PlayCircle,
+  Heart,
+  HeartOff,
+  StickyNote,
   ArrowDown,
   ArrowUp,
   CalendarPlus,
@@ -113,6 +116,9 @@ export const STEP_META: Record<AutomationStepType, StepMeta> = {
   assign_conversation: { label: "Criar tarefa / Atribuir", icon: UserCheck, border: "border-l-purple-600" },
   update_contact_field: { label: "Mudar dado do contato", icon: PencilLine, border: "border-l-blue-600" },
   update_deal_field: { label: "Mudar qualificação do negócio", icon: PencilLine, border: "border-l-sky-600" },
+  add_interest: { label: "Adicionar interesse", icon: Heart, border: "border-l-pink-500" },
+  remove_interest: { label: "Remover interesse", icon: HeartOff, border: "border-l-pink-300" },
+  add_note: { label: "Adicionar observação", icon: StickyNote, border: "border-l-yellow-600" },
   create_deal: { label: "Criar negócio", icon: Briefcase, border: "border-l-emerald-600" },
   create_appointment: { label: "Criar agendamento", icon: CalendarPlus, border: "border-l-teal-600" },
   update_appointment_status: { label: "Atualizar status do agendamento", icon: CalendarCheck, border: "border-l-teal-600" },
@@ -131,6 +137,9 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "condition",
   "update_contact_field",
   "update_deal_field",
+  "add_interest",
+  "remove_interest",
+  "add_note",
   "add_tag",
   "assign_conversation",
   "create_deal",
@@ -185,6 +194,10 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { field: "name", value: "" }
     case "update_deal_field":
       return { field: "temperature", value: "" }
+    case "add_interest":
+    case "remove_interest":
+    case "add_note":
+      return { value: "" }
     case "create_deal":
       return { pipeline_id: "", stage_id: "", title: "", value: 0 }
     case "create_appointment":
@@ -422,7 +435,8 @@ function DealFieldSelect({
   return (
     <select value={value || "temperature"} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
       <option value="source">Origem</option>
-      <option value="interest">Interesse</option>
+      <option value="status">Status (aberto / ganho / perdido)</option>
+      <option value="interest">Interesse (valor único — veja também &quot;Adicionar interesse&quot;)</option>
       <option value="crm_stage">Etapa no CRM (texto livre)</option>
       <option value="temperature">Temperatura (quente / morno / frio)</option>
       <option value="main_objection">Principal objeção</option>
@@ -472,6 +486,18 @@ function DealValueEditor({
               {o.label}
             </option>
           ))}
+        </select>
+      </FieldBlock>
+    )
+  }
+
+  if (field === "status") {
+    return (
+      <FieldBlock label="Novo status">
+        <select value={value || "open"} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
+          <option value="open">Aberto</option>
+          <option value="won">Ganho</option>
+          <option value="lost">Perdido</option>
         </select>
       </FieldBlock>
     )
@@ -1877,6 +1903,34 @@ function StepEditor({
           </p>
         </>
       )
+    case "add_interest":
+    case "remove_interest":
+    case "add_note": {
+      const isNote = step.step_type === "add_note"
+      return (
+        <>
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+            {isNote
+              ? "Acrescenta uma observação ao histórico do negócio — não apaga as anteriores."
+              : step.step_type === "add_interest"
+              ? "Acrescenta um interesse à lista do negócio — um contato pode acumular vários ao longo do tempo."
+              : "Remove um interesse específico da lista do negócio (precisa bater com o texto exato de um já adicionado)."}
+          </p>
+          <FieldBlock label={isNote ? "Texto da observação" : "Interesse"}>
+            <Textarea
+              value={(cfg.value as string) ?? ""}
+              onChange={(e) => set({ value: e.target.value })}
+              placeholder="Texto fixo ou {{ vars.x }} / {{ message.text }}"
+              className="min-h-16 bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <p className="text-xs text-muted-foreground">
+            Isso afeta o negócio mais recente e ainda aberto desse contato. Se não houver nenhum,
+            essa etapa não faz nada.
+          </p>
+        </>
+      )
+    }
     case "create_deal":
       return (
         <>
@@ -2233,8 +2287,14 @@ export function previewFor(step: BuilderStep): string {
     case "update_contact_field":
     case "update_deal_field":
       return `${step.step_config.field ?? "?"} = ${(step.step_config.value as string) || "?"}`
+    case "add_interest":
+    case "remove_interest":
+    case "add_note":
+      return (step.step_config.value as string) || "sem texto ainda"
     case "wait":
-      return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
+      return step.step_config.mode === "until_window"
+        ? `até ${(step.step_config.window as string) || "?"}`
+        : `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
     case "condition":
       return `quando ${step.step_config.subject ?? "?"}`
     case "send_webhook":

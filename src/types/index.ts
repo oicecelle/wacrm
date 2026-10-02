@@ -430,6 +430,9 @@ export type AutomationStepType =
   | 'assign_conversation'
   | 'update_contact_field'
   | 'update_deal_field'
+  | 'add_interest'
+  | 'remove_interest'
+  | 'add_note'
   | 'create_deal'
   | 'create_appointment'
   | 'update_appointment_status'
@@ -518,6 +521,16 @@ export interface UpdateDealFieldStepConfig {
    *  (won/lost), same lookup move_deal_stage uses. */
   field: string;
   /** Supports `{{ vars.* }}` / `{{ message.text }}` interpolation at runtime. */
+  value: string;
+}
+
+/** add_interest / remove_interest / add_note — all three just append
+ *  (or, for remove_interest, delete a matching) entry in a per-deal
+ *  list (deal_interests / deal_notes), unlike update_deal_field's
+ *  single overwritable column. Supports `{{ vars.* }}` /
+ *  `{{ message.text }}` interpolation at runtime, same as the other
+ *  deal/contact field writers. */
+export interface DealListEntryStepConfig {
   value: string;
 }
 
