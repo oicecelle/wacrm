@@ -8,6 +8,7 @@ import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
 import { LeadDrawer } from "@/components/pipelines/lead-drawer";
+import { leadState } from "@/components/pipelines/deal-card";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { LiaSummaryPanel } from "@/components/pipelines/lia-summary-panel";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,10 @@ export default function PipelinesPage() {
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterInterest, setFilterInterest] = useState<string>("all");
   const [filterResponsible, setFilterResponsible] = useState<string>("all");
+  const [filterCrmStatus, setFilterCrmStatus] = useState<string>("all");
+  const [filterLifecycle, setFilterLifecycle] = useState<string>("all");
+  const [filterState, setFilterState] = useState<string>("all");
+  const [crmStatuses, setCrmStatuses] = useState<{ id: string; nome: string }[]>([]);
 
   // Unanswered Conversations / Leads
   const [unansweredConversations, setUnansweredConversations] = useState<any[]>([]);
@@ -380,6 +385,18 @@ export default function PipelinesPage() {
   }
 
   // Real-time client-side filtering logic
+  // Opções do filtro "Status": a fila de atendimento configurada por
+  // essa clínica (crm_status), não uma lista fixa.
+  useEffect(() => {
+    if (!accountId) return;
+    supabase
+      .from("crm_status")
+      .select("id, nome")
+      .eq("clinic_id", accountId)
+      .order("ordem")
+      .then(({ data }) => setCrmStatuses((data as { id: string; nome: string }[] | null) ?? []));
+  }, [supabase, accountId]);
+
   const filteredDeals = useMemo(() => {
     return deals.filter((deal) => {
       // 1. Text Search (name, phone, whatsapp, title, cpf)
@@ -422,9 +439,28 @@ export default function PipelinesPage() {
         if (deal.responsible_user_id !== filterResponsible) return false;
       }
 
+      // 6. Status (fila de atendimento) — o valor ATUAL; o histórico de
+      // como chegou nele fica no drawer do lead.
+      if (filterCrmStatus !== "all") {
+        if (filterCrmStatus === "none") {
+          if (deal.crm_status_id) return false;
+        } else if (deal.crm_status_id !== filterCrmStatus) return false;
+      }
+
+      // 7. Ciclo de vida (aberto / ganho / perdido)
+      if (filterLifecycle !== "all") {
+        if ((deal.status ?? "open") !== filterLifecycle) return false;
+      }
+
+      // 8. Estado operacional — mesma função que o card usa pra mostrar
+      // a bolinha, então filtro e card nunca discordam.
+      if (filterState !== "all") {
+        if (leadState(deal).label !== filterState) return false;
+      }
+
       return true;
     });
-  }, [deals, filterSearch, filterTemperature, filterSource, filterInterest, filterResponsible]);
+  }, [deals, filterSearch, filterTemperature, filterSource, filterInterest, filterResponsible, filterCrmStatus, filterLifecycle, filterState]);
 
   const uniqueInterests = useMemo(() => {
     return Array.from(new Set(deals.map((d) => d.interest).filter(Boolean))) as string[];
@@ -634,8 +670,52 @@ export default function PipelinesPage() {
             </select>
           </div>
 
+          {/* Filtro de Status (fila de atendimento) */}
+          <div className="min-w-[140px]">
+            <select
+              value={filterCrmStatus}
+              onChange={(e) => setFilterCrmStatus(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todos Status</option>
+              {crmStatuses.map((st) => (
+                <option key={st.id} value={st.id}>{st.nome}</option>
+              ))}
+              <option value="none">Sem status</option>
+            </select>
+          </div>
+
+          {/* Filtro de Ciclo de vida */}
+          <div className="min-w-[130px]">
+            <select
+              value={filterLifecycle}
+              onChange={(e) => setFilterLifecycle(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todo ciclo</option>
+              <option value="open">Abertos</option>
+              <option value="won">Ganhos</option>
+              <option value="lost">Perdidos</option>
+            </select>
+          </div>
+
+          {/* Filtro de Estado operacional */}
+          <div className="min-w-[160px]">
+            <select
+              value={filterState}
+              onChange={(e) => setFilterState(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todos Estados</option>
+              <option value="Em conversa">Em conversa</option>
+              <option value="Aguardando cliente">Aguardando cliente</option>
+              <option value="Follow-up programado">Follow-up programado</option>
+              <option value="Sem próxima ação">Sem próxima ação</option>
+            </select>
+          </div>
+
           {/* Limpar Filtros */}
-          {(filterSearch || filterTemperature !== "all" || filterSource !== "all" || filterInterest !== "all" || filterResponsible !== "all") && (
+          {(filterSearch || filterTemperature !== "all" || filterSource !== "all" || filterInterest !== "all" || filterResponsible !== "all" || filterCrmStatus !== "all" || filterLifecycle !== "all" || filterState !== "all") && (
             <button
               onClick={() => {
                 setFilterSearch("");
@@ -643,6 +723,9 @@ export default function PipelinesPage() {
                 setFilterSource("all");
                 setFilterInterest("all");
                 setFilterResponsible("all");
+                setFilterCrmStatus("all");
+                setFilterLifecycle("all");
+                setFilterState("all");
               }}
               className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors hover:underline px-2 cursor-pointer"
             >

@@ -132,7 +132,7 @@ function formatLastInteraction(iso?: string | null) {
  * execuções de cada contato (N+1 num kanban grande) e inventar um
  * estado sem conseguir verificá-lo seria pior que não ter.
  */
-function leadState(deal: Deal): { label: string; dot: string } {
+export function leadState(deal: Deal): { label: string; dot: string } {
   if ((deal.conversation?.unread_count ?? 0) > 0) return { label: "Em conversa", dot: "bg-emerald-500" };
   if (deal.waiting_side === "lead") return { label: "Aguardando cliente", dot: "bg-amber-400" };
   if (deal.followup_scheduled_at && new Date(deal.followup_scheduled_at) > new Date()) {
