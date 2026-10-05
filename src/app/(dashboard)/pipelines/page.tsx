@@ -7,6 +7,7 @@ import type { Pipeline, PipelineStage, Deal } from "@/types";
 import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
+import { LeadDrawer } from "@/components/pipelines/lead-drawer";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { LiaSummaryPanel } from "@/components/pipelines/lia-summary-panel";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,7 @@ export default function PipelinesPage() {
   // the per-column "+" trigger the same Sheet.
   const [dealFormOpen, setDealFormOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  const [drawerDeal, setDrawerDeal] = useState<Deal | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
@@ -315,7 +317,15 @@ export default function PipelinesPage() {
     [stages],
   );
 
+  // Clicking a card opens the read-first lead drawer; "Editar" inside
+  // it hands off to the same DealForm as before, so nothing about
+  // editing changed — only what you see first.
+  const handleOpenDrawer = useCallback((deal: Deal) => {
+    setDrawerDeal(deal);
+  }, []);
+
   const handleEditDeal = useCallback((deal: Deal) => {
+    setDrawerDeal(null);
     setEditingDeal(deal);
     setDefaultStageId(deal.stage_id);
     setDealFormOpen(true);
@@ -678,7 +688,7 @@ export default function PipelinesPage() {
             deals={filteredDeals}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
-            onEditDeal={handleEditDeal}
+            onEditDeal={handleOpenDrawer}
           />
         </>
       )}
@@ -736,6 +746,17 @@ export default function PipelinesPage() {
             setSettingsOpen(false);
             setNewPipelineOpen(true);
           }}
+        />
+      )}
+
+      {accountId && (
+        <LeadDrawer
+          deal={drawerDeal}
+          stageName={stages.find((st) => st.id === drawerDeal?.stage_id)?.name}
+          accountId={accountId}
+          open={!!drawerDeal}
+          onOpenChange={(o) => !o && setDrawerDeal(null)}
+          onEdit={handleEditDeal}
         />
       )}
 
