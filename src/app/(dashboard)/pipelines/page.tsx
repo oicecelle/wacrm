@@ -8,6 +8,7 @@ import { PipelineBoard } from "@/components/pipelines/pipeline-board";
 import { PipelineSettings } from "@/components/pipelines/pipeline-settings";
 import { DealForm } from "@/components/pipelines/deal-form";
 import { LeadDrawer } from "@/components/pipelines/lead-drawer";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 import { leadState } from "@/components/pipelines/deal-card";
 import { PipelineAnalytics } from "@/components/pipelines/pipeline-analytics";
 import { LiaSummaryPanel } from "@/components/pipelines/lia-summary-panel";
@@ -175,12 +176,18 @@ export default function PipelinesPage() {
 
   const loadDeals = useCallback(
     async (pipelineId: string) => {
-      const { data } = await supabase
-        .from("deals")
-        .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*), conversation:conversations(last_message_at, last_message_text, unread_count)")
-        .eq("pipeline_id", pipelineId)
-        .order("created_at", { ascending: false });
-      return (data ?? []) as Deal[];
+      // Paginado: um select simples é cortado em 1.000 linhas pelo
+      // PostgREST sem aviso, e a maior clínica já estava em 949
+      // negócios. id como desempate mantém a ordem estável entre páginas.
+      return fetchAllRows<Deal>((from, to) =>
+        supabase
+          .from("deals")
+          .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*), conversation:conversations(last_message_at, last_message_text, unread_count)")
+          .eq("pipeline_id", pipelineId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as unknown as PromiseLike<{ data: Deal[] | null; error: { message: string } | null }>,
+      );
     },
     [supabase],
   );
