@@ -35,6 +35,7 @@ import {
   Heart,
   HeartOff,
   StickyNote,
+  Eraser,
   ArrowDown,
   ArrowUp,
   CalendarPlus,
@@ -121,6 +122,9 @@ export const STEP_META: Record<AutomationStepType, StepMeta> = {
   add_interest: { label: "Adicionar interesse", icon: Heart, border: "border-l-pink-500" },
   remove_interest: { label: "Remover interesse", icon: HeartOff, border: "border-l-pink-300" },
   add_note: { label: "Adicionar observação", icon: StickyNote, border: "border-l-yellow-600" },
+  edit_interest: { label: "Editar interesse", icon: PencilLine, border: "border-l-pink-400" },
+  edit_note: { label: "Editar observação", icon: PencilLine, border: "border-l-yellow-500" },
+  remove_note: { label: "Remover observação", icon: Eraser, border: "border-l-yellow-300" },
   create_deal: { label: "Criar negócio", icon: Briefcase, border: "border-l-emerald-600" },
   create_appointment: { label: "Criar agendamento", icon: CalendarPlus, border: "border-l-teal-600" },
   update_appointment_status: { label: "Atualizar status do agendamento", icon: CalendarCheck, border: "border-l-teal-600" },
@@ -142,6 +146,9 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "add_interest",
   "remove_interest",
   "add_note",
+  "edit_interest",
+  "edit_note",
+  "remove_note",
   "add_tag",
   "remove_tag",
   "assign_conversation",
@@ -200,6 +207,11 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
     case "add_interest":
     case "remove_interest":
     case "add_note":
+      return { value: "" }
+    case "edit_interest":
+    case "edit_note":
+      return { value: "", new_value: "" }
+    case "remove_note":
       return { value: "" }
     case "create_deal":
       return { pipeline_id: "", stage_id: "", title: "", value: 0 }
@@ -1985,6 +1997,46 @@ function StepEditor({
         </>
       )
     }
+    case "edit_interest":
+    case "edit_note":
+    case "remove_note": {
+      const isEdit = step.step_type !== "remove_note"
+      const isInterest = step.step_type === "edit_interest"
+      return (
+        <>
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+            {step.step_type === "edit_interest"
+              ? "Troca o texto de um interesse que o negócio já tem."
+              : step.step_type === "edit_note"
+              ? "Troca o texto de uma observação que o negócio já tem."
+              : "Apaga uma observação do negócio."}{" "}
+            O texto atual precisa bater exatamente com o que está salvo — se não achar, a etapa não
+            muda nada.
+          </p>
+          <FieldBlock label={isInterest ? "Interesse atual (texto exato)" : "Observação atual (texto exato)"}>
+            <Textarea
+              value={(cfg.value as string) ?? ""}
+              onChange={(e) => set({ value: e.target.value })}
+              className="min-h-16 bg-muted text-foreground"
+            />
+          </FieldBlock>
+          {isEdit && (
+            <FieldBlock label={isInterest ? "Novo texto do interesse" : "Novo texto da observação"}>
+              <Textarea
+                value={(cfg.new_value as string) ?? ""}
+                onChange={(e) => set({ new_value: e.target.value })}
+                placeholder="Texto fixo ou {{ vars.x }} / {{ message.text }}"
+                className="min-h-16 bg-muted text-foreground"
+              />
+            </FieldBlock>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Afeta o negócio mais recente e ainda aberto desse contato.
+            {isEdit ? " O texto antigo não fica guardado depois da troca." : ""}
+          </p>
+        </>
+      )
+    }
     case "create_deal":
       return (
         <>
@@ -2341,6 +2393,10 @@ export function previewFor(step: BuilderStep): string {
     case "update_contact_field":
     case "update_deal_field":
       return `${step.step_config.field ?? "?"} = ${(step.step_config.value as string) || "?"}`
+    case "edit_interest":
+    case "edit_note":
+      return `${(step.step_config.value as string) || "?"} → ${(step.step_config.new_value as string) || "?"}`
+    case "remove_note":
     case "add_interest":
     case "remove_interest":
     case "add_note":

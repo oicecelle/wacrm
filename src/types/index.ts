@@ -443,6 +443,9 @@ export type AutomationStepType =
   | 'add_interest'
   | 'remove_interest'
   | 'add_note'
+  | 'edit_interest'
+  | 'edit_note'
+  | 'remove_note'
   | 'create_deal'
   | 'create_appointment'
   | 'update_appointment_status'
@@ -542,6 +545,10 @@ export interface UpdateDealFieldStepConfig {
  *  deal/contact field writers. */
 export interface DealListEntryStepConfig {
   value: string;
+  /** edit_interest / edit_note only: the replacement text. `value` is
+   *  then the CURRENT text to look for (exact match), same convention
+   *  remove_interest already uses. */
+  new_value?: string;
 }
 
 export interface CreateDealStepConfig {

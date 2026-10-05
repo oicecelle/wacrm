@@ -99,14 +99,31 @@ export default function PipelinesPage() {
 
   const loadUnanswered = useCallback(async () => {
     if (!accountId) return;
-    const { data } = await supabase
-      .from("conversations")
-      .select("*, contact:contacts(*)")
-      .eq("account_id", accountId)
-      .gt("unread_count", 0)
-      .order("last_message_at", { ascending: true }); // oldest first
-    
-    setUnansweredConversations(data || []);
+    // Paginado pelo mesmo motivo de loadDeals: um select simples é
+    // cortado em 1.000 linhas pelo PostgREST sem aviso. Mais antigas
+    // primeiro; id desempata pra páginas não se sobreporem.
+    let rows: (typeof unansweredConversations)[number][] = [];
+    try {
+      rows = await fetchAllRows<(typeof unansweredConversations)[number]>((from, to) =>
+      supabase
+        .from("conversations")
+        .select("*, contact:contacts(*)")
+        .eq("account_id", accountId)
+        .gt("unread_count", 0)
+        .order("last_message_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{
+        data: (typeof unansweredConversations)[number][] | null;
+        error: { message: string } | null;
+      }>,
+    );
+    } catch {
+      // Same tolerance as before pagination: a failed load leaves the
+      // list empty instead of breaking the page.
+      return;
+    }
+
+    setUnansweredConversations(rows);
   }, [supabase, accountId]);
 
   const loadFollowupCount = useCallback(async () => {
@@ -179,7 +196,8 @@ export default function PipelinesPage() {
       // Paginado: um select simples é cortado em 1.000 linhas pelo
       // PostgREST sem aviso, e a maior clínica já estava em 949
       // negócios. id como desempate mantém a ordem estável entre páginas.
-      return fetchAllRows<Deal>((from, to) =>
+      try {
+        return await fetchAllRows<Deal>((from, to) =>
         supabase
           .from("deals")
           .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*), conversation:conversations(last_message_at, last_message_text, unread_count)")
@@ -187,7 +205,12 @@ export default function PipelinesPage() {
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
           .range(from, to) as unknown as PromiseLike<{ data: Deal[] | null; error: { message: string } | null }>,
-      );
+        );
+      } catch {
+        // Better an explicit error than a silently partial board.
+        toast.error("Falha ao carregar os negócios");
+        return [];
+      }
     },
     [supabase],
   );

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, History, Plus, StickyNote, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Heart, History, Plus, StickyNote, X, ChevronDown, ChevronUp, Pencil, Trash2, Check } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
 interface DealExtrasPanelProps {
@@ -59,6 +60,12 @@ export function DealExtrasPanel({ dealId, accountId }: DealExtrasPanelProps) {
   const [newInterest, setNewInterest] = useState("");
   const [newNote, setNewNote] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Inline editing: one entry at a time, per list.
+  const [editingInterestId, setEditingInterestId] = useState<string | null>(null);
+  const [editingInterestText, setEditingInterestText] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [noteToDelete, setNoteToDelete] = useState<NoteRow | null>(null);
 
   async function reload() {
     const [{ data: i }, { data: n }, { data: h }] = await Promise.all([
@@ -114,6 +121,41 @@ export function DealExtrasPanel({ dealId, accountId }: DealExtrasPanelProps) {
     reload();
   }
 
+  async function saveInterest() {
+    const value = editingInterestText.trim();
+    if (!editingInterestId || !value) return;
+    const { error } = await supabase.from("deal_interests").update({ value }).eq("id", editingInterestId);
+    if (error) {
+      toast.error("Não foi possível salvar o interesse.");
+      return;
+    }
+    setEditingInterestId(null);
+    reload();
+  }
+
+  async function saveNote() {
+    const text = editingNoteText.trim();
+    if (!editingNoteId || !text) return;
+    const { error } = await supabase.from("deal_notes").update({ note_text: text }).eq("id", editingNoteId);
+    if (error) {
+      toast.error("Não foi possível salvar a observação.");
+      return;
+    }
+    setEditingNoteId(null);
+    reload();
+  }
+
+  async function deleteNote() {
+    if (!noteToDelete) return;
+    const { error } = await supabase.from("deal_notes").delete().eq("id", noteToDelete.id);
+    setNoteToDelete(null);
+    if (error) {
+      toast.error("Não foi possível apagar a observação.");
+      return;
+    }
+    reload();
+  }
+
   if (loading) return null;
 
   return (
@@ -125,23 +167,55 @@ export function DealExtrasPanel({ dealId, accountId }: DealExtrasPanelProps) {
         </Label>
         {interests.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {interests.map((it) => (
-              <span
-                key={it.id}
-                className="flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 py-0.5 pl-2.5 pr-1 text-[11px] font-semibold text-pink-700"
-                title={fmtDateTime(it.created_at)}
-              >
-                {it.value}
-                <button
-                  type="button"
-                  onClick={() => removeInterest(it.id)}
-                  className="rounded-full p-0.5 hover:bg-pink-200"
-                  aria-label={`Remover ${it.value}`}
+            {interests.map((it) =>
+              editingInterestId === it.id ? (
+                <span key={it.id} className="flex items-center gap-1 rounded-full border border-pink-300 bg-card py-0.5 pl-2 pr-1">
+                  <input
+                    autoFocus
+                    value={editingInterestText}
+                    onChange={(e) => setEditingInterestText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveInterest();
+                      if (e.key === "Escape") setEditingInterestId(null);
+                    }}
+                    className="w-28 bg-transparent text-[11px] font-semibold text-foreground outline-none"
+                  />
+                  <button type="button" onClick={saveInterest} className="rounded-full p-0.5 hover:bg-pink-100" aria-label="Salvar">
+                    <Check className="h-3 w-3 text-pink-700" />
+                  </button>
+                  <button type="button" onClick={() => setEditingInterestId(null)} className="rounded-full p-0.5 hover:bg-pink-100" aria-label="Cancelar">
+                    <X className="h-3 w-3 text-pink-700" />
+                  </button>
+                </span>
+              ) : (
+                <span
+                  key={it.id}
+                  className="flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 py-0.5 pl-2.5 pr-1 text-[11px] font-semibold text-pink-700"
+                  title={fmtDateTime(it.created_at)}
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
+                  {it.value}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingInterestId(it.id);
+                      setEditingInterestText(it.value);
+                    }}
+                    className="rounded-full p-0.5 hover:bg-pink-200"
+                    aria-label={`Editar ${it.value}`}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeInterest(it.id)}
+                    className="rounded-full p-0.5 hover:bg-pink-200"
+                    aria-label={`Remover ${it.value}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ),
+            )}
           </div>
         )}
         <div className="flex gap-1.5">
@@ -172,7 +246,44 @@ export function DealExtrasPanel({ dealId, accountId }: DealExtrasPanelProps) {
           <div className="max-h-40 space-y-1.5 overflow-y-auto">
             {notes.map((n) => (
               <div key={n.id} className="rounded-lg bg-muted px-2.5 py-1.5">
-                <p className="text-xs text-foreground">{n.note_text}</p>
+                {editingNoteId === n.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      autoFocus
+                      value={editingNoteText}
+                      onChange={(e) => setEditingNoteText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveNote();
+                        if (e.key === "Escape") setEditingNoteId(null);
+                      }}
+                      className="min-w-0 flex-1 rounded border border-border bg-card px-1.5 py-0.5 text-xs text-foreground outline-none"
+                    />
+                    <button type="button" onClick={saveNote} className="rounded p-1 hover:bg-card" aria-label="Salvar">
+                      <Check className="h-3.5 w-3.5 text-foreground" />
+                    </button>
+                    <button type="button" onClick={() => setEditingNoteId(null)} className="rounded p-1 hover:bg-card" aria-label="Cancelar">
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-1.5">
+                    <p className="min-w-0 flex-1 text-xs text-foreground">{n.note_text}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingNoteId(n.id);
+                        setEditingNoteText(n.note_text);
+                      }}
+                      className="rounded p-1 hover:bg-card"
+                      aria-label="Editar observação"
+                    >
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                    <button type="button" onClick={() => setNoteToDelete(n)} className="rounded p-1 hover:bg-card" aria-label="Apagar observação">
+                      <Trash2 className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                )}
                 <p className="text-[10px] text-muted-foreground">{fmtDateTime(n.created_at)}</p>
               </div>
             ))}
@@ -227,6 +338,15 @@ export function DealExtrasPanel({ dealId, accountId }: DealExtrasPanelProps) {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!noteToDelete}
+        onOpenChange={(o) => !o && setNoteToDelete(null)}
+        title="Apagar observação?"
+        description="Essa observação será removida do negócio. Não dá para desfazer."
+        confirmLabel="Apagar"
+        onConfirm={deleteNote}
+      />
     </div>
   );
 }

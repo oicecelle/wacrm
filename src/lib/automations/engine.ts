@@ -735,6 +735,45 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       return `interest "${value}" removed`
     }
 
+    case 'edit_interest':
+    case 'edit_note':
+    case 'remove_note': {
+      const cfg = step.step_config as DealListEntryStepConfig
+      if (!args.contactId) throw new Error(`${step.step_type} needs a contact`)
+      if (!cfg.value) throw new Error(`${step.step_type} needs the current text to look for`)
+      const isEdit = step.step_type !== 'remove_note'
+      if (isEdit && !cfg.new_value) throw new Error(`${step.step_type} needs the new text`)
+
+      const { data: deal } = await db
+        .from('deals')
+        .select('id')
+        .eq('contact_id', args.contactId)
+        .eq('account_id', args.automation.account_id)
+        .not('status', 'in', '(won,lost)')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!deal) return 'no open deal for this contact — skipped'
+
+      const current = interpolate(cfg.value, args)
+      const next = isEdit ? interpolate(cfg.new_value as string, args) : null
+      const isInterest = step.step_type === 'edit_interest'
+      const table = isInterest ? 'deal_interests' : 'deal_notes'
+      const column = isInterest ? 'value' : 'note_text'
+
+      // Edits overwrite in place (these tables have no per-row history,
+      // unlike status/stage in deal_field_history) — the old text is
+      // gone once replaced. Matching is exact on purpose: a fuzzy match
+      // that rewrites the wrong entry is worse than "not found".
+      const query = isEdit
+        ? db.from(table).update({ [column]: next }).eq('deal_id', deal.id).eq('account_id', args.automation.account_id).eq(column, current)
+        : db.from(table).delete().eq('deal_id', deal.id).eq('account_id', args.automation.account_id).eq(column, current)
+      const { data: touched } = await query.select('id')
+      const n = touched?.length ?? 0
+      if (n === 0) return `"${current}" not found on this deal — nothing changed`
+      return isEdit ? `${n} entr${n === 1 ? 'y' : 'ies'} changed to "${next}"` : `${n} note${n === 1 ? '' : 's'} removed`
+    }
+
     case 'add_note': {
       const cfg = step.step_config as DealListEntryStepConfig
       if (!args.contactId) throw new Error('add_note needs a contact')
