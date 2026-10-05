@@ -143,6 +143,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "remove_interest",
   "add_note",
   "add_tag",
+  "remove_tag",
   "assign_conversation",
   "create_deal",
   "create_appointment",

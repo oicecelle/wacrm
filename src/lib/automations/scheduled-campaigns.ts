@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { minutesInTimeZone, dayOfWeekInTimeZone } from '@/lib/automations/engine'
 import { dispatchSendMessage } from '@/lib/whatsapp/sender-dispatcher'
 import { sendUazapiTextMessage, sendUazapiMediaMessage } from '@/lib/whatsapp/uazapi-api'
 
@@ -19,9 +20,15 @@ import { sendUazapiTextMessage, sendUazapiMediaMessage } from '@/lib/whatsapp/ua
 export async function runScheduledCampaigns() {
   const admin = supabaseAdmin()
   const now = new Date()
-  const todayStr = now.toISOString().slice(0, 10)
-  const todayDow = now.getDay() // 0=Sun..6=Sat, matches days_of_week storage
-  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  // Calendar day, weekday and clock time are all read in Brasília, not
+  // the server's own timezone (UTC on Vercel). Before this, a campaign
+  // set for "09:00" fired at 09:00 UTC = 06:00 in Brasília, and the
+  // "once per day" guard rolled over at 21:00 local instead of
+  // midnight. Same class of bug fixed in the automations engine.
+  const TZ = 'America/Sao_Paulo'
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(now) // YYYY-MM-DD
+  const todayDow = dayOfWeekInTimeZone(now, TZ) // 0=Sun..6=Sat, matches days_of_week storage
+  const nowMinutes = minutesInTimeZone(now, TZ)
 
   // How late after time_of_day a run is still considered "on time" —
   // covers the gap between cron polls plus any brief platform delay.
