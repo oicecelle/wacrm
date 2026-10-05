@@ -90,7 +90,14 @@ export function DealForm({
   const [generatingAI, setGeneratingAI] = useState(false);
   const [followupSettings, setFollowupSettings] = useState<FollowupSettings | null>(null);
 
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  // Contact picker: search-as-you-type, never the whole table. A plain
+  // select over every contact was silently capped at 1,000 rows by
+  // PostgREST (one clinic has 1,271), so contacts past the cut simply
+  // could not be chosen — and a 1,000-option dropdown is unusable
+  // long before that anyway.
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [contactQuery, setContactQuery] = useState("");
+  const [contactResults, setContactResults] = useState<Contact[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [linkedConversation, setLinkedConversation] =
     useState<Conversation | null>(null);
@@ -114,6 +121,8 @@ export function DealForm({
       // contact_id is nullable when the contact has been deleted
       // (migration 004: ON DELETE SET NULL). "" means "no selection".
       setContactId(deal.contact_id ?? "");
+      setSelectedContact(deal.contact ?? null);
+      setContactQuery("");
       setStageId(deal.stage_id);
       setAssignedTo(deal.assigned_to ?? "");
       setExpectedCloseDate(deal.expected_close_date ?? "");
@@ -137,6 +146,8 @@ export function DealForm({
       setValue("");
       setCurrency(defaultCurrency);
       setContactId("");
+      setSelectedContact(null);
+      setContactQuery("");
       setStageId(defaultStageId || stages[0]?.id || "");
       setAssignedTo("");
       setExpectedCloseDate("");
@@ -163,8 +174,7 @@ export function DealForm({
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const [c, p, fs, cs] = await Promise.all([
-        supabase.from("contacts").select("*").order("name"),
+      const [p, fs, cs] = await Promise.all([
         supabase.from("profiles").select("*").order("full_name"),
         fetch("/api/account/followup-settings").then(r => r.json()),
         accountId
@@ -172,7 +182,6 @@ export function DealForm({
           : Promise.resolve({ data: [] }),
       ]);
       if (cancelled) return;
-      setContacts((c.data ?? []) as Contact[]);
       setProfiles((p.data ?? []) as Profile[]);
       if (fs?.settings) setFollowupSettings(fs.settings);
       setCrmStatuses((cs.data as { id: string; nome: string }[] | null) ?? []);
@@ -181,6 +190,48 @@ export function DealForm({
       cancelled = true;
     };
   }, [open, supabase, accountId]);
+
+  // A deal can arrive with contact_id but without the joined contact
+  // object; load just that one row so the picker shows who it is.
+  useEffect(() => {
+    if (!open || !contactId || selectedContact?.id === contactId) return;
+    let cancelled = false;
+    supabase
+      .from("contacts")
+      .select("*")
+      .eq("id", contactId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setSelectedContact(data as Contact);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, contactId, selectedContact?.id, supabase]);
+
+  useEffect(() => {
+    const q = contactQuery.replace(/[,()]/g, " ").trim();
+    // No reset when the query is too short: the list below is only
+    // rendered at 2+ characters, so stale results are never visible.
+    if (!open || q.length < 2) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const digits = q.replace(/\D/g, "");
+      const filters = [`name.ilike.%${q}%`];
+      if (digits.length >= 3) filters.push(`phone_normalized.ilike.%${digits}%`);
+      const { data } = await supabase
+        .from("contacts")
+        .select("*")
+        .or(filters.join(","))
+        .order("name")
+        .limit(15);
+      if (!cancelled) setContactResults((data ?? []) as Contact[]);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [contactQuery, open, supabase]);
 
   // Fetch linked conversation for the selected contact (newest open one).
   // Clearing on no-selection is sync with prop state; the populated
@@ -346,18 +397,59 @@ export function DealForm({
 
             <div className="grid gap-2">
               <Label className="text-muted-foreground">Contato</Label>
-              <select
-                value={contactId}
-                onChange={(e) => setContactId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Selecione um contato</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || c.phone}
-                  </option>
-                ))}
-              </select>
+              {selectedContact ? (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-2.5 py-1.5 text-sm">
+                  <span className="min-w-0 truncate text-foreground">
+                    {selectedContact.name || selectedContact.phone}
+                    {selectedContact.name && (
+                      <span className="ml-2 text-xs text-muted-foreground">{selectedContact.phone}</span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedContact(null);
+                      setContactId("");
+                    }}
+                    className="shrink-0 pl-2 text-xs font-bold text-muted-foreground hover:text-foreground"
+                  >
+                    Trocar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    value={contactQuery}
+                    onChange={(e) => setContactQuery(e.target.value)}
+                    placeholder="Buscar contato por nome ou telefone…"
+                    className="border-border bg-muted text-foreground"
+                  />
+                  {contactQuery.trim().length >= 2 && (
+                    <div className="max-h-44 overflow-y-auto rounded-lg border border-border">
+                      {contactResults.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum contato encontrado.</p>
+                      ) : (
+                        contactResults.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedContact(c);
+                              setContactId(c.id);
+                              setContactQuery("");
+                              setContactResults([]);
+                            }}
+                            className="flex w-full flex-col px-3 py-1.5 text-left text-sm hover:bg-muted"
+                          >
+                            <span className="text-foreground">{c.name || c.phone}</span>
+                            {c.name && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
 
               {linkedConversation && (
                 <Link
@@ -588,7 +680,7 @@ export function DealForm({
                     onClick={async () => {
                       setGeneratingAI(true);
                       try {
-                        const contact = contacts.find(c => c.id === contactId);
+                        const contact = selectedContact;
                         const res = await fetch('/api/ai/followup-suggestion', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
