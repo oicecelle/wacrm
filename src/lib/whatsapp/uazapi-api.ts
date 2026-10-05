@@ -228,6 +228,27 @@ export async function getUazapiProfilePicture(
     'Content-Type': 'application/json',
   };
 
+  // First attempt: the chat-details endpoint, whose Chat entity carries
+  // the same `image` / `imagePreview` fields the inbound webhook payload
+  // already delivers (and that is where every stored contact photo came
+  // from). NOT verified against a live instance from this codebase — the
+  // two older GET lookups below stay as fallbacks, and any failure here
+  // just falls through to them.
+  try {
+    const res = await fetch(`${cleanUrl}/chat/details`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ number: phone, preview: true }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const url = data?.imagePreview || data?.image;
+      if (typeof url === 'string' && url.startsWith('http')) return url;
+    }
+  } catch (err) {
+    console.error('[getUazapiProfilePicture] failed chat/details:', err);
+  }
+
   // Try standard format (raw digits)
   try {
     const res = await fetch(`${cleanUrl}/get/profilePicture?number=${encodeURIComponent(phone)}`, {

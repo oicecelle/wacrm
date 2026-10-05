@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ url: null });
     }
 
-    const cleanPhone = phone.replace(/\D/g, "");
+    // `patients.phone` is usually stored the way a person typed it, with
+    // no country code. WhatsApp looks numbers up by their full form, so
+    // a bare 10/11-digit Brazilian number is sent as 55 + number.
+    let cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length === 10 || cleanPhone.length === 11) cleanPhone = `55${cleanPhone}`;
     const url = await getUazapiProfilePicture(
       config.uazapi_base_url || "https://customix.uazapi.com",
       config.uazapi_token,

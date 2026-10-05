@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { findExistingContactsBatch, normalizeKey } from "@/lib/contacts/dedupe";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -67,6 +68,30 @@ interface FilterOption {
   valor?: number;
   avatar_url?: string | null;
   color?: string | null;
+}
+
+/** Small round patient photo, falling back to initials (also when the image fails to load). */
+function PatientDot({ url, name, className }: { url?: string | null; name: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const parts = name.trim().split(" ");
+  const initials =
+    parts.length >= 2 ? `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}` : name.slice(0, 2);
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft-2 font-black uppercase text-primary",
+        className,
+      )}
+    >
+      {url && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element -- external WhatsApp-hosted URL
+        <img src={url} alt="" className="size-full object-cover" onError={() => setFailed(true)} />
+      ) : (
+        initials
+      )}
+    </span>
+  );
 }
 
 /** One compact stat tile (used by the day/week summary above the agenda). */
@@ -402,6 +427,27 @@ export default function AgendaPage() {
 
       if (error) throw error;
       const rows = (data || []) as any[];
+
+      // Patient photos. The query above can't return one: `patients`
+      // has no photo column (only avatar_color), so the card/popover
+      // code that reads `patients.avatar_url` never had anything to
+      // show. The photo lives on the matching CONTACT (filled from the
+      // WhatsApp payload), so look those up in one batch by phone and
+      // attach it here — everything downstream already reads this field.
+      try {
+        const phones = rows.map((r) => r.patients?.phone).filter(Boolean) as string[];
+        if (phones.length > 0) {
+          const found = await findExistingContactsBatch(supabase, accountId, phones);
+          for (const r of rows) {
+            if (!r.patients) continue;
+            const c = r.patients.phone ? found.get(normalizeKey(r.patients.phone)) : undefined;
+            r.patients.avatar_url = typeof c?.avatar_url === "string" && c.avatar_url ? c.avatar_url : null;
+          }
+        }
+      } catch (photoErr) {
+        console.error("Error attaching patient photos:", photoErr);
+      }
+
       setAppointments(rows);
 
       // Visit number (1ª, 2ª, ...) per appointment card. Needs each
@@ -530,6 +576,21 @@ export default function AgendaPage() {
   };
 
   const miniCalendarCells = getMiniCalendarGrid();
+
+  // Days that have at least one real appointment — drives the dot under
+  // each calendar day. Cancelled bookings and agenda blocks don't make a
+  // day "busy". A Set built once, instead of scanning every appointment
+  // for each of the 42 cells on every render.
+  const daysWithAppointments = useMemo(() => {
+    const days = new Set<string>();
+    for (const appt of appointments) {
+      if (appt.status === "cancelled") continue;
+      const kind = (appt.type || "").toLowerCase();
+      if (kind === "bloqueio" || kind === "bloqueio de agenda") continue;
+      days.add(new Date(appt.start_time).toDateString());
+    }
+    return days;
+  }, [appointments]);
 
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -1001,7 +1062,7 @@ export default function AgendaPage() {
                     setPickerMonth(cellDate.getMonth());
                     setPickerYear(cellDate.getFullYear());
                   }}
-                  className={`h-7 w-7 rounded-full flex items-center justify-center transition-all ${
+                  className={`relative h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                     isSelected
                       ? "bg-primary text-primary-foreground font-bold shadow-xs"
                       : isToday
@@ -1011,7 +1072,15 @@ export default function AgendaPage() {
                       : "text-neutral-300 dark:text-neutral-600 hover:bg-neutral-50"
                   }`}
                 >
-                  {cellDate.getDate()}
+                  <span className="mb-0.5">{cellDate.getDate()}</span>
+                  {daysWithAppointments.has(cellDate.toDateString()) && (
+                    <span
+                      aria-label="Tem agendamento"
+                      className={`absolute bottom-0.5 h-1.5 w-1.5 rounded-full ${
+                        isSelected ? "bg-primary-foreground" : "bg-primary"
+                      }`}
+                    />
+                  )}
                 </button>
               );
             })}
@@ -1170,11 +1239,7 @@ export default function AgendaPage() {
                 const isToday = cellDate.toDateString() === new Date().toDateString();
                 const isCurrentMonth = cellDate.getMonth() === pickerMonth;
 
-                // Check if date has appointments to display indicator dot
-                const hasAppt = appointments.some((appt) => {
-                  const startLocal = new Date(appt.start_time);
-                  return startLocal.toDateString() === cellDate.toDateString();
-                });
+                const hasAppt = daysWithAppointments.has(cellDate.toDateString());
 
                 return (
                   <button
@@ -1196,9 +1261,12 @@ export default function AgendaPage() {
                   >
                     <span className="text-[10px]">{cellDate.getDate()}</span>
                     {hasAppt && (
-                      <span className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        isSelected ? "bg-card" : "bg-primary"
-                      }`} />
+                      <span
+                        aria-label="Tem agendamento"
+                        className={`absolute bottom-0.5 h-1.5 w-1.5 rounded-full ${
+                          isSelected ? "bg-primary-foreground" : "bg-primary"
+                        }`}
+                      />
                     )}
                   </button>
                 );
@@ -1628,6 +1696,11 @@ export default function AgendaPage() {
                               {/* Line 1: Status Dot & Patient Name */}
                               <div className="flex items-center gap-1.5 min-w-0 pr-4">
                                 <span style={styles.dotStyle} className="h-2 w-2 shrink-0 rounded-full shadow-2xs" />
+                                <PatientDot
+                                  url={appt.patients?.avatar_url}
+                                  name={appt.patients?.name || "Sem Nome"}
+                                  className="h-4 w-4 text-[7px]"
+                                />
                                 <span className="text-[11px] font-bold text-foreground truncate flex-1 leading-tight">
                                   {appt.patients?.name || "Sem Nome"}
                                 </span>

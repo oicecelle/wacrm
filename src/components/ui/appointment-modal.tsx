@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { findExistingContact } from "@/lib/contacts/dedupe";
 import { toast } from "sonner";
+import { readAppointmentDraft, writeAppointmentDraft, clearAppointmentDraft } from "@/lib/agenda/appointment-draft";
 import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -279,6 +281,22 @@ interface SmartPanelData {
   lastAppointmentDate: string | null;
 }
 
+type AppointmentTabId =
+  | "details" | "timeline" | "tags" | "notes" | "custom" | "deals" | "history" | "documents" | "financial" | "prontuario";
+
+const APPOINTMENT_TABS: { id: AppointmentTabId; label: string; icon: React.ElementType }[] = [
+  { id: "details", label: "Agendamento", icon: CalendarDaysIcon },
+  { id: "timeline", label: "Linha do Tempo", icon: Hourglass },
+  { id: "tags", label: "Tags", icon: TagIcon },
+  { id: "notes", label: "Notas", icon: ClipboardListIcon },
+  { id: "custom", label: "Campos", icon: TagIcon },
+  { id: "deals", label: "CRM", icon: TrendingUpIcon },
+  { id: "history", label: "Histórico", icon: ClockIcon },
+  { id: "documents", label: "Documentos", icon: FileTextIcon },
+  { id: "financial", label: "Financeiro", icon: DollarSignIcon },
+  { id: "prontuario", label: "Prontuário", icon: UserIcon },
+];
+
 export function AppointmentModal({
   open,
   onOpenChange,
@@ -390,7 +408,14 @@ export function AppointmentModal({
   const [error, setError] = useState<string | null>(null);
 
   // Tabs navigation
-  const [activeTab, setActiveTab] = useState<"details" | "timeline" | "tags" | "notes" | "custom" | "deals" | "history" | "documents" | "financial" | "prontuario">(initialTab);
+  const [activeTab, setActiveTab] = useState<AppointmentTabId>(initialTab);
+  const tabButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  // Bring the active tab into view when it changes (the bar scrolls on
+  // narrow screens). An effect keyed to the tab, NOT a ref callback:
+  // that would re-run on every keystroke's re-render and make the bar jump.
+  useEffect(() => {
+    tabButtonRefs.current[activeTab]?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [activeTab]);
 
   // Sub-details state (fetched when patient is selected)
   const [selectedPatientInfo, setSelectedPatientInfo] = useState<any>(null);
@@ -492,10 +517,14 @@ export function AppointmentModal({
   });
 
   // Load selection options (patients, staff, procedures, rooms)
+  // Depends on the profile's ID, not the object: `profile` gets a new
+  // identity on every auth event, and Supabase fires one whenever the
+  // browser tab regains focus. Depending on the object re-downloaded
+  // every patient and contact on each return to the tab, and (below)
+  // wiped the form. Tab/payment resets used to live here too; they
+  // belong to opening the modal, not to refetching options.
   useEffect(() => {
     if (!open || !profile) return;
-    setActiveTab(initialTab);
-    setShowPaymentForm(false);
 
     const loadOptions = async () => {
       try {
@@ -572,11 +601,38 @@ export function AppointmentModal({
     };
 
     loadOptions();
-  }, [open, profile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, profile?.id]);
+
+  // Which "opening" of the modal the form was last initialised for.
+  // The init effect below RESETS every field, so it must run once per
+  // opening — never again just because something it listens to changed
+  // identity while the user is mid-typing (this used to wipe the form,
+  // and reload an edit from the database over unsaved changes, every
+  // time the browser tab regained focus).
+  const initKeyRef = useRef<string | null>(null);
+  const draftReadyRef = useRef(false);
 
   // Load appointment details if editing
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initKeyRef.current = null;
+      draftReadyRef.current = false;
+      return;
+    }
+
+    const initKey = [
+      appointmentId ?? "new",
+      defaultDate,
+      defaultPatientId,
+      defaultProfessionalId,
+      defaultProcedureName,
+      defaultType,
+      profile?.id ?? "",
+    ].join("|");
+    if (initKeyRef.current === initKey) return;
+    initKeyRef.current = initKey;
+    setShowPaymentForm(false);
 
     if (!appointmentId) {
       // Pre-fill fields for creation
@@ -633,6 +689,30 @@ export function AppointmentModal({
         const endIsoString = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         setEndTime(endIsoString);
       }
+
+      // Bring back what was being typed if the page was reloaded or
+      // the tab discarded in the middle of this same booking.
+      const draft = clinicId ? readAppointmentDraft(clinicId, initKey) : null;
+      if (draft) {
+        setPatientId(draft.patientId);
+        setSelectedPatientInfo(draft.selectedPatientInfo);
+        setProfessionalId(draft.professionalId);
+        setProcedureName(draft.procedureName);
+        setProcedureId(draft.procedureId);
+        setRoomId(draft.roomId);
+        setStartTime(draft.startTime);
+        setEndTime(draft.endTime);
+        setStatus(draft.status);
+        setNotes(draft.notes);
+        setApptType(draft.apptType as typeof apptType);
+        setAppointmentTag(draft.appointmentTag);
+        setAppointmentTagColor(draft.appointmentTagColor);
+        setIsOnline(draft.isOnline);
+        setGuestEmails(draft.guestEmails);
+        setSendWa(draft.sendWa);
+        toast.info("Recuperei o que você estava preenchendo.");
+      }
+      draftReadyRef.current = true;
       return;
     }
 
@@ -696,7 +776,52 @@ export function AppointmentModal({
     };
 
     loadAppointment();
-  }, [open, appointmentId, defaultDate, profile, defaultPatientId, defaultPatientName, defaultPatientPhone, defaultProfessionalId, defaultProcedureName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, appointmentId, defaultDate, profile?.id, defaultPatientId, defaultPatientName, defaultPatientPhone, defaultProfessionalId, defaultProcedureName]);
+
+  // Mirror the in-progress NEW appointment to sessionStorage (debounced).
+  // Skipped until the init effect has applied defaults/restored a
+  // draft — otherwise the blank defaults would overwrite the draft
+  // before it could be read.
+  useEffect(() => {
+    if (!open || appointmentId || !clinicId || !draftReadyRef.current || !initKeyRef.current) return;
+    const initKey = initKeyRef.current;
+    const t = setTimeout(() => {
+      writeAppointmentDraft(clinicId, initKey, {
+        patientId,
+        selectedPatientInfo,
+        professionalId,
+        procedureName,
+        procedureId,
+        roomId,
+        startTime,
+        endTime,
+        status,
+        notes,
+        apptType,
+        appointmentTag,
+        appointmentTagColor,
+        isOnline,
+        guestEmails,
+        sendWa,
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    open, appointmentId, clinicId, patientId, selectedPatientInfo, professionalId, procedureName, procedureId,
+    roomId, startTime, endTime, status, notes, apptType, appointmentTag, appointmentTagColor, isOnline,
+    guestEmails, sendWa,
+  ]);
+
+  // Closing the modal on purpose (X, Esc, Cancel, or after saving)
+  // discards the draft. Only the open → closed TRANSITION counts: on
+  // first mount `open` is false too, and clearing then would delete
+  // the very draft a reload is supposed to preserve.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasOpenRef.current && !open && clinicId) clearAppointmentDraft(clinicId);
+    wasOpenRef.current = open;
+  }, [open, clinicId]);
 
   const handleSelectProcedure = (name: string) => {
     const cleanName = (name === null || name === "none") ? "" : name;
@@ -1082,10 +1207,35 @@ export function AppointmentModal({
     setWhatsappAvatarUrl(null);
     const phone = selectedPatientInfo?.phone;
     if (!phone || !clinicId) return;
-    fetch(`/api/whatsapp/profile-picture?phone=${encodeURIComponent(phone)}&account_id=${clinicId}`)
-      .then((res) => res.json())
-      .then((data) => setWhatsappAvatarUrl(data?.url || null))
-      .catch(() => setWhatsappAvatarUrl(null));
+    let cancelled = false;
+    (async () => {
+      // 1) The photo already saved on the matching CONTACT. `patients`
+      //    has no photo column at all (only avatar_color), and the
+      //    contact's avatar_url is filled from the WhatsApp payload
+      //    when they message — that's the source that actually works.
+      try {
+        const contact = await findExistingContact(supabase, clinicId, phone);
+        const stored = typeof contact?.avatar_url === "string" ? contact.avatar_url : "";
+        if (stored) {
+          if (!cancelled) setWhatsappAvatarUrl(stored);
+          return;
+        }
+      } catch {
+        /* fall through to the live lookup */
+      }
+      // 2) Best-effort live lookup for contacts with no stored photo.
+      try {
+        const res = await fetch(`/api/whatsapp/profile-picture?phone=${encodeURIComponent(phone)}&account_id=${clinicId}`);
+        const data = await res.json();
+        if (!cancelled) setWhatsappAvatarUrl(data?.url || null);
+      } catch {
+        if (!cancelled) setWhatsappAvatarUrl(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPatientInfo?.phone, clinicId]);
 
   // Load Smart Panel details when patientId is selected
@@ -3146,7 +3296,7 @@ Qualquer dúvida, estou à disposição! 😊`;
           /* Expanded Panel layout: Tabbed content + Smart panel */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header: Patient Profile info */}
-            <header className="bg-card text-foreground p-5 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-neutral-100/50">
+            <header className="bg-card text-foreground px-5 pt-5 pb-0 shrink-0 flex flex-col gap-4 border-b border-border">
               <div className="flex items-center gap-4">
                 {/* Photo/Avatar circle */}
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-md">
@@ -3240,35 +3390,39 @@ Qualquer dúvida, estou à disposição! 😊`;
                 </div>
               </div>
 
-              {/* Navigation Tabs headers */}
-              <nav className="flex flex-wrap gap-1.5 self-center">
-                {[
-                  { id: "details", label: "Agendamento", icon: CalendarDaysIcon },
-                  { id: "timeline", label: "Linha do Tempo", icon: Hourglass },
-                  { id: "tags", label: "Tags", icon: TagIcon },
-                  { id: "notes", label: "Notas", icon: ClipboardListIcon },
-                  { id: "custom", label: "Campos", icon: TagIcon },
-                  { id: "deals", label: "CRM", icon: TrendingUpIcon },
-                  { id: "history", label: "Histórico", icon: ClockIcon },
-                  { id: "documents", label: "Documentos", icon: FileTextIcon },
-                  { id: "financial", label: "Financeiro", icon: DollarSignIcon },
-                  { id: "prontuario", label: "Prontuário", icon: UserIcon },
-                ].map((tb) => {
+              {/* Navigation tabs — one scrolling row, underline style.
+                  Ten pill buttons in a flex-wrap used to spill onto
+                  several rows and push the form down. */}
+              <nav
+                role="tablist"
+                aria-label="Seções do agendamento"
+                className="-mx-5 flex overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {APPOINTMENT_TABS.map((tb) => {
                   const Icon = tb.icon;
                   const isActive = activeTab === tb.id;
                   return (
                     <button
                       key={tb.id}
+                      ref={(el) => {
+                        tabButtonRefs.current[tb.id] = el;
+                      }}
                       type="button"
-                      onClick={() => setActiveTab(tb.id as any)}
-                      className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setActiveTab(tb.id)}
+                      className={`relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-3 text-xs font-semibold transition-colors ${
+                        isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-primary" : ""}`} />
                       {tb.label}
+                      <span
+                        aria-hidden
+                        className={`absolute inset-x-2 -bottom-px h-0.5 rounded-full transition-colors ${
+                          isActive ? "bg-primary" : "bg-transparent"
+                        }`}
+                      />
                     </button>
                   );
                 })}
