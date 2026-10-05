@@ -81,7 +81,7 @@ function formatFollowupTime(dateStr: string) {
 
   const timeStr = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-  if (diffMs < 0) return `Atrasado (${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })})`;
+  if (diffMs < 0) return `pendente desde ${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
   if (diffHours <= 1) return `Agora (${timeStr})`;
   if (diffHours < 24) return `Hoje às ${timeStr}`;
   if (diffDays === 1) return `Amanhã às ${timeStr}`;
@@ -107,6 +107,38 @@ function formatWaitingSince(sinceStr?: string, side?: string) {
 
   const who = side === "lead" ? "lead" : "equipe";
   return `Aguardando ${who} (${timeStr})`;
+}
+
+function formatLastInteraction(iso?: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (diffMin < 1) return "agora";
+  if (diffMin < 60) return `há ${diffMin}min`;
+  const sameDay = d.toDateString() === new Date().toDateString();
+  if (sameDay) return `hoje, ${time}`;
+  const yesterday = new Date(Date.now() - 86_400_000);
+  if (d.toDateString() === yesterday.toDateString()) return `ontem, ${time}`;
+  return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}, ${time}`;
+}
+
+/**
+ * Estado operacional do lead, derivado SÓ de campos que o negócio já
+ * carrega — nenhuma busca por card. Quatro dos cinco estados do
+ * documento de produto; o "automação ativa" ficou de fora de
+ * propósito: saber isso por card exigiria consultar a fila de
+ * execuções de cada contato (N+1 num kanban grande) e inventar um
+ * estado sem conseguir verificá-lo seria pior que não ter.
+ */
+function leadState(deal: Deal): { label: string; dot: string } {
+  if ((deal.conversation?.unread_count ?? 0) > 0) return { label: "Em conversa", dot: "bg-emerald-500" };
+  if (deal.waiting_side === "lead") return { label: "Aguardando cliente", dot: "bg-amber-400" };
+  if (deal.followup_scheduled_at && new Date(deal.followup_scheduled_at) > new Date()) {
+    return { label: "Follow-up programado", dot: "bg-blue-500" };
+  }
+  return { label: "Sem próxima ação", dot: "bg-neutral-300" };
 }
 
 function TemperatureBadge({ temperature }: { temperature?: 'hot' | 'warm' | 'cold' }) {
@@ -177,6 +209,8 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
   const contactLabel = deal.contact?.name || deal.contact?.phone || "Sem contato";
   const assigneeLabel = deal.assignee?.full_name || null;
   const waitingLabel = formatWaitingSince(deal.waiting_since, deal.waiting_side);
+  const state = leadState(deal);
+  const lastInteraction = formatLastInteraction(deal.conversation?.last_message_at);
 
   // Follow-up overdue?
   const followupOverdue = deal.followup_scheduled_at && new Date(deal.followup_scheduled_at) < new Date();
@@ -274,6 +308,20 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
           {initials(deal.contact?.name, deal.contact?.phone)}
         </span>
         <span className="truncate text-xs font-semibold text-neutral-600">{contactLabel}</span>
+      </div>
+
+      {/* Interesse */}
+      {deal.interest && (
+        <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
+          <span className="font-bold text-neutral-600">Interesse:</span> {deal.interest}
+        </p>
+      )}
+
+      {/* Estado atual */}
+      <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-neutral-600">
+        <span className={`h-1.5 w-1.5 rounded-full ${state.dot}`} aria-hidden />
+        {state.label}
+        {lastInteraction && <span className="font-normal text-muted-foreground">· {lastInteraction}</span>}
       </div>
 
       {/* Waiting since indicator */}

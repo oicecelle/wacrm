@@ -335,6 +335,10 @@ export interface Deal {
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
+  /** Joined by the Pipelines page — real last-interaction data from the
+   *  linked conversation (100% of deals have one), used by the card's
+   *  "última interação" and "em conversa" state. */
+  conversation?: { last_message_at: string | null; last_message_text: string | null; unread_count: number } | null;
   // AI fields
   interest?: string;
   crm_stage?: string;
