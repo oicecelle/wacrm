@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { findExistingContact } from "@/lib/contacts/dedupe";
+import { searchPatientOptions, type PatientOption } from "@/lib/agenda/patient-search";
 import { toast } from "sonner";
 import { readAppointmentDraft, writeAppointmentDraft, clearAppointmentDraft } from "@/lib/agenda/appointment-draft";
 import { formatCurrency } from "@/lib/currency";
@@ -255,13 +256,6 @@ interface AppointmentModalProps {
    *  history instead of a booking form. */
   initialTab?: "details" | "timeline" | "tags" | "notes" | "custom" | "deals" | "history" | "documents" | "financial" | "prontuario";
   onSave: () => void;
-}
-
-interface PatientOption {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
 }
 
 interface StaffOption {
@@ -530,34 +524,11 @@ export function AppointmentModal({
       try {
         // clinicId is scoped globally in the component
 
-        // Fetch patients (include phone & email for search cards)
-        const { data: ptsData } = await supabase
-          .from("patients")
-          .select("id, name, phone, email")
-          .eq("clinic_id", clinicId)
-          .order("name");
-
-        // Fetch contacts to fallback/merge
-        const { data: ctsData } = await supabase
-          .from("contacts")
-          .select("id, name, phone, email")
-          .eq("account_id", clinicId)
-          .order("name");
-
-        const mergedMap = new Map();
-        (ptsData || []).forEach(p => mergedMap.set(p.id, p));
-        (ctsData || []).forEach(c => {
-          // Previously required c.name to be truthy, which silently
-          // dropped freshly-created leads that haven't been named
-          // yet — exactly the contacts someone is most likely to be
-          // booking a first appointment for. Falls back to phone so
-          // they're still selectable.
-          if (!mergedMap.has(c.id)) {
-            mergedMap.set(c.id, { id: c.id, name: c.name || c.phone || "Contato sem nome", phone: c.phone, email: c.email });
-          }
-        });
-        const mergedList = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-        setPatients(mergedList);
+        // Patients/contacts are NOT downloaded here any more: the
+        // picker searches the server as you type (see the search effect
+        // below). The old bulk fetch was silently capped at 1,000 rows
+        // per table, so on a clinic with thousands of patients most of
+        // them could never be found.
 
         // Fetch staff (clinic_users)
         const { data: stData } = await supabase
@@ -2543,14 +2514,31 @@ Qualquer dúvida, estou à disposição! 😊`;
 
   const { firstName, lastName } = getPatientNameParts();
 
-  // Search filtered patients list
-  const filteredPatients = searchQuery.trim() === ""
-    ? patients.slice(0, 15) // Limit initial list for clean UI
-    : patients.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.phone && p.phone.includes(searchQuery)) ||
-        (p.email && p.email.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+  // Patient picker: results come from the server, already filtered and
+  // bounded (20 per table). Debounced while typing; an empty box loads
+  // the first few alphabetically, like before.
+  useEffect(() => {
+    if (!open || !clinicId) return;
+    let cancelled = false;
+    const t = setTimeout(
+      async () => {
+        try {
+          const results = await searchPatientOptions(supabase, clinicId, searchQuery);
+          if (!cancelled) setPatients(results);
+        } catch (err) {
+          console.error("Error searching patients:", err);
+        }
+      },
+      searchQuery.trim() ? 250 : 0,
+    );
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, clinicId, searchQuery]);
+
+  const filteredPatients = patients;
 
   // Auto calculate IMC for display
   const wNum = parseFloat(evalWeight);
