@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { parseSendInterval } from '@/lib/automations/send-interval'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { getTemplate } from '@/lib/automations/templates'
@@ -50,6 +51,13 @@ export async function POST(request: Request) {
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
   const { name, description, trigger_type, trigger_config, is_active, steps, template } = body
+  const minInterval = parseSendInterval(body.min_interval_seconds)
+  if (minInterval === undefined) {
+    return NextResponse.json(
+      { error: 'min_interval_seconds must be a whole number of seconds between 0 and 86400' },
+      { status: 400 },
+    )
+  }
 
   let effectiveSteps: BuilderStepInput[] | undefined = steps
   let effectiveName = name
@@ -105,6 +113,7 @@ export async function POST(request: Request) {
       trigger_type: effectiveTriggerType,
       trigger_config: effectiveTriggerConfig ?? {},
       is_active: !!is_active,
+      min_interval_seconds: minInterval,
     })
     .select()
     .single()

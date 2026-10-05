@@ -952,6 +952,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         trigger_type: state.trigger_type,
         trigger_config: state.trigger_config,
         is_active: state.is_active,
+        min_interval_seconds: state.min_interval_seconds ?? null,
         steps: toApiSteps(state.steps),
       }
 

@@ -46,6 +46,7 @@ export async function POST(
       trigger_type: original.trigger_type,
       trigger_config: original.trigger_config,
       is_active: false,
+      min_interval_seconds: original.min_interval_seconds ?? null,
     })
     .select()
     .single()

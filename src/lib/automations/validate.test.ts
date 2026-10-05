@@ -45,7 +45,7 @@ describe("validateStepsForActivation", () => {
   it("checks wait amount and unit boundaries", () => {
     const issues = validateStepsForActivation([
       { step_type: "wait", step_config: { amount: 0, unit: "minutes" } },
-      { step_type: "wait", step_config: { amount: 5, unit: "seconds" } },
+      { step_type: "wait", step_config: { amount: 5, unit: "weeks" } },
       { step_type: "wait", step_config: { amount: -1, unit: "hours" } },
       {
         step_type: "wait",
@@ -58,6 +58,43 @@ describe("validateStepsForActivation", () => {
       "steps[2].amount",
       "steps[3].amount",
     ]);
+  });
+
+  it("accepts seconds as a wait unit", () => {
+    expect(
+      validateStepsForActivation([{ step_type: "wait", step_config: { amount: 60, unit: "seconds" } }]),
+    ).toEqual([]);
+  });
+
+  it("accepts the interest/note steps when filled in, and rejects them when empty", () => {
+    const ok = validateStepsForActivation([
+      { step_type: "add_interest", step_config: { value: "Botox" } },
+      { step_type: "remove_interest", step_config: { value: "Botox" } },
+      { step_type: "add_note", step_config: { value: "ligar amanhã" } },
+      { step_type: "edit_interest", step_config: { value: "Botox", new_value: "Toxina" } },
+      { step_type: "edit_note", step_config: { value: "a", new_value: "b" } },
+      { step_type: "remove_note", step_config: { value: "a" } },
+    ]);
+    expect(ok).toEqual([]);
+
+    const bad = validateStepsForActivation([
+      { step_type: "add_interest", step_config: { value: "" } },
+      { step_type: "edit_note", step_config: { value: "a", new_value: "" } },
+      { step_type: "edit_interest", step_config: { new_value: "x" } },
+      { step_type: "remove_note", step_config: {} },
+    ]);
+    expect(bad.map((i) => i.path)).toEqual([
+      "steps[0].value",
+      "steps[1].new_value",
+      "steps[2].value",
+      "steps[3].value",
+    ]);
+  });
+
+  it("still flags a genuinely unknown step type", () => {
+    const issues = validateStepsForActivation([{ step_type: "teleport", step_config: {} }]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("desconhecido");
   });
 
   it("validates webhook URLs", () => {

@@ -91,6 +91,27 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.value`, message: 'o valor do campo é obrigatório' })
       }
       break
+    case 'add_interest':
+    case 'remove_interest':
+    case 'add_note':
+      if (!nonEmpty(c.value)) {
+        issues.push({ path: `${path}.value`, message: 'o texto é obrigatório' })
+      }
+      break
+    case 'edit_interest':
+    case 'edit_note':
+      if (!nonEmpty(c.value)) {
+        issues.push({ path: `${path}.value`, message: 'o texto atual (a ser encontrado) é obrigatório' })
+      }
+      if (!nonEmpty(c.new_value)) {
+        issues.push({ path: `${path}.new_value`, message: 'o novo texto é obrigatório' })
+      }
+      break
+    case 'remove_note':
+      if (!nonEmpty(c.value)) {
+        issues.push({ path: `${path}.value`, message: 'o texto da observação a remover é obrigatório' })
+      }
+      break
     case 'create_deal':
       if (!nonEmpty(c.pipeline_id)) {
         issues.push({ path: `${path}.pipeline_id`, message: 'o pipeline é obrigatório' })
@@ -141,10 +162,10 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       if (typeof c.amount !== 'number' || !Number.isFinite(c.amount) || c.amount <= 0) {
         issues.push({ path: `${path}.amount`, message: 'a quantidade de espera precisa ser maior que 0' })
       }
-      if (!['minutes', 'hours', 'days'].includes(String(c.unit))) {
+      if (!['seconds', 'minutes', 'hours', 'days'].includes(String(c.unit))) {
         issues.push({
           path: `${path}.unit`,
-          message: 'a unidade de espera precisa ser minutos, horas ou dias',
+          message: 'a unidade de espera precisa ser segundos, minutos, horas ou dias',
         })
       }
       break

@@ -39,6 +39,7 @@ export default function EditAutomationPage({
         trigger_type: body.automation.trigger_type as AutomationTriggerType,
         trigger_config: body.automation.trigger_config ?? {},
         is_active: !!body.automation.is_active,
+        min_interval_seconds: body.automation.min_interval_seconds ?? null,
         steps: fromServerSteps((body.steps ?? []) as ServerStepNode[]),
       })
     }

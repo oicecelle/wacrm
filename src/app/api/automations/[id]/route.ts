@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { parseSendInterval } from '@/lib/automations/send-interval'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import {
@@ -85,6 +86,16 @@ export async function PATCH(
     'is_active',
   ] as const) {
     if (k in body) update[k] = body[k]
+  }
+  if ('min_interval_seconds' in body) {
+    const parsed = parseSendInterval(body.min_interval_seconds)
+    if (parsed === undefined) {
+      return NextResponse.json(
+        { error: 'min_interval_seconds must be a whole number of seconds between 0 and 86400' },
+        { status: 400 },
+      )
+    }
+    update.min_interval_seconds = parsed
   }
 
   // If this PATCH leaves the automation active (either explicitly
