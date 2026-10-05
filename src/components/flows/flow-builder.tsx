@@ -158,6 +158,8 @@ export function FlowBuilder() {
         triggerIssues={issues.filter((i) => i.scope === "trigger")}
       />
 
+      <SendIntervalPanel state={state} setState={setState} />
+
       <EntryPicker state={state} setState={setState} />
 
       <section className="flex flex-col gap-3">
@@ -249,6 +251,46 @@ function KeywordsInput({
       placeholder="suporte, ajuda, oi"
       className="bg-muted"
     />
+  );
+}
+
+// ============================================================
+// Send interval panel
+// ============================================================
+
+function SendIntervalPanel({
+  state,
+  setState,
+}: {
+  state: BuilderState;
+  setState: React.Dispatch<React.SetStateAction<BuilderState>>;
+}) {
+  return (
+    <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
+      <div className="flex-1">
+        <h2 className="text-sm font-bold text-foreground">Intervalo mínimo entre envios</h2>
+        <p className="text-xs text-muted-foreground">
+          Se este fluxo for disparado por várias pessoas ao mesmo tempo, espaça as mensagens em
+          vez de mandar tudo junto. Vazio ou 0 = sem limite. Esperas longas ficam na fila e saem
+          até cerca de um minuto depois da vez.
+        </p>
+      </div>
+      <input
+        type="number"
+        min={0}
+        max={86400}
+        value={state.min_interval_seconds ?? ""}
+        onChange={(e) =>
+          setState((s) => ({
+            ...s,
+            min_interval_seconds: e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : null,
+          }))
+        }
+        placeholder="0"
+        className="h-8 w-20 rounded-lg border border-border bg-muted px-2 text-center text-xs text-foreground outline-none focus:border-primary"
+      />
+      <span className="text-xs text-muted-foreground">seg</span>
+    </section>
   );
 }
 

@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { resolveFallbackPolicy } from '@/lib/flows/fallback'
+import { resumePacedFlowRuns } from '@/lib/flows/engine'
 
 /**
  * Sweep abandoned active flow runs.
@@ -48,6 +49,16 @@ export async function GET(request: Request) {
   const admin = supabaseAdmin()
   const now = new Date()
 
+  // First, release runs parked by the flow's send-interval pacing whose
+  // slot has arrived. Done before the stale sweep and independent of
+  // it: the early `return` below (no active runs) must not skip this.
+  let resumed = 0
+  try {
+    resumed = (await resumePacedFlowRuns()).resumed
+  } catch (err) {
+    console.error('[flows-cron] resume paced runs failed:', err instanceof Error ? err.message : err)
+  }
+
   // Pull all currently-active runs along with their parent flow's
   // fallback_policy. Joined in one query — the small set of active
   // runs per tenant keeps this cheap.
@@ -62,7 +73,7 @@ export async function GET(request: Request) {
     console.error('[flows-cron] active-run scan failed:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  if (!runs?.length) return NextResponse.json({ swept: 0 })
+  if (!runs?.length) return NextResponse.json({ swept: 0, resumed })
 
   type Row = {
     id: string
@@ -108,5 +119,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ swept })
+  return NextResponse.json({ swept, resumed })
 }

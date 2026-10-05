@@ -33,6 +33,7 @@
  */
 
 import { supabaseAdmin } from "./admin-client";
+import { planPacedSend, sleep, INLINE_BUDGET_MS } from "@/lib/messaging/pacing";
 import {
   engineSendInteractiveButtons,
   engineSendInteractiveList,
@@ -323,7 +324,8 @@ async function logEvent(
     | "handoff"
     | "timeout"
     | "error"
-    | "completed",
+    | "completed"
+    | "paced",
   node_key: string | null,
   payload: Record<string, unknown> = {},
 ): Promise<void> {
@@ -619,13 +621,98 @@ async function endRun(
 // new current_node_key before returning.
 // ============================================================
 
+/** Node types that put a message on the wire — the only ones paced. */
+const PACED_NODE_TYPES = new Set([
+  "send_message",
+  "send_media",
+  "collect_input",
+  "send_buttons",
+  "send_list",
+]);
+
+export interface PacingState {
+  /** undefined = not loaded yet; null/0 = this flow has no pacing. */
+  interval: number | null | undefined;
+  /** Inline waiting left for this advance call (see pacing.ts). */
+  budgetMs: number;
+}
+
+/**
+ * Reserves this send's slot in the flow's own pacing and either lets
+ * it through, waits a short gap inline, or PARKS the run on this node
+ * until the slot arrives (the flows cron resumes it). Returns true when
+ * the run was parked and the caller must stop advancing.
+ *
+ * Fails open on any infrastructure error: a missed slot costs a
+ * slightly early message, but a failed reservation that stalled the
+ * run would strand a customer mid-conversation.
+ */
+export async function applyFlowPacing(
+  db: AdminClient,
+  run: FlowRunRow,
+  nodeKey: string,
+  pacing: PacingState,
+): Promise<boolean> {
+  if (pacing.interval === undefined) {
+    const flow = await loadFlow(db, run.flow_id);
+    pacing.interval = flow?.min_interval_seconds ?? null;
+  }
+  if (!pacing.interval || pacing.interval <= 0) return false;
+
+  const { data: slotIso, error: rpcErr } = await db.rpc("reserve_flow_send_slot", {
+    p_flow_id: run.flow_id,
+    p_interval_seconds: pacing.interval,
+  });
+  if (rpcErr) {
+    console.error("[flows] reserve_flow_send_slot error:", rpcErr.message);
+    return false;
+  }
+
+  const plan = planPacedSend(slotIso as string | null, pacing.budgetMs);
+  if (plan.action === "send_now") return false;
+
+  if (plan.action === "wait_inline") {
+    await sleep(plan.ms);
+    pacing.budgetMs -= plan.ms;
+    await logEvent(db, run.id, "paced", nodeKey, { mode: "inline", waited_ms: plan.ms });
+    return false;
+  }
+
+  const { data: parked, error: parkErr } = await db
+    .from("flow_runs")
+    .update({
+      current_node_key: nodeKey,
+      resume_at: plan.until,
+      last_advanced_at: new Date().toISOString(),
+    })
+    .eq("id", run.id)
+    .eq("status", "active")
+    .select("id");
+  if (parkErr) {
+    console.error("[flows] park run error:", parkErr.message);
+    return false;
+  }
+  if (!Array.isArray(parked) || parked.length === 0) {
+    // Run ended/changed under us — don't send for a run that's gone.
+    return true;
+  }
+  await logEvent(db, run.id, "paced", nodeKey, { mode: "deferred", resume_at: plan.until });
+  return true;
+}
+
 async function advanceFromNodeKey(
   db: AdminClient,
   run: FlowRunRow,
   startNodeKey: string,
   nodes: Map<string, FlowNodeRow>,
+  opts: { resumed?: boolean } = {},
 ): Promise<{ outcome: "advanced" | "completed" | "handed_off" }> {
   let currentKey: string | null = startNodeKey;
+  const pacing: PacingState = { interval: undefined, budgetMs: INLINE_BUDGET_MS };
+  // A run resumed by the cron already OWNS the slot it was parked for
+  // — pacing its first node again would reserve a second slot and
+  // push the message back a further interval, forever.
+  let bypassPacingAt: string | null = opts.resumed ? startNodeKey : null;
   // Defensive cap — if a flow has a cycle (which the validator
   // SHOULD catch but doesn't yet in v1), we bail rather than loop.
   for (let safety = 0; safety < 64; safety += 1) {
@@ -643,6 +730,13 @@ async function advanceFromNodeKey(
       });
       await endRun(db, run.id, "failed", "node_not_found");
       return { outcome: "completed" };
+    }
+    if (PACED_NODE_TYPES.has(node.node_type)) {
+      if (bypassPacingAt === node.node_key) {
+        bypassPacingAt = null;
+      } else if (await applyFlowPacing(db, run, node.node_key, pacing)) {
+        return { outcome: "advanced" };
+      }
     }
     await logEvent(db, run.id, "node_entered", node.node_key, {
       node_type: node.node_type,
@@ -1001,6 +1095,17 @@ async function handleReplyForActiveRun(
     text_length: message.kind === "text" ? message.text.length : null,
   });
 
+  // Parked by pacing: the node at current_node_key has NOT been sent
+  // yet, so there is no question for this message to answer. Reading
+  // it as a reply would feed it into a collect_input / button node
+  // whose prompt the customer never saw.
+  if (run.resume_at) {
+    await logEvent(db, run.id, "paced", run.current_node_key, {
+      mode: "reply_ignored_while_parked",
+    });
+    return { consumed: true, flow_run_id: run.id, outcome: "no_match" };
+  }
+
   if (!run.current_node_key) {
     // Defensive — a run with status='active' but no current node is
     // malformed. Fail the run rather than spin.
@@ -1222,4 +1327,55 @@ async function startNewRun(
     flow_run_id: run.id,
     outcome: outcome.outcome === "advanced" ? "started" : outcome.outcome,
   };
+}
+
+/**
+ * Resumes runs that were parked by pacing and whose slot has arrived.
+ * Called by the flows cron. Each run is claimed by clearing
+ * `resume_at` only if it still holds the value we read, so two
+ * overlapping cron ticks can't both send the same message.
+ */
+export async function resumePacedFlowRuns(limit = 50): Promise<{ resumed: number }> {
+  const db = supabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const { data: due, error } = await db
+    .from("flow_runs")
+    .select("id, resume_at")
+    .eq("status", "active")
+    .not("resume_at", "is", null)
+    .lte("resume_at", nowIso)
+    .order("resume_at", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.error("[flows] resumePacedFlowRuns scan error:", error.message);
+    return { resumed: 0 };
+  }
+
+  let resumed = 0;
+  for (const row of (due ?? []) as { id: string; resume_at: string }[]) {
+    const { data: claimed } = await db
+      .from("flow_runs")
+      .update({ resume_at: null, last_advanced_at: new Date().toISOString() })
+      .eq("id", row.id)
+      .eq("status", "active")
+      .eq("resume_at", row.resume_at)
+      .select("*");
+    const run = ((claimed ?? []) as FlowRunRow[])[0];
+    if (!run) continue; // another tick got it
+
+    try {
+      const flow = await loadFlow(db, run.flow_id);
+      if (!flow || flow.status !== "active" || !run.current_node_key) {
+        await endRun(db, run.id, "failed", !flow ? "flow_not_found" : "flow_inactive_while_paced");
+        continue;
+      }
+      const nodes = await loadAllNodes(db, run.flow_id);
+      await advanceFromNodeKey(db, run, run.current_node_key, nodes, { resumed: true });
+      resumed += 1;
+    } catch (err) {
+      console.error("[flows] resume paced run failed:", err instanceof Error ? err.message : err);
+      await endRun(db, run.id, "failed", "resume_failed");
+    }
+  }
+  return { resumed };
 }

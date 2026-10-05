@@ -11,6 +11,9 @@ const h = vi.hoisted(() => ({
     fromCalls: [] as string[],
     updateCalls: [] as { table: string; filters: [string, string, unknown][] }[],
     upsertCalls: [] as { table: string; payload: unknown }[],
+    insertCalls: [] as { table: string; payload: unknown }[],
+    rpcCalls: [] as string[],
+    rpcData: null as unknown,
   },
 }));
 
@@ -62,7 +65,12 @@ vi.mock("./admin-client", () => {
     };
     const b: Record<string, unknown> = {
       select: () => b,
-      insert: (p: unknown) => ((ops.type = "insert"), (ops.payload = p), b),
+      insert: (p: unknown) => (
+        (ops.type = "insert"),
+        (ops.payload = p),
+        state.insertCalls.push({ table, payload: p }),
+        b
+      ),
       update: (p: unknown) => ((ops.type = "update"), (ops.payload = p), b),
       delete: () => ((ops.type = "delete"), b),
       upsert: (p: unknown) => ((ops.type = "upsert"), (ops.payload = p), b),
@@ -85,7 +93,10 @@ vi.mock("./admin-client", () => {
         state.fromCalls.push(t);
         return builder(t);
       },
-      rpc: () => Promise.resolve({ error: null }),
+      rpc: (name: string) => {
+        state.rpcCalls.push(name);
+        return Promise.resolve({ data: state.rpcData, error: null });
+      },
     }),
   };
 });
@@ -95,6 +106,7 @@ vi.mock("./meta-send", () => ({
   engineSendTemplate: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
+import { engineSendText } from "./meta-send";
 import { runAutomationsForTrigger, isWithinWindow, minutesInTimeZone, dayOfWeekInTimeZone, waitMs, msUntilWindowOpens } from "./engine";
 
 const ACCOUNT = "acct-1";
@@ -107,6 +119,10 @@ beforeEach(() => {
   h.state.fromCalls = [];
   h.state.updateCalls = [];
   h.state.upsertCalls = [];
+  h.state.insertCalls = [];
+  h.state.rpcCalls = [];
+  h.state.rpcData = null;
+  vi.mocked(engineSendText).mockClear();
 });
 
 describe("runAutomationsForTrigger — tenant isolation", () => {
@@ -334,5 +350,73 @@ describe("msUntilWindowOpens — com filtro de dias (fila seg-sáb)", () => {
     expect(msUntilWindowOpens("10:00-14:00", outsideSunday)).toBeGreaterThan(0); // fora do horário, mas qualquer dia serve
     const insideSunday = new Date("2026-09-27T15:00:00Z"); // domingo, 12:00 BRT — dentro de 10-14h
     expect(msUntilWindowOpens("10:00-14:00", insideSunday)).toBe(0);
+  });
+});
+
+
+describe("send-interval pacing in the automations engine", () => {
+  const pacedAutomation = () => ({ ...automationWithUpdateStep(), min_interval_seconds: 120 });
+  const sendStep = () => ({
+    id: "send1",
+    automation_id: "a1",
+    step_type: "send_message",
+    position: 0,
+    parent_step_id: null,
+    step_config: { text: "oi" },
+  });
+  const trigger = (vars?: Record<string, unknown>) =>
+    runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "new_message_received",
+      contactId: "c1",
+      context: { message_text: "hi", conversation_id: "conv1", ...(vars ? { vars } : {}) },
+    });
+
+  beforeEach(() => {
+    h.state.owned = { id: "c1" };
+    h.state.automations = [pacedAutomation()];
+    h.state.steps = [sendStep()];
+  });
+
+  it("sends right away when the reserved slot is now", async () => {
+    h.state.rpcData = new Date().toISOString();
+    await trigger();
+    expect(h.state.rpcCalls).toContain("reserve_automation_send_slot");
+    expect(engineSendText).toHaveBeenCalledTimes(1);
+    expect(h.state.insertCalls.filter((c) => c.table === "automation_pending_executions")).toHaveLength(0);
+  });
+
+  it("defers a far-off slot to the queue, WITHOUT sending, and tags the step as owning its slot", async () => {
+    const slot = new Date(Date.now() + 90_000).toISOString();
+    h.state.rpcData = slot;
+    await trigger();
+    expect(engineSendText).not.toHaveBeenCalled();
+    const queued = h.state.insertCalls.filter((c) => c.table === "automation_pending_executions");
+    expect(queued).toHaveLength(1);
+    const row = queued[0].payload as { run_at: string; next_step_position: number; context: { vars: Record<string, unknown> } };
+    expect(row.run_at).toBe(slot);
+    expect(row.next_step_position).toBe(0); // resumes AT the send, not after it
+    expect(row.context.vars.__paced_step_id).toBe("send1");
+  });
+
+  it(
+    "REGRESSION: a run resumed from the queue sends without reserving a second slot " +
+      "(before, it re-reserved, re-deferred, and with an interval longer than the cron " +
+      "lag it would never send at all)",
+    async () => {
+      // Even if a reservation WOULD push it out, the step owns its slot.
+      h.state.rpcData = new Date(Date.now() + 90_000).toISOString();
+      await trigger({ __paced_step_id: "send1" });
+      expect(h.state.rpcCalls).not.toContain("reserve_automation_send_slot");
+      expect(engineSendText).toHaveBeenCalledTimes(1);
+      expect(h.state.insertCalls.filter((c) => c.table === "automation_pending_executions")).toHaveLength(0);
+    },
+  );
+
+  it("does no pacing at all when the automation has no interval configured", async () => {
+    h.state.automations = [automationWithUpdateStep()];
+    await trigger();
+    expect(h.state.rpcCalls).not.toContain("reserve_automation_send_slot");
+    expect(engineSendText).toHaveBeenCalledTimes(1);
   });
 });

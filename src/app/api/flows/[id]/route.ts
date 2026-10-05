@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { parseSendInterval } from '@/lib/automations/send-interval'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 
@@ -77,6 +78,7 @@ interface PutBody {
   trigger_config?: Record<string, unknown>
   entry_node_id?: string | null
   fallback_policy?: Record<string, unknown>
+  min_interval_seconds?: number | string | null
   nodes?: Array<{
     node_key: string
     node_type: string
@@ -123,6 +125,16 @@ export async function PUT(
     flowPatch.entry_node_id = body.entry_node_id
   if (body.fallback_policy !== undefined)
     flowPatch.fallback_policy = body.fallback_policy
+  if (body.min_interval_seconds !== undefined) {
+    const parsed = parseSendInterval(body.min_interval_seconds)
+    if (parsed === undefined) {
+      return NextResponse.json(
+        { error: 'min_interval_seconds must be a whole number of seconds between 0 and 86400' },
+        { status: 400 },
+      )
+    }
+    flowPatch.min_interval_seconds = parsed
+  }
 
   const { error: updErr } = await admin
     .from('flows')

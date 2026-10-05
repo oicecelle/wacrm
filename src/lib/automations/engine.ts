@@ -21,6 +21,7 @@ import type {
   AssignConversationStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
+import { planPacedSend, sleep, INLINE_BUDGET_MS } from '@/lib/messaging/pacing'
 import { engineSendText, engineSendTemplate, engineSendMedia } from './meta-send'
 import { extractFromTemplate, combineDateAndTime } from './template-extract'
 
@@ -164,6 +165,7 @@ export async function resumePendingExecution(pending: {
       startPosition: pending.next_step_position,
       logId: pending.log_id,
       triggerEvent: 'resumed_wait',
+      inlineBudget: { ms: INLINE_BUDGET_MS },
     })
     await markPending(pending.id, 'done')
   } catch (err) {
@@ -219,6 +221,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
     startPosition: 0,
     logId: log.id,
     triggerEvent: input.triggerType,
+    inlineBudget: { ms: INLINE_BUDGET_MS },
   })
 
   // Atomic counter update via the SQL function from migration 007.
@@ -242,6 +245,9 @@ interface ExecuteArgs {
   startPosition: number
   logId: string | null
   triggerEvent: string
+  /** Inline pacing wait left for this whole run (shared by reference
+   *  with nested branches). See lib/messaging/pacing.ts. */
+  inlineBudget?: { ms: number }
 }
 
 async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
@@ -324,13 +330,27 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
     // skipping it.
     const isOutboundSend =
       step.step_type === 'send_message' || step.step_type === 'send_template' || step.step_type === 'send_media'
-    if (isOutboundSend && args.automation.min_interval_seconds && args.automation.min_interval_seconds > 0) {
-      const { data: slotIso } = await db.rpc('reserve_automation_send_slot', {
+    // A run resumed from the pacing queue already OWNS the slot it was
+    // parked for. Without this, the resumed step would reserve a SECOND
+    // slot and defer again — and with an interval longer than the cron
+    // lag it would defer forever and never send.
+    const vars = (args.context.vars ?? {}) as Record<string, unknown>
+    const ownsSlot = vars.__paced_step_id === step.id
+    if (isOutboundSend && !ownsSlot && args.automation.min_interval_seconds && args.automation.min_interval_seconds > 0) {
+      const { data: slotIso, error: slotErr } = await db.rpc('reserve_automation_send_slot', {
         p_automation_id: args.automation.id,
         p_interval_seconds: args.automation.min_interval_seconds,
       })
-      const slotMs = slotIso ? new Date(slotIso as string).getTime() - Date.now() : 0
-      if (slotMs > 500) {
+      if (slotErr) console.error('[automations] reserve_automation_send_slot error:', slotErr.message)
+      const budget = (args.inlineBudget ??= { ms: INLINE_BUDGET_MS })
+      // Fail open on a reservation error: a slightly early message is
+      // better than a run that never sends.
+      const plan = slotErr ? ({ action: 'send_now' } as const) : planPacedSend(slotIso as string | null, budget.ms)
+
+      if (plan.action === 'wait_inline') {
+        await sleep(plan.ms)
+        budget.ms -= plan.ms
+      } else if (plan.action === 'defer') {
         await db.from('automation_pending_executions').insert({
           automation_id: args.automation.id,
           account_id: args.automation.account_id,
@@ -340,15 +360,15 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
           parent_step_id: args.parentStepId,
           branch: args.branch,
           next_step_position: step.position,
-          context: args.context,
-          run_at: slotIso as string,
+          context: { ...args.context, vars: { ...vars, __paced_step_id: step.id } },
+          run_at: plan.until,
           status: 'pending',
         })
         results.push({
           step_id: step.id,
           step_type: step.step_type,
           status: 'success',
-          detail: `paced — queued for ${slotIso}`,
+          detail: `paced — queued for ${plan.until}`,
         })
         status = 'partial'
         await appendResults(args.logId, results, status, errorMessage)

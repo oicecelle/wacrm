@@ -65,6 +65,8 @@ export interface BuilderState {
   entry_node_id: string | null;
   status: FlowRow["status"];
   nodes: BuilderNode[];
+  /** Minimum seconds between this flow's own sends; null = no pacing. */
+  min_interval_seconds: number | null;
 }
 
 export interface FlowEditorContextValue {
@@ -247,6 +249,7 @@ export function FlowEditorProvider({
     trigger_config: initialFlow.trigger_config as Record<string, unknown>,
     entry_node_id: initialFlow.entry_node_id,
     status: initialFlow.status,
+    min_interval_seconds: initialFlow.min_interval_seconds ?? null,
     nodes: initialNodes.map((n) => ({
       node_key: n.node_key,
       node_type: n.node_type as NodeType,
@@ -341,6 +344,7 @@ export function FlowEditorProvider({
           trigger_type: state.trigger_type,
           trigger_config: state.trigger_config,
           entry_node_id: state.entry_node_id,
+          min_interval_seconds: state.min_interval_seconds,
           nodes: state.nodes,
         }),
       });

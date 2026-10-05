@@ -247,6 +247,10 @@ export interface FlowRow {
   fallback_policy: FlowFallbackPolicy;
   execution_count: number;
   last_executed_at: string | null;
+  /** Minimum seconds between this flow's own outbound sends, across
+   *  all contacts. Null/0 = no pacing. */
+  min_interval_seconds?: number | null;
+  last_outbound_sent_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -286,6 +290,11 @@ export interface FlowRunRow {
   last_advanced_at: string;
   ended_at: string | null;
   end_reason: string | null;
+  /** Set while the run is parked on a send node waiting for its paced
+   *  slot (flows.min_interval_seconds). The node at `current_node_key`
+   *  has NOT been sent yet; the flows cron resumes it once this passes.
+   *  Null for a normal run. */
+  resume_at?: string | null;
 }
 
 // ============================================================
