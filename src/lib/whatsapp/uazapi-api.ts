@@ -1,3 +1,5 @@
+import { UAZAPI_WEBHOOK_EVENTS, UAZAPI_WEBHOOK_EXCLUDE_MESSAGES } from './uazapi-events';
+
 export interface UazapiSendResult {
   success: boolean;
   messageId?: string;
@@ -145,17 +147,58 @@ export async function sendUazapiTextMessage(
 }
 
 /**
- * Sets the webhook URL for a Uazapi instance to receive events.
+ * Event names present in a `GET /webhook` response, whatever shape the
+ * server uses. The docs (v2.4.4) return an array of webhooks, each with
+ * `events` as an array; an older deployment kept `events` as a single
+ * comma-separated string (and silently stored NOTHING when sent an
+ * array). Both are read here so registration can be verified instead
+ * of trusted.
+ */
+export function eventsFromWebhookConfig(data: unknown): string[] {
+  const entries = Array.isArray(data) ? data : data && typeof data === 'object' ? [data] : [];
+  const found = new Set<string>();
+  for (const entry of entries) {
+    const events = (entry as { events?: unknown } | null)?.events;
+    if (Array.isArray(events)) {
+      for (const e of events) if (typeof e === 'string' && e.trim()) found.add(e.trim());
+    } else if (typeof events === 'string') {
+      for (const e of events.split(/[\s,;]+/)) if (e) found.add(e);
+    }
+  }
+  return Array.from(found);
+}
+
+async function readUazapiWebhookEvents(cleanUrl: string, headers: Record<string, string>): Promise<string[] | null> {
+  try {
+    const res = await fetch(`${cleanUrl}/webhook`, { method: 'GET', headers });
+    if (!res.ok) return null;
+    return eventsFromWebhookConfig(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Registers our inbound webhook on a Uazapi instance (the "modo simples"
+ * of POST /webhook: one webhook per instance, created or updated).
+ * Called whenever a number is connected through the system.
  *
- * The `events` field must be sent as a plain string (comma-separated
- * for multiple types), not an array — confirmed by inspecting this
- * exact endpoint's own settings UI on a real instance ("Escutar
- * eventos" is a single text input, placeholder 'coloque "messages"').
- * The previous array payload was silently accepted by /webhook
- * without erroring, but left the server's own Events field empty —
- * meaning inbound messages were never actually pushed to our webhook,
- * even though the URL and enabled flag saved correctly. That's why
- * sending worked but nothing ever arrived in the inbox.
+ * Subscribes to the events listed in UAZAPI_WEBHOOK_EVENTS — everything
+ * except calls, groups, stories and channels.
+ *
+ * Two payload formats, VERIFIED rather than assumed:
+ *  1. The documented one: `events` / `excludeMessages` as arrays.
+ *  2. The legacy one: plain comma-separated strings. A previous
+ *     developer found that, on this deployment, an array was accepted
+ *     without error yet left the server's Events field EMPTY — inbound
+ *     messages silently never arrived. We don't know which server
+ *     version each clinic's instance runs, so after saving we read the
+ *     config back (GET /webhook) and, if `messages` is not there, retry
+ *     in the legacy format. Sending only the new format blind could
+ *     leave a newly connected number deaf.
+ *
+ * Returns true only when the server confirms `messages` is subscribed
+ * (or, if the read-back itself is unavailable, when the save succeeded).
  */
 export async function setUazapiWebhook(
   baseUrl: string,
@@ -169,45 +212,53 @@ export async function setUazapiWebhook(
     'Content-Type': 'application/json',
   };
 
-  const webhookPayload = {
+  const base = {
     enabled: true,
     url: webhookUrl,
-    events: 'messages',
-    // Keeps group-chat traffic out of automations/inbox by default —
-    // per-clinic broadcasts and 1:1 conversations are what this
-    // system is built around; group messages would otherwise flood
-    // the same pipeline.
-    excludeMessages: 'isGroupYes',
     addUrlEvents: false,
     addUrlTypesMessages: false,
   };
+  const attempts: Array<{ label: string; body: Record<string, unknown> }> = [
+    {
+      label: 'array',
+      body: { ...base, events: [...UAZAPI_WEBHOOK_EVENTS], excludeMessages: [...UAZAPI_WEBHOOK_EXCLUDE_MESSAGES] },
+    },
+    {
+      label: 'string',
+      body: { ...base, events: UAZAPI_WEBHOOK_EVENTS.join(','), excludeMessages: UAZAPI_WEBHOOK_EXCLUDE_MESSAGES.join(',') },
+    },
+  ];
 
-  // Attempt global webhook setting
-  try {
-    const res = await fetch(`${cleanUrl}/webhook`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(webhookPayload),
-    });
+  for (const attempt of attempts) {
+    try {
+      const res = await fetch(`${cleanUrl}/webhook`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(attempt.body),
+      });
+      if (!res.ok) {
+        console.warn(`[uazapi] setWebhook (${attempt.label}) failed: HTTP ${res.status}`);
+        continue;
+      }
+    } catch (err) {
+      console.warn(`[uazapi] setWebhook (${attempt.label}) network error:`, err);
+      continue;
+    }
 
-    if (res.ok) return true;
-  } catch {
-    // Ignore error and try fallback
-  }
-
-  // Fallback: Instance-specific webhook setting
-  try {
-    const res = await fetch(`${cleanUrl}/${token}/setWebhook`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(webhookPayload),
-    });
-
-    if (res.ok) return true;
-  } catch {
-    // Ignore error
+    const stored = await readUazapiWebhookEvents(cleanUrl, headers);
+    if (stored === null) {
+      // Can't read it back: trust the save, but say so.
+      console.warn(`[uazapi] webhook saved (${attempt.label}) but could not be verified`);
+      return true;
+    }
+    if (stored.includes('messages')) {
+      const missing = UAZAPI_WEBHOOK_EVENTS.filter((e) => !stored.includes(e));
+      if (missing.length > 0) {
+        console.warn(`[uazapi] webhook saved (${attempt.label}) but server did not keep: ${missing.join(', ')}`);
+      }
+      return true;
+    }
+    console.warn(`[uazapi] webhook (${attempt.label}) left events empty/without messages; trying the other format`);
   }
 
   return false;
