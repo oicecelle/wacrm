@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useWhatsappProvider } from "@/hooks/use-whatsapp-provider";
@@ -49,6 +49,8 @@ import { deleteAccountMedia } from "@/lib/storage/upload-media";
 import { TemplatePicker } from "./template-picker";
 import { buildReplyPreview } from "./reply-quote";
 import { toast } from "sonner";
+import { LoadOlderMessages } from "./load-older-messages";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 interface ReplyDraft {
   id: string;
@@ -312,18 +314,24 @@ export function MessageThread({
     (async () => {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-
-      if (cancelled) return;
-
-      if (error) {
+      // Paginated: a plain select is cut at 1,000 rows without any error.
+      // Ascending order would keep the OLDEST 1,000 and silently drop the
+      // newest — and imported history makes 1,000+ message threads normal.
+      try {
+        const rows = await fetchAllRows<Message>((from, to) =>
+          supabase
+            .from("messages")
+            .select("*")
+            .eq("conversation_id", conversationId)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to) as unknown as PromiseLike<{ data: Message[] | null; error: { message: string } | null }>,
+        );
+        if (cancelled) return;
+        onMessagesLoadedRef.current(rows);
+      } catch (error) {
+        if (cancelled) return;
         console.error("Failed to fetch messages:", error);
-      } else {
-        onMessagesLoadedRef.current(data ?? []);
       }
 
       if (!cancelled) setLoading(false);
@@ -468,13 +476,35 @@ export function MessageThread({
       });
   }, [conversationId, hasUnread]);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    if (scrollRef.current) {
-      const el = scrollRef.current;
+  // Scrolling. This used to jump to the bottom on EVERY change to
+  // `messages` — including a delivery/read receipt flipping a tick, which
+  // yanked you away from whatever older message you were reading — and it
+  // had no answer for older messages being added at the TOP. Now:
+  //  - new message at the end (or a different conversation) → bottom
+  //  - older messages added at the top → keep what you were looking at
+  //  - anything else (status change, edit…) → leave the scroll alone
+  const lastIdRef = useRef<string | undefined>(undefined);
+  const firstIdRef = useRef<string | undefined>(undefined);
+  const prevHeightRef = useRef(0);
+  const scrolledConvRef = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const first = messages[0]?.id;
+    const last = messages[messages.length - 1]?.id;
+    const conversationChanged = scrolledConvRef.current !== conversationId;
+
+    if (conversationChanged || last !== lastIdRef.current) {
       el.scrollTop = el.scrollHeight;
+    } else if (first !== firstIdRef.current && prevHeightRef.current > 0) {
+      el.scrollTop += el.scrollHeight - prevHeightRef.current;
     }
-  }, [messages]);
+
+    scrolledConvRef.current = conversationId;
+    lastIdRef.current = last;
+    firstIdRef.current = first;
+    prevHeightRef.current = el.scrollHeight;
+  }, [messages, conversationId]);
 
   const handleSend = useCallback(
     async (text: string, replyToId?: string) => {
@@ -1085,6 +1115,9 @@ export function MessageThread({
 
       {/* Messages Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+        {conversationId && !loading && (
+          <LoadOlderMessages conversationId={conversationId} onLoaded={onRefresh} />
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />

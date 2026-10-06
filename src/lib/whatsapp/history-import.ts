@@ -100,13 +100,28 @@ export function mapHistoryMessage(m: HistoryMessage, nowMs = Date.now()): Mapped
 
   let contentType: HistoryContentType = "text";
   let kind = "";
-  if (type.includes("image")) (contentType = "image"), (kind = "image");
-  else if (type.includes("sticker")) (contentType = "image"), (kind = "sticker");
-  else if (type.includes("video")) (contentType = "video"), (kind = "video");
-  else if (type.includes("audio") || type.includes("ptt") || type.includes("voice")) (contentType = "audio"), (kind = "audio");
-  else if (type.includes("document")) (contentType = "document"), (kind = "document");
-  else if (type.includes("location")) (contentType = "location"), (kind = "location");
-  else if (type.includes("contact") || type.includes("vcard")) kind = "contact";
+  if (type.includes("image")) {
+    contentType = "image";
+    kind = "image";
+  } else if (type.includes("sticker")) {
+    // The database has no sticker type: store it as an image placeholder.
+    contentType = "image";
+    kind = "sticker";
+  } else if (type.includes("video")) {
+    contentType = "video";
+    kind = "video";
+  } else if (type.includes("audio") || type.includes("ptt") || type.includes("voice")) {
+    contentType = "audio";
+    kind = "audio";
+  } else if (type.includes("document")) {
+    contentType = "document";
+    kind = "document";
+  } else if (type.includes("location")) {
+    contentType = "location";
+    kind = "location";
+  } else if (type.includes("contact") || type.includes("vcard")) {
+    kind = "contact"; // stays text: no contact type in the database
+  }
 
   const text = typeof m.text === "string" ? m.text.trim() : "";
   // Media isn't downloaded for history: keep the caption if there is one,

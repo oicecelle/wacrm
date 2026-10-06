@@ -504,3 +504,42 @@ export async function uazapiFindChats(
   if (!res.ok) throw new Error(`Uazapi POST /chat/find failed: HTTP ${res.status}`);
   return parseFindChatsResponse(await res.json(), opts.offset, opts.limit);
 }
+
+// ── On-demand history ────────────────────────────────────────────
+
+export interface HistorySyncResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+}
+
+/**
+ * `POST /message/history-sync` — asks the phone for OLDER messages of one
+ * chat (1–100, going back from `messageid`, or from the oldest message
+ * the server knows when omitted). The answer is asynchronous: messages
+ * arrive as `history` webhook batches, ending with a `status` batch.
+ * `number` must be the full chat JID.
+ */
+export async function uazapiRequestHistorySync(
+  baseUrl: string,
+  token: string,
+  req: { number: string; count: number; messageid?: string },
+): Promise<HistorySyncResult> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/message/history-sync`, {
+      method: 'POST',
+      headers: uazapiHeaders(token),
+      body: JSON.stringify({
+        number: req.number,
+        mode: 'history',
+        count: Math.min(100, Math.max(1, Math.floor(req.count))),
+        ...(req.messageid ? { messageid: req.messageid } : {}),
+      }),
+    });
+    if (res.ok) return { ok: true, status: res.status };
+    const detail = await res.json().catch(() => ({}));
+    return { ok: false, status: res.status, error: detail?.error || `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, status: 0, error: err instanceof Error ? err.message : 'network error' };
+  }
+}

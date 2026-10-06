@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Conversation, Message, Contact, ConversationStatus } from "@/types";
+import { insertMessageSorted, isBackfilledMessage } from "@/lib/inbox/thread-messages";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageThread } from "@/components/inbox/message-thread";
@@ -236,6 +237,18 @@ export default function InboxPage() {
       const newMsg = event.new;
 
       if (event.eventType === "INSERT") {
+        // A message dated well in the past is backfilled WhatsApp history,
+        // not something that just happened: slot it into the open thread
+        // by date and stop. Falling through would overwrite the
+        // conversation's preview with an old message, add 1 to its
+        // unread count, and append it to the END of the thread.
+        if (isBackfilledMessage(newMsg.created_at)) {
+          if (activeConversation && newMsg.conversation_id === activeConversation.id) {
+            setMessages((prev) => insertMessageSorted(prev, newMsg));
+          }
+          return;
+        }
+
         // Add to messages if it belongs to active conversation
         if (
           activeConversation &&
