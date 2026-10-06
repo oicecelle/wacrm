@@ -1121,6 +1121,20 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
         .eq('tag_id', cfg.operand)
       return (count ?? 0) > 0
     }
+    case 'whatsapp_label_presence': {
+      // A label in the clinic's WhatsApp, read from the local mirror the
+      // `chat_labels` webhook event keeps current. `operand` is
+      // WhatsApp's own label id. Scoped to the account (this table, unlike
+      // contact_tags, carries account_id).
+      if (!args.contactId || !cfg.operand) return false
+      const { count } = await db
+        .from('contact_whatsapp_labels')
+        .select('contact_id', { count: 'exact', head: true })
+        .eq('account_id', args.automation.account_id)
+        .eq('contact_id', args.contactId)
+        .eq('wa_label_id', cfg.operand)
+      return (count ?? 0) > 0
+    }
     case 'contact_field': {
       if (!args.contactId || !cfg.operand) return false
       // Scope to the account so the condition can't be turned into a

@@ -626,6 +626,7 @@ export interface WaitStepConfig {
 export type ConditionSubject =
   | 'contact_field'
   | 'tag_presence'
+  | 'whatsapp_label_presence'
   | 'message_content'
   | 'time_of_day'
   | 'no_reply_since';

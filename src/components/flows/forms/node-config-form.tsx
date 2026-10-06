@@ -590,7 +590,7 @@ function SendListForm({
 // ============================================================
 
 interface ConditionCfg {
-  subject?: "var" | "tag" | "contact_field" | "crm_status";
+  subject?: "var" | "tag" | "whatsapp_label" | "contact_field" | "crm_status";
   subject_key?: string;
   operator?: "equals" | "contains" | "present" | "absent";
   value?: string;
@@ -616,6 +616,7 @@ function ConditionForm({
   onUpdateConfig: (patch: Record<string, unknown>) => void;
 }) {
   const tags = useUserTags();
+  const waLabels = useWhatsappLabels();
 
   const subject = cfg.subject ?? "var";
   const operator = cfg.operator ?? "equals";
@@ -629,7 +630,10 @@ function ConditionForm({
           <Select
             value={subject}
             onValueChange={(v) =>
-              onUpdateConfig({ subject: v as ConditionCfg["subject"] })
+              // The key means something different per subject (a tag
+              // UUID, a WhatsApp label id, a variable name…), so a key
+              // left over from another subject would be silently wrong.
+              onUpdateConfig({ subject: v as ConditionCfg["subject"], subject_key: "" })
             }
           >
             <SelectTrigger className="bg-muted">
@@ -637,7 +641,8 @@ function ConditionForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="var">Variável capturada</SelectItem>
-              <SelectItem value="tag">Contato possui a tag</SelectItem>
+              <SelectItem value="tag">Contato possui a tag (CRM)</SelectItem>
+              <SelectItem value="whatsapp_label">Contato possui a etiqueta (WhatsApp)</SelectItem>
               <SelectItem value="contact_field">Campo do contato</SelectItem>
               <SelectItem value="crm_status">Status do CRM (crm_stage)</SelectItem>
             </SelectContent>
@@ -649,6 +654,8 @@ function ConditionForm({
               ? "nome da variável"
               : subject === "tag"
                 ? "Tag"
+                : subject === "whatsapp_label"
+                ? "Etiqueta do WhatsApp"
                 : subject === "crm_status"
                   ? "Etapa do CRM"
                   : "Campo"}
@@ -669,6 +676,28 @@ function ConditionForm({
                 ))}
               </SelectContent>
             </Select>
+          ) : subject === "whatsapp_label" ? (
+            waLabels.length > 0 ? (
+              <Select
+                value={cfg.subject_key ?? ""}
+                onValueChange={(v) => onUpdateConfig({ subject_key: v })}
+              >
+                <SelectTrigger className="bg-muted">
+                  <SelectValue placeholder="Escolha uma etiqueta…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {waLabels.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="rounded-lg border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                Nenhuma etiqueta sincronizada ainda. Na Caixa de Entrada, use Etiquetas → Sincronizar.
+              </p>
+            )
           ) : subject === "contact_field" ? (
             <Select
               value={cfg.subject_key ?? ""}

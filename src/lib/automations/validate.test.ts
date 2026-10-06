@@ -105,6 +105,18 @@ describe("validateStepsForActivation", () => {
     expect(bad.map((i) => i.path)).toEqual(["steps[0].wa_label_id", "steps[1].wa_label_id"]);
   });
 
+  it("a WhatsApp-label condition needs the label chosen (operand), like a tag condition does", () => {
+    expect(
+      validateStepsForActivation([
+        { step_type: "condition", step_config: { subject: "whatsapp_label_presence", operand: "10" }, branches: { yes: [], no: [] } },
+      ]),
+    ).toEqual([]);
+    const bad = validateStepsForActivation([
+      { step_type: "condition", step_config: { subject: "whatsapp_label_presence", operand: "" }, branches: { yes: [], no: [] } },
+    ]);
+    expect(bad.map((i) => i.path)).toContain("steps[0].operand");
+  });
+
   it("still flags a genuinely unknown step type", () => {
     const issues = validateStepsForActivation([{ step_type: "teleport", step_config: {} }]);
     expect(issues).toHaveLength(1);

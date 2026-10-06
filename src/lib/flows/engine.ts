@@ -556,6 +556,17 @@ async function evaluateConditionNode(
     // against a tag UUID would still work mechanically (compare its
     // existence to the value).
     subjectValue = (count ?? 0) > 0 ? cfg.subject_key : undefined;
+  } else if (cfg.subject === "whatsapp_label") {
+    // A label in the clinic's WhatsApp, read from the local mirror kept
+    // up to date by the `chat_labels` webhook event. Scoped to the
+    // run's account. `subject_key` is WhatsApp's own label id.
+    const { count } = await db
+      .from("contact_whatsapp_labels")
+      .select("contact_id", { count: "exact", head: true })
+      .eq("account_id", run.account_id)
+      .eq("contact_id", run.contact_id!)
+      .eq("wa_label_id", cfg.subject_key);
+    subjectValue = (count ?? 0) > 0 ? cfg.subject_key : undefined;
   } else if (cfg.subject === "crm_status") {
     const { data } = await db
       .from("deals")

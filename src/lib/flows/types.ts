@@ -142,7 +142,7 @@ export type ConditionOperator =
   | "present"
   | "absent";
 
-export type ConditionSubject = "var" | "tag" | "contact_field" | "crm_status";
+export type ConditionSubject = "var" | "tag" | "whatsapp_label" | "contact_field" | "crm_status";
 
 /**
  * Routes the run based on a predicate over the contact's tags,

@@ -574,3 +574,23 @@ describe("set_tag node — CRM tags and WhatsApp labels", () => {
     expect(missing.map((i) => i.field)).not.toContain("tag_id");
   });
 });
+
+describe("condition node — WhatsApp label subject", () => {
+  const flowWithCondition = (cfg: Record<string, unknown>) => [
+    { node_key: "start", node_type: "start", config: { next_node_key: "cond" } },
+    { node_key: "cond", node_type: "condition", config: { operator: "present", true_next: "ho", false_next: "ho", ...cfg } },
+    { node_key: "ho", node_type: "handoff", config: {} },
+  ];
+  const errors = (cfg: Record<string, unknown>) =>
+    validateFlowForActivation(validFlow, flowWithCondition(cfg)).filter((i) => i.node_key === "cond" && i.severity === "error");
+
+  it("accepts the subject when a label is chosen", () => {
+    expect(errors({ subject: "whatsapp_label", subject_key: "10" })).toEqual([]);
+  });
+  it("requires the label (subject_key)", () => {
+    expect(errors({ subject: "whatsapp_label", subject_key: "" }).map((i) => i.field)).toContain("subject_key");
+  });
+  it("CRM tag conditions keep working unchanged", () => {
+    expect(errors({ subject: "tag", subject_key: "tag-uuid" })).toEqual([]);
+  });
+});

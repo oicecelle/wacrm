@@ -244,7 +244,9 @@ export function summarizeNode(node: BuilderNode): string | null {
       const subject =
         cfg.subject === "tag"
           ? "tag"
-          : cfg.subject === "contact_field"
+          : cfg.subject === "whatsapp_label"
+            ? "etiqueta WhatsApp"
+            : cfg.subject === "contact_field"
             ? "field"
             : cfg.subject === "crm_status"
               ? "status"
@@ -252,7 +254,9 @@ export function summarizeNode(node: BuilderNode): string | null {
       const subjectStr =
         subject === "tag"
           ? `has tag ${truncate(subjectKey, 24)}`
-          : subject === "status"
+          : subject === "etiqueta WhatsApp"
+            ? `tem etiqueta WhatsApp ${truncate(subjectKey, 24)}`
+            : subject === "status"
             ? "crm_stage"
             : `${subject}.${subjectKey}`;
       const op =
@@ -270,7 +274,7 @@ export function summarizeNode(node: BuilderNode): string | null {
         (cfg.operator === "equals" || cfg.operator === "contains") && value
           ? ` "${truncate(value, 20)}"`
           : "";
-      return subject === "tag" ? subjectStr : `${subjectStr} ${op}${valStr}`;
+      return subject === "tag" || subject === "etiqueta WhatsApp" ? subjectStr : `${subjectStr} ${op}${valStr}`;
     }
     case "set_tag": {
       const mode = cfg.mode === "remove" ? "Remove" : "Add";

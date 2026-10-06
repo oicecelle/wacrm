@@ -14,6 +14,8 @@ const h = vi.hoisted(() => ({
     insertCalls: [] as { table: string; payload: unknown }[],
     rpcCalls: [] as string[],
     rpcData: null as unknown,
+    labelCount: 0,
+    labelFilters: [] as [string, string, unknown][],
   },
 }));
 
@@ -46,13 +48,28 @@ vi.mock("./admin-client", () => {
       }
       return { data: null, error: null };
     }
+    if (table === "contact_whatsapp_labels") {
+      state.labelFilters = ops.filters;
+      return { data: null, error: null, count: state.labelCount };
+    }
     if (table === "automations") return { data: state.automations, error: null };
     if (table === "automation_logs") {
       if (type === "insert") return { data: { id: "log1" }, error: null };
       if (type === "update") return { data: null, error: null };
       return { data: { steps_executed: [], status: "success" }, error: null };
     }
-    if (table === "automation_steps") return { data: state.steps, error: null };
+    if (table === "automation_steps") {
+      // Honour the same scoping the real query applies, so a branch's
+      // children are loaded for THAT branch only (otherwise a nested call
+      // would reload the condition itself and recurse forever).
+      let rows = state.steps as Array<Record<string, unknown>>;
+      for (const [op, k, v] of ops.filters) {
+        if (k === "parent_step_id") rows = rows.filter((r) => (r.parent_step_id ?? null) === v);
+        if (op === "eq" && k === "branch") rows = rows.filter((r) => r.branch === v);
+        if (op === "gte" && k === "position") rows = rows.filter((r) => typeof r.position !== "number" || r.position >= (v as number));
+      }
+      return { data: rows, error: null };
+    }
     return { data: null, error: null };
   }
 
@@ -75,8 +92,8 @@ vi.mock("./admin-client", () => {
       delete: () => ((ops.type = "delete"), b),
       upsert: (p: unknown) => ((ops.type = "upsert"), (ops.payload = p), b),
       eq: (k: string, v: unknown) => (ops.filters.push(["eq", k, v]), b),
-      gte: () => b,
-      is: () => b,
+      gte: (k: string, v: unknown) => (ops.filters.push(["gte", k, v]), b),
+      is: (k: string, v: unknown) => (ops.filters.push(["is", k, v]), b),
       order: () => b,
       limit: () => b,
       single: () => Promise.resolve(resolve(ops)),
@@ -125,6 +142,8 @@ beforeEach(() => {
   h.state.insertCalls = [];
   h.state.rpcCalls = [];
   h.state.rpcData = null;
+  h.state.labelCount = 0;
+  h.state.labelFilters = [];
   vi.mocked(engineSendText).mockClear();
 });
 
@@ -484,5 +503,77 @@ describe("WhatsApp label steps", () => {
     await trigger();
     expect(labelAction).not.toHaveBeenCalled();
     expect(engineSendText).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("WhatsApp label condition", () => {
+  const cond = (operand = "10") => ({
+    id: "cond1",
+    automation_id: "a1",
+    step_type: "condition",
+    position: 0,
+    parent_step_id: null,
+    branch: null,
+    step_config: { subject: "whatsapp_label_presence", operand },
+  });
+  const branchSend = (branch: "yes" | "no", text: string) => ({
+    id: `send-${branch}`,
+    automation_id: "a1",
+    step_type: "send_message",
+    position: 0,
+    parent_step_id: "cond1",
+    branch,
+    step_config: { text },
+  });
+  const sentTexts = () => vi.mocked(engineSendText).mock.calls.map((c) => JSON.stringify(c));
+  const trigger = () =>
+    runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "new_message_received",
+      contactId: "c1",
+      context: { message_text: "hi", conversation_id: "conv1" },
+    });
+
+  beforeEach(() => {
+    h.state.owned = { id: "c1" };
+    h.state.automations = [automationWithUpdateStep()];
+    h.state.steps = [cond(), branchSend("yes", "TEM-A-ETIQUETA"), branchSend("no", "SEM-A-ETIQUETA")];
+  });
+
+  it("takes the YES branch when the contact has the label", async () => {
+    h.state.labelCount = 1;
+    await trigger();
+    const sent = sentTexts();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain("TEM-A-ETIQUETA");
+  });
+
+  it("takes the NO branch when the contact does not have it", async () => {
+    h.state.labelCount = 0;
+    await trigger();
+    const sent = sentTexts();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain("SEM-A-ETIQUETA");
+  });
+
+  it("looks the label up by THIS account, contact and WhatsApp label id", async () => {
+    h.state.labelCount = 1;
+    h.state.steps = [cond("42"), branchSend("yes", "x"), branchSend("no", "y")];
+    await trigger();
+    expect(h.state.labelFilters).toEqual(
+      expect.arrayContaining([
+        ["eq", "account_id", ACCOUNT],
+        ["eq", "contact_id", "c1"],
+        ["eq", "wa_label_id", "42"],
+      ]),
+    );
+  });
+
+  it("with no label chosen it is false (NO branch), never an accidental match", async () => {
+    h.state.labelCount = 1; // would match if the operand weren't checked first
+    h.state.steps = [cond(""), branchSend("yes", "TEM-A-ETIQUETA"), branchSend("no", "SEM-A-ETIQUETA")];
+    await trigger();
+    expect(sentTexts()[0]).toContain("SEM-A-ETIQUETA");
   });
 });

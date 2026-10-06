@@ -586,20 +586,20 @@ function validateNode(
 
     case "condition": {
       const cfg = node.config as {
-        subject?: "var" | "tag" | "contact_field" | "crm_status";
+        subject?: "var" | "tag" | "whatsapp_label" | "contact_field" | "crm_status";
         subject_key?: string;
         operator?: "equals" | "contains" | "present" | "absent";
         value?: string;
         true_next?: string;
         false_next?: string;
       };
-      if (!cfg.subject || !["var", "tag", "contact_field", "crm_status"].includes(cfg.subject)) {
+      if (!cfg.subject || !["var", "tag", "whatsapp_label", "contact_field", "crm_status"].includes(cfg.subject)) {
         issues.push({
           severity: "error",
           scope: "node",
           node_key: node.node_key,
           field: "subject",
-          message: "A condição precisa de um assunto (variável / tag / campo do contato / status no CRM).",
+          message: "A condição precisa de um assunto (variável / tag do CRM / etiqueta do WhatsApp / campo do contato / status no CRM).",
         });
       }
       if (!cfg.subject_key?.trim() && cfg.subject !== "crm_status") {
@@ -608,7 +608,7 @@ function validateNode(
           scope: "node",
           node_key: node.node_key,
           field: "subject_key",
-          message: "A condição precisa de uma chave (nome da variável, id da tag, ou nome do campo).",
+          message: "A condição precisa de uma chave (nome da variável, id da tag, etiqueta do WhatsApp ou nome do campo).",
         });
       }
       if (

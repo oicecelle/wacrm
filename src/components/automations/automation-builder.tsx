@@ -2321,10 +2321,11 @@ function StepEditor({
           <FieldBlock label="Assunto">
             <select
               value={(cfg.subject as string) ?? "tag_presence"}
-              onChange={(e) => set({ subject: e.target.value })}
+              onChange={(e) => set({ subject: e.target.value, operand: "" })}
               className="w-full rounded-lg border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
             >
-              <option value="tag_presence">Presença de tag</option>
+              <option value="tag_presence">Presença de tag (CRM)</option>
+              <option value="whatsapp_label_presence">Presença de etiqueta (WhatsApp)</option>
               <option value="contact_field">Campo do contato</option>
               <option value="message_content">Conteúdo da mensagem</option>
               <option value="time_of_day">Horário do dia</option>
@@ -2335,6 +2336,11 @@ function StepEditor({
             <FieldBlock label="Operando">
               {cfg.subject === "tag_presence" ? (
                 <TagSelect
+                  value={(cfg.operand as string) ?? ""}
+                  onChange={(v) => set({ operand: v })}
+                />
+              ) : cfg.subject === "whatsapp_label_presence" ? (
+                <WhatsappLabelSelect
                   value={(cfg.operand as string) ?? ""}
                   onChange={(v) => set({ operand: v })}
                 />
