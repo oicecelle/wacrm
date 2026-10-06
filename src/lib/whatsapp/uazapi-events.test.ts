@@ -41,12 +41,19 @@ describe("routeUazapiEvent", () => {
     }
   });
 
-  it("history: only the label batches are kept (to be logged); everything else is ignored", () => {
+  it("history: messages, status and the label batches are routed; chats, calls and the rest are ignored", () => {
+    expect(routeUazapiEvent({ EventType: "history", event: "messages" }).route).toBe("history_messages");
+    expect(routeUazapiEvent({ EventType: "history", event: "status" }).route).toBe("history_status");
     expect(routeUazapiEvent({ EventType: "history", event: "labels" }).route).toBe("history_labels");
     expect(routeUazapiEvent({ EventType: "history", event: "chat_labels" }).route).toBe("history_labels");
-    for (const batch of ["messages", "chats", "calls", "status", undefined]) {
+    for (const batch of ["chats", "calls", undefined]) {
       expect(routeUazapiEvent({ EventType: "history", event: batch }).route).toBe("ignored");
     }
+  });
+
+  it("REGRESSION: a history MESSAGES batch must never fall through to the live-message path (it would fire automations)", () => {
+    expect(routeUazapiEvent({ EventType: "history", event: "messages" }).route).not.toBe("messages");
+    expect(routeUazapiEvent({ EventType: "history", event: "messages" }).route).not.toBe("legacy");
   });
 
   it("ignores an event type it has never heard of", () => {

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import {
   routeUazapiEvent,
   parseConnectionStatus,
@@ -7,6 +7,14 @@ import {
   parseChatLabelsEvent,
 } from '@/lib/whatsapp/uazapi-events'
 import { applyLabelDefinition, applyChatLabels } from '@/lib/whatsapp/labels-sync'
+import { allowsContactCreation, importHistoryMessages, type HistoryMessage } from '@/lib/whatsapp/history-import'
+import { createSupabaseHistoryStore } from '@/lib/whatsapp/history-store'
+import {
+  parseHistoryStatusBatch,
+  applyManualHistoryStatus,
+  markPairingImportDone,
+  markPairingImportStarted,
+} from '@/lib/whatsapp/history-status'
 import { advanceMessageStatuses, idVariants } from '@/lib/whatsapp/apply-receipt'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
@@ -32,6 +40,10 @@ function supabaseAdmin() {
 export async function GET() {
   return NextResponse.json({ status: 'active', service: 'uazapi-webhook' }, { status: 200 })
 }
+
+// History batches are processed after the 2xx reply (see `after()`), but
+// still inside this function's lifetime; give a large batch room to finish.
+export const maxDuration = 60
 
 export async function POST(request: Request) {
   try {
@@ -196,6 +208,40 @@ export async function POST(request: Request) {
         console.error('[uazapi-webhook] chat_labels failed:', err instanceof Error ? err.message : err)
       }
       return NextResponse.json({ status: 'ignored', reason: 'chat_labels event not applicable' })
+    }
+
+    if (routed.route === 'history_messages') {
+      // Old messages (the pairing sync, or a "load earlier" request).
+      // Answered with 2xx immediately and processed AFTER the response:
+      // Uazapi asks for a fast reply, and these batches are large. They
+      // are written quietly — see lib/whatsapp/history-import.ts — and
+      // never go through the live-message path below.
+      const batch = Array.isArray(body.messages) ? (body.messages as HistoryMessage[]) : []
+      const owner = typeof body.owner === 'string' ? body.owner : null
+      after(async () => {
+        try {
+          if (config.history_import_state === 'pending') await markPairingImportStarted(db, config.id)
+          const store = createSupabaseHistoryStore(db, config.account_id, config.user_id, owner)
+          const stats = await importHistoryMessages(store, batch, { allowCreate: allowsContactCreation(config) })
+          console.log('[uazapi-webhook] history batch imported:', JSON.stringify(stats))
+        } catch (err) {
+          console.error('[uazapi-webhook] history import failed:', err instanceof Error ? err.message : err)
+        }
+      })
+      return NextResponse.json({ status: 'accepted', messages: batch.length })
+    }
+
+    if (routed.route === 'history_status') {
+      after(async () => {
+        try {
+          const parsed = parseHistoryStatusBatch(body)
+          if (parsed?.kind === 'manual') await applyManualHistoryStatus(db, config.account_id, parsed)
+          else if (parsed?.kind === 'pairing_complete') await markPairingImportDone(db, config.id)
+        } catch (err) {
+          console.error('[uazapi-webhook] history status failed:', err instanceof Error ? err.message : err)
+        }
+      })
+      return NextResponse.json({ status: 'accepted' })
     }
 
     if (routed.route === 'history_labels') {

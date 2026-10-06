@@ -49,7 +49,9 @@ export type UazapiEventRoute =
   | "receipt"
   | "label_definition"
   | "chat_labels"
-  | "history_labels" // label batches inside `history`: logged only (item shape undocumented)
+  | "history_labels" // label batches inside `history`: logged only (items are definitions)
+  | "history_messages" // old messages: pairing sync and "load earlier" requests
+  | "history_status" // end of a history sync / result of one "load earlier" request
   | "ignored";
 
 const ROUTES: Record<string, UazapiEventRoute> = {
@@ -75,13 +77,17 @@ export function routeUazapiEvent(body: unknown): { route: UazapiEventRoute; even
       : null;
   if (!eventType) return { route: "legacy", eventType: null };
 
-  // `history` carries many kinds of batch (messages, chats, calls…) in
-  // its `event` field. Only the two label batches matter here — and
-  // only to be recorded: the docs don't describe the shape of their
-  // items, so they are captured for inspection rather than guessed at.
+  // `history` carries many kinds of batch in its `event` field:
+  // messages (imported), status (end of a sync / result of a "load
+  // earlier" request), the two label batches (recorded only — they carry
+  // definitions, confirmed on a real batch), and chats/calls (ignored).
   if (eventType === "history") {
     const batch = (body as { event?: unknown }).event;
-    return { route: batch === "labels" || batch === "chat_labels" ? "history_labels" : "ignored", eventType };
+    if (batch === "messages") return { route: "history_messages", eventType };
+    if (batch === "status") return { route: "history_status", eventType };
+    if (batch === "labels" || batch === "chat_labels") return { route: "history_labels", eventType };
+    // `chats` and `calls` batches carry nothing we store.
+    return { route: "ignored", eventType };
   }
   return { route: ROUTES[eventType] ?? "ignored", eventType };
 }
