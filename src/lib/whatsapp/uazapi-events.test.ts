@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   UAZAPI_WEBHOOK_EVENTS,
+  bareLabelId,
   bareMessageId,
   mapReceiptState,
   normalizeWaLabelIds,
@@ -128,6 +129,23 @@ describe("labels", () => {
     expect(normalizeWaLabelIds('[{"labelid":"7"},{"id":"8"}]')).toEqual(["7", "8"]);
     expect(normalizeWaLabelIds("10,20 30")).toEqual(["10", "20", "30"]);
     expect(normalizeWaLabelIds("{not json")).toEqual([]);
+  });
+
+  it("REGRESSION: real wa_label ids carry the owner number — stored bare, so they match the definitions", () => {
+    // Exactly what the production webhook logs showed.
+    expect(normalizeWaLabelIds(["5521966177727:11"])).toEqual(["11"]);
+    expect(normalizeWaLabelIds('["554196864960:15"]')).toEqual(["15"]);
+    expect(normalizeWaLabelIds([{ id: "554196864960:9" }])).toEqual(["9"]);
+    expect(normalizeWaLabelIds("554196864960:4, 554196864960:6")).toEqual(["4", "6"]);
+    expect(bareLabelId("554196864960:15")).toBe("15");
+    expect(bareLabelId("15")).toBe("15");
+    expect(
+      parseChatLabelsEvent({ chat: { wa_chatid: "554198755731@s.whatsapp.net", wa_label: ["554196864960:15"] } })?.labelIds,
+    ).toEqual(["15"]);
+  });
+
+  it("a labels event id with the owner prefix is stored bare too", () => {
+    expect(parseLabelEvent({ event: { LabelID: "554196864960:9", Action: { name: "X" } } })?.labelId).toBe("9");
   });
 
   it("parses a chat_labels event, including 'all removed'", () => {

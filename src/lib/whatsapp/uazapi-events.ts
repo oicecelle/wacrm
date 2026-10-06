@@ -151,6 +151,19 @@ export function parseReceiptEvent(body: unknown): ParsedReceipt | null {
 // ── labels ───────────────────────────────────────────────────────
 
 /**
+ * WhatsApp label ids arrive as `<owner number>:<label id>` (e.g.
+ * `554196864960:15`) in `chat.wa_label` and as the `id` of a Label, but
+ * the bare number (`15`, the Label's `labelid`) is what the definitions
+ * and `POST /chat/labels` use. Everything is stored under the bare id.
+ * Missing this made every association miss its definition, so no
+ * contact ever showed a label even though the events were arriving.
+ */
+export function bareLabelId(id: string): string {
+  const i = id.lastIndexOf(":");
+  return (i >= 0 ? id.slice(i + 1) : id).trim();
+}
+
+/**
  * `chat.wa_label` is documented as "variable; may be JSON text".
  * Accepts an array of ids/objects, a JSON string of the same, or a
  * plain comma/space separated string, and returns the label ids.
@@ -169,7 +182,7 @@ export function normalizeWaLabelIds(raw: unknown): string[] {
         }
         return "";
       })
-      .map((s) => s.trim())
+      .map((s) => bareLabelId(s))
       .filter(Boolean);
   }
   if (typeof raw === "string") {
@@ -182,7 +195,7 @@ export function normalizeWaLabelIds(raw: unknown): string[] {
         return [];
       }
     }
-    return text.split(/[\s,;]+/).filter(Boolean);
+    return text.split(/[\s,;]+/).map(bareLabelId).filter(Boolean);
   }
   return [];
 }
@@ -215,7 +228,7 @@ export function parseLabelEvent(body: unknown): ParsedLabelDefinition | null {
   if (!ev || (typeof rawId !== "string" && typeof rawId !== "number")) return null;
   const action = (ev.Action && typeof ev.Action === "object" ? ev.Action : {}) as Record<string, unknown>;
   return {
-    labelId: String(rawId),
+    labelId: bareLabelId(String(rawId)),
     name: typeof action.name === "string" ? action.name : undefined,
     color: typeof action.color === "number" ? action.color : undefined,
     deleted: action.deleted === true,
