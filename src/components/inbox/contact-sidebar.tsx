@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
+import { ContactWhatsappLabels } from "@/components/inbox/contact-whatsapp-labels";
 import {
   Phone,
   Mail,
@@ -276,11 +277,16 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
           {/* Divider */}
           <div className="my-4 border-t border-border" />
 
-          {/* Tags */}
+          {/* WhatsApp labels — their own section, apart from CRM tags */}
+          <ContactWhatsappLabels contactId={contact.id} />
+
+          <div className="my-4 border-t border-border" />
+
+          {/* CRM tags */}
           <div>
             <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <TagIcon className="h-3 w-3" />
-              Tags
+              Tags do CRM
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {tags.length === 0 ? (

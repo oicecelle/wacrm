@@ -27,18 +27,24 @@ interface MessageBubbleProps {
   onToggleReaction?: (emoji: string) => void;
 }
 
-function StatusIcon({ status }: { status: Message["status"] }) {
+/**
+ * Delivery ticks, as WhatsApp shows them: one grey tick = sent to the
+ * server, two grey = delivered to the phone, two blue = read (only when
+ * the contact has read receipts on). Shared by the message bubble and
+ * the conversation list so both always say the same thing.
+ */
+export function StatusIcon({ status, className = "h-3.5 w-3.5" }: { status: Message["status"] | null | undefined; className?: string }) {
   switch (status) {
     case "sending":
-      return <Clock className="h-3 w-3 text-muted-foreground" />;
+      return <Clock className={`${className} text-muted-foreground`} aria-label="Enviando" />;
     case "sent":
-      return <Check className="h-3 w-3 text-muted-foreground" />;
+      return <Check className={`${className} text-muted-foreground`} aria-label="Enviada" />;
     case "delivered":
-      return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
+      return <CheckCheck className={`${className} text-muted-foreground`} aria-label="Entregue" />;
     case "read":
-      return <CheckCheck className="h-3 w-3 text-blue-400" />;
+      return <CheckCheck className={`${className} text-[#53bdeb]`} aria-label="Lida" />;
     case "failed":
-      return <XCircle className="h-3 w-3 text-red-400" />;
+      return <XCircle className={`${className} text-red-400`} aria-label="Falhou" />;
     default:
       return null;
   }

@@ -163,6 +163,8 @@ export interface Conversation {
   updated_at: string;
   is_pinned?: boolean;
   last_message_from_me?: boolean;
+  /** Status of the latest message (kept by a DB trigger, migration 077). Drives the ticks in the list. */
+  last_message_status?: MessageStatus | null;
   contact?: Contact;
 }
 

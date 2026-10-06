@@ -5,7 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus } from "@/types";
-import { Search, ChevronDown, Pin, CheckCheck } from "lucide-react";
+import { Search, ChevronDown, Pin } from "lucide-react";
+import { StatusIcon } from "@/components/inbox/message-bubble";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { useContactTags } from "@/hooks/use-contact-tags";
+import { TagChipsRow, TagFilter } from "@/components/inbox/tag-chips";
+import { contactMatchesTagFilter, type ContactTagInfo } from "@/lib/inbox/contact-tag-map";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,6 +65,9 @@ export function ConversationList({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [loading, setLoading] = useState(true);
+  const [tagFilter, setTagFilter] = useState<Set<string>>(() => new Set());
+  const [labelsReload, setLabelsReload] = useState(0);
+  const { byContact, crmTags, waLabels } = useContactTags(accountId, resyncToken + labelsReload);
 
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
@@ -84,28 +92,32 @@ export function ConversationList({
     let cancelled = false;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("conversations")
-        .select("*, contact:contacts(*)")
-        .eq("account_id", accountId)
-        .order("is_pinned", { ascending: false })
-        .order("last_message_at", { ascending: false, nullsFirst: false });
-
-      if (cancelled) return;
-
-      if (error) {
-        // Supabase errors have non-enumerable properties — log fields explicitly
-        console.error("Failed to fetch conversations:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
+      // Paginated: a plain select is cut at 1,000 rows by PostgREST
+      // without any error, and the biggest clinic already has 1,300+
+      // conversations — the oldest ones were invisible and unsearchable.
+      // `id` breaks ties so pages never overlap or skip rows.
+      let rows: Conversation[] = [];
+      try {
+        rows = await fetchAllRows<Conversation>((from, to) =>
+          supabase
+            .from("conversations")
+            .select("*, contact:contacts(*)")
+            .eq("account_id", accountId)
+            .order("is_pinned", { ascending: false })
+            .order("last_message_at", { ascending: false, nullsFirst: false })
+            .order("id", { ascending: false })
+            .range(from, to) as unknown as PromiseLike<{ data: Conversation[] | null; error: { message: string } | null }>,
+        );
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to fetch conversations:", error instanceof Error ? error.message : error);
         setLoading(false);
         return;
       }
 
-      onConversationsLoadedRef.current(data ?? []);
+      if (cancelled) return;
+
+      onConversationsLoadedRef.current(rows);
       setLoading(false);
     })();
 
@@ -124,6 +136,10 @@ export function ConversationList({
       result = result.filter((c) => c.unread_count > 0);
     } else if (filter !== "all") {
       result = result.filter((c) => c.status === filter);
+    }
+
+    if (tagFilter.size > 0) {
+      result = result.filter((c) => contactMatchesTagFilter(byContact.get(c.contact_id), tagFilter));
     }
 
     if (search.trim()) {
@@ -146,7 +162,7 @@ export function ConversationList({
       const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
       return bTime - aTime;
     });
-  }, [conversations, filter, search]);
+  }, [conversations, filter, search, tagFilter, byContact]);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,6 +197,7 @@ export function ConversationList({
           />
         </div>
 
+        <div className="flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex items-center justify-center h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-muted">
               {activeFilter?.label ?? "All"}
@@ -206,6 +223,15 @@ export function ConversationList({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        <TagFilter
+          crmTags={crmTags}
+          waLabels={waLabels}
+          byContact={byContact}
+          selected={tagFilter}
+          onChange={setTagFilter}
+          onSynced={() => setLabelsReload((n) => n + 1)}
+        />
+        </div>
       </div>
 
       {/* Conversation Items.
@@ -232,6 +258,7 @@ export function ConversationList({
                 isActive={conv.id === activeConversationId}
                 onSelect={handleSelect}
                 onPinToggle={onPinToggle}
+                tags={byContact.get(conv.contact_id)}
               />
             ))}
           </div>
@@ -246,6 +273,7 @@ interface ConversationItemProps {
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
   onPinToggle?: (conversationId: string, currentPinned: boolean) => void;
+  tags?: ContactTagInfo;
 }
 
 function ConversationItem({
@@ -253,6 +281,7 @@ function ConversationItem({
   isActive,
   onSelect,
   onPinToggle,
+  tags,
 }: ConversationItemProps) {
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || "Desconhecido";
@@ -324,8 +353,12 @@ function ConversationItem({
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 min-w-0 flex-1">
+            {/* Real status of the last message. This used to render two BLUE
+                ticks for every last message we sent, whatever its status. */}
             {conversation.last_message_from_me && (
-              <CheckCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              <span className="shrink-0">
+                <StatusIcon status={conversation.last_message_status ?? "sent"} />
+              </span>
             )}
             <p className="truncate text-xs text-muted-foreground">
               {conversation.last_message_text || "Nenhuma mensagem ainda"}
@@ -346,6 +379,7 @@ function ConversationItem({
             />
           </div>
         </div>
+        <TagChipsRow info={tags} />
       </div>
     </div>
   );
