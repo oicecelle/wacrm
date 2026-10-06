@@ -36,6 +36,7 @@ import {
   HeartOff,
   StickyNote,
   Eraser,
+  MessageCircle,
   ArrowDown,
   ArrowUp,
   CalendarPlus,
@@ -71,6 +72,7 @@ import type {
   Tag as TagRecord,
 } from "@/types"
 import { createClient } from "@/lib/supabase/client"
+import { waLabelColor } from "@/lib/whatsapp/label-colors"
 import { useAuth } from "@/hooks/use-auth"
 import { useWhatsappProvider } from "@/hooks/use-whatsapp-provider"
 import { cn } from "@/lib/utils"
@@ -114,8 +116,10 @@ export const STEP_META: Record<AutomationStepType, StepMeta> = {
   send_message: { label: "Enviar mensagem", icon: MessageSquare, border: "border-l-blue-600" },
   send_template: { label: "Enviar Modelo Salvo", icon: FileText, border: "border-l-indigo-600" },
   send_media: { label: "Enviar Foto / Anexo", icon: ImagePlus, border: "border-l-cyan-600" },
-  add_tag: { label: "Adicionar tag", icon: Tag, border: "border-l-emerald-600" },
-  remove_tag: { label: "Remover tag", icon: TagIcon, border: "border-l-amber-600" },
+  add_tag: { label: "Adicionar tag (CRM)", icon: Tag, border: "border-l-emerald-600" },
+  remove_tag: { label: "Remover tag (CRM)", icon: TagIcon, border: "border-l-amber-600" },
+  add_whatsapp_label: { label: "Adicionar etiqueta (WhatsApp)", icon: MessageCircle, border: "border-l-green-500" },
+  remove_whatsapp_label: { label: "Remover etiqueta (WhatsApp)", icon: MessageCircle, border: "border-l-green-300" },
   assign_conversation: { label: "Criar tarefa / Atribuir", icon: UserCheck, border: "border-l-purple-600" },
   update_contact_field: { label: "Mudar dado do contato", icon: PencilLine, border: "border-l-blue-600" },
   update_deal_field: { label: "Mudar qualificação do negócio", icon: PencilLine, border: "border-l-sky-600" },
@@ -151,6 +155,8 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "remove_note",
   "add_tag",
   "remove_tag",
+  "add_whatsapp_label",
+  "remove_whatsapp_label",
   "assign_conversation",
   "create_deal",
   "create_appointment",
@@ -198,6 +204,9 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
     case "add_tag":
     case "remove_tag":
       return { tag_id: "" }
+    case "add_whatsapp_label":
+    case "remove_whatsapp_label":
+      return { wa_label_id: "" }
     case "assign_conversation":
       return { mode: "round_robin" }
     case "update_contact_field":
@@ -251,6 +260,8 @@ interface AutomationResources {
   customFields: CustomField[]
   pipelineStages: { id: string; name: string }[]
   crmStatuses: { id: string; nome: string }[]
+  /** WhatsApp labels mirrored from the clinic's phone (not CRM tags). */
+  waLabels: { id: string; name: string; color: string }[]
 }
 
 const ResourcesContext = createContext<AutomationResources>({
@@ -260,6 +271,7 @@ const ResourcesContext = createContext<AutomationResources>({
   customFields: [],
   pipelineStages: [],
   crmStatuses: [],
+  waLabels: [],
 })
 
 function useResources(): AutomationResources {
@@ -275,6 +287,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string }[]>([])
   const [crmStatuses, setCrmStatuses] = useState<{ id: string; nome: string }[]>([])
+  const [waLabels, setWaLabels] = useState<{ id: string; name: string; color: string }[]>([])
 
   useEffect(() => {
     if (!accountId) return
@@ -303,7 +316,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
           ? templatesQuery.eq("status", "APPROVED")
           : templatesQuery.not("status", "in", "(REJECTED,DISABLED)")
 
-      const [tagsRes, templatesRes, customFieldsRes, stagesRes, crmStatusRes] = await Promise.all([
+      const [tagsRes, templatesRes, customFieldsRes, stagesRes, crmStatusRes, waLabelsRes] = await Promise.all([
         supabase.from("tags").select("*").eq("account_id", accountId).order("name"),
         templatesQuery,
         supabase.from("custom_fields").select("*").eq("account_id", accountId).order("field_name"),
@@ -313,6 +326,12 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
           .eq("pipelines.account_id", accountId)
           .order("position"),
         supabase.from("crm_status").select("id, nome, ordem").eq("clinic_id", accountId).order("ordem"),
+        supabase
+          .from("whatsapp_labels")
+          .select("wa_label_id, name, color")
+          .eq("account_id", accountId)
+          .eq("deleted", false)
+          .order("name"),
       ])
       if (cancelled) return
       setTags((tagsRes.data as TagRecord[] | null) ?? [])
@@ -320,6 +339,13 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
       setCustomFields((customFieldsRes.data as CustomField[] | null) ?? [])
       setPipelineStages(((stagesRes.data as { id: string; name: string }[] | null) ?? []).map((s) => ({ id: s.id, name: s.name })))
       setCrmStatuses(((crmStatusRes.data as { id: string; nome: string }[] | null) ?? []).map((s) => ({ id: s.id, nome: s.nome })))
+      setWaLabels(
+        ((waLabelsRes.data as { wa_label_id: string; name: string; color: number | null }[] | null) ?? []).map((l) => ({
+          id: l.wa_label_id,
+          name: l.name || `Etiqueta ${l.wa_label_id}`,
+          color: waLabelColor(l.color),
+        })),
+      )
     })()
 
     // Members go through the API so we inherit its email-visibility
@@ -342,7 +368,7 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
   }, [accountId, providerType])
 
   return (
-    <ResourcesContext.Provider value={{ tags, members, templates, customFields, pipelineStages, crmStatuses }}>
+    <ResourcesContext.Provider value={{ tags, members, templates, customFields, pipelineStages, crmStatuses, waLabels }}>
       {children}
     </ResourcesContext.Provider>
   )
@@ -353,6 +379,49 @@ const SELECT_CLASS =
 
 /** Tag dropdown by name + color, storing the tag's id. Falls back to a
  *  raw id input when no tags exist yet. */
+/**
+ * WhatsApp label picker. These are the labels that exist in the
+ * clinic's own WhatsApp (mirrored here), not CRM tags — applying one
+ * changes the real chat. Falls back to an explanation when none have
+ * been synced yet, like TagSelect does.
+ */
+function WhatsappLabelSelect({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { waLabels } = useResources()
+  if (waLabels.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
+        Nenhuma etiqueta do WhatsApp sincronizada ainda. Abra a Caixa de Entrada, clique em{" "}
+        <span className="font-bold text-foreground">Etiquetas → Sincronizar</span> e volte aqui. (Etiquetas são um
+        recurso do WhatsApp Business.)
+      </p>
+    )
+  }
+  const selected = waLabels.find((l) => l.id === value)
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="h-3 w-3 shrink-0 rounded-[3px] border border-border"
+        style={{ backgroundColor: selected?.color ?? "transparent" }}
+        aria-hidden
+      />
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
+        <option value="">Selecione uma etiqueta…</option>
+        {waLabels.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 function TagSelect({
   value,
   onChange,
@@ -1892,6 +1961,22 @@ function StepEditor({
           onChange={(patch) => set(patch)}
         />
       )
+    case "add_whatsapp_label":
+    case "remove_whatsapp_label":
+      return (
+        <>
+          <FieldBlock label="Etiqueta do WhatsApp">
+            <WhatsappLabelSelect
+              value={(cfg.wa_label_id as string) ?? ""}
+              onChange={(v) => set({ wa_label_id: v })}
+            />
+          </FieldBlock>
+          <p className="text-xs text-muted-foreground">
+            Muda a etiqueta na conversa do WhatsApp de verdade (pela Uazapi), não só aqui no CRM. Se a etiqueta tiver
+            sido apagada no celular ou a conexão estiver fora do ar, a etapa falha com o motivo.
+          </p>
+        </>
+      )
     case "add_tag":
     case "remove_tag":
       return (
@@ -2397,6 +2482,9 @@ export function previewFor(step: BuilderStep): string {
     case "edit_interest":
     case "edit_note":
       return `${(step.step_config.value as string) || "?"} → ${(step.step_config.new_value as string) || "?"}`
+    case "add_whatsapp_label":
+    case "remove_whatsapp_label":
+      return step.step_config.wa_label_id ? "etiqueta selecionada" : "escolha a etiqueta"
     case "remove_note":
     case "add_interest":
     case "remove_interest":

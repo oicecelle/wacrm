@@ -25,6 +25,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useWhatsappLabels } from "@/hooks/use-whatsapp-labels";
 import {
   Loader2,
   Paperclip,
@@ -765,7 +766,9 @@ function ConditionForm({
 
 interface SetTagCfg {
   mode?: "add" | "remove";
+  kind?: "crm" | "whatsapp";
   tag_id?: string;
+  wa_label_id?: string;
   next_node_key?: string;
 }
 
@@ -781,9 +784,31 @@ function SetTagForm({
   onUpdateConfig: (patch: Record<string, unknown>) => void;
 }) {
   const tags = useUserTags();
+  const waLabels = useWhatsappLabels();
+  const isWhatsapp = cfg.kind === "whatsapp";
 
   return (
     <>
+      <div className="mb-3">
+        <label className="mb-1 block text-xs text-muted-foreground">Tipo</label>
+        <Select
+          value={cfg.kind ?? "crm"}
+          onValueChange={(v) => onUpdateConfig({ kind: v as SetTagCfg["kind"] })}
+        >
+          <SelectTrigger className="bg-muted">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="crm">Tag do CRM</SelectItem>
+            <SelectItem value="whatsapp">Etiqueta do WhatsApp</SelectItem>
+          </SelectContent>
+        </Select>
+        {isWhatsapp && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Muda a etiqueta na conversa do WhatsApp de verdade. Se não der certo, o fluxo segue e o motivo fica no registro.
+          </p>
+        )}
+      </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs text-muted-foreground">Ação</label>
@@ -797,14 +822,36 @@ function SetTagForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="add">Adicionar tag</SelectItem>
-              <SelectItem value="remove">Remover tag</SelectItem>
+              <SelectItem value="add">{isWhatsapp ? "Adicionar etiqueta" : "Adicionar tag"}</SelectItem>
+              <SelectItem value="remove">{isWhatsapp ? "Remover etiqueta" : "Remover tag"}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground">Tag</label>
-          {tags.length > 0 ? (
+          <label className="mb-1 block text-xs text-muted-foreground">{isWhatsapp ? "Etiqueta do WhatsApp" : "Tag"}</label>
+          {isWhatsapp ? (
+            waLabels.length > 0 ? (
+              <Select
+                value={cfg.wa_label_id ?? ""}
+                onValueChange={(v) => onUpdateConfig({ wa_label_id: v })}
+              >
+                <SelectTrigger className="bg-muted">
+                  <SelectValue placeholder="Escolha uma etiqueta…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {waLabels.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="rounded-lg border border-dashed border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                Nenhuma etiqueta sincronizada ainda. Na Caixa de Entrada, use Etiquetas → Sincronizar.
+              </p>
+            )
+          ) : tags.length > 0 ? (
             <Select
               value={cfg.tag_id ?? ""}
               onValueChange={(v) => onUpdateConfig({ tag_id: v })}

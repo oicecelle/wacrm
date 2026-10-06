@@ -101,6 +101,9 @@ vi.mock("./admin-client", () => {
   };
 });
 
+const labelAction = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/whatsapp/label-actions", () => ({ setContactWhatsappLabel: labelAction }));
+
 vi.mock("./meta-send", () => ({
   engineSendText: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
   engineSendTemplate: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
@@ -418,5 +421,68 @@ describe("send-interval pacing in the automations engine", () => {
     await trigger();
     expect(h.state.rpcCalls).not.toContain("reserve_automation_send_slot");
     expect(engineSendText).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe("WhatsApp label steps", () => {
+  const labelStep = (type: "add_whatsapp_label" | "remove_whatsapp_label", wa_label_id = "10") => ({
+    id: "lbl1",
+    automation_id: "a1",
+    step_type: type,
+    position: 0,
+    parent_step_id: null,
+    step_config: { wa_label_id },
+  });
+  const sendStep = {
+    id: "send2",
+    automation_id: "a1",
+    step_type: "send_message",
+    position: 1,
+    parent_step_id: null,
+    step_config: { text: "depois da etiqueta" },
+  };
+  const trigger = () =>
+    runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "new_message_received",
+      contactId: "c1",
+      context: { message_text: "hi", conversation_id: "conv1" },
+    });
+
+  beforeEach(() => {
+    labelAction.mockReset();
+    h.state.owned = { id: "c1" };
+    h.state.automations = [automationWithUpdateStep()];
+  });
+
+  it("add: calls the label service for THIS account and contact, then carries on", async () => {
+    labelAction.mockResolvedValue({ ok: true });
+    h.state.steps = [labelStep("add_whatsapp_label", "10"), sendStep];
+    await trigger();
+    expect(labelAction).toHaveBeenCalledWith(expect.anything(), ACCOUNT, "c1", "10", "add");
+    expect(engineSendText).toHaveBeenCalledTimes(1);
+  });
+
+  it("remove maps to the 'remove' operation", async () => {
+    labelAction.mockResolvedValue({ ok: true });
+    h.state.steps = [labelStep("remove_whatsapp_label", "20")];
+    await trigger();
+    expect(labelAction).toHaveBeenCalledWith(expect.anything(), ACCOUNT, "c1", "20", "remove");
+  });
+
+  it("REGRESSION: when WhatsApp refuses, the step FAILS and later steps do not run (no false success)", async () => {
+    labelAction.mockResolvedValue({ ok: false, error: "label not found" });
+    h.state.steps = [labelStep("add_whatsapp_label", "999"), sendStep];
+    await trigger();
+    expect(labelAction).toHaveBeenCalledTimes(1);
+    expect(engineSendText).not.toHaveBeenCalled();
+  });
+
+  it("a step with no label chosen fails without calling WhatsApp", async () => {
+    h.state.steps = [labelStep("add_whatsapp_label", ""), sendStep];
+    await trigger();
+    expect(labelAction).not.toHaveBeenCalled();
+    expect(engineSendText).not.toHaveBeenCalled();
   });
 });

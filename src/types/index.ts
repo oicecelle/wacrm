@@ -439,6 +439,8 @@ export type AutomationStepType =
   | 'send_media'
   | 'add_tag'
   | 'remove_tag'
+  | 'add_whatsapp_label'
+  | 'remove_whatsapp_label'
   | 'assign_conversation'
   | 'update_contact_field'
   | 'update_deal_field'
@@ -508,6 +510,11 @@ export interface SendMediaStepConfig {
 
 export interface TagStepConfig {
   tag_id: string;
+}
+
+/** WhatsApp label (etiqueta) — NOT a CRM tag. `wa_label_id` is WhatsApp's own id. */
+export interface WhatsappLabelStepConfig {
+  wa_label_id: string;
 }
 
 export interface AssignConversationStepConfig {

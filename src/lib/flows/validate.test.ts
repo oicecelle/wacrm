@@ -547,3 +547,30 @@ describe("reachableFromEntry", () => {
     expect(set).toEqual(new Set(["a", "b"]));
   });
 });
+
+describe("set_tag node — CRM tags and WhatsApp labels", () => {
+  const flowWith = (tagCfg: Record<string, unknown>) => [
+    { node_key: "start", node_type: "start", config: { next_node_key: "tag" } },
+    { node_key: "tag", node_type: "set_tag", config: { mode: "add", next_node_key: "ho", ...tagCfg } },
+    { node_key: "ho", node_type: "handoff", config: {} },
+  ];
+  const errorsFor = (cfg: Record<string, unknown>) =>
+    validateFlowForActivation(validFlow, flowWith(cfg)).filter((i) => i.node_key === "tag" && i.severity === "error");
+
+  it("a flow saved before WhatsApp labels existed (no `kind`) is still a CRM tag node", () => {
+    expect(errorsFor({ tag_id: "tag-1" })).toEqual([]);
+    expect(errorsFor({}).map((i) => i.field)).toContain("tag_id");
+  });
+
+  it("kind 'crm' needs tag_id", () => {
+    expect(errorsFor({ kind: "crm", tag_id: "t" })).toEqual([]);
+    expect(errorsFor({ kind: "crm" }).map((i) => i.field)).toContain("tag_id");
+  });
+
+  it("kind 'whatsapp' needs a label, NOT a tag_id", () => {
+    expect(errorsFor({ kind: "whatsapp", wa_label_id: "10" })).toEqual([]);
+    const missing = errorsFor({ kind: "whatsapp", tag_id: "leftover-crm-tag" });
+    expect(missing.map((i) => i.field)).toContain("wa_label_id");
+    expect(missing.map((i) => i.field)).not.toContain("tag_id");
+  });
+});

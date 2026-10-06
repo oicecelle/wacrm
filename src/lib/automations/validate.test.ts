@@ -91,6 +91,20 @@ describe("validateStepsForActivation", () => {
     ]);
   });
 
+  it("requires a WhatsApp label for the label steps", () => {
+    expect(
+      validateStepsForActivation([
+        { step_type: "add_whatsapp_label", step_config: { wa_label_id: "10" } },
+        { step_type: "remove_whatsapp_label", step_config: { wa_label_id: "10" } },
+      ]),
+    ).toEqual([]);
+    const bad = validateStepsForActivation([
+      { step_type: "add_whatsapp_label", step_config: { wa_label_id: "" } },
+      { step_type: "remove_whatsapp_label", step_config: {} },
+    ]);
+    expect(bad.map((i) => i.path)).toEqual(["steps[0].wa_label_id", "steps[1].wa_label_id"]);
+  });
+
   it("still flags a genuinely unknown step type", () => {
     const issues = validateStepsForActivation([{ step_type: "teleport", step_config: {} }]);
     expect(issues).toHaveLength(1);

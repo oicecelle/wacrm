@@ -74,6 +74,12 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.tag_id`, message: 'a tag é obrigatória' })
       }
       break
+    case 'add_whatsapp_label':
+    case 'remove_whatsapp_label':
+      if (!nonEmpty(c.wa_label_id)) {
+        issues.push({ path: `${path}.wa_label_id`, message: 'escolha a etiqueta do WhatsApp' })
+      }
+      break
     case 'assign_conversation':
       if (c.mode === 'specific' && !nonEmpty(c.agent_id)) {
         issues.push({

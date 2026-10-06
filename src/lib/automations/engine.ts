@@ -10,6 +10,7 @@ import type {
   SendMediaStepConfig,
   SendWebhookStepConfig,
   TagStepConfig,
+  WhatsappLabelStepConfig,
   UpdateContactFieldStepConfig,
   UpdateDealFieldStepConfig,
   DealListEntryStepConfig,
@@ -22,6 +23,7 @@ import type {
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { planPacedSend, sleep, INLINE_BUDGET_MS } from '@/lib/messaging/pacing'
+import { setContactWhatsappLabel } from '@/lib/whatsapp/label-actions'
 import { engineSendText, engineSendTemplate, engineSendMedia } from './meta-send'
 import { extractFromTemplate, combineDateAndTime } from './template-extract'
 
@@ -500,6 +502,22 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           { onConflict: 'contact_id,tag_id', ignoreDuplicates: true },
         )
       return `tag ${cfg.tag_id} added`
+    }
+
+    case 'add_whatsapp_label':
+    case 'remove_whatsapp_label': {
+      // The label lives in the clinic's WhatsApp, so this calls Uazapi
+      // (and mirrors the result locally). A refusal — label deleted in
+      // the phone, no Uazapi connection, contact without a phone —
+      // FAILS the step with Uazapi's own reason, instead of the
+      // automation reporting success for something that never happened.
+      const cfg = step.step_config as WhatsappLabelStepConfig
+      if (!args.contactId) throw new Error(`${step.step_type} needs a contact`)
+      if (!cfg.wa_label_id) throw new Error(`${step.step_type} needs a WhatsApp label`)
+      const op = step.step_type === 'add_whatsapp_label' ? 'add' : 'remove'
+      const result = await setContactWhatsappLabel(db, args.automation.account_id, args.contactId, cfg.wa_label_id, op)
+      if (!result.ok) throw new Error(result.error ?? 'WhatsApp label operation failed')
+      return `WhatsApp label ${cfg.wa_label_id} ${op === 'add' ? 'added' : 'removed'}`
     }
 
     case 'remove_tag': {

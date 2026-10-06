@@ -41,7 +41,6 @@ export function ContactWhatsappLabels({ contactId }: { contactId: string }) {
   }, [accountId, contactId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async load, state set after the awaits
     load();
   }, [load]);
 

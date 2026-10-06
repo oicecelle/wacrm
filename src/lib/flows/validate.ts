@@ -660,7 +660,9 @@ function validateNode(
     case "set_tag": {
       const cfg = node.config as {
         mode?: "add" | "remove";
+        kind?: "crm" | "whatsapp";
         tag_id?: string;
+        wa_label_id?: string;
         next_node_key?: string;
       };
       if (!cfg.mode || !["add", "remove"].includes(cfg.mode)) {
@@ -672,7 +674,17 @@ function validateNode(
           message: "A etapa de tag precisa de um modo (adicionar ou remover).",
         });
       }
-      if (!cfg.tag_id) {
+      if (cfg.kind === "whatsapp") {
+        if (!cfg.wa_label_id) {
+          issues.push({
+            severity: "error",
+            scope: "node",
+            node_key: node.node_key,
+            field: "wa_label_id",
+            message: "A etapa precisa de uma etiqueta do WhatsApp pra aplicar.",
+          });
+        }
+      } else if (!cfg.tag_id) {
         issues.push({
           severity: "error",
           scope: "node",

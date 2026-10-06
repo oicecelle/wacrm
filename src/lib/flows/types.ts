@@ -169,8 +169,18 @@ export interface ConditionNodeConfig {
 
 export interface SetTagNodeConfig {
   mode: "add" | "remove";
+  /**
+   * Which kind of tag this node applies. Absent = "crm", so every flow
+   * saved before WhatsApp labels existed keeps behaving exactly the same.
+   *  - "crm":      a tag from this system (`tag_id`)
+   *  - "whatsapp": a label in the clinic's WhatsApp (`wa_label_id`) —
+   *                changes the real chat through Uazapi
+   */
+  kind?: "crm" | "whatsapp";
   /** Tag UUID. The builder picks from the user's existing tags. */
   tag_id: string;
+  /** WhatsApp's own label id, when kind is "whatsapp". */
+  wa_label_id?: string;
   next_node_key: string;
 }
 

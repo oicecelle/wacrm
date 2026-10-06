@@ -106,7 +106,7 @@ export const NODE_META: Record<
     color: "text-amber-500",
   },
   set_tag: {
-    label: "Adicionar tag",
+    label: "Tag ou etiqueta",
     icon: Tag,
     color: "text-pink-400",
   },
@@ -274,6 +274,11 @@ export function summarizeNode(node: BuilderNode): string | null {
     }
     case "set_tag": {
       const mode = cfg.mode === "remove" ? "Remove" : "Add";
+      if (cfg.kind === "whatsapp") {
+        return cfg.wa_label_id
+          ? `${mode} etiqueta do WhatsApp`
+          : `${mode} etiqueta do WhatsApp (nenhuma escolhida)`;
+      }
       const tagId = typeof cfg.tag_id === "string" ? cfg.tag_id : "";
       // No tag name available without an async lookup here; show a
       // short prefix of the UUID so users can disambiguate between

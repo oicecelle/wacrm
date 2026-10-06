@@ -183,7 +183,7 @@ export function defaultConfigFor(type: NodeType): Record<string, unknown> {
         false_next: "",
       };
     case "set_tag":
-      return { mode: "add", tag_id: "", next_node_key: "" };
+      return { mode: "add", kind: "crm", tag_id: "", next_node_key: "" };
     case "set_crm_status":
       return { crm_stage: "", next_node_key: "" };
     case "handoff":

@@ -34,6 +34,7 @@
 
 import { supabaseAdmin } from "./admin-client";
 import { planPacedSend, sleep, INLINE_BUDGET_MS } from "@/lib/messaging/pacing";
+import { setContactWhatsappLabel } from "@/lib/whatsapp/label-actions";
 import {
   engineSendInteractiveButtons,
   engineSendInteractiveList,
@@ -876,7 +877,19 @@ async function advanceFromNodeKey(
     if (node.node_type === "set_tag") {
       const cfg = node.config as unknown as SetTagNodeConfig;
       try {
-        if (cfg.mode === "add") {
+        if (cfg.kind === "whatsapp") {
+          // A label in the clinic's WhatsApp: goes through Uazapi. A
+          // refusal is logged below like any tag-write failure — the
+          // flow still advances rather than strand the customer.
+          const result = await setContactWhatsappLabel(
+            db,
+            run.account_id,
+            run.contact_id!,
+            cfg.wa_label_id ?? "",
+            cfg.mode === "add" ? "add" : "remove",
+          );
+          if (!result.ok) throw new Error(result.error ?? "WhatsApp label operation failed");
+        } else if (cfg.mode === "add") {
           await db
             .from("contact_tags")
             .upsert(
