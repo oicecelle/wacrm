@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { MessageCircle, RefreshCw, Tag as TagIcon, Check, ListFilter } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/api-error";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { tagKey, type ContactTagInfo, type TagChip } from "@/lib/inbox/contact-tag-map";
@@ -103,7 +104,7 @@ export function TagFilter({ crmTags, waLabels, byContact, selected, onChange, on
     try {
       const res = await fetch("/api/whatsapp/labels/sync", { method: "POST" });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || "Falha ao sincronizar");
+      if (!res.ok) throw new Error(apiErrorMessage(res.status, body, "Falha ao sincronizar"));
       toast.success(`${body.labels ?? 0} etiqueta(s) do WhatsApp sincronizada(s).`);
       onSynced();
     } catch (err) {

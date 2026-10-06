@@ -39,6 +39,15 @@ export async function POST() {
     return NextResponse.json({ ok: true, labels: saved, refresh_requested: refreshRequested })
   } catch (err) {
     console.error('[whatsapp/labels/sync] failed:', err)
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Falha ao sincronizar etiquetas.' }, { status: 502 })
+    const message = err instanceof Error ? err.message : ''
+    // Uazapi itself refusing the instance token is a different problem
+    // from our own session check — say so, in plain words.
+    if (/HTTP (401|403)\b/.test(message)) {
+      return NextResponse.json(
+        { error: 'A Uazapi recusou o token desta conexão. Reconecte o número em Configurações → WhatsApp e tente de novo.', source: 'uazapi' },
+        { status: 502 },
+      )
+    }
+    return NextResponse.json({ error: message || 'Falha ao sincronizar etiquetas.', source: 'uazapi' }, { status: 502 })
   }
 }

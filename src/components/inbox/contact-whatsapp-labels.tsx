@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TagBadge } from "@/components/inbox/tag-chips";
 import { waLabelColor } from "@/lib/whatsapp/label-colors";
+import { apiErrorMessage } from "@/lib/api-error";
 import type { TagChip } from "@/lib/inbox/contact-tag-map";
 
 /**
@@ -53,7 +54,7 @@ export function ContactWhatsappLabels({ contactId }: { contactId: string }) {
         body: JSON.stringify({ contact_id: contactId, wa_label_id: label.id, op }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || "A operação não foi aceita pelo WhatsApp.");
+      if (!res.ok) throw new Error(apiErrorMessage(res.status, body, "A operação não foi aceita pelo WhatsApp."));
       await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível alterar a etiqueta.");

@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { shouldBlockUnauthenticatedApi } from '@/lib/auth/middleware-rules'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getEnv } from '@/lib/env'
 
@@ -125,9 +126,19 @@ export async function middleware(request: NextRequest) {
 
   // API routes that need auth (not webhooks)
   // Note: 'webhook' (without leading slash) catches both /webhook and /uazapi-webhook
-  if (!user && request.nextUrl.pathname.startsWith('/api/whatsapp/') &&
-      !request.nextUrl.pathname.includes('webhook')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // An auth check that timed out leaves `user` null too, but that means
+  // "unknown", not "logged out" — see shouldBlockUnauthenticatedApi. The
+  // routes under /api/whatsapp each authenticate the caller themselves,
+  // so letting an unknown session through here is safe. `source` lets a
+  // 401 be traced to this layer instead of the route's own check.
+  if (
+    shouldBlockUnauthenticatedApi({
+      pathname: request.nextUrl.pathname,
+      hasUser: !!user,
+      authCheckTimedOut,
+    })
+  ) {
+    return NextResponse.json({ error: 'Unauthorized', source: 'middleware' }, { status: 401 })
   }
 
   return supabaseResponse
