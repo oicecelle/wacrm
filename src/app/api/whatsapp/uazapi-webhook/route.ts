@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { routeUazapiEvent, parseConnectionStatus } from '@/lib/whatsapp/uazapi-events'
+import { routeUazapiEvent, parseConnectionStatus, parseReceiptEvent } from '@/lib/whatsapp/uazapi-events'
+import { advanceMessageStatuses, idVariants } from '@/lib/whatsapp/apply-receipt'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe'
@@ -142,7 +143,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'processed_connection_update', applied: status })
     }
 
-    if (routed.route === 'receipt' || routed.route === 'label_definition' || routed.route === 'chat_labels') {
+    if (routed.route === 'receipt') {
+      // Delivery / read receipts for messages WE sent. Errors here are
+      // swallowed on purpose: Uazapi does not retry a failed delivery,
+      // and answering 500 only slows its queue.
+      try {
+        const receipt = parseReceiptEvent(body)
+        if (receipt) {
+          const owner = typeof body.owner === 'string' ? body.owner : null
+          const updated = await advanceMessageStatuses(db, config.account_id, receipt.messageIds, receipt.state, owner)
+          // Broadcast recipients are matched by whatsapp_message_id, which
+          // may be stored with or without the `owner:` prefix.
+          for (const variant of idVariants(receipt.messageIds, owner)) {
+            await advanceBroadcastRecipientStatus(db, variant, receipt.state)
+          }
+          return NextResponse.json({ status: 'processed_receipt', state: receipt.state, messages_updated: updated })
+        }
+      } catch (err) {
+        console.error('[uazapi-webhook] receipt handling failed:', err instanceof Error ? err.message : err)
+      }
+      return NextResponse.json({ status: 'ignored', reason: 'receipt not applicable' })
+    }
+
+    if (routed.route === 'label_definition' || routed.route === 'chat_labels') {
       // Handlers arrive in the next steps; until then these must still
       // be acknowledged without touching the message path.
       return NextResponse.json({ status: 'ignored', reason: `event ${routed.eventType} pending handler` })
@@ -411,7 +434,9 @@ export async function POST(request: Request) {
       content_text: contentText || null,
       media_url: mediaUrl || msg.mediaUrl || msg.url || null,
       message_id: messageId,
-      status: 'delivered',
+      // A message typed on the phone starts as just 'sent' and moves up
+      // when Uazapi reports the receipts; customer messages have no ticks.
+      status: fromMe ? 'sent' : 'delivered',
       created_at: new Date().toISOString(),
     })
 
