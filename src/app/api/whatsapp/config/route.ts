@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { decideHistoryImportStart } from '@/lib/whatsapp/history-import-start'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import {
@@ -443,20 +444,30 @@ export async function POST(request: Request) {
       // Check if config exists
       const { data: existing } = await supabase
         .from('whatsapp_config')
-        .select('id')
+        .select('id, connected_at, history_import_state, history_import_started_at')
         .eq('account_id', accountId)
         .maybeSingle()
+
+      // A number that isn't connected yet is about to be paired: open the
+      // first-pairing window so its WhatsApp history is imported (and may
+      // create the contacts/conversations the new account doesn't have).
+      // Otherwise leave the import state untouched.
+      const historyImport = decideHistoryImportStart({
+        connectedNow: status.connected,
+        existing: existing ?? null,
+      })
+      const row = historyImport ? { ...payload, ...historyImport } : payload
 
       if (existing) {
         const { error } = await supabase
           .from('whatsapp_config')
-          .update(payload)
+          .update(row)
           .eq('account_id', accountId)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('whatsapp_config')
-          .insert(payload)
+          .insert(row)
         if (error) throw error
       }
 

@@ -157,6 +157,16 @@ export async function POST(request: Request) {
           .from('whatsapp_config')
           .update({ status, updated_at: new Date().toISOString() })
           .eq('id', config.id)
+        // Remember that this number HAS paired. The first-pairing history
+        // window keys off it: a connection that has connected before must
+        // never be treated as a brand-new one (only set once, never moved).
+        if (status === 'connected') {
+          await db
+            .from('whatsapp_config')
+            .update({ connected_at: new Date().toISOString() })
+            .eq('id', config.id)
+            .is('connected_at', null)
+        }
         console.log(`[uazapi-webhook] Connection event → ${status}`)
       }
       return NextResponse.json({ status: 'processed_connection_update', applied: status })
