@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { HistoryImportNote } from "@/components/whatsapp/history-import-note";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
@@ -665,6 +666,7 @@ export default function OnboardingPage() {
                     <p className="text-sm font-bold text-slate-900">🎉 WhatsApp conectado com sucesso.</p>
                     <p className="text-xs text-emerald-700/80 font-semibold">Seu CRM está sincronizado e ativo!</p>
                   </div>
+                  <HistoryImportNote />
                   <button 
                     onClick={handleDisconnectWhatsApp}
                     className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline"
