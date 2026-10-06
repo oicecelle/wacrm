@@ -101,14 +101,50 @@ export function TagFilter({ crmTags, waLabels, byContact, selected, onChange, on
 
   async function sync() {
     setSyncing(true);
+    const toastId = toast.loading("Sincronizando etiquetas…");
     try {
-      const res = await fetch("/api/whatsapp/labels/sync", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(apiErrorMessage(res.status, body, "Falha ao sincronizar"));
-      toast.success(`${body.labels ?? 0} etiqueta(s) do WhatsApp sincronizada(s).`);
+      let offset = 0;
+      let labels = 0;
+      let scanned = 0;
+      let changed = 0;
+      let matched = 0;
+      let withLabels = 0;
+      let backfillError: string | null = null;
+      // The server works in time-boxed slices and says where it stopped;
+      // keep asking until it reports it's done (capped, so a misbehaving
+      // server can never keep this loop running forever).
+      for (let i = 0; i < 100; i++) {
+        const res = await fetch("/api/whatsapp/labels/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offset }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(apiErrorMessage(res.status, body, "Falha ao sincronizar"));
+        labels = body.labels ?? labels;
+        scanned += body.scanned ?? 0;
+        changed += body.contactsChanged ?? 0;
+        matched += body.matchedWithLabels ?? 0;
+        withLabels += body.withLabels ?? 0;
+        backfillError = body.backfill_error ?? null;
+        if (!body.hasMore || typeof body.nextOffset !== "number") break;
+        offset = body.nextOffset;
+        toast.loading(`Sincronizando etiquetas… ${scanned}${body.total ? ` de ${body.total}` : ""} conversas`, { id: toastId });
+      }
+      if (backfillError) {
+        toast.warning(
+          `${labels} etiqueta(s) sincronizada(s), mas não consegui ver quem tem cada uma: ${backfillError}`,
+          { id: toastId, duration: 9000 },
+        );
+      } else {
+        toast.success(
+          `${labels} etiqueta(s). ${scanned} conversa(s) verificadas: ${withLabels} com etiqueta, ${matched} delas já são contatos do CRM (${changed} atualizado(s)).`,
+          { id: toastId, duration: 7000 },
+        );
+      }
       onSynced();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao sincronizar etiquetas.");
+      toast.error(err instanceof Error ? err.message : "Falha ao sincronizar etiquetas.", { id: toastId });
     } finally {
       setSyncing(false);
     }

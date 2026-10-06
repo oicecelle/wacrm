@@ -440,3 +440,67 @@ export async function uazapiRefreshLabels(baseUrl: string, token: string): Promi
     return false;
   }
 }
+
+// ── Chat listing (used to load who already has which label) ──────
+
+export interface UazapiChatSummary {
+  wa_chatid?: string;
+  phone?: string;
+  /** Present only when the server sent the field; absent ≠ "no labels". */
+  wa_label?: unknown;
+}
+
+export interface FindChatsPage {
+  chats: UazapiChatSummary[];
+  hasMore: boolean;
+  nextOffset: number | null;
+  total: number | null;
+}
+
+/** Reads a `POST /chat/find` response (documented shape) defensively. */
+export function parseFindChatsResponse(data: unknown, offset: number, requestedLimit: number): FindChatsPage {
+  const d = (data && typeof data === 'object' ? data : {}) as {
+    chats?: unknown;
+    pagination?: { hasMore?: unknown; nextOffset?: unknown; totalRecords?: unknown };
+  };
+  const chats = (Array.isArray(d.chats) ? d.chats : []) as UazapiChatSummary[];
+  const pg = d.pagination ?? {};
+  const total = typeof pg.totalRecords === 'number' ? pg.totalRecords : null;
+  // Prefer the server's own paging hints; otherwise derive from counts.
+  let hasMore: boolean;
+  if (typeof pg.hasMore === 'boolean') hasMore = pg.hasMore;
+  else if (total !== null) hasMore = offset + chats.length < total;
+  else hasMore = chats.length >= requestedLimit;
+  const nextOffset = hasMore
+    ? typeof pg.nextOffset === 'number' && pg.nextOffset > offset
+      ? pg.nextOffset
+      : offset + chats.length
+    : null;
+  // A page that returned nothing can't advance — never loop on it.
+  return { chats, hasMore: hasMore && chats.length > 0, nextOffset: chats.length > 0 ? nextOffset : null, total };
+}
+
+/**
+ * `POST /chat/find` — one page of individual (non-group) chats in the
+ * compact projection, which includes each chat's `wa_label` list.
+ */
+export async function uazapiFindChats(
+  baseUrl: string,
+  token: string,
+  opts: { offset: number; limit: number },
+): Promise<FindChatsPage> {
+  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/find`, {
+    method: 'POST',
+    headers: uazapiHeaders(token),
+    body: JSON.stringify({
+      operator: 'AND',
+      sort: '-wa_lastMsgTimestamp',
+      limit: opts.limit,
+      offset: opts.offset,
+      compact: true,
+      wa_isGroup: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`Uazapi POST /chat/find failed: HTTP ${res.status}`);
+  return parseFindChatsResponse(await res.json(), opts.offset, opts.limit);
+}
