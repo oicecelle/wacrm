@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { routeUazapiEvent, parseConnectionStatus } from '@/lib/whatsapp/uazapi-events'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe'
@@ -34,6 +35,17 @@ export async function POST(request: Request) {
       body = await request.json()
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    // Events we don't act on are acknowledged right away, before ANY
+    // work: no payload logging (it includes the instance token, and
+    // `presence` fires on every "typing…" while `history` batches are
+    // huge — they would flood the diagnostics table), no DB access.
+    // Uazapi asks for an immediate 2xx; a slow or erroring receiver
+    // delays its delivery queue for everyone behind it.
+    const early = routeUazapiEvent(body)
+    if (early.route === 'ignored') {
+      return NextResponse.json({ status: 'ignored', reason: `event ${early.eventType} not handled` })
     }
 
     console.log('[uazapi-webhook] Received payload:', JSON.stringify(body).substring(0, 1000))
@@ -105,7 +117,38 @@ export async function POST(request: Request) {
     }
 
 
-    // 2. Handle connection status updates
+    // 1.5. Route by the documented `EventType`. Before this, EVERYTHING
+    // that wasn't a connection update was processed as an inbound
+    // message — harmless while only `messages` was subscribed, but
+    // events like `chats` / `chat_labels` carry a `chat.wa_chatid`, so
+    // they would have found a phone, created a contact + conversation
+    // and stored a blank "customer" message (triggering automations and
+    // flows), and the rest (`presence`, `history`, `contacts`…) would
+    // have ended in 400s that slow Uazapi's delivery queue.
+    const routed = routeUazapiEvent(body)
+
+    if (routed.route === 'connection') {
+      // The documented field is `instance.status`. Leave the stored
+      // status untouched when the payload says nothing usable — guessing
+      // "disconnected" would mislabel a healthy clinic.
+      const status = parseConnectionStatus(body)
+      if (status) {
+        await db
+          .from('whatsapp_config')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', config.id)
+        console.log(`[uazapi-webhook] Connection event → ${status}`)
+      }
+      return NextResponse.json({ status: 'processed_connection_update', applied: status })
+    }
+
+    if (routed.route === 'receipt' || routed.route === 'label_definition' || routed.route === 'chat_labels') {
+      // Handlers arrive in the next steps; until then these must still
+      // be acknowledged without touching the message path.
+      return NextResponse.json({ status: 'ignored', reason: `event ${routed.eventType} pending handler` })
+    }
+
+    // 2. Handle connection status updates (legacy payload shape only)
     const dataObj = body.data || body || {}
     const msg = dataObj.message || {}
     const eventType = body.event || body.type
