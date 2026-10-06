@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server'
-import { routeUazapiEvent, parseConnectionStatus, parseReceiptEvent } from '@/lib/whatsapp/uazapi-events'
+import {
+  routeUazapiEvent,
+  parseConnectionStatus,
+  parseReceiptEvent,
+  parseLabelEvent,
+  parseChatLabelsEvent,
+} from '@/lib/whatsapp/uazapi-events'
+import { applyLabelDefinition, applyChatLabels } from '@/lib/whatsapp/labels-sync'
 import { advanceMessageStatuses, idVariants } from '@/lib/whatsapp/apply-receipt'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
@@ -165,10 +172,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'ignored', reason: 'receipt not applicable' })
     }
 
-    if (routed.route === 'label_definition' || routed.route === 'chat_labels') {
-      // Handlers arrive in the next steps; until then these must still
-      // be acknowledged without touching the message path.
-      return NextResponse.json({ status: 'ignored', reason: `event ${routed.eventType} pending handler` })
+    if (routed.route === 'label_definition') {
+      try {
+        const label = parseLabelEvent(body)
+        if (label) {
+          await applyLabelDefinition(db, config.account_id, label)
+          return NextResponse.json({ status: 'processed_label', label_id: label.labelId })
+        }
+      } catch (err) {
+        console.error('[uazapi-webhook] label definition failed:', err instanceof Error ? err.message : err)
+      }
+      return NextResponse.json({ status: 'ignored', reason: 'label event not applicable' })
+    }
+
+    if (routed.route === 'chat_labels') {
+      try {
+        const parsed = parseChatLabelsEvent(body)
+        if (parsed) {
+          const outcome = await applyChatLabels(db, config.account_id, parsed)
+          return NextResponse.json({ status: 'processed_chat_labels', outcome, labels: parsed.labelIds.length })
+        }
+      } catch (err) {
+        console.error('[uazapi-webhook] chat_labels failed:', err instanceof Error ? err.message : err)
+      }
+      return NextResponse.json({ status: 'ignored', reason: 'chat_labels event not applicable' })
+    }
+
+    if (routed.route === 'history_labels') {
+      // Already stored in whatsapp_webhook_logs at the top of this
+      // handler. Nothing to apply until a real batch has been inspected.
+      return NextResponse.json({ status: 'logged', reason: 'label history batch recorded for inspection' })
     }
 
     // 2. Handle connection status updates (legacy payload shape only)

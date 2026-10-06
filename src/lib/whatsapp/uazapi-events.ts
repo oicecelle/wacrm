@@ -49,6 +49,7 @@ export type UazapiEventRoute =
   | "receipt"
   | "label_definition"
   | "chat_labels"
+  | "history_labels" // label batches inside `history`: logged only (item shape undocumented)
   | "ignored";
 
 const ROUTES: Record<string, UazapiEventRoute> = {
@@ -73,6 +74,15 @@ export function routeUazapiEvent(body: unknown): { route: UazapiEventRoute; even
       ? (body as { EventType: string }).EventType
       : null;
   if (!eventType) return { route: "legacy", eventType: null };
+
+  // `history` carries many kinds of batch (messages, chats, calls…) in
+  // its `event` field. Only the two label batches matter here — and
+  // only to be recorded: the docs don't describe the shape of their
+  // items, so they are captured for inspection rather than guessed at.
+  if (eventType === "history") {
+    const batch = (body as { event?: unknown }).event;
+    return { route: batch === "labels" || batch === "chat_labels" ? "history_labels" : "ignored", eventType };
+  }
   return { route: ROUTES[eventType] ?? "ignored", eventType };
 }
 

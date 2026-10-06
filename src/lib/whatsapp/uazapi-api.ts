@@ -265,7 +265,10 @@ export async function setUazapiWebhook(
 }
 
 /**
- * Fetches the WhatsApp profile picture for a contact from Uazapi.
+ * Fetches the WhatsApp profile picture of a chat: `POST /chat/avatar`
+ * (documented). Returns a TEMPORARY url — it expires, so don't treat a
+ * stored copy as permanent — or null when there is no photo (the API
+ * answers 200 with an empty `url` in that case).
  */
 export async function getUazapiProfilePicture(
   baseUrl: string,
@@ -273,64 +276,19 @@ export async function getUazapiProfilePicture(
   phone: string
 ): Promise<string | null> {
   const cleanUrl = baseUrl.replace(/\/$/, '');
-  const headers = {
-    'token': token,
-    'apikey': token,
-    'Content-Type': 'application/json',
-  };
-
-  // First attempt: the chat-details endpoint, whose Chat entity carries
-  // the same `image` / `imagePreview` fields the inbound webhook payload
-  // already delivers (and that is where every stored contact photo came
-  // from). NOT verified against a live instance from this codebase — the
-  // two older GET lookups below stay as fallbacks, and any failure here
-  // just falls through to them.
   try {
-    const res = await fetch(`${cleanUrl}/chat/details`, {
+    const res = await fetch(`${cleanUrl}/chat/avatar`, {
       method: 'POST',
-      headers,
+      headers: { 'token': token, 'apikey': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ number: phone, preview: true }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      const url = data?.imagePreview || data?.image;
-      if (typeof url === 'string' && url.startsWith('http')) return url;
-    }
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data?.url === 'string' && data.url.startsWith('http') ? data.url : null;
   } catch (err) {
-    console.error('[getUazapiProfilePicture] failed chat/details:', err);
+    console.error('[getUazapiProfilePicture] failed:', err);
+    return null;
   }
-
-  // Try standard format (raw digits)
-  try {
-    const res = await fetch(`${cleanUrl}/get/profilePicture?number=${encodeURIComponent(phone)}`, {
-      method: 'GET',
-      headers,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const url = data?.profilePicUrl || data?.url;
-      if (url && url.startsWith('http')) return url;
-    }
-  } catch (err) {
-    console.error('[getUazapiProfilePicture] failed standard number:', err);
-  }
-
-  // Try with JID format suffix
-  try {
-    const res = await fetch(`${cleanUrl}/get/profilePicture?number=${encodeURIComponent(phone + '@s.whatsapp.net')}`, {
-      method: 'GET',
-      headers,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const url = data?.profilePicUrl || data?.url;
-      if (url && url.startsWith('http')) return url;
-    }
-  } catch (err) {
-    console.error('[getUazapiProfilePicture] failed JID format:', err);
-  }
-
-  return null;
 }
 
 /**
@@ -405,3 +363,80 @@ export async function sendUazapiMediaMessage(
   }
 }
 
+// ── WhatsApp labels (etiquetas) ──────────────────────────────────
+
+const uazapiHeaders = (token: string) => ({
+  'token': token,
+  'apikey': token,
+  'Content-Type': 'application/json',
+});
+
+export type ChatLabelAction = { add: string } | { remove: string } | { set: string[] };
+
+/**
+ * `POST /chat/labels` — add one label, remove one, or REPLACE the whole
+ * set on a chat. Exactly one operation per call (the API rejects mixes),
+ * and a label id that doesn't exist is rejected by the server.
+ */
+export async function uazapiChatLabels(
+  baseUrl: string,
+  token: string,
+  number: string,
+  action: ChatLabelAction,
+): Promise<{ ok: boolean; error?: string }> {
+  const body: Record<string, unknown> = { number };
+  if ('add' in action) body.add_labelid = action.add;
+  else if ('remove' in action) body.remove_labelid = action.remove;
+  else body.labelids = action.set;
+
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/labels`, {
+      method: 'POST',
+      headers: uazapiHeaders(token),
+      body: JSON.stringify(body),
+    });
+    if (res.ok) return { ok: true };
+    const detail = await res.json().catch(() => ({}));
+    return { ok: false, error: detail?.error || `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'network error' };
+  }
+}
+
+/**
+ * `POST /label/edit` — create (`labelid: "new"`), edit or delete a label.
+ * The API does NOT return the new label's id ("Label created"); read it
+ * back with GET /labels or from the `labels` webhook event.
+ */
+export async function uazapiEditLabel(
+  baseUrl: string,
+  token: string,
+  label: { labelid: string; name?: string; color?: number; delete?: boolean },
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/label/edit`, {
+      method: 'POST',
+      headers: uazapiHeaders(token),
+      body: JSON.stringify({ delete: false, ...label }),
+    });
+    if (res.ok) return { ok: true };
+    const detail = await res.json().catch(() => ({}));
+    return { ok: false, error: detail?.error || `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'network error' };
+  }
+}
+
+/** `POST /labels/refresh` — asks the phone to re-send labels; they arrive as `history` batches. */
+export async function uazapiRefreshLabels(baseUrl: string, token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/labels/refresh`, {
+      method: 'POST',
+      headers: uazapiHeaders(token),
+      body: '{}',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

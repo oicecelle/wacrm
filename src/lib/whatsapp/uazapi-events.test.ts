@@ -35,8 +35,16 @@ describe("routeUazapiEvent", () => {
   });
 
   it("REGRESSION: chats/history/presence/contacts/sender never reach the message path", () => {
-    for (const t of ["chats", "history", "presence", "contacts", "sender", "call", "groups", "status_posts"]) {
+    for (const t of ["chats", "presence", "contacts", "sender", "call", "groups", "status_posts"]) {
       expect(routeUazapiEvent({ EventType: t }).route).toBe("ignored");
+    }
+  });
+
+  it("history: only the label batches are kept (to be logged); everything else is ignored", () => {
+    expect(routeUazapiEvent({ EventType: "history", event: "labels" }).route).toBe("history_labels");
+    expect(routeUazapiEvent({ EventType: "history", event: "chat_labels" }).route).toBe("history_labels");
+    for (const batch of ["messages", "chats", "calls", "status", undefined]) {
+      expect(routeUazapiEvent({ EventType: "history", event: batch }).route).toBe("ignored");
     }
   });
 
