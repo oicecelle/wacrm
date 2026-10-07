@@ -11,6 +11,7 @@ import { applyLabelDefinition, applyChatLabels } from '@/lib/whatsapp/labels-syn
 import { allowsContactCreation, importHistoryMessages, type HistoryMessage } from '@/lib/whatsapp/history-import'
 import { createSupabaseHistoryStore } from '@/lib/whatsapp/history-store'
 import { reserveHistoryContactSlots } from '@/lib/whatsapp/history-cap'
+import { withConversationLock } from '@/lib/whatsapp/conversation-lock'
 import {
   parseHistoryStatusBatch,
   applyManualHistoryStatus,
@@ -570,88 +571,121 @@ export async function POST(request: Request) {
       console.error('[uazapi-webhook] Error updating conversation:', convError)
     }
 
-    // Only run flows, automations, and AI analysis for customer inbound private messages (ignore if fromMe === true or it is a group message)
-    if (!fromMe && !isGroup) {
-      // Flip broadcast status to replied if appropriate
-      await flagBroadcastReplyIfAny(accountId, contactRecord.id)
+    // SAVE FIRST, THEN REACT. Up to here the message is stored and the
+    // conversation preview is updated — the part that must not be lost.
+    // Everything below (flows, automations, AI) is a REACTION to a message
+    // that already exists, and it can take a long time: a flow sends
+    // messages, automations can wait to pace their sends, the AI call can
+    // take seconds. Uazapi asks for a fast 2xx and delays its delivery
+    // queue while a receiver is slow, so the reply goes out now and the
+    // reactions run after it (`after()` keeps the function alive for them).
+    //
+    // Per-conversation lock: now that the reply is fast, the customer's
+    // NEXT message can arrive while this one is still being processed, and
+    // the flow engine drops a message that meets a run still being created
+    // — so the reactions to one conversation run one message at a time.
+    //
+    // Side benefit: the automation/AI dispatches used to be fire-and-forget
+    // (not awaited) right before the response was sent; a serverless
+    // function can be frozen the moment it responds, which can cut those
+    // off mid-run. Inside `after()` they are awaited and kept alive.
+    const reactions = async () => {
+      // Only customer inbound private messages trigger flows, automations
+      // and AI analysis (ignore fromMe, and group messages)
+      if (!fromMe && !isGroup) {
+        // Flip broadcast status to replied if appropriate
+        await flagBroadcastReplyIfAny(accountId, contactRecord.id)
 
-      if (isFirstInboundMessage) {
-        // "Primeira conversa" on the contact's timeline — nothing
-        // wrote this event before, so a brand-new lead's timeline
-        // started blank until something else (an appointment, a
-        // deal stage change, etc.) happened to it.
-        await db.from('contact_timeline').insert({
-          account_id: accountId,
-          contact_id: contactRecord.id,
-          event_type: 'message',
-          title: 'Primeira conversa',
-          description: contentText ? `"${contentText}"` : 'Primeiro contato via WhatsApp.',
-          metadata: { conversation_id: conversation.id },
-        })
-      }
+        if (isFirstInboundMessage) {
+          // "Primeira conversa" on the contact's timeline — nothing
+          // wrote this event before, so a brand-new lead's timeline
+          // started blank until something else (an appointment, a
+          // deal stage change, etc.) happened to it.
+          await db.from('contact_timeline').insert({
+            account_id: accountId,
+            contact_id: contactRecord.id,
+            event_type: 'message',
+            title: 'Primeira conversa',
+            description: contentText ? `"${contentText}"` : 'Primeiro contato via WhatsApp.',
+            metadata: { conversation_id: conversation.id },
+          })
+        }
 
-      // Dispatch to Flow Runner
-      const flowResult = await dispatchInboundToFlows({
-        accountId,
-        userId: configOwnerUserId,
-        contactId: contactRecord.id,
-        conversationId: conversation.id,
-        message: {
-          kind: 'text',
-          text: contentText,
-          meta_message_id: messageId,
-        },
-        isFirstInboundMessage,
-      })
-      const flowConsumed = flowResult.consumed
-
-      // Dispatch to Automation Engine
-      const automationTriggers: ('new_contact_created' | 'first_inbound_message' | 'new_message_received' | 'keyword_match')[] = []
-      if (!flowConsumed) {
-        automationTriggers.push('new_message_received', 'keyword_match')
-      }
-      if (contactOutcome.wasCreated) automationTriggers.unshift('new_contact_created')
-      if (isFirstInboundMessage) automationTriggers.unshift('first_inbound_message')
-
-      for (const triggerType of automationTriggers) {
-        runAutomationsForTrigger({
+        // Dispatch to Flow Runner
+        const flowResult = await dispatchInboundToFlows({
           accountId,
-          triggerType,
+          userId: configOwnerUserId,
+          contactId: contactRecord.id,
+          conversationId: conversation.id,
+          message: {
+            kind: 'text',
+            text: contentText,
+            meta_message_id: messageId,
+          },
+          isFirstInboundMessage,
+        })
+        const flowConsumed = flowResult.consumed
+
+        // Dispatch to Automation Engine
+        const automationTriggers: ('new_contact_created' | 'first_inbound_message' | 'new_message_received' | 'keyword_match')[] = []
+        if (!flowConsumed) {
+          automationTriggers.push('new_message_received', 'keyword_match')
+        }
+        if (contactOutcome.wasCreated) automationTriggers.unshift('new_contact_created')
+        if (isFirstInboundMessage) automationTriggers.unshift('first_inbound_message')
+
+        // Automations and the AI analysis are independent of each other:
+        // run them side by side, and let one failing not stop the rest.
+        await Promise.allSettled([
+          ...automationTriggers.map((triggerType) =>
+            runAutomationsForTrigger({
+              accountId,
+              triggerType,
+              contactId: contactRecord.id,
+              context: {
+                message_text: contentText,
+                conversation_id: conversation.id,
+                message_direction: 'lead',
+              },
+            }).catch((err) => console.error('[uazapi-webhook] Automations dispatch failed:', err)),
+          ),
+          analyseWhatsAppConversationWithAI(
+            conversation.id,
+            contactRecord.id,
+            accountId,
+            messageId,
+          ).catch((err) => console.error('[uazapi-webhook] AI Analysis trigger failed:', err)),
+        ])
+      } else if (fromMe && !isGroup) {
+        // The clinic's own outbound messages never used to trigger
+        // anything — keyword_match automations configured with
+        // from: 'us' (e.g. "we just confirmed an appointment") need
+        // this side covered too, since the confirming text is
+        // something the CLINIC typed, not the patient. Flows and AI
+        // analysis stay customer-only; they're about reacting to what
+        // the patient says, not what we say.
+        await runAutomationsForTrigger({
+          accountId,
+          triggerType: 'keyword_match',
           contactId: contactRecord.id,
           context: {
             message_text: contentText,
             conversation_id: conversation.id,
-            message_direction: 'lead',
+            message_direction: 'us',
           },
-        }).catch((err) => console.error('[uazapi-webhook] Automations dispatch failed:', err))
+        }).catch((err) => console.error('[uazapi-webhook] Automations dispatch (outbound) failed:', err))
       }
-
-      // Trigger contextual AI Analysis asynchronously
-      analyseWhatsAppConversationWithAI(
-        conversation.id,
-        contactRecord.id,
-        accountId,
-        messageId
-      ).catch((err) => console.error('[uazapi-webhook] AI Analysis trigger failed:', err))
-    } else if (fromMe && !isGroup) {
-      // The clinic's own outbound messages never used to trigger
-      // anything — keyword_match automations configured with
-      // from: 'us' (e.g. "we just confirmed an appointment") need
-      // this side covered too, since the confirming text is
-      // something the CLINIC typed, not the patient. Flows and AI
-      // analysis stay customer-only; they're about reacting to what
-      // the patient says, not what we say.
-      runAutomationsForTrigger({
-        accountId,
-        triggerType: 'keyword_match',
-        contactId: contactRecord.id,
-        context: {
-          message_text: contentText,
-          conversation_id: conversation.id,
-          message_direction: 'us',
-        },
-      }).catch((err) => console.error('[uazapi-webhook] Automations dispatch (outbound) failed:', err))
     }
+
+    after(async () => {
+      try {
+        await withConversationLock(db, conversation.id, reactions)
+      } catch (err) {
+        // The message is already saved; a failing reaction is logged, never
+        // turned into an error for Uazapi (it does not retry anyway).
+        console.error('[uazapi-webhook] Reactions to message failed:', err instanceof Error ? err.message : err)
+      }
+    })
 
     return NextResponse.json({ status: 'success', messageId })
   } catch (error: any) {
