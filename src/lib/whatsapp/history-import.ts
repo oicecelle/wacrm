@@ -143,6 +143,17 @@ export function mapHistoryMessage(m: HistoryMessage, nowMs = Date.now()): Mapped
 
 // ── policy for creating contacts ─────────────────────────────────
 
+/**
+ * Most contacts one first-pairing import may CREATE. A phone can hold
+ * thousands of chats; importing every one at once floods the CRM with
+ * people who may never have dealt with the clinic, and costs ~4 writes
+ * per contact. The conversations left out aren't lost: that person shows
+ * up as soon as they write, and "load earlier messages" then brings
+ * their older history. Messages for contacts that ALREADY exist are not
+ * counted against this.
+ */
+export const FIRST_PAIRING_MAX_CONTACTS = 1000;
+
 /** How long after saving the connection the first-pairing import may create contacts. */
 export const FIRST_PAIRING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -205,6 +216,8 @@ export interface HistoryImportStats {
   mapped: number;
   skippedNoContact: number;
   skippedNoConversation: number;
+  /** Chats left out because the first-pairing contact cap was reached. */
+  skippedOverCap: number;
   contactsCreated: number;
   conversationsCreated: number;
   duplicates: number;
@@ -214,13 +227,23 @@ export interface HistoryImportStats {
 export async function importHistoryMessages(
   store: HistoryStore,
   messages: HistoryMessage[],
-  opts: { allowCreate: boolean; nowMs?: number },
+  opts: {
+    allowCreate: boolean;
+    nowMs?: number;
+    /**
+     * Asks how many NEW contacts may still be created (atomically, since
+     * batches arrive concurrently). Returns the number granted, up to the
+     * number requested. When omitted, creation is not capped.
+     */
+    reserveContactSlots?: (requested: number) => Promise<number>;
+  },
 ): Promise<HistoryImportStats> {
   const stats: HistoryImportStats = {
     received: messages.length,
     mapped: 0,
     skippedNoContact: 0,
     skippedNoConversation: 0,
+    skippedOverCap: 0,
     contactsCreated: 0,
     conversationsCreated: 0,
     duplicates: 0,
@@ -251,8 +274,25 @@ export async function importHistoryMessages(
   const missing = phones.filter((p) => !contactIdByPhone.has(p));
   if (missing.length > 0) {
     if (opts.allowCreate) {
+      // Under a cap, the chats that matter most go first: ones where the
+      // person actually wrote to the clinic, then the most recent.
+      const rank = (phone: string) => {
+        const list = byPhone.get(phone) ?? [];
+        const wrote = list.some((m) => !m.fromMe) ? 1 : 0;
+        const newest = list.reduce((max, m) => (m.createdAt > max ? m.createdAt : max), "");
+        return { wrote, newest };
+      };
+      const ordered = [...missing].sort((a, b) => {
+        const ra = rank(a);
+        const rb = rank(b);
+        return rb.wrote - ra.wrote || rb.newest.localeCompare(ra.newest);
+      });
+      const granted = opts.reserveContactSlots ? Math.max(0, Math.min(ordered.length, await opts.reserveContactSlots(ordered.length))) : ordered.length;
+      const allowed = ordered.slice(0, granted);
+      stats.skippedOverCap = ordered.length - allowed.length;
+
       const created = await store.createContacts(
-        missing.map((phone) => {
+        allowed.map((phone) => {
           // The push name is only on messages the contact sent; newest wins.
           const named = [...(byPhone.get(phone) ?? [])]
             .filter((x) => x.senderName)

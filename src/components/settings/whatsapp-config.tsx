@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { InboxConnectionNotice, useInboxConnectionNotice } from '@/components/whatsapp/inbox-connection-notice';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -54,6 +55,7 @@ export function WhatsAppConfig() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('desconhecido');
   const [resetReason, setResetReason] = useState<ResetReason>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const inboxNotice = useInboxConnectionNotice();
 
   const [phoneNumberId, setPhoneNumberId] = useState('');
   const [wabaId, setWabaId] = useState('');
@@ -336,6 +338,8 @@ export function WhatsAppConfig() {
 
       if (data.connected) {
         toast.success('Instância conectada e pronta para disparos.', { duration: 8000 });
+        // Just connected: explain how the inbox works (once per account).
+        inboxNotice.show();
       } else {
         toast.error(
           `Não conectada. Status da Uazapi: "${data.state ?? 'desconhecido'}". Detalhes técnicos no console (F12).`,
@@ -469,6 +473,7 @@ export function WhatsAppConfig() {
 
   return (
     <section className="animate-in fade-in-50 duration-200">
+      <InboxConnectionNotice open={inboxNotice.open} onAcknowledge={inboxNotice.acknowledge} onDismiss={inboxNotice.dismiss} />
       <SettingsPanelHead
         title="Conexão do WhatsApp"
         description="Conecte a API oficial da Meta ou uma instância Uazapi. Credenciais, webhook e passo a passo, tudo aqui."

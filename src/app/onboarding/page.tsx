@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { HistoryImportNote } from "@/components/whatsapp/history-import-note";
+import { InboxConnectionNotice, useInboxConnectionNotice } from "@/components/whatsapp/inbox-connection-notice";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
@@ -63,6 +64,7 @@ export default function OnboardingPage() {
   // --- Step States ---
   // Step 2: WhatsApp
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const inboxNotice = useInboxConnectionNotice();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [uazapiToken, setUazapiToken] = useState("");
   const [uazapiInstanceName, setUazapiInstanceName] = useState("");
@@ -307,6 +309,8 @@ export default function OnboardingPage() {
               clearInterval(interval);
               setPollIntervalId(null);
               setWaStatus("connected");
+              // The moment the QR code was scanned: tell them how the inbox works.
+              inboxNotice.show();
               
               const { data: clinicUser } = await supabase
                 .from("clinic_users")
@@ -667,6 +671,7 @@ export default function OnboardingPage() {
                     <p className="text-xs text-emerald-700/80 font-semibold">Seu CRM está sincronizado e ativo!</p>
                   </div>
                   <HistoryImportNote />
+                  <InboxConnectionNotice open={inboxNotice.open} onAcknowledge={inboxNotice.acknowledge} onDismiss={inboxNotice.dismiss} />
                   <button 
                     onClick={handleDisconnectWhatsApp}
                     className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline"

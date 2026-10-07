@@ -274,3 +274,79 @@ describe("importHistoryMessages — first pairing (creates what's missing)", () 
     expect(log.createdConvs).toHaveLength(0);
   });
 });
+
+
+describe("importHistoryMessages — first-pairing contact cap", () => {
+  const phones = ["5511999990101", "5511999990102", "5511999990103", "5511999990104"];
+  const chat = (phone: string, over: Partial<HistoryMessage> = {}) =>
+    msg({ messageid: `M-${phone}-${over.messageid ?? ""}`, chatid: `${phone}@s.whatsapp.net`, ...over });
+
+  it("creates only as many contacts as the cap grants, and reports the rest", async () => {
+    const { store, log } = memoryStore({});
+    const stats = await importHistoryMessages(
+      store,
+      phones.map((p) => chat(p)),
+      { allowCreate: true, nowMs: NOW, reserveContactSlots: async () => 2 },
+    );
+    expect(stats).toMatchObject({ contactsCreated: 2, skippedOverCap: 2, inserted: 2 });
+    expect(log.createdContacts).toHaveLength(2);
+  });
+
+  it("when the cap is exhausted (0 granted), creates nothing — and imports no messages for people it didn't create", async () => {
+    const { store, log } = memoryStore({});
+    const stats = await importHistoryMessages(store, phones.map((p) => chat(p)), {
+      allowCreate: true,
+      nowMs: NOW,
+      reserveContactSlots: async () => 0,
+    });
+    expect(stats).toMatchObject({ contactsCreated: 0, skippedOverCap: 4, inserted: 0 });
+    expect(log.createdContacts).toHaveLength(0);
+    expect(log.createdConvs).toHaveLength(0);
+  });
+
+  it("under the cap, chats where the person WROTE come first, then the most recent", async () => {
+    const { store, log } = memoryStore({});
+    await importHistoryMessages(
+      store,
+      [
+        // only OUR messages (never replied) — newest of all
+        chat(phones[0], { fromMe: true, messageTimestamp: T("2026-09-30T10:00:00Z") }),
+        // the person wrote — older
+        chat(phones[1], { fromMe: false, messageTimestamp: T("2026-05-01T10:00:00Z") }),
+        // the person wrote — newer
+        chat(phones[2], { fromMe: false, messageTimestamp: T("2026-08-01T10:00:00Z") }),
+      ],
+      { allowCreate: true, nowMs: NOW, reserveContactSlots: async () => 2 },
+    );
+    expect(log.createdContacts.map((c) => c.phone).sort()).toEqual([phones[1], phones[2]].sort());
+  });
+
+  it("existing contacts are NOT counted against the cap and keep receiving their messages", async () => {
+    const { store, log } = memoryStore({ contacts: { [phones[0]]: "c-existing" }, conversations: { "c-existing": "conv-existing" } });
+    let asked = -1;
+    const stats = await importHistoryMessages(store, [chat(phones[0]), chat(phones[1])], {
+      allowCreate: true,
+      nowMs: NOW,
+      reserveContactSlots: async (n) => ((asked = n), 0),
+    });
+    expect(asked).toBe(1); // only the one that needs creating
+    expect(stats).toMatchObject({ inserted: 1, skippedOverCap: 1 });
+    expect(log.inserted[0].conversationId).toBe("conv-existing");
+  });
+
+  it("never grants itself more than the batch asked for (a misbehaving reservation)", async () => {
+    const { store } = memoryStore({});
+    const stats = await importHistoryMessages(store, [chat(phones[0])], {
+      allowCreate: true,
+      nowMs: NOW,
+      reserveContactSlots: async () => 99,
+    });
+    expect(stats.contactsCreated).toBe(1);
+  });
+
+  it("without a reservation function creation is not capped (the existing behaviour)", async () => {
+    const { store } = memoryStore({});
+    const stats = await importHistoryMessages(store, phones.map((p) => chat(p)), { allowCreate: true, nowMs: NOW });
+    expect(stats).toMatchObject({ contactsCreated: 4, skippedOverCap: 0 });
+  });
+});

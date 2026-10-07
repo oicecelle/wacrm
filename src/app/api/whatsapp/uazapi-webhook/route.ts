@@ -1,4 +1,5 @@
 import { NextResponse, after } from 'next/server'
+import { redactWebhookPayloadForLog, redactedLogLine } from '@/lib/whatsapp/log-redaction'
 import {
   routeUazapiEvent,
   parseConnectionStatus,
@@ -9,6 +10,7 @@ import {
 import { applyLabelDefinition, applyChatLabels } from '@/lib/whatsapp/labels-sync'
 import { allowsContactCreation, importHistoryMessages, type HistoryMessage } from '@/lib/whatsapp/history-import'
 import { createSupabaseHistoryStore } from '@/lib/whatsapp/history-store'
+import { reserveHistoryContactSlots } from '@/lib/whatsapp/history-cap'
 import {
   parseHistoryStatusBatch,
   applyManualHistoryStatus,
@@ -69,20 +71,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'ignored', reason: `event ${early.eventType} not handled` })
     }
 
-    console.log('[uazapi-webhook] Received payload:', JSON.stringify(body).substring(0, 1000))
+    // Redacted: no instance token, no message text. Vercel logs and the
+    // diagnostics table are both readable by more people than the
+    // conversations themselves should be (and Uazapi's own guidance is to
+    // never log tokens or message content).
+    console.log('[uazapi-webhook] Received payload:', redactedLogLine(body))
 
     const db = supabaseAdmin()
 
-    // Diagnostic logging to inspect real incoming payload from UazAPI
-    const { error: logErr } = await db
-      .from('whatsapp_webhook_logs')
-      .insert({
-        payload: body,
-        received_at: new Date().toISOString()
-      })
-    if (logErr) {
-      console.error('[uazapi-webhook] Diagnostic logging failed:', logErr)
-    }
+    // Diagnostic log of the real payload SHAPE. Written AFTER the reply:
+    // it used to be awaited here, adding a database round trip to the
+    // response time of every single event, while Uazapi asks for a fast
+    // 2xx. A failure to log never affects the event itself.
+    const loggedPayload = redactWebhookPayloadForLog(body)
+    const receivedAt = new Date().toISOString()
+    after(async () => {
+      const { error: logErr } = await db
+        .from('whatsapp_webhook_logs')
+        .insert({ payload: loggedPayload, received_at: receivedAt })
+      if (logErr) console.error('[uazapi-webhook] Diagnostic logging failed:', logErr.message)
+    })
 
     let config: any = null
 
@@ -240,7 +248,12 @@ export async function POST(request: Request) {
         try {
           if (config.history_import_state === 'pending') await markPairingImportStarted(db, config.id)
           const store = createSupabaseHistoryStore(db, config.account_id, config.user_id, owner)
-          const stats = await importHistoryMessages(store, batch, { allowCreate: allowsContactCreation(config) })
+          const stats = await importHistoryMessages(store, batch, {
+            allowCreate: allowsContactCreation(config),
+            // Batches arrive concurrently; the database hands out the
+            // remaining contact slots atomically (migration 082).
+            reserveContactSlots: (requested) => reserveHistoryContactSlots(db, config.id, requested),
+          })
           console.log('[uazapi-webhook] history batch imported:', JSON.stringify(stats))
         } catch (err) {
           console.error('[uazapi-webhook] history import failed:', err instanceof Error ? err.message : err)
