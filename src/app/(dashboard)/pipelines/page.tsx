@@ -107,7 +107,7 @@ export default function PipelinesPage() {
       rows = await fetchAllRows<(typeof unansweredConversations)[number]>((from, to) =>
       supabase
         .from("conversations")
-        .select("*, contact:contacts(*)")
+        .select("*, contact:contacts(*)", { count: "exact" })
         .eq("account_id", accountId)
         .gt("unread_count", 0)
         .order("last_message_at", { ascending: true })
@@ -115,6 +115,7 @@ export default function PipelinesPage() {
         .range(from, to) as unknown as PromiseLike<{
         data: (typeof unansweredConversations)[number][] | null;
         error: { message: string } | null;
+        count?: number | null;
       }>,
     );
     } catch {
@@ -200,11 +201,11 @@ export default function PipelinesPage() {
         return await fetchAllRows<Deal>((from, to) =>
         supabase
           .from("deals")
-          .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*), conversation:conversations(last_message_at, last_message_text, unread_count)")
+          .select("*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*), conversation:conversations(last_message_at, last_message_text, unread_count)", { count: "exact" })
           .eq("pipeline_id", pipelineId)
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
-          .range(from, to) as unknown as PromiseLike<{ data: Deal[] | null; error: { message: string } | null }>,
+          .range(from, to) as unknown as PromiseLike<{ data: Deal[] | null; error: { message: string } | null; count?: number | null }>,
         );
       } catch {
         // Better an explicit error than a silently partial board.

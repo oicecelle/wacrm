@@ -321,11 +321,11 @@ export function MessageThread({
         const rows = await fetchAllRows<Message>((from, to) =>
           supabase
             .from("messages")
-            .select("*")
+            .select("*", { count: "exact" })
             .eq("conversation_id", conversationId)
             .order("created_at", { ascending: true })
             .order("id", { ascending: true })
-            .range(from, to) as unknown as PromiseLike<{ data: Message[] | null; error: { message: string } | null }>,
+            .range(from, to) as unknown as PromiseLike<{ data: Message[] | null; error: { message: string } | null; count?: number | null }>,
         );
         if (cancelled) return;
         onMessagesLoadedRef.current(rows);

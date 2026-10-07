@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
 import { waLabelColor } from "@/lib/whatsapp/label-colors";
@@ -25,11 +25,28 @@ const EMPTY: State = { crmTags: [], crmPairs: [], waLabels: [], waPairs: [], loa
  * `resyncToken` is bumped by the inbox when the tab regains focus or
  * realtime reconnects, so labels changed in the phone meanwhile show up.
  */
-export function useContactTags(accountId: string | null | undefined, resyncToken = 0) {
+/** Focus/reconnect resyncs reuse data fetched less than this long ago. */
+const MIN_RESYNC_INTERVAL_MS = 60_000;
+
+export function useContactTags(accountId: string | null | undefined, resyncToken = 0, forceToken = 0) {
   const [state, setState] = useState<State>(EMPTY);
+  const loadedRef = useRef<{ at: number; account: string; force: number } | null>(null);
 
   useEffect(() => {
     if (!accountId) return;
+    // `resyncToken` is bumped every time the tab regains focus. Without
+    // this, each return to the tab re-downloaded four datasets (every CRM
+    // tag pair and every WhatsApp-label pair of the account) — a lot of
+    // round trips to a distant database for data that rarely changes.
+    // An explicit `forceToken` bump (the Sincronizar button) always reloads.
+    const last = loadedRef.current;
+    const fresh =
+      last !== null &&
+      last.account === accountId &&
+      last.force === forceToken &&
+      Date.now() - last.at < MIN_RESYNC_INTERVAL_MS;
+    if (fresh) return;
+    loadedRef.current = { at: Date.now(), account: accountId, force: forceToken };
     let cancelled = false;
     const supabase = createClient();
 
@@ -37,12 +54,12 @@ export function useContactTags(accountId: string | null | undefined, resyncToken
       try {
         const [crmTagRows, waLabelRows, crmPairRows, waPairRows] = await Promise.all([
           fetchAllRows<{ id: string; name: string; color: string }>((from, to) =>
-            supabase.from("tags").select("id, name, color").eq("account_id", accountId).order("id").range(from, to) as never,
+            supabase.from("tags").select("id, name, color", { count: "exact" }).eq("account_id", accountId).order("id").range(from, to) as never,
           ),
           fetchAllRows<{ wa_label_id: string; name: string; color: number | null }>((from, to) =>
             supabase
               .from("whatsapp_labels")
-              .select("wa_label_id, name, color")
+              .select("wa_label_id, name, color", { count: "exact" })
               .eq("account_id", accountId)
               .eq("deleted", false)
               .order("wa_label_id")
@@ -51,7 +68,7 @@ export function useContactTags(accountId: string | null | undefined, resyncToken
           fetchAllRows<{ id: string; contact_id: string; tag_id: string }>((from, to) =>
             supabase
               .from("contact_tags")
-              .select("id, contact_id, tag_id, tags!inner(account_id)")
+              .select("id, contact_id, tag_id, tags!inner(account_id)", { count: "exact" })
               .eq("tags.account_id", accountId)
               .order("id")
               .range(from, to) as never,
@@ -59,7 +76,7 @@ export function useContactTags(accountId: string | null | undefined, resyncToken
           fetchAllRows<{ contact_id: string; wa_label_id: string }>((from, to) =>
             supabase
               .from("contact_whatsapp_labels")
-              .select("contact_id, wa_label_id")
+              .select("contact_id, wa_label_id", { count: "exact" })
               .eq("account_id", accountId)
               .order("contact_id")
               .order("wa_label_id")
@@ -91,7 +108,7 @@ export function useContactTags(accountId: string | null | undefined, resyncToken
     return () => {
       cancelled = true;
     };
-  }, [accountId, resyncToken]);
+  }, [accountId, resyncToken, forceToken]);
 
   const byContact = useMemo<Map<string, ContactTagInfo>>(() => buildContactTagMap(state), [state]);
   return { byContact, crmTags: state.crmTags, waLabels: state.waLabels, loading: state.loading };

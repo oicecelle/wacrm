@@ -67,7 +67,7 @@ export function ConversationList({
   const [loading, setLoading] = useState(true);
   const [tagFilter, setTagFilter] = useState<Set<string>>(() => new Set());
   const [labelsReload, setLabelsReload] = useState(0);
-  const { byContact, crmTags, waLabels } = useContactTags(accountId, resyncToken + labelsReload);
+  const { byContact, crmTags, waLabels } = useContactTags(accountId, resyncToken, labelsReload);
 
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
@@ -101,12 +101,12 @@ export function ConversationList({
         rows = await fetchAllRows<Conversation>((from, to) =>
           supabase
             .from("conversations")
-            .select("*, contact:contacts(*)")
+            .select("*, contact:contacts(*)", { count: "exact" })
             .eq("account_id", accountId)
             .order("is_pinned", { ascending: false })
             .order("last_message_at", { ascending: false, nullsFirst: false })
             .order("id", { ascending: false })
-            .range(from, to) as unknown as PromiseLike<{ data: Conversation[] | null; error: { message: string } | null }>,
+            .range(from, to) as unknown as PromiseLike<{ data: Conversation[] | null; error: { message: string } | null; count?: number | null }>,
         );
       } catch (error) {
         if (cancelled) return;

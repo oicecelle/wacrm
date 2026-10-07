@@ -110,7 +110,21 @@ describe("createSupabaseHistoryStore", () => {
     const patients = calls.find((c) => c.table === "patients")!;
     expect(patients.opts).toMatchObject({ onConflict: "id", ignoreDuplicates: true });
     expect((patients.payload as Array<Record<string, unknown>>)[0]).toMatchObject({ id: "n1", clinic_id: "acct", name: "Ana" });
+    // DECISION: history-created contacts carry NO tags until a real interaction
+    expect((patients.payload as Array<Record<string, unknown>>)[0].tags).toEqual([]);
     expect(calls.some((c) => c.table === "contact_whatsapp_names")).toBe(true);
+  });
+
+  it("paces large imports: a pause between chunks of messages, none before the first or for a single chunk", async () => {
+    const sleeps: number[] = [];
+    const { db } = fakeDb(() => ({}));
+    const store = createSupabaseHistoryStore(db, "acct", "u", null, { pauseMs: 250, sleep: async (ms) => void sleeps.push(ms) });
+    const mk = (i: number) => ({ conversationId: "c", messageId: `M${i}`, fromMe: false, createdAt: "2026-01-01T00:00:00.000Z", contentType: "text" as const, contentText: "x", status: "delivered" as const });
+    await store.insertMessages(Array.from({ length: 450 }, (_, i) => mk(i))); // 3 chunks of 200
+    expect(sleeps).toEqual([250, 250]);
+    sleeps.length = 0;
+    await store.insertMessages(Array.from({ length: 50 }, (_, i) => mk(i))); // 1 chunk
+    expect(sleeps).toEqual([]);
   });
 
   it("a contact whose name is just its phone gets no push-name row", async () => {

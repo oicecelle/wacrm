@@ -31,7 +31,14 @@ export function createSupabaseHistoryStore(
   accountId: string,
   userId: string,
   owner?: string | null,
+  opts: { pauseMs?: number; sleep?: (ms: number) => Promise<void> } = {},
 ): HistoryStore {
+  // Every inserted message becomes a Realtime event for every open inbox
+  // of the account (and Realtime is shared by the whole project). A big
+  // import written in one burst can lag live messages for everyone, so
+  // the chunks are paced instead of fired back to back.
+  const pauseMs = opts.pauseMs ?? 250;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   async function conversationsFor(contactIds: string[]): Promise<Map<string, string>> {
     const out = new Map<string, string>();
     for (const chunk of chunks(contactIds, CHUNK)) {
@@ -105,7 +112,12 @@ export function createSupabaseHistoryStore(
               name: c.name,
               phone: c.phone,
               lead_score: 50,
-              tags: ["lead-whatsapp"],
+              // NO tags. A contact created from old history hasn't done
+              // anything yet that says what it is — the live path tags new
+              // contacts 'lead-whatsapp' because they just wrote in; these
+              // may be a client from years ago, a supplier, a wrong number.
+              // Tags come later, from real interactions.
+              tags: [],
               stage: "novo",
             })),
             { onConflict: "id", ignoreDuplicates: true },
@@ -166,7 +178,10 @@ export function createSupabaseHistoryStore(
 
     async insertMessages(rows: HistoryMessageRow[]) {
       let inserted = 0;
-      for (const chunk of chunks(rows, MSG_CHUNK)) {
+      const batches = chunks(rows, MSG_CHUNK);
+      for (let b = 0; b < batches.length; b++) {
+        const chunk = batches[b];
+        if (b > 0 && pauseMs > 0) await sleep(pauseMs);
         const payload = chunk.map((r) => ({
           conversation_id: r.conversationId,
           sender_type: r.fromMe ? "agent" : "customer",
