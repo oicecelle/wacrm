@@ -16,6 +16,7 @@ import {
   markPairingImportStarted,
 } from '@/lib/whatsapp/history-status'
 import { advanceMessageStatuses, idVariants } from '@/lib/whatsapp/apply-receipt'
+import { markConversationReadFromPhone } from '@/lib/whatsapp/read-on-phone'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe'
@@ -178,7 +179,8 @@ export async function POST(request: Request) {
       // and answering 500 only slows its queue.
       try {
         const receipt = parseReceiptEvent(body)
-        if (receipt) {
+        if (receipt?.source === 'contact') {
+          // The CONTACT received/read a message we sent → advance the ticks.
           const owner = typeof body.owner === 'string' ? body.owner : null
           const updated = await advanceMessageStatuses(db, config.account_id, receipt.messageIds, receipt.state, owner)
           // Broadcast recipients are matched by whatsapp_message_id, which
@@ -187,6 +189,12 @@ export async function POST(request: Request) {
             await advanceBroadcastRecipientStatus(db, variant, receipt.state)
           }
           return NextResponse.json({ status: 'processed_receipt', state: receipt.state, messages_updated: updated })
+        }
+        if (receipt?.source === 'own_device') {
+          // OUR phone read the customer's messages → the conversation was
+          // opened there, so clear its unread badge here too.
+          const cleared = await markConversationReadFromPhone(db, config.account_id, receipt.chatId, receipt.messageIds)
+          return NextResponse.json({ status: 'processed_read_on_phone', cleared })
         }
       } catch (err) {
         console.error('[uazapi-webhook] receipt handling failed:', err instanceof Error ? err.message : err)

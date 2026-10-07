@@ -112,13 +112,33 @@ export function parseConnectionStatus(body: unknown): "connected" | "disconnecte
 
 // ── delivery / read receipts ─────────────────────────────────────
 
+/**
+ * Two different things arrive as `messages_update` receipts, and the
+ * field that tells them apart (`IsFromMe`) means the OPPOSITE of what the
+ * documentation says — established from 3,695 real receipts, matched
+ * against our own messages table:
+ *
+ *  - `IsFromMe: false`  (the contact is the one reporting): they RECEIVED
+ *    or READ a message WE sent. 2,682 of 2,816 matched ids were our own
+ *    outbound messages. This drives the ticks.
+ *  - `IsFromMe: true`   (our own account, usually the phone, reporting):
+ *    WE read a message the customer sent. 1,100 of the matched ids were
+ *    customer messages. This is "the conversation was opened on the
+ *    phone" — the signal to clear the unread badge.
+ *
+ * The documentation example shows the reverse. Trust the data.
+ */
 export interface ParsedReceipt {
   /** Bare WhatsApp message ids, the `owner:` prefix already stripped. */
   messageIds: string[];
   state: "delivered" | "read";
+  /** contact → about OUR messages (ticks); own_device → about the CUSTOMER's messages (read on the phone). */
+  source: "contact" | "own_device";
+  /** JID of the conversation. */
+  chatId: string;
 }
 
-/** "Read"/"Played" → read, "Delivered" → delivered; anything else → null. */
+/** "Read"/"Played" → read, "Delivered" → delivered; anything else (e.g. "Deleted") → null. */
 export function mapReceiptState(raw: unknown): "delivered" | "read" | null {
   if (typeof raw !== "string") return null;
   const s = raw.toLowerCase();
@@ -134,24 +154,37 @@ export function bareMessageId(id: string): string {
 }
 
 /**
- * Reads a `messages_update` delivery. Only individual-chat receipts
- * (`type: "ReadReceipt"`) for messages WE sent are used: group receipts
- * are batched differently (and groups are filtered out anyway), and a
- * receipt with `IsFromMe: false` is about a message the customer sent.
+ * Reads a `messages_update` receipt for an individual chat. Group
+ * receipts are batched differently (and groups are filtered out anyway).
+ * From our own account only a READ is meaningful (a delivery receipt from
+ * our own device says nothing about the customer).
  */
 export function parseReceiptEvent(body: unknown): ParsedReceipt | null {
   const b = body as { type?: unknown; state?: unknown; event?: Record<string, unknown> } | null;
   const ev = b?.event;
   if (!ev || typeof ev !== "object") return null;
   if (b?.type === "GroupReceipts" || ev.Type === "GroupReceipts" || ev.IsGroup === true) return null;
-  if (ev.IsFromMe === false) return null;
 
   const state = mapReceiptState(b?.state ?? ev.Type);
   const rawIds = ev.MessageIDs;
-  if (!state || !Array.isArray(rawIds)) return null;
+  const chatId = typeof ev.Chat === "string" ? ev.Chat : "";
+  if (!state || !Array.isArray(rawIds) || !chatId) return null;
+
+  let source: ParsedReceipt["source"];
+  if (ev.IsFromMe === false) {
+    source = "contact";
+  } else if (ev.IsFromMe === true) {
+    // Our own account reporting. When the "sender" is the chat itself the
+    // direction is ambiguous (seen on a handful of events) — skip those.
+    if (typeof ev.Sender === "string" && ev.Sender === chatId) return null;
+    if (state !== "read") return null;
+    source = "own_device";
+  } else {
+    return null;
+  }
 
   const messageIds = rawIds.filter((x): x is string => typeof x === "string" && x.length > 0).map(bareMessageId);
-  return messageIds.length > 0 ? { messageIds, state } : null;
+  return messageIds.length > 0 ? { messageIds, state, source, chatId } : null;
 }
 
 // ── labels ───────────────────────────────────────────────────────

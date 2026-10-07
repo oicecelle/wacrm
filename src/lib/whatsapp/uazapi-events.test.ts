@@ -83,17 +83,28 @@ describe("parseConnectionStatus", () => {
 });
 
 describe("receipts", () => {
-  const read = {
+  // Shapes taken from real production events (not from the docs example,
+  // which has IsFromMe the other way round).
+  const CONTACT = "5521992385953@s.whatsapp.net";
+  const OURS = "554196864960@s.whatsapp.net";
+  const fromContact = (state: string, over: Record<string, unknown> = {}) => ({
     EventType: "messages_update",
     type: "ReadReceipt",
-    state: "Read",
-    event: { MessageIDs: ["MSG1", "5511999999999:MSG2"], Type: "Read", IsFromMe: true, IsGroup: false },
-  };
+    state,
+    event: { Chat: CONTACT, Sender: CONTACT, IsFromMe: false, IsGroup: false, MessageIDs: ["MSG1", "554196864960:MSG2"], Type: state, ...over },
+  });
+  const fromOurPhone = (state: string, over: Record<string, unknown> = {}) => ({
+    EventType: "messages_update",
+    type: "ReadReceipt",
+    state,
+    event: { Chat: CONTACT, Sender: OURS, IsFromMe: true, IsGroup: false, MessageIDs: ["CUST1"], Type: state, ...over },
+  });
 
   it("maps states", () => {
     expect(mapReceiptState("Read")).toBe("read");
     expect(mapReceiptState("Played")).toBe("read");
     expect(mapReceiptState("Delivered")).toBe("delivered");
+    expect(mapReceiptState("Deleted")).toBeNull();
     expect(mapReceiptState("Sender")).toBeNull();
     expect(mapReceiptState(undefined)).toBeNull();
   });
@@ -103,25 +114,47 @@ describe("receipts", () => {
     expect(bareMessageId("3EB0ABC")).toBe("3EB0ABC");
   });
 
-  it("parses a read receipt for several messages", () => {
-    expect(parseReceiptEvent(read)).toEqual({ messageIds: ["MSG1", "MSG2"], state: "read" });
+  it("REGRESSION: a receipt from the CONTACT (IsFromMe:false) is about OUR messages and drives the ticks", () => {
+    // This shape was being thrown away: it is 63% of all real receipts.
+    expect(parseReceiptEvent(fromContact("Read"))).toEqual({
+      messageIds: ["MSG1", "MSG2"],
+      state: "read",
+      source: "contact",
+      chatId: CONTACT,
+    });
+    expect(parseReceiptEvent(fromContact("Delivered"))).toMatchObject({ source: "contact", state: "delivered" });
+    expect(parseReceiptEvent(fromContact("Played"))).toMatchObject({ source: "contact", state: "read" });
   });
 
-  it("parses delivered", () => {
-    const d = { ...read, state: "Delivered", event: { ...read.event, Type: "Delivered" } };
-    expect(parseReceiptEvent(d)?.state).toBe("delivered");
+  it("a READ from our own phone (IsFromMe:true) means the conversation was opened there", () => {
+    expect(parseReceiptEvent(fromOurPhone("Read"))).toEqual({
+      messageIds: ["CUST1"],
+      state: "read",
+      source: "own_device",
+      chatId: CONTACT,
+    });
   });
 
-  it("ignores group receipts and receipts about the customer's own messages", () => {
-    expect(parseReceiptEvent({ ...read, type: "GroupReceipts" })).toBeNull();
-    expect(parseReceiptEvent({ ...read, event: { ...read.event, IsGroup: true } })).toBeNull();
-    expect(parseReceiptEvent({ ...read, event: { ...read.event, IsFromMe: false } })).toBeNull();
+  it("a DELIVERY report from our own device says nothing about the customer — ignored", () => {
+    expect(parseReceiptEvent(fromOurPhone("Delivered"))).toBeNull();
+  });
+
+  it("the ambiguous shape (IsFromMe:true but the sender is the chat itself) is skipped, not guessed", () => {
+    expect(parseReceiptEvent(fromOurPhone("Read", { Sender: CONTACT }))).toBeNull();
+  });
+
+  it("ignores group receipts, deletions and anything without a usable direction", () => {
+    expect(parseReceiptEvent({ ...fromContact("Read"), type: "GroupReceipts" })).toBeNull();
+    expect(parseReceiptEvent(fromContact("Read", { IsGroup: true }))).toBeNull();
+    expect(parseReceiptEvent(fromContact("Deleted"))).toBeNull();
+    expect(parseReceiptEvent(fromContact("Read", { IsFromMe: undefined }))).toBeNull();
   });
 
   it("returns null for malformed payloads instead of throwing", () => {
     expect(parseReceiptEvent({})).toBeNull();
-    expect(parseReceiptEvent({ state: "Read", event: { MessageIDs: [] } })).toBeNull();
-    expect(parseReceiptEvent({ state: "Read", event: { MessageIDs: null } })).toBeNull();
+    expect(parseReceiptEvent(fromContact("Read", { MessageIDs: [] }))).toBeNull();
+    expect(parseReceiptEvent(fromContact("Read", { MessageIDs: null }))).toBeNull();
+    expect(parseReceiptEvent(fromContact("Read", { Chat: undefined }))).toBeNull();
   });
 });
 
