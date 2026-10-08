@@ -31,19 +31,19 @@ export function ReplyQuote({
     <div
       className={cn(
         "flex items-start gap-2 border-l-2 px-2 py-1",
-        onPrimary ? "border-primary-foreground/50" : "border-primary",
+        onPrimary ? "border-[#06CF9C]" : "border-[#06CF9C]",
         isChip
           ? "rounded-md bg-muted/80"
           : onPrimary
-            ? "mb-1.5 rounded-md bg-primary-foreground/15"
-            : "mb-1.5 rounded-md bg-background/20",
+            ? "mb-1.5 rounded-md bg-black/5 dark:bg-white/10"
+            : "mb-1.5 rounded-md bg-black/5 dark:bg-white/10",
       )}
     >
       <div className="min-w-0 flex-1 overflow-hidden">
         <div
           className={cn(
             "truncate text-[11px] font-medium",
-            onPrimary ? "text-primary-foreground" : "text-primary",
+            "text-[#06795D] dark:text-[#06CF9C]",
           )}
         >
           {authorLabel}

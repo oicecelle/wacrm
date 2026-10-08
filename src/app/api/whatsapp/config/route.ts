@@ -259,6 +259,19 @@ export async function GET() {
       }
 
       const status = await getUazapiStatus(baseUrl, token)
+      // Mantém o status guardado em dia com o que a Uazapi diz agora.
+      // Sem isso, um "desconectado" gravado por um evento passageiro
+      // ficava para sempre e a Caixa de Entrada mostrava aviso falso.
+      // Falha de rede (state "error") não prova nada: não mexe.
+      if (status.state !== 'error') {
+        const live = status.connected ? 'connected' : 'disconnected'
+        if (config.status !== live) {
+          await supabase
+            .from('whatsapp_config')
+            .update({ status: live, updated_at: new Date().toISOString() })
+            .eq('account_id', accountId)
+        }
+      }
       return NextResponse.json({
         connected: status.connected,
         provider_type: 'uazapi',

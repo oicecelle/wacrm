@@ -19,6 +19,7 @@ import {
   markPairingImportStarted,
 } from '@/lib/whatsapp/history-status'
 import { advanceMessageStatuses, idVariants } from '@/lib/whatsapp/apply-receipt'
+import { messageIdMatchFilter } from '@/lib/whatsapp/message-id-match'
 import { markConversationReadFromPhone } from '@/lib/whatsapp/read-on-phone'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
@@ -288,26 +289,26 @@ export async function POST(request: Request) {
     const eventType = body.event || body.type
     const connectionState = body.connectionState || body.state || dataObj.connectionState || dataObj.state
     if (eventType === 'connection.update' || connectionState) {
-      const isConnected =
-        body.connected === true ||
-        body.state === 'connected' ||
-        body.status === 'connected' ||
-        body.connectionState === 'connected' ||
-        body.instance?.state === 'connected' ||
-        dataObj.connected === true ||
-        dataObj.state === 'connected' ||
-        dataObj.status === 'connected' ||
-        dataObj.connectionState === 'connected'
+      // Só muda o status quando o payload diz claramente conectado ou
+      // desconectado. Antes, qualquer corpo com um "state" qualquer
+      // ("connecting", etc.) virava "desconectado" e acendia o aviso falso.
+      const explicit = String(
+        body.connected === true ? 'connected'
+          : body.state || body.status || body.connectionState ||
+            body.instance?.state || dataObj.state || dataObj.status || dataObj.connectionState || ''
+      ).toLowerCase()
+      const next =
+        explicit === 'connected' || explicit === 'open' ? 'connected'
+          : explicit === 'disconnected' || explicit === 'close' || explicit === 'closed' ? 'disconnected'
+          : null
 
-      await db
-        .from('whatsapp_config')
-        .update({
-          status: isConnected ? 'connected' : 'disconnected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', config.id)
-
-      console.log(`[uazapi-webhook] Updated config status to ${isConnected ? 'connected' : 'disconnected'}`)
+      if (next) {
+        await db
+          .from('whatsapp_config')
+          .update({ status: next, updated_at: new Date().toISOString() })
+          .eq('id', config.id)
+        console.log(`[uazapi-webhook] Updated config status to ${next}`)
+      }
       return NextResponse.json({ status: 'processed_connection_update' })
     }
 
@@ -454,7 +455,8 @@ export async function POST(request: Request) {
     const { data: existingMsg } = await db
       .from('messages')
       .select('id')
-      .eq('message_id', messageId)
+      .or(messageIdMatchFilter(messageId))
+      .limit(1)
       .maybeSingle()
 
     if (existingMsg) {

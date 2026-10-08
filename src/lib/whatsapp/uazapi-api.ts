@@ -1,4 +1,4 @@
-import { UAZAPI_WEBHOOK_EVENTS, UAZAPI_WEBHOOK_EXCLUDE_MESSAGES } from './uazapi-events';
+import { UAZAPI_WEBHOOK_EVENTS, UAZAPI_WEBHOOK_EXCLUDE_MESSAGES, bareMessageId } from './uazapi-events';
 
 export interface UazapiSendResult {
   success: boolean;
@@ -130,7 +130,7 @@ export async function sendUazapiTextMessage(
     if (res.ok) {
       return {
         success: true,
-        messageId: data?.messageId || data?.id || data?.messages?.[0]?.id || `uaz-${Date.now()}`,
+        messageId: bareMessageId(String(data?.messageId || data?.id || data?.messages?.[0]?.id || `uaz-${Date.now()}`)),
       };
     } else {
       return {
@@ -347,7 +347,7 @@ export async function sendUazapiMediaMessage(
     if (res.ok) {
       return {
         success: true,
-        messageId: data?.messageId || data?.id || data?.messages?.[0]?.id || `uaz-${Date.now()}`,
+        messageId: bareMessageId(String(data?.messageId || data?.id || data?.messages?.[0]?.id || `uaz-${Date.now()}`)),
       };
     } else {
       return {

@@ -225,6 +225,24 @@ export default function InboxPage() {
         .eq("account_id", accountId)
         .maybeSingle();
 
+      if (data?.status === "connected") {
+        setWhatsappConnected(true);
+        return;
+      }
+
+      // O status guardado pode estar velho (um evento passageiro de
+      // "desconectado"). Antes de avisar, confirma com a Uazapi agora —
+      // o servidor também corrige o valor guardado.
+      try {
+        const res = await fetch("/api/whatsapp/config", { cache: "no-store" });
+        if (res.ok) {
+          const live = await res.json();
+          setWhatsappConnected(live?.connected === true);
+          return;
+        }
+      } catch {
+        // sem rede: cai no valor guardado
+      }
       setWhatsappConnected(data?.status === "connected");
     };
 

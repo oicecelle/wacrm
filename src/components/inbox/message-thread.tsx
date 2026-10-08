@@ -199,6 +199,11 @@ export function MessageThread({
   }, [isRefreshing, onRefresh]);
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
   const [whatsappName, setWhatsappName] = useState<string | null>(null);
+  // Foto do WhatsApp pode expirar: se a imagem falhar, volta à inicial.
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [contact?.id, contact?.avatar_url]);
 
   useEffect(() => {
     if (!contact?.id) {
@@ -939,7 +944,16 @@ export function MessageThread({
             </button>
           )}
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
-            {displayName.charAt(0).toUpperCase()}
+            {contact.avatar_url && !avatarFailed ? (
+              <img
+                src={contact.avatar_url}
+                alt={displayName}
+                className="h-9 w-9 rounded-full object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              displayName.charAt(0).toUpperCase()
+            )}
           </div>
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-foreground flex items-center gap-1.5 flex-wrap">

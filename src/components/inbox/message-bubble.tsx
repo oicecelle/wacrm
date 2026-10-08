@@ -36,11 +36,11 @@ interface MessageBubbleProps {
 export function StatusIcon({ status, className = "h-3.5 w-3.5" }: { status: Message["status"] | null | undefined; className?: string }) {
   switch (status) {
     case "sending":
-      return <Clock className={`${className} text-muted-foreground`} aria-label="Enviando" />;
+      return <Clock className={`${className} text-[#667781] dark:text-[#8696A0]`} aria-label="Enviando" />;
     case "sent":
-      return <Check className={`${className} text-muted-foreground`} aria-label="Enviada" />;
+      return <Check className={`${className} text-[#667781] dark:text-[#8696A0]`} aria-label="Enviada" />;
     case "delivered":
-      return <CheckCheck className={`${className} text-muted-foreground`} aria-label="Entregue" />;
+      return <CheckCheck className={`${className} text-[#667781] dark:text-[#8696A0]`} aria-label="Entregue" />;
     case "read":
       return <CheckCheck className={`${className} text-[#53bdeb]`} aria-label="Lida" />;
     case "failed":
@@ -270,8 +270,8 @@ export function MessageBubble({
         className={cn(
           "relative rounded-2xl px-3 py-2",
           isAgent
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md bg-muted text-foreground",
+            ? "rounded-br-md bg-[#D9FDD3] text-[#111B21] shadow-sm dark:bg-[#005C4B] dark:text-[#E9EDEF]"
+            : "rounded-bl-md bg-white text-[#111B21] shadow-sm dark:bg-[#202C33] dark:text-[#E9EDEF]",
         )}
       >
         {reply && (
@@ -295,7 +295,7 @@ export function MessageBubble({
               // timestamp must read against that (not the neutral
               // foreground) — otherwise it goes low-contrast in light
               // mode. Inbound bubbles use the muted surface.
-              isAgent ? "text-primary-foreground/70" : "text-muted-foreground",
+              "text-[#667781] dark:text-[#8696A0]",
             )}
           >
             {time}
