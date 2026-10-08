@@ -235,6 +235,31 @@ export async function POST(request: Request) {
       }
     }
 
+    // Proteção contra envio em dobro (duplo clique, retry de rede, duas
+    // abas): o mesmo texto na mesma conversa em até 5 s é tratado como o
+    // mesmo envio e não vai de novo ao WhatsApp.
+    if (message_type === 'text' && content_text) {
+      const since = new Date(Date.now() - 5000).toISOString()
+      const { data: recent } = await supabase
+        .from('messages')
+        .select('id, message_id')
+        .eq('conversation_id', conversation_id)
+        .eq('sender_type', 'agent')
+        .eq('content_type', 'text')
+        .eq('content_text', content_text)
+        .gte('created_at', since)
+        .limit(1)
+        .maybeSingle()
+      if (recent) {
+        return NextResponse.json({
+          success: true,
+          duplicate: true,
+          message_id: recent.id,
+          whatsapp_message_id: recent.message_id,
+        })
+      }
+    }
+
     // Send via dispatchSendMessage
     let waMessageId = ''
     let workingPhone = sanitizedPhone
