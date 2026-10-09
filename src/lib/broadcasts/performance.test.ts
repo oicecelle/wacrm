@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computePerformance, phoneKey, bestTemplate, type PerfRecipient, type PerfAppointment } from "./performance";
+import { computePerformance, phoneKey, bestTemplate, parseManualOutcome, type PerfRecipient, type PerfAppointment } from "./performance";
 
 const rec = (id: string, tpl: string, phone: string, sent: string, replied: string | null = null, b = "b1"): PerfRecipient => ({
   id, broadcast_id: b, broadcast_name: b, template_name: tpl, contact_id: id, contact_name: id, contact_phone: phone, sent_at: sent, replied_at: replied,
@@ -118,5 +118,70 @@ describe("bestTemplate", () => {
     });
     expect(bestTemplate([mk("pequeno", 3, 3, 3), mk("grande", 100, 30, 5)])?.template).toBe("grande");
     expect(bestTemplate([mk("pequeno", 3, 3, 3)])).toBeNull();
+  });
+});
+
+describe("marcação manual do resultado", () => {
+  const withManual = (r: PerfRecipient, manual: PerfRecipient["manual_outcome"]): PerfRecipient => ({ ...r, manual_outcome: manual });
+
+  it("'agendou' conta como agendamento mesmo sem agendamento no sistema e fora da janela", () => {
+    const r = computePerformance(
+      [withManual(rec("1", "A", "21990000001", "2026-10-02T10:00:00Z"), "agendou")],
+      [],
+      range,
+    );
+    const a = r.rows[0];
+    expect(a.scheduled).toBe(1);
+    expect(a.results[0].scheduled).toBe(true);
+    expect(a.results[0].scheduledBy).toBe("manual");
+    expect(r.totals.scheduled).toBe(1);
+  });
+
+  it("'agendou' não inventa resposta: respondeu continua como estava", () => {
+    const r = computePerformance([withManual(rec("1", "A", "21990000001", "2026-10-02T10:00:00Z"), "agendou")], [], range);
+    expect(r.rows[0].replied).toBe(0);
+    expect(r.rows[0].results[0].replied).toBe(false);
+  });
+
+  it("'respondeu' desfaz um agendamento detectado e conta a resposta fora da janela", () => {
+    const r = computePerformance(
+      [withManual(rec("1", "A", "21990000001", "2026-10-02T10:00:00Z", "2026-10-20T10:00:00Z"), "respondeu")],
+      [appt("a1", "2026-10-03T10:00:00Z", ["21990000001"])],
+      range,
+    );
+    const a = r.rows[0];
+    expect(a.replied).toBe(1);
+    expect(a.scheduled).toBe(0);
+    expect(a.results[0].appointment).toBeNull();
+  });
+
+  it("'sem_resposta' zera resposta e agendamento detectados", () => {
+    const r = computePerformance(
+      [withManual(rec("1", "A", "21990000001", "2026-10-02T10:00:00Z", "2026-10-02T11:00:00Z"), "sem_resposta")],
+      [appt("a1", "2026-10-03T10:00:00Z", ["21990000001"])],
+      range,
+    );
+    expect(r.rows[0].replied).toBe(0);
+    expect(r.rows[0].scheduled).toBe(0);
+  });
+
+  it("sem marcação manual, a detecção automática segue valendo", () => {
+    const r = computePerformance(
+      [rec("1", "A", "21990000001", "2026-10-02T10:00:00Z")],
+      [appt("a1", "2026-10-03T10:00:00Z", ["21990000001"])],
+      range,
+    );
+    expect(r.rows[0].scheduled).toBe(1);
+    expect(r.rows[0].results[0].scheduledBy).toBe("auto");
+  });
+});
+
+describe("parseManualOutcome", () => {
+  it("aceita só os valores conhecidos", () => {
+    expect(parseManualOutcome("agendou")).toBe("agendou");
+    expect(parseManualOutcome("respondeu")).toBe("respondeu");
+    expect(parseManualOutcome("sem_resposta")).toBe("sem_resposta");
+    expect(parseManualOutcome("qualquer")).toBeNull();
+    expect(parseManualOutcome(null)).toBeNull();
   });
 });

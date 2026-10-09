@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { endOfMonth, startOfMonth, subDays, subMonths, format } from 'date-fns';
-import { Loader2, MessageCircle, CalendarCheck, Send, Trophy, ExternalLink, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Loader2, MessageCircle, CalendarCheck, Send, Trophy, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchAllRows } from '@/lib/supabase/fetch-all';
@@ -13,6 +14,8 @@ import {
   MIN_SAMPLE_FOR_BEST,
   type PerfAppointment,
   type PerfRecipient,
+  parseManualOutcome,
+  type ManualOutcome,
   type TemplatePerf,
   type RecipientResult,
 } from '@/lib/broadcasts/performance';
@@ -20,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type PeriodKey = 'this_month' | 'last_month' | '30d' | '90d';
 
@@ -81,6 +85,7 @@ interface RawRecipient {
   contact_id: string | null;
   sent_at: string | null;
   replied_at: string | null;
+  manual_outcome: string | null;
   broadcasts: { name: string | null; template_name: string | null } | { name: string | null; template_name: string | null }[] | null;
   contact: { id: string; name: string | null; phone: string | null } | { id: string; name: string | null; phone: string | null }[] | null;
 }
@@ -124,7 +129,7 @@ export default function BroadcastPerformancePage() {
           supabase
             .from('broadcast_recipients')
             .select(
-              'id, broadcast_id, contact_id, sent_at, replied_at, broadcasts!inner(name, template_name, account_id), contact:contacts(id, name, phone)',
+              'id, broadcast_id, contact_id, sent_at, replied_at, manual_outcome, broadcasts!inner(name, template_name, account_id), contact:contacts(id, name, phone)',
               { count: 'exact' },
             )
             .eq('broadcasts.account_id', accountId)
@@ -173,6 +178,7 @@ export default function BroadcastPerformancePage() {
               contact_phone: c?.phone ?? null,
               sent_at: r.sent_at as string,
               replied_at: r.replied_at,
+              manual_outcome: parseManualOutcome(r.manual_outcome),
             };
           }),
       );
@@ -192,6 +198,32 @@ export default function BroadcastPerformancePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Marca o resultado à mão. Atualiza a tela na hora (e, com isso, os números do
+  // desempenho) e grava no banco; se a gravação falhar, volta ao valor anterior.
+  const setOutcome = useCallback(
+    async (recipientId: string, outcome: ManualOutcome | null) => {
+      const before = recipients.find((r) => r.id === recipientId)?.manual_outcome ?? null;
+      setRecipients((list) => list.map((r) => (r.id === recipientId ? { ...r, manual_outcome: outcome } : r)));
+      const { error: upErr } = await createClient()
+        .from('broadcast_recipients')
+        .update({
+          manual_outcome: outcome,
+          manual_outcome_at: outcome ? new Date().toISOString() : null,
+          manual_outcome_by: outcome ? profile?.id ?? null : null,
+        })
+        .eq('id', recipientId);
+      if (upErr) {
+        setRecipients((list) => list.map((r) => (r.id === recipientId ? { ...r, manual_outcome: before } : r)));
+        toast.error(
+          /manual_outcome/i.test(upErr.message)
+            ? 'Não foi possível salvar: falta aplicar a atualização do banco (migração 086).'
+            : 'Não foi possível salvar essa mudança. Tente de novo.',
+        );
+      }
+    },
+    [recipients, profile?.id],
+  );
 
   const current = useMemo(
     () => computePerformance(recipients, appointments, { from: cur.from, to: cur.to, windowDays }),
@@ -329,20 +361,47 @@ export default function BroadcastPerformancePage() {
         </>
       )}
 
-      <ConversationsDialog key={selected ?? 'none'} row={selectedRow} accountId={accountId ?? undefined} onClose={() => setSelected(null)} />
+      <ConversationsDialog key={selected ?? 'none'} row={selectedRow} accountId={accountId ?? undefined} onClose={() => setSelected(null)} onChangeOutcome={setOutcome} />
     </div>
   );
 }
 
 type Tab = 'replied' | 'scheduled' | 'all';
 
-function ConversationsDialog({ row, accountId, onClose }: { row: TemplatePerf | null; accountId?: string; onClose: () => void }) {
+const fmt = (iso: string) => format(new Date(iso), 'dd/MM HH:mm');
+
+const OUTCOME_LABEL: Record<ManualOutcome, string> = {
+  sem_resposta: 'Sem resposta',
+  respondeu: 'Respondeu, sem agendamento',
+  agendou: 'Agendou',
+};
+
+/** O que a detecção automática concluiu para esse destinatário. */
+function autoLabel(r: RecipientResult): string {
+  // sem marcação manual `scheduled`/`replied` vêm só da detecção
+  if (r.manual) return 'Automático';
+  if (r.scheduled) return 'Automático: agendou';
+  if (r.replied) return 'Automático: respondeu';
+  return 'Automático: sem resposta';
+}
+
+function ConversationsDialog({
+  row,
+  accountId,
+  onClose,
+  onChangeOutcome,
+}: {
+  row: TemplatePerf | null;
+  accountId?: string;
+  onClose: () => void;
+  onChangeOutcome: (recipientId: string, outcome: ManualOutcome | null) => void;
+}) {
   const [tab, setTab] = useState<Tab>('replied');
   const [convByContact, setConvByContact] = useState<Record<string, string>>({});
 
   const list = useMemo(() => {
     if (!row) return [] as RecipientResult[];
-    const filtered = row.results.filter((r) => (tab === 'replied' ? r.replied : tab === 'scheduled' ? !!r.appointment : true));
+    const filtered = row.results.filter((r) => (tab === 'replied' ? r.replied : tab === 'scheduled' ? r.scheduled : true));
     return [...filtered].sort((a, b) => Date.parse(b.recipient.sent_at) - Date.parse(a.recipient.sent_at)).slice(0, 300);
   }, [row, tab]);
 
@@ -365,6 +424,10 @@ function ConversationsDialog({ row, accountId, onClose }: { row: TemplatePerf | 
         (data ?? []).forEach((c: { id: string; contact_id: string }) => {
           if (!found[c.contact_id]) found[c.contact_id] = c.id;
         });
+        // quem não tem conversa fica com '' para a tela não mostrar "carregando" para sempre
+        ids.slice(i, i + 150).forEach((id) => {
+          if (!(id in found)) found[id] = '';
+        });
       }
       if (!cancelled) setConvByContact((prev) => ({ ...prev, ...found }));
     })();
@@ -374,81 +437,94 @@ function ConversationsDialog({ row, accountId, onClose }: { row: TemplatePerf | 
   }, [list, row, accountId, convByContact]);
 
   const counts = row ? { replied: row.replied, scheduled: row.scheduled, all: row.sent } : { replied: 0, scheduled: 0, all: 0 };
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'replied', label: `Responderam (${counts.replied})` },
-    { key: 'scheduled', label: `Agendaram (${counts.scheduled})` },
-    { key: 'all', label: `Todas as enviadas (${counts.all})` },
+  const tabs: { key: Tab; label: string; count: number }[] = [
+    { key: 'replied', label: 'Responderam', count: counts.replied },
+    { key: 'scheduled', label: 'Agendaram', count: counts.scheduled },
+    { key: 'all', label: 'Enviadas', count: counts.all },
   ];
 
   return (
     <Dialog open={!!row} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{row?.template}</DialogTitle>
-          <DialogDescription>Abra a conversa para ver se a pessoa fechou ou não.</DialogDescription>
+      <DialogContent className="flex max-h-[88vh] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-3 p-4 sm:max-w-2xl sm:p-5">
+        <DialogHeader className="pr-8">
+          <DialogTitle className="truncate">{row?.template}</DialogTitle>
+          <DialogDescription>Abra a conversa para ver se a pessoa fechou, ou corrija o resultado no menu de cada contato.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-wrap gap-2">
+
+        <div role="tablist" className="grid shrink-0 grid-cols-3 gap-1 rounded-lg bg-muted p-1">
           {tabs.map((t) => (
-            <Button key={t.key} size="sm" variant={tab === t.key ? 'default' : 'outline'} onClick={() => setTab(t.key)}>
-              {t.label}
-            </Button>
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                'flex min-w-0 flex-col items-center rounded-md px-1.5 py-1.5 text-xs font-medium transition-colors sm:flex-row sm:justify-center sm:gap-1.5 sm:text-sm',
+                tab === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <span className="max-w-full truncate">{t.label}</span>
+              <span className="tabular-nums opacity-70">{t.count}</span>
+            </button>
           ))}
         </div>
-        <div className="max-h-[55vh] overflow-y-auto rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Contato</TableHead>
-                <TableHead>Disparo</TableHead>
-                <TableHead>Enviada</TableHead>
-                <TableHead>Respondeu</TableHead>
-                <TableHead>Resultado</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {list.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Nenhuma conversa nesta lista.</TableCell>
-                </TableRow>
-              )}
-              {list.map(({ recipient: r, replied, appointment }) => {
-                const convId = r.contact_id ? convByContact[r.contact_id] : undefined;
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <div className="font-medium">{r.contact_name || r.contact_phone || 'Contato'}</div>
-                      {r.contact_name && <div className="text-xs text-muted-foreground">{r.contact_phone}</div>}
-                    </TableCell>
-                    <TableCell className="max-w-40 truncate text-xs text-muted-foreground">{r.broadcast_name}</TableCell>
-                    <TableCell className="whitespace-nowrap text-xs">{format(new Date(r.sent_at), 'dd/MM HH:mm')}</TableCell>
-                    <TableCell className="whitespace-nowrap text-xs">{replied && r.replied_at ? format(new Date(r.replied_at), 'dd/MM HH:mm') : '—'}</TableCell>
-                    <TableCell>
-                      {appointment ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                          Agendou{appointment.start_time ? ` · ${format(new Date(appointment.start_time), 'dd/MM')}` : ''}
-                        </Badge>
-                      ) : replied ? (
-                        <Badge variant="secondary">Respondeu, sem agendamento</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Sem resposta</span>
+
+        <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto overflow-x-hidden rounded-lg border border-border">
+          {list.length === 0 && <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma conversa nesta lista.</li>}
+          {list.map((res) => {
+            const r = res.recipient;
+            const convId = r.contact_id ? convByContact[r.contact_id] : undefined;
+            return (
+              <li key={r.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-foreground">{r.contact_name || r.contact_phone || 'Contato'}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {r.contact_name && r.contact_phone ? `${r.contact_phone} · ` : ''}
+                    {r.broadcast_name}
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    Enviada {fmt(r.sent_at)}
+                    {res.replied && r.replied_at ? ` · respondeu ${fmt(r.replied_at)}` : ''}
+                    {res.appointment?.start_time ? ` · consulta ${format(new Date(res.appointment.start_time), 'dd/MM')}` : ''}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
+                    <select
+                      aria-label={`Resultado de ${r.contact_name || r.contact_phone || 'contato'}`}
+                      value={res.manual ?? 'auto'}
+                      onChange={(e) => onChangeOutcome(r.id, e.target.value === 'auto' ? null : (e.target.value as ManualOutcome))}
+                      className={cn(
+                        'h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm text-foreground',
+                        res.scheduled ? 'border-emerald-500/50' : 'border-border',
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {convId ? (
-                        <Link href={`/inbox?c=${convId}`} target="_blank" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                          Abrir <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                    >
+                      <option value="auto">{autoLabel(res)}</option>
+                      {(Object.keys(OUTCOME_LABEL) as ManualOutcome[]).map((k) => (
+                        <option key={k} value={k}>{OUTCOME_LABEL[k]}</option>
+                      ))}
+                    </select>
+                    {res.manual && <div className="mt-0.5 text-[11px] text-muted-foreground">marcado à mão</div>}
+                  </div>
+                  {convId ? (
+                    <Link
+                      href={`/inbox?c=${convId}`}
+                      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-muted"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Abrir
+                    </Link>
+                  ) : (
+                    <span className="shrink-0 px-1 text-xs text-muted-foreground">{convId === undefined && r.contact_id ? '…' : 'Sem conversa'}</span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
         {row && (tab === 'all' ? row.sent : tab === 'replied' ? row.replied : row.scheduled) > 300 && (
-          <p className="text-xs text-muted-foreground">Mostrando as 300 mais recentes.</p>
+          <p className="shrink-0 text-xs text-muted-foreground">Mostrando as 300 mais recentes.</p>
         )}
       </DialogContent>
     </Dialog>

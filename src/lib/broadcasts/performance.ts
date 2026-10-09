@@ -8,6 +8,9 @@
  *    para um paciente com o mesmo telefone do contato. Se o contato recebeu
  *    mais de um disparo antes de agendar, o crédito vai para o ÚLTIMO
  *    (último toque), e cada agendamento conta uma única vez.
+ *  - Marcação manual: quando alguém muda o resultado de um destinatário na
+ *    tela, essa marcação vale mais do que a detecção automática (e ignora a
+ *    janela de dias). Serve, por exemplo, para quem aparece presencialmente.
  *
  * Tudo aqui é puro (sem banco) para ser testável.
  */
@@ -28,6 +31,15 @@ export function phoneKey(phone: string | null | undefined): string {
   return d.length >= 8 ? d.slice(-8) : "";
 }
 
+/** Resultado marcado à mão. `null` = usar a detecção automática. */
+export type ManualOutcome = "sem_resposta" | "respondeu" | "agendou";
+
+export const MANUAL_OUTCOMES: ManualOutcome[] = ["sem_resposta", "respondeu", "agendou"];
+
+export function parseManualOutcome(v: unknown): ManualOutcome | null {
+  return typeof v === "string" && (MANUAL_OUTCOMES as string[]).includes(v) ? (v as ManualOutcome) : null;
+}
+
 export interface PerfRecipient {
   id: string;
   broadcast_id: string;
@@ -38,6 +50,7 @@ export interface PerfRecipient {
   contact_phone: string | null;
   sent_at: string;
   replied_at: string | null;
+  manual_outcome?: ManualOutcome | null;
 }
 
 export interface PerfAppointment {
@@ -52,6 +65,11 @@ export interface PerfAppointment {
 export interface RecipientResult {
   recipient: PerfRecipient;
   replied: boolean;
+  /** Agendou (detectado ou marcado à mão). */
+  scheduled: boolean;
+  scheduledBy: "auto" | "manual" | null;
+  manual: ManualOutcome | null;
+  /** Agendamento detectado automaticamente, se houver (e não foi desfeito à mão). */
   appointment: PerfAppointment | null;
 }
 
@@ -137,13 +155,30 @@ export function computePerformance(
       groups.set(name, g);
     }
     const repliedMs = r.replied_at ? Date.parse(r.replied_at) : NaN;
-    const replied = !Number.isNaN(repliedMs) && repliedMs >= sent && repliedMs - sent <= windowMs;
-    const appointment = credited.get(r.id) ?? null;
+    let replied = !Number.isNaN(repliedMs) && repliedMs >= sent && repliedMs - sent <= windowMs;
+    let appointment = credited.get(r.id) ?? null;
+    let scheduled = !!appointment;
+    let scheduledBy: RecipientResult["scheduledBy"] = appointment ? "auto" : null;
+    const manual = r.manual_outcome ?? null;
+    if (manual === "sem_resposta") {
+      replied = false;
+      scheduled = false;
+      scheduledBy = null;
+      appointment = null;
+    } else if (manual === "respondeu") {
+      replied = true;
+      scheduled = false;
+      scheduledBy = null;
+      appointment = null;
+    } else if (manual === "agendou") {
+      scheduled = true;
+      scheduledBy = "manual";
+    }
     g._b.add(r.broadcast_id);
     g.sent += 1;
     if (replied) g.replied += 1;
-    if (appointment) g.scheduled += 1;
-    g.results.push({ recipient: r, replied, appointment });
+    if (scheduled) g.scheduled += 1;
+    g.results.push({ recipient: r, replied, scheduled, scheduledBy, manual, appointment });
   }
 
   const rows: TemplatePerf[] = [];
