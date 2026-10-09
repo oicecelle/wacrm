@@ -33,6 +33,8 @@ export interface AudienceConfig {
   csvContacts?: ManualContact[];
   /** Contacts carrying any of these tags are subtracted from the result. */
   excludeTagIds?: string[];
+  /** Marca com uma tag quem receber o disparo (ver lib/broadcasts/tag-on-send). */
+  tagOnSend?: { enabled: boolean; tagId?: string; newTagName?: string };
   filters?: {
     contact_type?: 'all' | 'lead' | 'client';
     gender?: 'all' | 'male' | 'female' | 'other';
@@ -489,6 +491,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             tagIds: payload.audience.tagIds,
             customField: payload.audience.customField,
             excludeTagIds: payload.audience.excludeTagIds,
+            tagOnSend: payload.audience.tagOnSend,
           },
           scheduled_at: payload.scheduledAt,
           interval_seconds: payload.intervalSeconds,

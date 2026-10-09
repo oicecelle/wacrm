@@ -1,5 +1,6 @@
 'use client';
 
+import { templateNameTaken } from '@/lib/templates/name-unique';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -130,6 +131,12 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Sessão expirada.');
+
+      if (await templateNameTaken(supabase, profile.account_id, newName)) {
+        toast.error('Já existe um modelo com esse nome nesta clínica. Escolha outro nome.');
+        setSaving(false);
+        return;
+      }
 
       const variables = extractNamedVariables(newBody);
 

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Switch } from '@/components/ui/switch';
+import { templateNameTaken } from '@/lib/templates/name-unique';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { MessageTemplate } from '@/types';
@@ -197,6 +199,11 @@ export function SimpleTemplateManager() {
     setSaving(true);
     try {
       const supabase = createClient();
+      if (await templateNameTaken(supabase, profile.account_id, name, editingId)) {
+        toast.error('Já existe um modelo com esse nome nesta clínica. Escolha outro nome.');
+        setSaving(false);
+        return;
+      }
       const variables = extractNamedVariables(parts.map((p) => p.text ?? '').join(' '));
 
       if (editingId) {
@@ -367,17 +374,11 @@ export function SimpleTemplateManager() {
                   (dá pra incluir mesmo assim, na hora).
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={preventResend}
-                onClick={() => setPreventResend((v) => !v)}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${preventResend ? 'bg-primary' : 'bg-neutral-300'}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${preventResend ? 'translate-x-5' : 'translate-x-0.5'}`}
-                />
-              </button>
+              <Switch
+                checked={preventResend}
+                onCheckedChange={setPreventResend}
+                aria-label="Impedir reenvio"
+              />
             </div>
 
             <div className="space-y-1.5">

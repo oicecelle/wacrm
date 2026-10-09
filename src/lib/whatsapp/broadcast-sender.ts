@@ -5,6 +5,7 @@ import {
   namedParamsToPositional,
 } from '@/lib/whatsapp/sender-dispatcher'
 import { sendUazapiTextMessage, sendUazapiMediaMessage } from '@/lib/whatsapp/uazapi-api'
+import { tagIdForBroadcast } from '@/lib/broadcasts/tag-on-send'
 
 /**
  * Sends one broadcast_recipients row right now and writes its result
@@ -116,11 +117,11 @@ export async function sendOneBroadcastRecipient(
       })
       .eq('id', recipient.id)
 
-    // Only templates explicitly marked prevent_resend get logged —
-    // this table exists purely to answer "has this contact already
-    // gotten THIS template", so logging every send unconditionally
-    // would just be a write nobody reads for the common case.
-    if (templateRow?.prevent_resend && templateRow?.id && recipient.contact_id && broadcast.account_id) {
+    // Todo envio entra no histórico "este contato já recebeu ESTE modelo",
+    // mesmo com "impedir reenvio" desligado. Antes só modelos com a opção
+    // ligada eram registrados, então ligar a opção depois não excluía
+    // ninguém que já tinha recebido.
+    if (templateRow?.id && recipient.contact_id && broadcast.account_id) {
       await admin
         .from('template_send_log')
         .upsert(
@@ -132,6 +133,21 @@ export async function sendOneBroadcastRecipient(
           },
           { onConflict: 'account_id,contact_id,template_id', ignoreDuplicates: false },
         )
+    }
+
+    // Marca o contato com a tag escolhida no disparo (se houver). Falha aqui
+    // não derruba o envio, que já foi feito.
+    if (recipient.contact_id) {
+      try {
+        const tagId = await tagIdForBroadcast(admin, broadcast.id)
+        if (tagId) {
+          await admin
+            .from('contact_tags')
+            .upsert({ contact_id: recipient.contact_id, tag_id: tagId }, { onConflict: 'contact_id,tag_id' })
+        }
+      } catch (err) {
+        console.error('[broadcast-sender] tag on send failed:', err instanceof Error ? err.message : err)
+      }
     }
   } else {
     await admin

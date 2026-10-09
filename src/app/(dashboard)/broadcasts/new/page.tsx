@@ -124,6 +124,7 @@ export default function NewBroadcastPage() {
           customField: audience.customField,
           csvContacts: audience.csvContacts,
           excludeTagIds: audience.excludeTagIds,
+          tagOnSend: audience.tagOnSend,
         },
         variables,
         scheduledAt: scheduledAtIso,
@@ -331,6 +332,7 @@ export default function NewBroadcastPage() {
               onNameChange={setName}
               template={template}
               audience={audience}
+              onAudienceChange={setAudience}
               scheduledAtIso={scheduledAtIso}
               onSend={handleSend}
               onSaveDraft={handleSaveDraft}

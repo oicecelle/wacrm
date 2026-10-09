@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveTagOnSend } from '@/lib/broadcasts/tag-on-send'
 import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils'
 import {
   checkRateLimit,
@@ -226,6 +227,12 @@ export async function POST(request: Request) {
       }
     }
 
+    // "Marcar quem receber": garante que a tag exista nesta clínica.
+    const tagResolved = await resolveTagOnSend(supabase, accountId, user.id, audience_filter)
+    if (tagResolved.error) {
+      return NextResponse.json({ error: tagResolved.error }, { status: 400 })
+    }
+
     const { data: broadcast, error: broadcastError } = await supabase
       .from('broadcasts')
       .insert({
@@ -235,7 +242,7 @@ export async function POST(request: Request) {
         template_name,
         template_language: template_language || 'pt_BR',
         template_variables: template_variables ?? null,
-        audience_filter: audience_filter ?? null,
+        audience_filter: tagResolved.audienceFilter ?? null,
         status: 'scheduled',
         scheduled_at: scheduledAt.toISOString(),
         interval_seconds: intervalSeconds,

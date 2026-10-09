@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { MessageTemplate } from '@/types';
+import type { AudienceConfig } from '@/hooks/use-broadcast-sending';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,19 +16,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Send, Loader2, Users, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { suggestedTagName } from '@/lib/broadcasts/tag-on-send';
+import { ArrowLeft, Send, Loader2, Users, Save, Tag } from 'lucide-react';
 
-interface AudienceConfig {
-  type: string;
-  tagIds?: string[];
-  csvContacts?: { phone: string; name?: string }[];
-}
 
 interface Step4Props {
   name: string;
   onNameChange: (name: string) => void;
   template: MessageTemplate;
   audience: AudienceConfig;
+  onAudienceChange: (audience: AudienceConfig) => void;
   /** ISO string from step 3, or undefined for "send as soon as possible". */
   scheduledAtIso?: string;
   onSend: () => void;
@@ -42,6 +41,7 @@ export function Step4ScheduleSend({
   onNameChange,
   template,
   audience,
+  onAudienceChange,
   scheduledAtIso,
   onSend,
   onSaveDraft,
@@ -54,6 +54,24 @@ export function Step4ScheduleSend({
   const [showConfirm, setShowConfirm] = useState(false);
   const [estimatedReach, setEstimatedReach] = useState<number>(0);
   const [loadingReach, setLoadingReach] = useState(true);
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (!accountId) return;
+    createClient()
+      .from('tags')
+      .select('id, name')
+      .eq('account_id', accountId)
+      .order('name')
+      .then(({ data }) => setTags((data ?? []) as { id: string; name: string }[]));
+  }, [accountId]);
+
+  const tagOnSend = audience.tagOnSend ?? { enabled: false };
+  // 'new' = criar uma tag nova com o nome digitado; senão o id de uma tag existente.
+  const tagChoice = tagOnSend.tagId ?? 'new';
+  function setTagOnSend(next: NonNullable<AudienceConfig['tagOnSend']>) {
+    onAudienceChange({ ...audience, tagOnSend: next });
+  }
 
   useEffect(() => {
     if (!accountId) return;
@@ -160,6 +178,56 @@ export function Step4ScheduleSend({
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Marcar quem receber */}
+      <div className="rounded-xl border border-border bg-card/50 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Tag className="mt-0.5 h-4 w-4 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Marcar quem receber este disparo</p>
+              <p className="text-xs text-muted-foreground">
+                Cada contato que receber a mensagem ganha uma tag. Assim você filtra depois quem recebeu esta campanha.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={tagOnSend.enabled}
+            onCheckedChange={(checked) =>
+              setTagOnSend({
+                ...tagOnSend,
+                enabled: checked,
+                newTagName: tagOnSend.newTagName ?? suggestedTagName(name, template.name),
+              })
+            }
+            aria-label="Marcar quem receber este disparo"
+          />
+        </div>
+        {tagOnSend.enabled && (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <select
+              value={tagChoice}
+              onChange={(e) =>
+                setTagOnSend({ ...tagOnSend, tagId: e.target.value === 'new' ? undefined : e.target.value })
+              }
+              className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+            >
+              <option value="new">Criar uma tag nova</option>
+              {tags.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            {tagChoice === 'new' && (
+              <Input
+                value={tagOnSend.newTagName ?? ''}
+                onChange={(e) => setTagOnSend({ ...tagOnSend, newTagName: e.target.value })}
+                placeholder="Nome da tag"
+                className="border-border bg-muted text-foreground"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Processing overlay */}
