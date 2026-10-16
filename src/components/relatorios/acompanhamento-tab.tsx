@@ -47,7 +47,9 @@ async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ da
   return out;
 }
 
-const dayStr = (d: Date) => d.toISOString().slice(0, 10);
+// Data local (não UTC) no formato AAAA-MM-DD, que é o que o campo de data usa.
+const dayStr = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
   const supabase = useMemo(() => createClient(), []);
@@ -57,12 +59,9 @@ export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [statuses, setStatuses] = useState<{ id: string; nome: string }[]>([]);
 
-  const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return dayStr(d);
-  });
-  const [to, setTo] = useState(() => dayStr(new Date()));
+  // Começa sem filtro nenhum: lista completa de leads.
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [tagF, setTagF] = useState("all");
   const [sourceF, setSourceF] = useState("all");
   const [stageF, setStageF] = useState("all");
@@ -141,8 +140,8 @@ export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
 
   const filtered = useMemo(() => {
     // `from` e `to` são datas locais; inclui o dia final inteiro.
-    const fromMs = new Date(`${from}T00:00:00`).getTime();
-    const toMs = new Date(`${to}T23:59:59.999`).getTime();
+    const fromMs = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity;
+    const toMs = to ? new Date(`${to}T23:59:59.999`).getTime() : Infinity;
     return rows.filter((r) => {
       const t = Date.parse(r.createdAt);
       if (t < fromMs || t > toMs) return false;
@@ -159,6 +158,27 @@ export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
   const agendou = agendadoId ? filtered.filter((r) => r.statusId === agendadoId).length : 0;
   const pct = (n: number) => (total > 0 ? `${Math.round((n / total) * 100)}%` : "0%");
   const statusName = (id: string | null) => statuses.find((s) => s.id === id)?.nome ?? "—";
+
+  const hasFilter = from || to || tagF !== "all" || sourceF !== "all" || stageF !== "all" || statusF !== "all";
+  const clear = () => {
+    setFrom("");
+    setTo("");
+    setTagF("all");
+    setSourceF("all");
+    setStageF("all");
+    setStatusF("all");
+  };
+  const preset = (days: number | null) => {
+    if (days === null) {
+      setFrom("");
+      setTo("");
+      return;
+    }
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    setFrom(dayStr(d));
+    setTo(dayStr(new Date()));
+  };
 
   const sel = "w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none";
 
@@ -192,7 +212,7 @@ export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
           </select>
         </label>
         <label className="text-xs font-semibold space-y-1">
-          <span>Etapa no CRM</span>
+          <span>Estágio</span>
           <select value={stageF} onChange={(e) => setStageF(e.target.value)} className={sel}>
             <option value="all">Todas</option>
             {stages.map((s) => (
@@ -211,6 +231,20 @@ export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
         </label>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 -mt-3 text-xs">
+        <span className="font-semibold text-muted-foreground">Período:</span>
+        {([["Tudo", null], ["Hoje", 0], ["7 dias", 7], ["30 dias", 30]] as const).map(([label, days]) => (
+          <button key={label} onClick={() => preset(days)} className="rounded-full border border-border px-3 py-1 font-semibold hover:bg-muted cursor-pointer">
+            {label}
+          </button>
+        ))}
+        {hasFilter && (
+          <button onClick={clear} className="font-bold text-muted-foreground hover:text-primary hover:underline px-2 cursor-pointer">
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
       {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
 
       {loading ? (
@@ -221,26 +255,26 @@ export function AcompanhamentoTab({ accountId }: { accountId: string | null }) {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground font-semibold">Chegaram</p>
+              <p className="text-xs text-muted-foreground font-semibold">Leads</p>
               <p className="text-3xl font-bold">{total}</p>
             </div>
             <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground font-semibold">Sinal solicitado</p>
+              <p className="text-xs text-muted-foreground font-semibold">Sinais solicitados</p>
               <p className="text-3xl font-bold">{sinal}</p>
-              <p className="text-xs text-muted-foreground">{pct(sinal)} de quem chegou</p>
+              <p className="text-xs text-muted-foreground">{pct(sinal)} dos leads</p>
             </div>
             <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground font-semibold">Agendaram</p>
+              <p className="text-xs text-muted-foreground font-semibold">Agendados</p>
               <p className="text-3xl font-bold">{agendou}</p>
               <p className="text-xs text-muted-foreground">
-                {agendadoId ? `${pct(agendou)} de quem chegou` : 'Não há status "Agendado" cadastrado'}
+                {agendadoId ? `${pct(agendou)} dos leads` : 'Não há status "Agendado" cadastrado'}
               </p>
             </div>
           </div>
 
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-border text-xs font-bold">
-              {total} {total === 1 ? "contato" : "contatos"} · chegada pela data de criação do negócio no Funil
+              {total} {total === 1 ? "lead" : "leads"} · período pela data em que o lead entrou no Funil
             </div>
             {total === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">Nenhum contato com esses filtros.</p>

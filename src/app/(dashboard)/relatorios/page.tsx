@@ -47,7 +47,7 @@ export default function RelatoriosPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Tab State: "dashboard" | "rules" | "reports"
-  const [activeTab, setActiveTab] = useState<"dashboard" | "rules" | "reports" | "acompanhamento">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "rules" | "reports" | "acompanhamento">("acompanhamento");
 
   // Filters State
   const [startDate, setStartDate] = useState(() => {
@@ -448,6 +448,14 @@ export default function RelatoriosPage() {
         {/* Tab Controls */}
         <div className="flex gap-1 border-b border-border self-start md:self-auto overflow-x-auto max-w-full">
           <button
+            onClick={() => setActiveTab("acompanhamento")}
+            className={`px-4 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
+              activeTab === "acompanhamento" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Leads
+          </button>
+          <button
             onClick={() => setActiveTab("dashboard")}
             className={`px-4 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
               activeTab === "dashboard" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -470,14 +478,6 @@ export default function RelatoriosPage() {
             }`}
           >
             Relatórios Automáticos (WhatsApp)
-          </button>
-          <button
-            onClick={() => setActiveTab("acompanhamento")}
-            className={`px-4 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
-              activeTab === "acompanhamento" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Acompanhamento de Leads
           </button>
         </div>
       </div>
