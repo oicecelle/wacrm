@@ -70,6 +70,7 @@ export default function PipelinesPage() {
   const [filterInterest, setFilterInterest] = useState<string>("all");
   const [filterResponsible, setFilterResponsible] = useState<string>("all");
   const [filterCrmStatus, setFilterCrmStatus] = useState<string>("all");
+  const [filterCrmStage, setFilterCrmStage] = useState<string>("all");
   const [filterLifecycle, setFilterLifecycle] = useState<string>("all");
   const [filterState, setFilterState] = useState<string>("all");
   const [crmStatuses, setCrmStatuses] = useState<{ id: string; nome: string }[]>([]);
@@ -478,6 +479,13 @@ export default function PipelinesPage() {
         } else if (deal.crm_status_id !== filterCrmStatus) return false;
       }
 
+      // 6b. Etapa no CRM (texto livre do negócio)
+      if (filterCrmStage !== "all") {
+        if (filterCrmStage === "none") {
+          if (deal.crm_stage) return false;
+        } else if (deal.crm_stage !== filterCrmStage) return false;
+      }
+
       // 7. Ciclo de vida (aberto / ganho / perdido)
       if (filterLifecycle !== "all") {
         if ((deal.status ?? "open") !== filterLifecycle) return false;
@@ -491,7 +499,18 @@ export default function PipelinesPage() {
 
       return true;
     });
-  }, [deals, filterSearch, filterTemperature, filterSource, filterInterest, filterResponsible, filterCrmStatus, filterLifecycle, filterState]);
+  }, [deals, filterSearch, filterTemperature, filterSource, filterInterest, filterResponsible, filterCrmStatus, filterCrmStage, filterLifecycle, filterState]);
+
+  // Origens: as fixas + qualquer outra que exista nos negócios (ex.: "Anúncio").
+  const sourceOptions = useMemo(() => {
+    const fixed = ["WhatsApp", "Instagram", "Google", "Site", "Indicação", "Outros"];
+    const extra = Array.from(new Set(deals.map((d) => d.source).filter(Boolean))) as string[];
+    return [...fixed, ...extra.filter((s) => !fixed.includes(s)).sort()];
+  }, [deals]);
+
+  const uniqueCrmStages = useMemo(() => {
+    return (Array.from(new Set(deals.map((d) => d.crm_stage).filter(Boolean))) as string[]).sort();
+  }, [deals]);
 
   const uniqueInterests = useMemo(() => {
     return Array.from(new Set(deals.map((d) => d.interest).filter(Boolean))) as string[];
@@ -664,12 +683,9 @@ export default function PipelinesPage() {
               className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
             >
               <option value="all">Todas as Origens</option>
-              <option value="WhatsApp">WhatsApp</option>
-              <option value="Instagram">Instagram</option>
-              <option value="Google">Google</option>
-              <option value="Site">Site</option>
-              <option value="Indicação">Indicação</option>
-              <option value="Outros">Outros</option>
+              {sourceOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
           </div>
 
@@ -716,6 +732,21 @@ export default function PipelinesPage() {
             </select>
           </div>
 
+          {/* Filtro de Etapa no CRM */}
+          <div className="min-w-[150px]">
+            <select
+              value={filterCrmStage}
+              onChange={(e) => setFilterCrmStage(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs focus:outline-none"
+            >
+              <option value="all">Todas as Etapas CRM</option>
+              {uniqueCrmStages.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+              <option value="none">Sem etapa</option>
+            </select>
+          </div>
+
           {/* Filtro de Ciclo de vida */}
           <div className="min-w-[130px]">
             <select
@@ -746,7 +777,7 @@ export default function PipelinesPage() {
           </div>
 
           {/* Limpar Filtros */}
-          {(filterSearch || filterTemperature !== "all" || filterSource !== "all" || filterInterest !== "all" || filterResponsible !== "all" || filterCrmStatus !== "all" || filterLifecycle !== "all" || filterState !== "all") && (
+          {(filterSearch || filterTemperature !== "all" || filterSource !== "all" || filterInterest !== "all" || filterResponsible !== "all" || filterCrmStatus !== "all" || filterCrmStage !== "all" || filterLifecycle !== "all" || filterState !== "all") && (
             <button
               onClick={() => {
                 setFilterSearch("");
@@ -755,6 +786,7 @@ export default function PipelinesPage() {
                 setFilterInterest("all");
                 setFilterResponsible("all");
                 setFilterCrmStatus("all");
+                setFilterCrmStage("all");
                 setFilterLifecycle("all");
                 setFilterState("all");
               }}

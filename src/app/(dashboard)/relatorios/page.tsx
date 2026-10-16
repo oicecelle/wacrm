@@ -28,6 +28,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { AcompanhamentoTab } from "@/components/relatorios/acompanhamento-tab";
 
 interface SourceRule {
   keyword: string;
@@ -46,7 +47,7 @@ export default function RelatoriosPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Tab State: "dashboard" | "rules" | "reports"
-  const [activeTab, setActiveTab] = useState<"dashboard" | "rules" | "reports">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "rules" | "reports" | "acompanhamento">("dashboard");
 
   // Filters State
   const [startDate, setStartDate] = useState(() => {
@@ -470,6 +471,14 @@ export default function RelatoriosPage() {
           >
             Relatórios Automáticos (WhatsApp)
           </button>
+          <button
+            onClick={() => setActiveTab("acompanhamento")}
+            className={`px-4 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
+              activeTab === "acompanhamento" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Acompanhamento de Leads
+          </button>
         </div>
       </div>
 
@@ -478,6 +487,8 @@ export default function RelatoriosPage() {
           <AlertDescription className="text-xs font-semibold">{error}</AlertDescription>
         </Alert>
       )}
+
+      {activeTab === "acompanhamento" && <AcompanhamentoTab accountId={accountId} />}
 
       {/* ── Tab Content: Dashboard ── */}
       {activeTab === "dashboard" && (
